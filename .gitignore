@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local runtime data
+user_data/
+output/
+data/chroma/
+tmp_canvas_media/
+tmp_canvas_render/
+_docx_inputs/
+
+# Local secrets and generated files
+config.yaml
+*.log
+*.db
+*.sqlite3
+*.docx
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
