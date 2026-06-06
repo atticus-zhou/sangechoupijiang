@@ -1,0 +1,77 @@
+models:
+  zhongshu:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.7
+    max_tokens: 4096
+  menxia:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.2
+    max_tokens: 4096
+  shangshu:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.3
+    max_tokens: 4096
+  libu:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.1
+    max_tokens: 2048
+  hubu:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.2
+    max_tokens: 4096
+  libu_comm:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.3
+    max_tokens: 2048
+  bingbu:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.3
+    max_tokens: 8192
+  xingbu:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.2
+    max_tokens: 4096
+  gongbu:
+    provider: deepseek
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    temperature: 0.5
+    max_tokens: 8192
+
+office_models:
+  comic_production:
+    gongbu:
+      provider: doubao
+      model: doubao-seedream-5
+      api_key: ${ARK_API_KEY}
+    bingbu:
+      provider: doubao
+      model: doubao-seedream-5
+      api_key: ${ARK_API_KEY}
+    xingbu:
+      provider: dashscope
+      model: qwen-vl-max
+      api_key: ${DASHSCOPE_API_KEY}
+
+system:
+  max_zhongshu_menxia_rounds: 3
+  max_bingbu_xingbu_retries: 1
+  max_orchestrator_loops: 10
+  vector_db_path: ./data/chroma
+  similarity_threshold: 0.7

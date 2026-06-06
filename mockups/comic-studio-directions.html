@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI漫剧创作台方向草图</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #161b22;
+      --panel2: #101827;
+      --line: #2b3342;
+      --text: #dbe3ee;
+      --muted: #94a3b8;
+      --blue: #58a6ff;
+      --red: #e55c50;
+      --green: #3fb950;
+      --radius: 14px;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      padding: 28px;
+    }
+    h1, h2, h3, p { margin: 0; }
+    .page { max-width: 1480px; margin: 0 auto; }
+    .head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 22px;
+      gap: 24px;
+    }
+    .head h1 { font-size: 34px; letter-spacing: 0; }
+    .head p { color: var(--muted); margin-top: 8px; }
+    .switcher { display: flex; gap: 10px; flex-wrap: wrap; }
+    .switcher button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .switcher button.active {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(88, 166, 255, .1);
+    }
+    .mock {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #0b111d;
+      min-height: 760px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .mock.active { display: block; }
+    .bar {
+      height: 58px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      background: #070b12;
+    }
+    .brand { font-weight: 800; font-size: 20px; }
+    .bar span { color: var(--muted); font-size: 13px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 13px;
+      background: rgba(255,255,255,.02);
+    }
+    .btn {
+      border: 0;
+      background: var(--red);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .ghost {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 10px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .muted { color: var(--muted); }
+    .grid-a {
+      display: grid;
+      grid-template-columns: 260px 1fr 340px;
+      min-height: 702px;
+    }
+    .left, .right {
+      border-right: 1px solid var(--line);
+      padding: 18px;
+      background: #080d16;
+    }
+    .right { border-right: 0; border-left: 1px solid var(--line); }
+    .nav-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 13px;
+      border-radius: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .nav-item.active {
+      color: var(--blue);
+      background: rgba(88,166,255,.1);
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+    .main-a { padding: 22px; }
+    .stage-row { display: flex; gap: 8px; margin: 18px 0; flex-wrap: wrap; }
+    .stage-row span { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+    .stage-row span.active { color: var(--blue); border-color: var(--blue); background: rgba(88,166,255,.1); }
+    .idea-box textarea {
+      width: 100%;
+      min-height: 130px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      resize: vertical;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .asset-list { display: grid; gap: 10px; margin-top: 14px; }
+    .asset { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel2); }
+    .asset strong { display: block; margin-bottom: 4px; }
+    .grid-b {
+      display: grid;
+      grid-template-columns: 300px 1fr 330px;
+      min-height: 702px;
+    }
+    .canvas {
+      padding: 20px;
+      background:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px),
+        #0c1320;
+      background-size: 24px 24px;
+      position: relative;
+    }
+    .board-title { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .node {
+      min-height: 150px;
+      border: 1px solid var(--line);
+      background: rgba(22,27,34,.94);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .node h3 { margin-bottom: 10px; }
+    .thumb {
+      height: 72px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1d2b42, #3b1d2e);
+      border: 1px solid rgba(255,255,255,.08);
+      margin-top: 12px;
+    }
+    .grid-c {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 702px;
+    }
+    .chat {
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 16px;
+    }
+    .bubble {
+      max-width: 760px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: var(--panel);
+    }
+    .bubble.user { align-self: flex-end; background: rgba(88,166,255,.1); border-color: rgba(88,166,255,.4); }
+    .composer {
+      margin-top: auto;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      gap: 12px;
+    }
+    .composer input {
+      flex: 1;
+      background: transparent;
+      border: 0;
+      color: var(--text);
+      font-size: 15px;
+      outline: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="head">
+      <div>
+        <h1>AI漫剧创作台：三个方向草图</h1>
+        <p>这不是最终 UI，只是用来找感觉。你可以告诉我：更接近 A、B、C，或者三者混合。</p>
+      </div>
+      <div class="switcher">
+        <button class="active" onclick="showMock('a', this)">A 阶段式</button>
+        <button onclick="showMock('b', this)">B 导演画布</button>
+        <button onclick="showMock('c', this)">C 聊天创作</button>
+      </div>
+    </div>
+
+    <section id="mock-a" class="mock active">
+      <div class="bar">
+        <div class="brand">AI漫剧创作台</div>
+        <span>更像“项目管理 + 创作流程”</span>
+      </div>
+      <div class="grid-a">
+        <aside class="left">
+          <div class="nav-item active">灵感 <span>当前</span></div>
+          <div class="nav-item">剧本 <span>待生成</span></div>
+          <div class="nav-item">人物/道具/场景 <span>待生成</span></div>
+          <div class="nav-item">风格圣经 <span>待确认</span></div>
+          <div class="nav-item">分镜/运镜 <span>待生成</span></div>
+          <div class="nav-item">提示词包 <span>待整理</span></div>
+        </aside>
+        <main class="main-a">
+          <h2>从一个灵感开始</h2>
+          <p class="muted">适合用户一步一步推进，每一步都能看见产物和确认状态。</p>
+          <div class="stage-row">
+            <span class="active">灵感</span><span>剧本</span><span>角色</span><span>风格</span><span>分镜</span><span>交付</span>
+          </div>
+          <div class="card idea-box">
+            <h3>你脑海里的故事种子</h3>
+            <textarea>重生后的女主在公司年会上反击陷害她的人，但她发现真正的幕后黑手不是台上的对手。</textarea>
+            <div class="chips"><span class="pill">逆袭爽剧</span><span class="pill">竖屏</span><span class="pill">3集</span><span class="pill">电影感</span></div>
+          </div>
+          <div style="margin-top:16px; display:flex; gap:10px;">
+            <button class="btn">生成项目骨架</button><button class="ghost">只完善剧本</button>
+          </div>
+        </main>
+        <aside class="right">
+          <h3>资产包</h3>
+          <div class="asset-list">
+            <div class="asset"><strong>剧本方向</strong><span class="muted">等待生成</span></div>
+            <div class="asset"><strong>人物图设定</strong><span class="muted">等待生成</span></div>
+            <div class="asset"><strong>分镜表</strong><span class="muted">等待生成</span></div>
+            <div class="asset"><strong>提示词包</strong><span class="muted">等待生成</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="mock-b" class="mock">
+      <div class="bar">
+        <div class="brand">导演桌</div>
+        <span>更像“白板/画布”，适合创作者看全局关系</span>
+      </div>
+      <div class="grid-b">
+        <aside class="left">
+          <h3>项目素材</h3>
+          <div class="asset-list">
+            <div class="asset"><strong>主角</strong><span class="muted">脸型/服装已锁定</span></div>
+            <div class="asset"><strong>对手</strong><span class="muted">等待首图</span></div>
+            <div class="asset"><strong>公司年会厅</strong><span class="muted">场景草图</span></div>
+            <div class="asset"><strong>证物手机</strong><span class="muted">关键道具</span></div>
+          </div>
+        </aside>
+        <main class="canvas">
+          <div class="board-title"><h2>第 1 集画布</h2><span class="pill">镜头关系 / 资产依赖 / 运镜</span></div>
+          <div class="flow">
+            <div class="node"><h3>镜头 01</h3><p class="muted">主角走入年会厅，镜头缓慢推进。</p><div class="thumb"></div></div>
+            <div class="node"><h3>镜头 02</h3><p class="muted">对手举杯，台下闪过证物手机。</p><div class="thumb"></div></div>
+            <div class="node"><h3>镜头 03</h3><p class="muted">主角特写，意识到真正幕后黑手。</p><div class="thumb"></div></div>
+            <div class="node"><h3>人物图</h3><p class="muted">主角/对手形象锁定。</p><div class="thumb"></div></div>
+            <div class="node"><h3>场景图</h3><p class="muted">年会厅灯光与布局。</p><div class="thumb"></div></div>
+            <div class="node"><h3>运镜图</h3><p class="muted">推进、转焦、拉远。</p><div class="thumb"></div></div>
+          </div>
+        </main>
+        <aside class="right">
+          <h3>当前选中：镜头 03</h3>
+          <p class="muted" style="margin:12px 0;">这里显示这个镜头需要哪些人物、道具、场景和提示词。</p>
+          <div class="asset"><strong>人物</strong><span class="muted">主角</span></div>
+          <div class="asset"><strong>场景</strong><span class="muted">公司年会厅</span></div>
+          <div class="asset"><strong>运镜</strong><span class="muted">从手机转焦到主角眼神</span></div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="mock-c" class="mock">
+      <div class="bar">
+        <div class="brand">创作助手</div>
+        <span>更像“对话 + 自动整理资产”，入口最轻</span>
+      </div>
+      <div class="grid-c">
+        <aside class="left">
+          <h3>自动整理的资产</h3>
+          <div class="asset-list">
+            <div class="asset"><strong>故事圣经</strong><span class="muted">已整理</span></div>
+            <div class="asset"><strong>人物图提示词</strong><span class="muted">3个角色</span></div>
+            <div class="asset"><strong>分镜</strong><span class="muted">第1集 8 镜</span></div>
+            <div class="asset"><strong>待确认</strong><span class="muted">主角形象</span></div>
+          </div>
+        </aside>
+        <main class="chat">
+          <div class="bubble user">我想做一个重生复仇短剧，女主在年会上反击陷害她的人。</div>
+          <div class="bubble">我先帮你生成一个 3 集竖屏漫剧骨架。第 1 集重点是“误以为反派在台上，实际黑手在台下”。要不要走悬疑爽剧风？</div>
+          <div class="bubble user">可以，但女主不要太疯，要冷静。</div>
+          <div class="bubble">已更新女主人设：冷静克制、通过证据反击。下一步我会生成主角/对手/关键道具的参考图提示词。</div>
+          <div class="composer"><input value="把第 1 集分镜多加几个特写和推进镜头"><button class="btn">继续创作</button></div>
+        </main>
+      </div>
+    </section>
+  </div>
+  <script>
+    function showMock(id, button) {
+      document.querySelectorAll('.mock').forEach(el => el.classList.remove('active'));
+      document.querySelector('#mock-' + id).classList.add('active');
+      document.querySelectorAll('.switcher button').forEach(el => el.classList.remove('active'));
+      button.classList.add('active');
+    }
+  </script>
+</body>
+</html>

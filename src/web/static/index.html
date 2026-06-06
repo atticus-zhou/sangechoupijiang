@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三个臭皮匠 - 多 Agent 办公室</title>
+<link rel="stylesheet" href="/static/css/style.css?v=office-context-persist-20260603">
+</head>
+<body class="hall-mode">
+
+<aside class="sidebar">
+    <a class="logo" href="/" onclick="navigate('offices'); return false;">
+        <span>三个臭皮匠</span>
+        <strong id="sidebar-office-name">研究办公室</strong>
+    </a>
+    <nav>
+        <a data-page="workbench" onclick="navigateActiveWorkbench()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:10px"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 Z"></path></svg>
+            工作站
+        </a>
+        <a data-page="tools" onclick="navigate('tools')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:10px"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+            工具
+        </a>
+        <a data-page="skills" onclick="navigate('skills')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:10px"><path d="M12 2L2 7l10 5 10-5-10-5Z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+            技能
+        </a>
+        <a data-page="models" onclick="navigate('models')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:10px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            模型
+        </a>
+        <a data-page="prompts" onclick="navigate('prompts')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:10px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            提示词
+        </a>
+        <a data-page="history" onclick="navigate('history')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:10px"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            历史
+        </a>
+        <a data-page="offices" onclick="navigate('offices')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:10px"><path d="M3 9.5 12 3l9 6.5"></path><path d="M5 10v10h14V10"></path></svg>
+            返回大厅
+        </a>
+    </nav>
+</aside>
+
+<main>
+    <!-- Office Hall -->
+    <section class="page" id="page-offices">
+        <div class="office-hall">
+            <div class="hall-head">
+                <h1>三个臭皮匠</h1>
+            </div>
+
+            <div class="office-card-grid">
+                <button class="office-card available" onclick="navigate('research')">
+                    <strong>研究办公室</strong>
+                    <span>市场调研、竞品分析、开品建议和老板简报。</span>
+                    <em onclick="event.stopPropagation()">样品展示</em>
+                </button>
+
+                <button class="office-card available" onclick="navigate('comic_production')">
+                    <strong>ai漫剧办公室</strong>
+                    <span>从灵感或完整剧本出发，进入隔离版制片链，生成资产拆解、分镜、运镜、提示词和 Word 画布。</span>
+                    <small>当前统一进入 AI 漫剧制片办公室，避免旧办公室与新制片链混用。</small>
+                    <em onclick="event.stopPropagation(); showSampleUnavailable('AI 漫剧办公室')">样品展示</em>
+                </button>
+
+                <button class="office-card unavailable" onclick="showOfficeUnavailable('预留办公室')">
+                    <strong>xxxx办公室</strong>
+                    <span>预留办公室，可按你的业务流程配置专属 Agent 分工。</span>
+                    <small>暂未开放：还没有绑定具体业务流程。</small>
+                    <em onclick="event.stopPropagation(); showSampleUnavailable('预留办公室')">样品展示</em>
+                </button>
+
+                <button class="office-card unavailable" onclick="showOfficeUnavailable('技术办公室')">
+                    <strong>技术办公室</strong>
+                    <span>技术方案、代码任务、问题排查和交付记录。</span>
+                    <small>暂未开放：需要先配置技术工作流和验收规则。</small>
+                    <em onclick="event.stopPropagation(); showSampleUnavailable('技术办公室')">样品展示</em>
+                </button>
+
+                <button class="office-card unavailable" onclick="showOfficeUnavailable('预留办公室')">
+                    <strong>xxxxx办公室</strong>
+                    <span>预留办公室，用于后续扩展新的项目型工作流。</span>
+                    <small>暂未开放：当前只是占位办公室。</small>
+                    <em onclick="event.stopPropagation(); showSampleUnavailable('预留办公室')">样品展示</em>
+                </button>
+
+                <button class="office-card unavailable" onclick="showOfficeUnavailable('预留办公室')">
+                    <strong>xxxx办公室</strong>
+                    <span>预留办公室，可承载内容、投放、复盘等方向。</span>
+                    <small>暂未开放：还没有配置 Agent 分工和产物模板。</small>
+                    <em onclick="event.stopPropagation(); showSampleUnavailable('预留办公室')">样品展示</em>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Task -->
+    <section class="page" id="page-task" style="display:none">
+        <div class="chat-scroll-area">
+            <div class="welcome-screen" id="welcome-screen">
+                <h1>通用工作站 <span>Multi-Agent</span></h1>
+                <p>临时任务可以从这里发起；标准化项目建议从办公室大厅进入。</p>
+            </div>
+            
+            <div class="chat-message" id="result-card" style="display:none">
+                <div class="result-head">
+                    <div class="agent-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2zm0 18a2 2 0 0 1-2-2c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2zm0-10a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2z"></path></svg>
+                    </div>
+                    <div class="msg-meta">
+                        <strong>三个臭皮匠</strong>
+                        <code id="result-task-id"></code>
+                    </div>
+                    <span id="result-status"></span>
+                </div>
+                <div id="result-content"></div>
+                <div id="result-files"></div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <textarea id="task-input" placeholder="给三个臭皮匠发送一个临时任务..." rows="1" oninput="this.style.height = '';this.style.height = Math.min(this.scrollHeight, 200) + 'px'"></textarea>
+                <div class="chat-input-actions">
+                    <select id="skill-select"><option value="">✨ 选择技能 (可选)</option></select>
+                    <button id="btn-submit" onclick="submitTask()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="input-footer">内部仍由多 Agent 协作框架驱动；用户侧以办公室组织工作。</div>
+        </div>
+    </section>
+
+    <!-- Research Office -->
+    <section class="page" id="page-research" style="display:none">
+        <div class="office-layout">
+            <div class="office-main">
+                <div class="office-head">
+                    <div>
+                        <h2>研究办公室</h2>
+                        <p class="desc">市场调研、竞品分析、开品建议和老板简报的工作空间。</p>
+                    </div>
+                    <div class="panel-actions">
+                        <button class="ghost" onclick="navigate('offices')">返回大厅</button>
+                        <button class="ghost" onclick="loadResearchOffice()">刷新</button>
+                    </div>
+                </div>
+
+                <div class="card office-submit">
+                    <div class="panel-title">
+                        <h3>研究开工单</h3>
+                        <span class="badge badge-info">产品调研</span>
+                    </div>
+                    <div class="research-brief-grid">
+                        <div>
+                            <label>研究对象</label>
+                            <input id="research-subject" type="text" placeholder="例如：中国家用投影仪、抖音便捷食品、眼部按摩仪">
+                        </div>
+                        <div>
+                            <label>主要平台</label>
+                            <select id="research-platform">
+                                <option value="抖音/飞瓜等内容电商平台">抖音/飞瓜</option>
+                                <option value="天猫、京东、拼多多等货架电商平台">传统电商</option>
+                                <option value="全网公开资料与行业报告">全网公开资料</option>
+                                <option value="用户指定平台">用户指定平台</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>交付用途</label>
+                            <select id="research-purpose">
+                                <option value="开品/选品立项">开品/选品立项</option>
+                                <option value="竞品复盘">竞品复盘</option>
+                                <option value="行业趋势判断">行业趋势判断</option>
+                                <option value="内部讨论材料">内部讨论材料</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label>重点分析</label>
+                    <div class="research-checks">
+                        <label><input type="checkbox" value="头部竞品" checked> 头部竞品</label>
+                        <label><input type="checkbox" value="价格带" checked> 价格带</label>
+                        <label><input type="checkbox" value="卖点/标题关键词" checked> 卖点关键词</label>
+                        <label><input type="checkbox" value="差评痛点" checked> 差评痛点</label>
+                        <label><input type="checkbox" value="差异化机会" checked> 差异化机会</label>
+                        <label><input type="checkbox" value="图表建议" checked> 图表建议</label>
+                        <label><input type="checkbox" value="截图取证计划" checked> 截图计划</label>
+                    </div>
+                    <label>补充要求</label>
+                    <textarea id="research-input" rows="4" placeholder="例如：重点看 2026 年趋势，报告要能直接给老板看；如果数据无法确认，请标为待核验。"></textarea>
+                    <div class="office-submit-actions">
+                        <select id="research-workspace-select">
+                            <option value="">新建工作空间</option>
+                        </select>
+                        <button onclick="submitResearchTask()">提交给研究办公室</button>
+                    </div>
+                </div>
+
+                <div class="card evidence-panel">
+                    <div class="panel-title">
+                        <div>
+                            <h3>截图证据</h3>
+                            <p class="desc">让办公室自己去飞瓜取证；你只需要在弹出的浏览器里登录一次。</p>
+                        </div>
+                        <div class="panel-actions">
+                            <input type="file" id="research-evidence-input" style="display:none" accept="image/png,image/jpeg,image/webp,image/gif" onchange="uploadResearchEvidence(event)">
+                            <button class="ghost btn-sm" onclick="openResearchLoginBrowser()">打开登录窗口</button>
+                        </div>
+                    </div>
+                    <div class="evidence-run-card">
+                        <div>
+                            <strong>飞瓜自动取证</strong>
+                            <span>按上方“研究对象”自动截取搜索、商品榜、品牌榜和达人榜入口。</span>
+                        </div>
+                        <button onclick="captureResearchFeigua()">开始取证</button>
+                    </div>
+                    <div class="evidence-secondary-actions">
+                        <button class="ghost btn-sm" onclick="syncResearchEvidence()">整理证据表</button>
+                        <button class="ghost btn-sm" onclick="document.getElementById('research-evidence-input').click()">上传本地截图</button>
+                        <button class="ghost btn-sm" onclick="toggleEvidenceAdvanced()">高级截图</button>
+                    </div>
+                    <div id="evidence-advanced" class="evidence-advanced" style="display:none">
+                        <div class="capture-row">
+                            <input id="research-capture-url" type="url" placeholder="高级模式：粘贴指定页面 URL">
+                            <input id="research-capture-title" type="text" placeholder="截图名称">
+                        </div>
+                        <button class="ghost btn-sm" onclick="captureResearchUrl()">截取指定页面</button>
+                    </div>
+                    <textarea id="research-evidence-note" rows="2" placeholder="可选：说明这张截图来自哪里、对应什么榜单或页面。"></textarea>
+                    <div class="evidence-hint">账号密码请只在弹出的浏览器里输入，系统会复用本地登录态截图，不会要求你在聊天里提供密码。</div>
+                </div>
+
+                <div class="card office-panel">
+                    <div class="panel-title">
+                        <h3>产物状态看板</h3>
+                        <span id="research-package-score" class="badge badge-info">未开始</span>
+                    </div>
+                    <div id="research-package-board" class="package-board">
+                        <div class="empty-state">选择一个工作空间后查看材料包完成度。</div>
+                    </div>
+                </div>
+
+                <div class="office-grid">
+                    <div class="card office-panel">
+                        <div class="panel-title">
+                            <h3>工作空间</h3>
+                            <span id="research-workspace-count" class="badge badge-info">0</span>
+                        </div>
+                        <div id="research-workspaces" class="workspace-list"></div>
+                    </div>
+
+                    <div class="card office-panel">
+                        <div class="panel-title">
+                            <h3>任务时间线</h3>
+                            <span id="research-task-count" class="badge badge-info">0</span>
+                        </div>
+                        <div id="research-timeline" class="timeline-list">
+                            <div class="empty-state">选择一个工作空间后查看任务进度。</div>
+                        </div>
+                    </div>
+
+                    <div class="card office-panel">
+                        <div class="panel-title">
+                            <h3>产物</h3>
+                            <div class="panel-actions">
+                                <span id="research-current-workspace" class="badge badge-info">未选择</span>
+                                <button class="ghost btn-sm" onclick="exportResearchWorkspace()">导出</button>
+                            </div>
+                        </div>
+                        <div id="research-artifacts" class="artifact-list">
+                            <div class="empty-state">选择一个工作空间查看产物。</div>
+                        </div>
+                        <div id="research-artifact-detail" class="artifact-detail empty-state">选择一个产物查看完整内容。</div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="office-side">
+                <div class="card office-panel">
+                    <h3>办公室分工</h3>
+                    <div id="research-duties" class="duty-list"></div>
+                </div>
+                <div class="card office-panel">
+                    <h3>验收标准</h3>
+                    <ul id="research-criteria" class="criteria-list"></ul>
+                </div>
+            </aside>
+        </div>
+    </section>
+
+    <!-- AI Comic Office -->
+    <section class="page" id="page-comic" style="display:none">
+        <div class="office-layout">
+            <div class="office-main">
+                <div class="office-head">
+                    <div>
+                        <h2>AI漫剧创作台</h2>
+                        <p class="desc">从一句灵感开始，逐步生成剧本、人物、道具、场景、分镜、运镜和提示词资产。</p>
+                    </div>
+                    <div class="panel-actions">
+                        <button class="ghost" onclick="navigate('offices')">返回大厅</button>
+                        <button class="ghost" onclick="loadComicOffice()">刷新</button>
+                    </div>
+                </div>
+
+                <div class="card office-submit comic-studio-card">
+                    <div class="panel-title">
+                        <div>
+                            <h3>主创对话</h3>
+                            <p class="desc mini-desc">先和主创对话官把灵感聊透，确认故事提案后再进入资产生产。</p>
+                        </div>
+                        <span class="badge badge-info">创作台</span>
+                    </div>
+                    <div class="research-brief-grid">
+                        <div>
+                            <label>灵感</label>
+                            <input id="comic-idea" type="text" placeholder="例如：重生后的女主在公司年会上反击陷害她的人">
+                        </div>
+                        <div>
+                            <label>输入方式</label>
+                            <select id="comic-input-mode" onchange="toggleComicInputMode()">
+                                <option value="idea">只有灵感，需要一起完善故事</option>
+                                <option value="script">已有完整剧本，直接拆解生产</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>题材类型</label>
+                            <select id="comic-genre">
+                                <option value="revenge short drama">逆袭/复仇爽剧</option>
+                                <option value="suspense">悬疑/推理</option>
+                                <option value="fantasy costume drama">古风/仙侠</option>
+                                <option value="romance">情感/恋爱</option>
+                                <option value="science fiction">科幻/未来</option>
+                                <option value="comedy">搞笑/轻喜剧</option>
+                                <option value="horror thriller">恐怖/惊悚</option>
+                                <option value="workplace drama">职场/商战</option>
+                                <option value="family emotion">家庭/伦理</option>
+                                <option value="school youth">校园/青春</option>
+                                <option value="martial arts fantasy">武侠/玄幻</option>
+                            </select>
+                            <input id="comic-genre-custom" class="inline-custom" type="text" placeholder="自定义题材，例如：民国悬疑+女性复仇">
+                        </div>
+                        <div>
+                            <label>剧本长度</label>
+                            <select id="comic-length">
+                                <option value="3 episodes, 60 seconds each">3集，每集约60秒</option>
+                                <option value="5 episodes, 60 seconds each">5集，每集约60秒</option>
+                                <option value="1 episode, 90 seconds">单集约90秒</option>
+                                <option value="10 episodes, 45 seconds each">10集，每集约45秒</option>
+                                <option value="1 episode, 30 seconds">单集约30秒</option>
+                                <option value="1 episode, 3 minutes">单集约3分钟</option>
+                                <option value="3 episodes, 30 seconds each">3集，每集约30秒</option>
+                                <option value="5 episodes, 90 seconds each">5集，每集约90秒</option>
+                                <option value="10 episodes, 60 seconds each">10集，每集约60秒</option>
+                                <option value="20 episodes, 45 seconds each">20集，每集约45秒</option>
+                                <option value="30 episodes, 60 seconds each">30集，每集约60秒</option>
+                            </select>
+                            <input id="comic-length-custom" class="inline-custom" type="text" placeholder="自定义长度，例如：12集，每集75秒">
+                        </div>
+                        <div>
+                            <label>目标平台</label>
+                            <select id="comic-platform">
+                                <option value="Douyin/Kuaishou vertical short drama">抖音/快手竖屏短剧</option>
+                                <option value="Xiaohongshu vertical story">小红书竖屏故事</option>
+                                <option value="Bilibili comic video">B站漫剧视频</option>
+                                <option value="general image-video workflow">通用图片/视频平台</option>
+                                <option value="WeChat Channels vertical video">视频号竖屏视频</option>
+                                <option value="Kuaishou fast-paced short drama">快手强节奏短剧</option>
+                                <option value="Douyin paid mini drama">抖音付费微短剧</option>
+                                <option value="YouTube Shorts vertical comic">YouTube Shorts 竖屏漫剧</option>
+                                <option value="TikTok vertical drama">TikTok 竖屏短剧</option>
+                                <option value="long-form webtoon video">横屏/长视频漫剧</option>
+                            </select>
+                            <input id="comic-platform-custom" class="inline-custom" type="text" placeholder="自定义平台，例如：视频号+小红书双平台">
+                        </div>
+                        <div>
+                            <label>画面风格</label>
+                            <select id="comic-style">
+                                <option value="vertical AI comic, cinematic panels, consistent character design">电影感竖屏漫剧</option>
+                                <option value="modern Chinese webtoon, clean line art, dramatic lighting">现代国漫条漫</option>
+                                <option value="Korean webtoon style, polished faces, emotional close-ups">韩漫情绪特写</option>
+                                <option value="dark suspense comic, low-key lighting, realistic backgrounds">暗黑悬疑写实</option>
+                                <option value="costume fantasy comic, ornate clothing, elegant color palette">古风幻想</option>
+                                <option value="realistic urban drama, restrained colors, natural lighting">都市写实短剧</option>
+                                <option value="Japanese anime style, clean colors, expressive faces">日漫清爽风</option>
+                                <option value="cyberpunk comic, neon lights, futuristic city">赛博朋克</option>
+                                <option value="ink wash Chinese fantasy, elegant composition">水墨国风</option>
+                                <option value="cute chibi comic, bright colors, light comedy">Q版轻喜剧</option>
+                                <option value="movie storyboard style, grayscale director frames">电影分镜灰稿</option>
+                            </select>
+                            <input id="comic-style-custom" class="inline-custom" type="text" placeholder="自定义画风，例如：港风霓虹+写实脸">
+                        </div>
+                    </div>
+                    <div id="comic-script-source-wrap" style="display:none;">
+                        <label>完整剧本</label>
+                        <textarea id="comic-script-source" rows="7" placeholder="如果你已经有完整剧本，粘贴在这里。系统会按这版剧本拆人物、道具、场景、分镜、运镜和提示词，不再另起故事。"></textarea>
+                    </div>
+                    <label>创作指令</label>
+                    <textarea id="comic-extra" rows="2" placeholder="例如：女主更冷静克制；反派不要脸谱化；第1集要有强反转。"></textarea>
+                    
+                    <div class="office-submit-actions">
+                        <select id="comic-workspace-select" onchange="selectComicWorkspace(this.value)">
+                            <option value="">新建漫剧项目</option>
+                        </select>
+                        <button onclick="startComicCabinet()">开始聊故事</button>
+                    </div>
+
+                    <!-- 聊天区域 -->
+                    <div id="comic-chat-container" class="comic-chat-container" style="display:none; margin-top: 20px;">
+                        <div id="comic-chat-history" class="comic-chat-history"></div>
+                        <div class="comic-chat-input-area">
+                            <textarea id="comic-chat-input" rows="2" placeholder="回答主创的话，或者补充你的想法..."></textarea>
+                            <div class="comic-chat-actions">
+                                <button class="ghost" onclick="startComicCabinet()">重新写一版</button>
+                                <button onclick="continueComicCabinet()">继续聊故事</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 提案区域 -->
+                    <div id="comic-proposal-container" class="comic-proposal-container" style="display:none; margin-top: 20px;">
+                        <div class="panel-title">
+                            <h3>当前故事提案</h3>
+                            <span class="badge badge-info">点击后直接开始生产</span>
+                        </div>
+                        <div id="comic-script-preview" class="artifact-detail"></div>
+                        <div class="office-submit-actions" style="margin-top: 15px;">
+                            <button onclick="confirmComicScript()">确认故事并开始生成</button>
+                        </div>
+                    </div>
+
+                    <!-- 确认状态区域 -->
+                    <div id="comic-confirmed-panel" class="comic-brief-panel" style="display:none; margin-top: 20px;">
+                        <div class="panel-title">
+                            <h3>已确认故事</h3>
+                            <span class="badge badge-ok">故事已确认，可继续生产</span>
+                        </div>
+                        <div id="comic-confirmed-script" class="artifact-detail"></div>
+                        <div class="office-submit-actions">
+                            <button class="ghost" onclick="unconfirmComicScript()">退回修改故事</button>
+                            <button id="comic-approve-assets-btn" class="ghost" onclick="approveComicAssetsAndSubmit()" style="display:none;">资产审核通过，继续生成</button>
+                            <button id="comic-start-production-btn" onclick="submitComicTask()">生成资产拆解审核包</button>
+                        </div>
+                    </div>
+
+                    <div id="comic-asset-review-panel" class="comic-asset-review-panel" style="display:none; margin-top: 20px;">
+                        <div class="panel-title">
+                            <h3>资产拆解待确认</h3>
+                            <span class="badge badge-info">请先审核</span>
+                        </div>
+                        <p class="desc mini-desc">中书省和门下省已经把人物、道具、场景和分镜输入拆完。确认它们符合故事后，再继续生成图片和 Word 画布。</p>
+                        <div class="office-submit-actions">
+                            <button class="ghost" onclick="focusComicAssetReview()">查看资产拆解包</button>
+                            <button onclick="approveComicAssetsAndSubmit()">确认拆解无误，继续生成</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card office-panel">
+                    <div class="panel-title">
+                        <h3>创作阶段看板</h3>
+                        <span id="comic-package-score" class="badge badge-info">未开始</span>
+                    </div>
+                    <div id="comic-package-board" class="package-board">
+                        <div class="empty-state">选择一个漫剧项目后查看剧本、资产、分镜和提示词完成度。</div>
+                    </div>
+                </div>
+
+                <div class="office-grid">
+                    <div class="card office-panel">
+                        <div class="panel-title">
+                            <h3>漫剧项目</h3>
+                            <span id="comic-workspace-count" class="badge badge-info">0</span>
+                        </div>
+                        <div id="comic-workspaces" class="workspace-list"></div>
+                    </div>
+
+                    <div class="card office-panel">
+                        <div class="panel-title">
+                            <h3>创作记录</h3>
+                            <span id="comic-task-count" class="badge badge-info">0</span>
+                        </div>
+                        <div id="comic-timeline" class="timeline-list">
+                            <div class="empty-state">选择一个漫剧项目后查看任务进度。</div>
+                        </div>
+                    </div>
+
+                    <div class="card office-panel">
+                        <div class="panel-title">
+                            <h3>资产</h3>
+                            <div class="panel-actions">
+                                <span id="comic-current-workspace" class="badge badge-info">未选择</span>
+                                <button class="ghost btn-sm" onclick="exportComicWorkspace()">导出</button>
+                            </div>
+                        </div>
+                        <div id="comic-artifacts" class="artifact-list">
+                            <div class="empty-state">选择一个漫剧项目查看资产。</div>
+                        </div>
+                        <div id="comic-artifact-detail" class="artifact-detail empty-state">选择一个资产查看完整内容。</div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="office-side">
+                <div class="card office-panel">
+                    <h3>办公室分工</h3>
+                    <div id="comic-duties" class="duty-list"></div>
+                </div>
+                <div class="card office-panel">
+                    <h3>验收标准</h3>
+                    <ul id="comic-criteria" class="criteria-list"></ul>
+                </div>
+            </aside>
+        </div>
+    </section>
+
+    <!-- Tools -->
+    <section class="page" id="page-tools" style="display:none">
+        <div class="settings-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin-bottom: 0;">工具 (Tools)</h2>
+                <div>
+                    <input type="file" id="tool-upload-input" style="display: none;" accept=".yaml,.yml,.json" onchange="uploadTool(event)">
+                    <button class="ghost btn-sm" onclick="document.getElementById('tool-upload-input').click()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        上传工具
+                    </button>
+                </div>
+            </div>
+            <p class="desc">Agent 可调用的真实工具。这些工具让 Agent 能够搜索网络、抓取网页、读写文件。</p>
+            <div id="tools-list" class="card" style="padding:0; background:transparent; border:none;"></div>
+        </div>
+    </section>
+
+    <!-- Skills -->
+    <section class="page" id="page-skills" style="display:none">
+        <div class="settings-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin-bottom: 0;">技能 (Skills)</h2>
+                <div>
+                    <input type="file" id="skill-upload-input" style="display: none;" accept=".yaml,.yml,.json" onchange="uploadSkill(event)">
+                    <button class="ghost btn-sm" onclick="document.getElementById('skill-upload-input').click()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        上传技能
+                    </button>
+                </div>
+            </div>
+            <p class="desc">预设的任务模板，提交任务时可选择复用。</p>
+            <div id="skills-list" class="card" style="padding:0; background:transparent; border:none;"></div>
+            <div class="card" style="margin-top:20px">
+                <h3>新建技能</h3>
+                <div class="form-row" style="margin-top:16px">
+                    <input id="new-skill-name" placeholder="名称">
+                    <input id="new-skill-desc" placeholder="描述">
+                </div>
+                <textarea id="new-skill-prompt" placeholder="提示词模板，{user_input} 代表用户输入" rows="3" style="margin-top:16px"></textarea>
+                <button onclick="createSkill()" style="margin-top:16px">创建</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Models -->
+    <section class="page" id="page-models" style="display:none">
+        <div class="settings-container">
+            <h2>模型配置 (Models) <span id="model-office-label" class="badge badge-info">当前：研究办公室</span></h2>
+            <p class="desc">每个部门可独立选择 LLM 模型。修改后即时生效。</p>
+            <div class="model-test-toolbar">
+                <div>
+                    <strong>连通性测试</strong>
+                    <span>保存密钥后先测试，避免工作台跑到一半才发现某个部门不可用。</span>
+                </div>
+                <button class="btn-ghost" id="btn-test-all-models" onclick="testAllModels()">测试当前办公室全部部门</button>
+            </div>
+            <div id="model-list"></div>
+        </div>
+    </section>
+
+    <!-- Prompts -->
+    <section class="page" id="page-prompts" style="display:none">
+        <div class="settings-container">
+            <h2>提示词 (Prompts)</h2>
+            <p class="desc">自定义各部门的 System Prompt。留空使用默认值。</p>
+            <div class="split">
+                <div class="card" id="prompt-agent-list" style="flex:0 0 200px;padding:8px;"></div>
+                <div class="card" style="flex:1">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <h3 id="prompt-editor-title" style="margin:0;">选择部门</h3>
+                        <div style="display:flex;gap:8px">
+                            <button class="ghost" onclick="savePrompt()">保存</button>
+                            <button class="ghost" onclick="resetPrompt()">恢复默认</button>
+                        </div>
+                    </div>
+                    <textarea id="prompt-editor-textarea" rows="18" style="font-family:var(--mono);font-size:13px"></textarea>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- History -->
+    <section class="page" id="page-history" style="display:none">
+        <div class="settings-container">
+            <h2>历史记录 (History)</h2>
+            <div class="card" style="padding:0;overflow:auto; background:transparent; border:none;">
+                <table>
+                    <thead><tr><th>ID</th><th>需求</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+                    <tbody id="history-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+  <script src="/static/js/app.js?v=comic-production-office-20260606-cover-legacy-comic"></script>
+</body>
+</html>
