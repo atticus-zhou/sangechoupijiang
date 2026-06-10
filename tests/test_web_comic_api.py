@@ -204,6 +204,99 @@ class WebComicApiTests(unittest.TestCase):
         self.assertIn("工部需要生图模型", started.json()["detail"])
         self.assertIn("兵部需要生图模型", started.json()["detail"])
 
+    def test_asset_review_decision_is_bound_to_current_confirmed_script(self):
+        workspace_id = f"ws_review_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="Asset review decision",
+            brief="Asset review should be explicit and script-bound.",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{workspace_id}_confirmed_script",
+            workspace_id=workspace_id,
+            task_id="",
+            artifact_type="confirmed_script",
+            title="Confirmed script",
+            content="Confirmed script hash: current_hash",
+            metadata={"office_id": "comic_production", "script_hash": "current_hash", "script_version": 2, "confirmed": True},
+            created_by="shangshu",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{workspace_id}_asset_review_package",
+            workspace_id=workspace_id,
+            task_id="",
+            artifact_type="asset_review_package",
+            title="Asset review package",
+            content="人物、道具、场景拆解待审核。",
+            metadata={"office_id": "comic_production", "script_hash": "current_hash", "review_status": "pending", "requires_human_review": True},
+            created_by="menxia",
+        )
+
+        response = self.client.post(
+            f"/api/workspaces/{workspace_id}/comic/asset-review/decision",
+            json={"status": "approved", "reviewer_notes": "人物和场景拆解可以进入生产。"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "approved")
+        artifact = config_manager.get_artifact(f"art_{workspace_id}_asset_review_package")
+        metadata = artifact["metadata"]
+        self.assertEqual(metadata["review_status"], "approved")
+        self.assertEqual(metadata["script_hash"], "current_hash")
+        self.assertEqual(metadata["script_version"], 2)
+        self.assertEqual(metadata["reviewer_notes"], "人物和场景拆解可以进入生产。")
+        self.assertTrue(metadata["reviewed_at"])
+
+    def test_old_asset_review_approval_cannot_unlock_new_confirmed_script(self):
+        workspace_id = f"ws_old_review_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="Old review must not unlock",
+            brief="Old approved asset review should not unlock a new script hash.",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{workspace_id}_confirmed_script",
+            workspace_id=workspace_id,
+            task_id="",
+            artifact_type="confirmed_script",
+            title="Confirmed script",
+            content="Confirmed script hash: new_hash",
+            metadata={"office_id": "comic_production", "script_hash": "new_hash", "script_version": 2, "confirmed": True},
+            created_by="shangshu",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{workspace_id}_asset_review_package",
+            workspace_id=workspace_id,
+            task_id="",
+            artifact_type="asset_review_package",
+            title="Old asset review package",
+            content="Old assets approved.",
+            metadata={"office_id": "comic_production", "script_hash": "old_hash", "review_status": "approved", "requires_human_review": True},
+            created_by="menxia",
+        )
+
+        class DummyTask:
+            def add_done_callback(self, callback):
+                return None
+
+        def fake_create_task(coro):
+            coro.close()
+            return DummyTask()
+
+        with patch("src.web.app._schedule_background_task", side_effect=fake_create_task):
+            started = self.client.post("/api/tasks", json={
+                "user_request": "Idea: new story",
+                "office_id": "comic_production",
+                "workspace_id": workspace_id,
+            })
+
+        self.assertEqual(started.status_code, 200)
+        self.assertEqual(started.json()["office_id"], "comic_production")
+
     def test_history_exposes_comic_word_canvas_download(self):
         task_id = f"hist_{str(uuid.uuid4())[:8]}"
         workspace_id = f"ws_hist_{str(uuid.uuid4())[:8]}"
@@ -263,12 +356,19 @@ class WebComicApiTests(unittest.TestCase):
             conn.commit()
             conn.close()
 
-    def test_comic_image_specs_include_every_storyboard_shot(self):
+    def test_comic_image_specs_skip_shots_and_only_generate_base_assets(self):
         result = {
             "comic_package": {
                 "script_binding": {"script_hash": "abc", "script_version": 1, "confirmed": True},
                 "characters": [{"id": "char_01", "image_prompt": "人物设定"}],
-                "scenes": [{"id": "scene_01", "image_prompt": "场景设定"}],
+                "scenes": [{
+                    "id": "scene_01",
+                    "image_prompt": "场景设定",
+                    "asset_specs": [
+                        {"kind": "scene_wide_establishing", "label": "场景广角建立图", "prompt": "广角空间参考"},
+                        {"kind": "scene_top_down_layout", "label": "场景俯视布局图", "prompt": "俯视空间参考"},
+                    ],
+                }],
                 "shots": [
                     {"id": f"shot_{index:03d}", "image_prompt": f"第{index}镜真实剧情画面", "binding": {}}
                     for index in range(1, 7)
@@ -278,8 +378,13 @@ class WebComicApiTests(unittest.TestCase):
 
         specs = _comic_image_specs(result, limit=12)
         storyboard_ids = [item["source_id"] for item in specs if item["kind"] == "storyboard"]
+        spec_kinds = {item["kind"] for item in specs}
 
-        self.assertEqual(storyboard_ids, [f"shot_{index:03d}" for index in range(1, 7)])
+        self.assertEqual(storyboard_ids, [])
+        self.assertIn("character", spec_kinds)
+        self.assertIn("scene", spec_kinds)
+        self.assertIn("scene_wide_establishing", spec_kinds)
+        self.assertIn("scene_top_down_layout", spec_kinds)
 
     @patch("src.comic_office.workflow._model_config_usable", return_value=True)
     @patch("src.comic_office.workflow._cabinet_story_writer_llm", return_value={"assistant_message": "Mock LLM Message", "story": {}})

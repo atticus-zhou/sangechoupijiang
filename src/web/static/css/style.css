@@ -445,6 +445,11 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .comic-asset-review-panel .office-submit-actions {
     margin-top: 14px;
 }
+.comic-asset-review-panel textarea {
+    margin-top: 12px;
+    min-height: 74px;
+    resize: vertical;
+}
 .mini-desc {
     margin: 4px 0 0;
     font-size: 13px;
@@ -1195,6 +1200,31 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .model-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .model-card-head h4 { margin-bottom: 0; flex-wrap: wrap; }
 .agent-tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); color: var(--text2); font-weight: 500; }
+.model-requirement {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--bg);
+}
+.model-requirement strong,
+.model-requirement span,
+.model-requirement p {
+    display: block;
+    line-height: 1.5;
+}
+.model-requirement strong {
+    color: var(--text);
+    font-size: 13px;
+}
+.model-requirement span,
+.model-requirement p {
+    color: var(--text2);
+    font-size: 12px;
+}
+.model-requirement p {
+    margin-top: 3px;
+}
 .advanced-toggle { font-size: 13px; color: var(--text2); cursor: pointer; margin-top: 12px; display: inline-flex; align-items: center; gap: 4px; user-select: none; font-weight: 500; }
 .advanced-toggle:hover { color: var(--accent); }
 .advanced-row { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line); }

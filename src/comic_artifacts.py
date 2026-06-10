@@ -21,8 +21,6 @@ def build_comic_artifacts(task_id: str, result: dict) -> list[dict]:
         _artifact("character_sheet", f"{title} - 人物图设定", _table_for(package.get("characters", [])), "hubu", artifact_meta),
         _artifact("prop_sheet", f"{title} - 道具图设定", _table_for(package.get("props", [])), "hubu", artifact_meta),
         _artifact("scene_sheet", f"{title} - 场景图设定", _table_for(package.get("scenes", [])), "hubu", artifact_meta),
-        _artifact("storyboard_table", f"{title} - 分镜表", _storyboard_table(package), "bingbu", artifact_meta),
-        _artifact("camera_plan", f"{title} - 运镜方案", _camera_plan(package), "bingbu", artifact_meta),
         _artifact("prompt_package", f"{title} - 提示词包", _prompt_package(package), "gongbu", artifact_meta),
         _artifact("production_canvas", f"{title} - 制片画布", _production_canvas(package), "gongbu", artifact_meta),
         _artifact("word_canvas", f"{title} - Word画布交付", _word_canvas_note(package), "gongbu", artifact_meta),
@@ -134,7 +132,7 @@ def _style_content(package: dict) -> str:
         "",
         f"- 锁定画风：{style}",
         "- 画幅：默认竖屏优先，除非用户修改平台要求。",
-        "- 色彩连续性：人物图、道具图、场景图和分镜图必须保持同一主色调体系。",
+        "- 色彩连续性：人物图、道具图、场景图和镜头提示词必须保持同一主色调体系。",
         "- 光线连续性：重复出现的场景必须保持同一主光方向。",
         "- 重生成规则：如果生成图破坏脸型、服装、色彩、道具状态或场景布局，先调整提示词/参考图再继续。",
     ])
@@ -144,15 +142,30 @@ def _asset_review_package(package: dict) -> str:
     lines = [
         f"# {package.get('title', 'AI漫剧')} 资产拆解审核包",
         "",
-        "这个产物用于人在正式生图前审核：人物、道具、场景、剧情节拍和分镜输入是否贴合故事。",
+        "这个产物用于人在正式生图前审核：人物、道具、场景、剧情节拍和镜头提示词输入是否贴合故事。",
         "",
         "## 审核结论",
         "- 状态：待审核",
         "- 通过后：尚书省再派发给户部/兵部/工部继续生产。",
         "- 不通过：回到中书省/门下省修改拆解，不应直接消耗生图额度。",
         "",
+        "## 提示词预审",
+    ]
+    prompt_generation = package.get("prompt_generation") or {}
+    review = prompt_generation.get("quality_review") or {}
+    lines.extend([
+        f"- 生成方式：{_prompt_generation_mode_label(prompt_generation.get('mode', ''))}",
+        f"- 刑部预审：{review.get('status', '未执行')}",
+        f"- 预审说明：{review.get('summary', '暂无')}",
+    ])
+    issues = review.get("issues") or []
+    if issues:
+        lines.append(f"- 需要注意：{'；'.join(str(item) for item in issues)}")
+    lines.extend([
+        "",
         "## 人物",
     ]
+    )
     for item in package.get("characters", []) or []:
         lines.append(f"- {item.get('id', '')}｜{item.get('name', '')}｜{item.get('role', '')}｜{item.get('image_prompt', '')}")
         lines.extend(_asset_spec_lines(item))
@@ -171,13 +184,21 @@ def _asset_review_package(package: dict) -> str:
     for beat in package.get("script_beats", []) or []:
         lines.append(f"- {beat.get('id', '')}｜{beat.get('name', '')}｜{beat.get('content', '')}")
     lines.append("")
-    lines.append("## 分镜输入")
+    lines.append("## 镜头提示词输入")
     for shot in package.get("shots", []) or []:
         lines.append(
             f"- {shot.get('id', '')}｜{shot.get('beat', '')}｜人物：{', '.join(shot.get('characters', []))}｜"
             f"场景：{shot.get('scene', '')}｜道具：{', '.join(shot.get('props', []))}"
         )
     return "\n".join(lines)
+
+
+def _prompt_generation_mode_label(mode: str) -> str:
+    labels = {
+        "llm_enhanced": "大模型增强提示词",
+        "rule_template": "规则模板兜底",
+    }
+    return labels.get(mode or "", mode or "未执行")
 
 
 def _asset_spec_lines(item: dict) -> list[str]:
@@ -201,28 +222,6 @@ def _table_for(items: list[dict]) -> str:
     return "\n".join(rows)
 
 
-def _storyboard_table(package: dict) -> str:
-    rows = [
-        "| 镜头 | 锚点 | 剧情节拍 | Beat ID | 场景 | 人物 | 道具 | 景别 | 对应图片 | 生图提示词 |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-    ]
-    for shot in package.get("shots", []) or []:
-        binding = shot.get("binding", {}) or {}
-        rows.append(
-            f"| {shot.get('id', '')} | {binding.get('anchor_id', '')} | {shot.get('beat', '')} | {binding.get('beat_id', '')} | {shot.get('scene', '')} | "
-            f"{', '.join(shot.get('characters', []))} | {', '.join(shot.get('props', []))} | "
-            f"{shot.get('framing', '')} | {shot.get('image_ref', '')} | {shot.get('image_prompt', '')} |"
-        )
-    return "\n".join(rows)
-
-
-def _camera_plan(package: dict) -> str:
-    rows = ["| 镜头 | 运镜方式 | 视频生成提示词 |", "| --- | --- | --- |"]
-    for shot in package.get("shots", []) or []:
-        rows.append(f"| {shot.get('id', '')} | {shot.get('camera_movement', '')} | {shot.get('video_prompt', '')} |")
-    return "\n".join(rows)
-
-
 def _prompt_package(package: dict) -> str:
     lines = ["# 提示词包", "", "## 资产提示词"]
     for group in ("characters", "props", "scenes"):
@@ -235,9 +234,19 @@ def _prompt_package(package: dict) -> str:
     global_negative = package.get("global_negative_prompt") or ""
     if global_negative:
         lines.extend(["", "## 全局负面提示词", global_negative])
-    lines.append("\n## 分镜图提示词")
+    lines.append("\n## 镜头画面与视频提示词")
     for shot in package.get("shots", []) or []:
-        lines.append(f"- {shot.get('id')} 对应图片 {shot.get('image_ref')}: {shot.get('image_prompt')}")
+        lines.append(f"- {shot.get('id')}: {shot.get('director_prompt') or shot.get('image_prompt')}")
+        if shot.get("reference_assets"):
+            lines.append(f"  参考资产：{shot.get('reference_assets')}")
+        if shot.get("action_chain"):
+            lines.append(f"  动作链：{shot.get('action_chain')}")
+        if shot.get("performance_intent"):
+            lines.append(f"  表演意图：{shot.get('performance_intent')}")
+        if shot.get("cinematography"):
+            lines.append(f"  摄影：{shot.get('cinematography')}")
+        if shot.get("lighting"):
+            lines.append(f"  灯光：{shot.get('lighting')}")
         lines.append(f"  视频提示词：{shot.get('video_prompt')}")
     return "\n".join(lines)
 
@@ -246,15 +255,16 @@ def _production_canvas(package: dict) -> str:
     rows = [
         f"# {package.get('title', 'AI漫剧')} 制片画布",
         "",
-        "| 镜头 | 脚本版本 | 对应图片 | 画面内容 | 人物 | 场景 | 道具 | 分镜图提示词 | 视频/运镜提示词 |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| 镜头 | 脚本版本 | 画面内容 | 参考资产 | 动作链 | 表演意图 | 摄影/灯光 | 视频生成提示词 |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for shot in package.get("shots", []) or []:
         binding = shot.get("binding", {}) or {}
+        camera_light = "；".join(part for part in [shot.get("cinematography", ""), shot.get("lighting", "")] if part)
         rows.append(
-            f"| {shot.get('id', '')} | v{binding.get('script_version', 0)} / {binding.get('beat_id', '')} | 对应图片：{shot.get('image_ref', '')} | {shot.get('beat', '')} | "
-            f"{', '.join(shot.get('characters', []))} | {shot.get('scene', '')} | {', '.join(shot.get('props', []))} | "
-            f"{shot.get('image_prompt', '')} | {shot.get('video_prompt', '')} |"
+            f"| {shot.get('id', '')} | v{binding.get('script_version', 0)} / {binding.get('beat_id', '')} | {shot.get('beat', '')} | "
+            f"{shot.get('reference_assets', '')} | {shot.get('action_chain', '')} | {shot.get('performance_intent', '')} | "
+            f"{camera_light} | {shot.get('video_prompt', '')} |"
         )
     return "\n".join(rows)
 
@@ -264,7 +274,7 @@ def _word_canvas_note(package: dict) -> str:
         "# Word画布交付",
         "",
         "正式任务完成后，系统会生成 .docx 文件。",
-        "Word 中会用画布式表格展示：镜头、对应图片、人物、场景、道具、分镜图提示词、视频/运镜提示词和负面提示词。",
+        "Word 中会用画布式表格展示：镜头、参考资产、动作链、表演意图、摄影灯光、镜头提示词和视频提示词。",
         "如果此资产没有下载链接，说明文档生成库不可用或任务尚未完成。",
     ])
 
@@ -280,8 +290,9 @@ def _consistency_checklist(package: dict) -> str:
         "- 发型、服装、年龄感和色彩点缀不能漂移。",
         "- 道具必须保持同一形状、破损状态和归属关系。",
         "- 重复场景必须保持同一空间布局和关键背景物。",
-        "- 分镜图必须使用分镜表中指定的人物、道具、场景和 beat 锚点。",
-        "- 运镜方案必须和镜头景别兼容。",
+        "- 镜头提示词必须使用提示词表中指定的人物、道具、场景和 beat 锚点。",
+        "- 每个镜头必须有起始/过程/结束动作链、表演意图、摄影和灯光。",
+        "- 视频生成提示词必须和镜头景别、动作链、表演意图兼容。",
         "- 剧本一旦变更，必须按 script_hash 重新判断哪些人物、场景、镜头需要局部返工。",
         "- 未通过检查的图片必须先重生成，再扩展下一批镜头。",
     ])

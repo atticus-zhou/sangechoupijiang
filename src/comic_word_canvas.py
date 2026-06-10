@@ -42,35 +42,36 @@ def build_comic_word_canvas(package: dict, image_artifacts: list[dict], output_d
     global_negative = package.get("global_negative_prompt") or ""
     if global_negative:
         doc.add_heading("全局一致性与负面提示词", level=2)
-        doc.add_paragraph("下面这组规则对全部人物、道具、场景、分镜和视频运镜生效，不再在每个镜头里重复。")
+        doc.add_paragraph("下面这组规则对全部人物、道具、场景、镜头画面提示词和视频提示词生效，不再在每个镜头里重复。")
         doc.add_paragraph(global_negative)
 
     _add_asset_tables(doc, package, image_by_ref)
 
-    table = doc.add_table(rows=1, cols=8)
+    table = doc.add_table(rows=1, cols=9)
     table.style = "Table Grid"
-    headers = ["镜头", "对应图片", "画面内容", "人物", "场景", "道具", "分镜图提示词", "视频/运镜提示词"]
+    headers = ["镜头", "画面内容", "参考资产", "动作链", "表演意图", "摄影", "灯光", "镜头导演提示词", "视频生成提示词"]
     for index, header in enumerate(headers):
         table.rows[0].cells[index].text = header
 
     for shot in package.get("shots", []) or []:
         cells = table.add_row().cells
         cells[0].text = shot.get("id", "")
-        _fill_image_cell(cells[1], shot, image_by_ref)
-        cells[2].text = shot.get("beat", "")
-        cells[3].text = ", ".join(shot.get("characters", []))
-        cells[4].text = shot.get("scene", "")
-        cells[5].text = ", ".join(shot.get("props", []))
-        cells[6].text = shot.get("image_prompt", "")
-        cells[7].text = shot.get("video_prompt", "")
+        cells[1].text = shot.get("beat", "")
+        cells[2].text = shot.get("reference_assets", "") or _execution_asset_note(shot)
+        cells[3].text = shot.get("action_chain", "")
+        cells[4].text = shot.get("performance_intent", "")
+        cells[5].text = shot.get("cinematography", "")
+        cells[6].text = shot.get("lighting", "")
+        cells[7].text = shot.get("director_prompt", "") or shot.get("image_prompt", "")
+        cells[8].text = shot.get("video_prompt", "")
 
     doc.add_heading("平台执行表（Libtv / 图生视频）", level=2)
     doc.add_paragraph(
-        "这一页给后续视频平台执行使用：按镜头上传对应分镜图，复制平台提示词，保持角色、场景和道具锚点一致。"
+        "这一页给后续视频平台执行使用：复制视频提示词，并参考人物、道具、场景基础资产，保持角色、场景和道具锚点一致。"
     )
     exec_table = doc.add_table(rows=1, cols=7)
     exec_table.style = "Table Grid"
-    exec_headers = ["镜头", "上传图片", "视频时长", "平台提示词", "运镜", "动作重点", "失败重试建议"]
+    exec_headers = ["镜头", "参考资产", "视频时长", "平台提示词", "镜头运动", "动作链", "失败重试建议"]
     for index, header in enumerate(exec_headers):
         exec_table.rows[0].cells[index].text = header
 
@@ -78,11 +79,11 @@ def build_comic_word_canvas(package: dict, image_artifacts: list[dict], output_d
         cells = exec_table.add_row().cells
         shot_id = shot.get("id", "")
         cells[0].text = shot_id
-        cells[1].text = _execution_image_note(shot, image_by_ref)
+        cells[1].text = _execution_asset_note(shot)
         cells[2].text = _shot_duration(shot)
         cells[3].text = _platform_prompt(shot)
         cells[4].text = shot.get("camera_movement") or shot.get("camera") or "保持主体稳定，轻微推进。"
-        cells[5].text = shot.get("beat", "")
+        cells[5].text = shot.get("action_chain", "") or shot.get("beat", "")
         cells[6].text = _retry_advice(shot)
 
     for paragraph in doc.paragraphs:
@@ -172,29 +173,18 @@ def _image_artifact_map(image_artifacts: list[dict]) -> dict[str, Path]:
     return result
 
 
-def _fill_image_cell(cell, shot: dict, image_by_ref: dict[str, Path]) -> None:
-    from docx.shared import Inches
-
-    shot_id = shot.get("id", "")
-    image_path = image_by_ref.get(shot_id)
-    paragraph = cell.paragraphs[0]
-    paragraph.add_run(f"对应图片：{shot.get('image_ref', '')}")
-    if not image_path:
-        return
-    paragraph.add_run("\n")
-    try:
-        paragraph.add_run().add_picture(str(image_path), width=Inches(1.15))
-    except Exception:
-        paragraph.add_run(f"\n图片路径：{image_path}")
-
-
-def _execution_image_note(shot: dict, image_by_ref: dict[str, Path]) -> str:
-    shot_id = shot.get("id", "")
-    image_ref = shot.get("image_ref", "") or shot_id
-    image_path = image_by_ref.get(shot_id)
-    if image_path:
-        return f"{image_ref}\n{image_path.name}"
-    return image_ref
+def _execution_asset_note(shot: dict) -> str:
+    parts = []
+    characters = ", ".join(shot.get("characters", []) or [])
+    props = ", ".join(shot.get("props", []) or [])
+    scene = shot.get("scene", "")
+    if characters:
+        parts.append(f"人物：{characters}")
+    if scene:
+        parts.append(f"场景：{scene}")
+    if props:
+        parts.append(f"道具：{props}")
+    return "\n".join(parts) or "参考基础资产"
 
 
 def _shot_duration(shot: dict) -> str:
@@ -207,7 +197,7 @@ def _shot_duration(shot: dict) -> str:
 def _platform_prompt(shot: dict) -> str:
     parts = [
         shot.get("video_prompt", ""),
-        f"画面锚点：{shot.get('image_prompt', '')}",
+        f"导演提示词：{shot.get('director_prompt') or shot.get('image_prompt', '')}",
     ]
     return "\n".join(part for part in parts if part)
 
@@ -224,7 +214,7 @@ def _retry_advice(shot: dict) -> str:
     if props:
         anchors.append(f"道具：{props}")
     anchor_text = "；".join(anchors) or "先固定角色和场景锚点"
-    return f"若脸、服装或场景跑偏，回到对应分镜图重生；重试时保留：{anchor_text}。"
+    return f"若脸、服装或场景跑偏，回到人物/道具/场景基础资产重新约束；重试时保留：{anchor_text}。"
 
 
 def _safe_filename(text: str) -> str:

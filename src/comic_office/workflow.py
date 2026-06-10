@@ -4,7 +4,7 @@ The comic office is a pre-production studio:
 
 1. Lock the creative direction with the user.
 2. Let a small cabinet review the script logic before asset production.
-3. Produce script, assets, storyboards, prompts, and a Word delivery canvas.
+3. Produce script, base assets, shot prompts, and a Word delivery canvas.
 """
 
 from __future__ import annotations
@@ -152,7 +152,7 @@ def build_comic_request(
         f"Length: {length.strip() or '短篇'}",
         f"Platform: {platform.strip() or '竖屏短视频平台'}",
         f"Visual style: {visual_style.strip() or DEFAULT_STYLE}",
-        "Required output: 中文剧本方向、内阁剧本预审、人物/道具/场景拆解、风格圣经、分镜表、运镜方案、提示词包、制片画布和一致性检查清单。",
+        "Required output: 中文剧本方向、内阁剧本预审、人物/道具/场景拆解、风格圣经、镜头画面提示词、视频生成提示词、提示词包、制片画布和一致性检查清单。",
     ]
     if extra.strip():
         parts.append(f"Extra requirements: {extra.strip()}")
@@ -273,6 +273,223 @@ def build_comic_result(task_id: str, user_request: str) -> dict:
             "shots": shots,
         },
     }
+
+
+async def enhance_comic_prompts_llm(result: dict, model_configs: dict[str, ModelConfig] | None = None) -> dict:
+    """Let text models rewrite asset and shot prompts before human asset review."""
+    package = (result or {}).get("comic_package") or {}
+    if not package:
+        return result
+    config = _prompt_writer_config(model_configs or {})
+    if not _model_config_usable(config):
+        package["prompt_generation"] = {
+            "mode": "rule_template",
+            "quality_review": {
+                "status": "fallback",
+                "summary": "工部/兵部文本模型未配置，暂用规则模板提示词。建议配置可用文本模型后重新生成资产拆解包。",
+                "issues": ["prompt_model_missing"],
+            },
+        }
+        return result
+    llm = LLMFactory.create(config)
+    try:
+        response = await retry_async(
+            lambda: llm.chat(
+                [
+                    LLMMessage(role="system", content=_prompt_enhancer_system_prompt()),
+                    LLMMessage(role="user", content=_prompt_enhancer_user_prompt(package)),
+                ],
+                response_format={"type": "json_object"},
+            ),
+            attempts=2,
+            delay_seconds=0.2,
+        )
+        payload = _parse_prompt_enhancement_json(response.content)
+    except Exception as e:
+        package["prompt_generation"] = {
+            "mode": "rule_template",
+            "quality_review": {
+                "status": "fallback",
+                "summary": "提示词增强模型调用失败，暂用规则模板提示词。",
+                "issues": [str(e)[:160]],
+            },
+        }
+        return result
+    if not payload:
+        package["prompt_generation"] = {
+            "mode": "rule_template",
+            "quality_review": {
+                "status": "fallback",
+                "summary": "提示词增强模型没有返回可用结构化结果，暂用规则模板提示词。",
+                "issues": ["invalid_prompt_enhancement_json"],
+            },
+        }
+        return result
+    _apply_prompt_enhancement(package, payload)
+    review = payload.get("quality_review") or {}
+    package["prompt_generation"] = {
+        "mode": "llm_enhanced",
+        "model": getattr(config, "model", ""),
+        "quality_review": {
+            "status": str(review.get("status") or "pass"),
+            "summary": str(review.get("summary") or "刑部预审通过：提示词已经过故事贴合度和可执行性检查。"),
+            "issues": [str(item) for item in (review.get("issues") or []) if str(item).strip()],
+        },
+    }
+    return result
+
+
+def _prompt_writer_config(configs: dict[str, ModelConfig]) -> ModelConfig | None:
+    for key in ("gongbu", "bingbu", "xingbu", "shangshu"):
+        cfg = configs.get(key)
+        if _model_config_usable(cfg):
+            return cfg
+    return None
+
+
+def _prompt_enhancer_system_prompt() -> str:
+    return (
+        "你是AI漫剧制片办公室的工部提示词主笔，同时接受刑部预审。"
+        "你的任务不是套模板，而是像导演和提示词导演一样，根据确认故事、人物、道具、场景和镜头，"
+        "重写可直接用于生图/视频生成的中文提示词。"
+        "必须区分基础资产和镜头提示词：人物/道具/场景基础图只锁定设定，不讲故事；镜头画面提示词和视频提示词可以讲剧情。"
+        "镜头提示词必须像导演给摄影、演员和视频生成平台下指令：要有首帧/参考资产、动作链、表演意图、摄影、灯光、"
+        "情绪节奏、台词或无台词表演，并且每条都要因剧情节拍不同而变化。"
+        "必须保持资产ID不变，只输出JSON对象。"
+    )
+
+
+def _prompt_enhancer_user_prompt(package: dict) -> str:
+    compact = {
+        "title": package.get("title", ""),
+        "visual_style": package.get("visual_style", ""),
+        "confirmed_script": package.get("confirmed_script", {}),
+        "characters": _compact_prompt_items(package.get("characters", [])),
+        "props": _compact_prompt_items(package.get("props", [])),
+        "scenes": _compact_prompt_items(package.get("scenes", [])),
+        "shots": [
+            {
+                "id": shot.get("id", ""),
+                "beat": shot.get("beat", ""),
+                "framing": shot.get("framing", ""),
+                "camera_movement": shot.get("camera_movement", ""),
+                "characters": shot.get("characters", []),
+                "props": shot.get("props", []),
+                "scene": shot.get("scene", ""),
+                "image_prompt": shot.get("image_prompt", ""),
+                "video_prompt": shot.get("video_prompt", ""),
+                "reference_assets": shot.get("reference_assets", ""),
+                "performance_intent": shot.get("performance_intent", ""),
+                "action_chain": shot.get("action_chain", ""),
+                "cinematography": shot.get("cinematography", ""),
+                "lighting": shot.get("lighting", ""),
+                "director_prompt": shot.get("director_prompt", ""),
+            }
+            for shot in package.get("shots", [])[:12]
+        ],
+    }
+    return "\n".join([
+        "请把下面的模板化提示词重写为更贴合故事的制片提示词。",
+        "要求：",
+        "1. 不要只替换名字；每条提示词都要具体，但必须区分职责。",
+        "2. 人物资产要能支撑一致性：脸型、发型、服装主色、标志物、年龄感。",
+        "3. 道具资产只展示形状、材质、尺寸、颜色、磨损状态和多角度参考，不要人物手持，不要剧情现场。",
+        "4. 场景资产只展示空间结构、光线、入口、站位区和机位参考，尽量无人物，不要正在发生的剧情。",
+        "5. 镜头提示词必须使用导演字段：reference_assets、action_chain、performance_intent、cinematography、lighting、director_prompt。",
+        "6. action_chain 要写成“起始/过程/结束”，不要只写一个静态画面。",
+        "7. performance_intent 要写演员状态、眼神、语气、节奏或心理，不要只写“悲伤/紧张”。",
+        "8. cinematography 和 lighting 要贴合故事，不要每个镜头都复制同一套摄影机和灯光。",
+        "9. director_prompt 是给图生视频/文生视频平台的完整镜头提示词，必须引用人物/道具/场景资产，不要求单独为镜头出图。",
+        "10. video_prompt 要和镜头方式、动作链、表演意图相关，不能只写泛泛的“慢推/拉远”。",
+        "11. 不要添加不存在的核心剧情，不要改资产ID。",
+        "12. director_prompt 建议采用这类信息密度：镜头方式 + 参考资产 + 角色动作/台词或无台词表演 + 摄影镜头 + 色彩光线 + 一致性禁忌。",
+        "13. negative_prompt 只写该镜头特别需要避免的问题，通用限制已有 global_negative_prompt，不要每条机械重复同一长串。",
+        "14. 最后给出刑部预审 quality_review，检查基础资产是否误讲故事、提示词是否模板化、镜头提示词是否可执行。",
+        "",
+        "返回JSON格式：",
+        '{"characters":[{"id":"char_01","image_prompt":"...","asset_specs":[{"kind":"character_three_view","label":"人物三视图","image_ref":"char_01_three_view.png","prompt":"...","acceptance":"..."}]}],"props":[{"id":"prop_01","image_prompt":"...","asset_specs":[]}],"scenes":[{"id":"scene_01","image_prompt":"...","asset_specs":[]}],"shots":[{"id":"shot_001","reference_assets":"参考资产：...","action_chain":"起始：...；过程：...；结束：...","performance_intent":"...","cinematography":"...","lighting":"...","director_prompt":"...","image_prompt":"...","video_prompt":"...","negative_prompt":"..."}],"quality_review":{"status":"pass|needs_revision","summary":"...","issues":[]}}',
+        "",
+        "待处理资产：",
+        json.dumps(compact, ensure_ascii=False),
+    ])
+
+
+def _compact_prompt_items(items: list[dict]) -> list[dict]:
+    compact = []
+    for item in items[:12]:
+        compact.append({
+            "id": item.get("id", ""),
+            "name": item.get("name", ""),
+            "role": item.get("role", ""),
+            "continuity_rule": item.get("continuity_rule", item.get("visual_lock", "")),
+            "image_prompt": item.get("image_prompt", ""),
+            "asset_specs": [
+                {
+                    "kind": spec.get("kind", ""),
+                    "label": spec.get("label", ""),
+                    "image_ref": spec.get("image_ref", ""),
+                    "prompt": spec.get("prompt", ""),
+                    "acceptance": spec.get("acceptance", ""),
+                }
+                for spec in item.get("asset_specs", [])[:4]
+            ],
+        })
+    return compact
+
+
+def _parse_prompt_enhancement_json(content: str) -> dict:
+    raw = (content or "").strip()
+    if not raw or raw.startswith("[API错误]"):
+        return {}
+    data = parse_json_object(raw)
+    return data if isinstance(data, dict) else {}
+
+
+def _apply_prompt_enhancement(package: dict, payload: dict) -> None:
+    for group in ("characters", "props", "scenes"):
+        current = {item.get("id", ""): item for item in package.get(group, []) or []}
+        for incoming in payload.get(group, []) or []:
+            item = current.get(incoming.get("id", ""))
+            if not item:
+                continue
+            if incoming.get("image_prompt"):
+                item["image_prompt"] = str(incoming["image_prompt"]).strip()
+            incoming_specs = incoming.get("asset_specs") or []
+            if incoming_specs:
+                item["asset_specs"] = _merge_asset_specs(item.get("asset_specs", []), incoming_specs)
+    shots = {shot.get("id", ""): shot for shot in package.get("shots", []) or []}
+    for incoming in payload.get("shots", []) or []:
+        shot = shots.get(incoming.get("id", ""))
+        if not shot:
+            continue
+        for key in (
+            "image_prompt",
+            "video_prompt",
+            "negative_prompt",
+            "reference_assets",
+            "performance_intent",
+            "action_chain",
+            "cinematography",
+            "lighting",
+            "director_prompt",
+        ):
+            if incoming.get(key):
+                shot[key] = str(incoming[key]).strip()
+
+
+def _merge_asset_specs(current_specs: list[dict], incoming_specs: list[dict]) -> list[dict]:
+    by_key = {(spec.get("kind") or spec.get("label") or ""): dict(spec) for spec in current_specs or []}
+    for incoming in incoming_specs or []:
+        key = incoming.get("kind") or incoming.get("label") or ""
+        if not key:
+            continue
+        original = by_key.get(key, {})
+        merged = {**original}
+        for field in ("kind", "label", "image_ref", "prompt", "acceptance"):
+            if incoming.get(field):
+                merged[field] = str(incoming[field]).strip()
+        by_key[key] = merged
+    return list(by_key.values())
 
 
 def parse_comic_request(user_request: str) -> dict:
@@ -1692,16 +1909,18 @@ def _enrich_production_assets(
     props: list[dict],
     scenes: list[dict],
 ) -> None:
-    """Attach production-grade asset specs before storyboard/image generation."""
+    """Attach production-grade asset specs before image generation."""
     style = _premium_visual_style(visual_style)
     for item in characters or []:
         name = item.get("name", "")
         role = item.get("role", "")
         lock = item.get("visual_lock", "")
         item["image_prompt"] = (
-            f"{title}，{style}，商业级人物设定图，{name}，{role}，半身肖像和全身站姿结合，"
-            f"面部结构精致，眼神有戏，服装材质和主色清楚，适合后续角色一致性参考，"
-            f"柔和电影布光，干净背景，不要文字，不要标签，不要编号。连续性要求：{lock}"
+            f"{style}，基础人物设定图，角色名称：{name}，角色功能：{role}，"
+            f"只展示角色基础外观，不演剧情动作，不出现其他角色。半身肖像和全身站姿结合，"
+            f"锁定脸型、发型、年龄感、体型、服装主色、服装材质和标志性随身物，"
+            f"干净中性背景，柔和工作室布光，适合后续角色一致性参考，"
+            f"不要文字，不要标签，不要编号，不要剧情场景。连续性要求：{lock}"
         )
         item.setdefault("asset_specs", [
             {
@@ -1709,9 +1928,10 @@ def _enrich_production_assets(
                 "label": "人物三视图",
                 "image_ref": f"{item.get('id', 'character')}_three_view.png",
                 "prompt": (
-                    f"{title}，{style}，商业级角色设定三视图，{name}，{role}，正面、侧面、背面，"
-                    f"统一脸型骨相、统一发型轮廓、统一服装主色和材质，完整站姿，角色可用于后续视频生成参考，"
-                    f"细腻面部结构，清晰服装褶皱，专业设定稿排版，柔和电影布光，"
+                    f"{style}，基础人物三视图，角色名称：{name}，角色功能：{role}，"
+                    f"正面、侧面、背面，统一脸型骨相、统一发型轮廓、统一服装主色和材质，"
+                    f"完整站姿，干净中性背景，专业设定稿排版，柔和工作室布光，"
+                    f"只用于锁定角色外观，不演剧情，不出现道具散落或冲突事件，"
                     f"不要文字，不要编号，不要水印。连续性要求：{lock}"
                 ),
                 "acceptance": "正面、侧面、背面必须像同一个角色；服装、发型、年龄感稳定。",
@@ -1721,9 +1941,10 @@ def _enrich_production_assets(
                 "label": "人物表情表",
                 "image_ref": f"{item.get('id', 'character')}_expressions.png",
                 "prompt": (
-                    f"{title}，{style}，商业级角色表情表，{name}，{role}，中性、震惊、愤怒、悲伤、克制、决绝，"
+                    f"{style}，基础人物表情表，角色名称：{name}，角色功能：{role}，中性、震惊、愤怒、悲伤、克制、决绝，"
                     f"六个半身表情，同一脸型和发型，同一服装，同一年龄感，眼神和嘴角情绪清晰，"
-                    f"干净背景，适合做角色一致性参考，不要文字，不要编号，不要水印。"
+                    f"干净中性背景，适合做角色一致性参考，只展示表情，不演剧情，"
+                    f"不要文字，不要编号，不要水印。"
                 ),
                 "acceptance": "六个表情可区分，但脸型、发型、服装不能漂移。",
             },
@@ -1732,9 +1953,10 @@ def _enrich_production_assets(
         name = item.get("name", "")
         rule = item.get("continuity_rule", "")
         item["image_prompt"] = (
-            f"{title}，{style}，商业级关键道具设定图，{name}，单独展示，材质纹理清晰，"
-            f"颜色、磨损、尺寸和形状稳定，边缘干净，适合后续分镜重复引用，"
-            f"工作室柔光，干净背景，不要文字，不要标签，不要编号。连续性要求：{rule}"
+            f"{style}，基础道具设定图，道具名称：{name}，单独展示，"
+            f"只锁定道具的形状、尺寸、颜色、材质、纹理、磨损状态和识别特征，"
+            f"边缘干净，适合后续分镜重复引用，工作室柔光，干净中性背景，"
+            f"不要人物，不要剧情动作，不要散落现场，不要文字，不要标签，不要编号。连续性要求：{rule}"
         )
         item.setdefault("asset_specs", [
             {
@@ -1742,50 +1964,68 @@ def _enrich_production_assets(
                 "label": "道具多角度设定",
                 "image_ref": f"{item.get('id', 'prop')}_turnaround.png",
                 "prompt": (
-                    f"{title}，{style}，商业级关键道具设定图，{name}，正面、侧面、细节特写，"
+                    f"{style}，基础道具多角度设定，道具名称：{name}，正面、侧面、细节特写，"
                     f"材质纹理清晰，颜色和磨损稳定，比例真实，边缘干净，能被后续分镜反复识别，"
-                    f"柔和工作室布光，干净背景，不要文字，不要编号，不要水印。连续性要求：{rule}"
+                    f"柔和工作室布光，干净中性背景，不出现人物手持、尸体、打斗或剧情现场，"
+                    f"不要文字，不要编号，不要水印。连续性要求：{rule}"
                 ),
                 "acceptance": "道具形状、颜色、材质稳定，后续镜头能一眼认出。",
             },
             {
                 "kind": "prop_usage_sheet",
-                "label": "道具使用状态",
+                "label": "道具基础状态",
                 "image_ref": f"{item.get('id', 'prop')}_usage.png",
                 "prompt": (
-                    f"{title}，{style}，{name}在剧情中的使用状态参考，静置、被握住、特写、关键变化前后对比，"
-                    f"保持同一物件的材质、体积、颜色和破损状态，镜头有电影质感，细节清晰，不要文字，不要编号，不要水印。"
+                    f"{style}，基础道具状态表，道具名称：{name}，静置状态、打开/关闭或完整/轻微磨损状态、细节特写，"
+                    f"保持同一物件的材质、体积、颜色和破损状态，干净中性背景，细节清晰，"
+                    f"只做道具参考，不演剧情使用，不出现角色手部、血迹、尸体或冲突场面，"
+                    f"不要文字，不要编号，不要水印。"
                 ),
-                "acceptance": "使用前后仍然是同一个道具，关键变化服务剧情。",
+                "acceptance": "不同状态仍然是同一个道具，形状、颜色、材质稳定。",
             },
         ])
     for item in scenes or []:
         name = item.get("name", "")
         rule = item.get("continuity_rule", "")
         item["image_prompt"] = (
-            f"{title}，{style}，商业级场景概念图，{name}，竖屏漫剧背景，无人物，"
+            f"{style}，基础场景设定图，场景名称：{name}，竖屏漫剧背景，无人物，"
             f"空间透视清楚，光线方向明确，环境细节真实可信，远中近景层次分明，"
-            f"电影氛围和色彩统一，适合后续分镜复用，不要文字，不要标签，不要编号。连续性要求：{rule}"
+            f"电影氛围和色彩统一，适合后续分镜复用，只锁定空间结构，不演剧情事件，"
+            f"不要文字，不要标签，不要编号，不要角色互动。连续性要求：{rule}"
         )
         item.setdefault("asset_specs", [
             {
-                "kind": "scene_layout",
-                "label": "场景空间设定",
-                "image_ref": f"{item.get('id', 'scene')}_layout.png",
+                "kind": "scene_wide_establishing",
+                "label": "场景广角建立图",
+                "image_ref": f"{item.get('id', 'scene')}_wide.png",
                 "prompt": (
-                    f"{title}，{style}，商业级场景空间设定图，{name}，建立镜头，主要入口、人物站位区、关键道具位置，"
-                    f"空间层次清楚，远中近景分明，光线方向明确，色调稳定，环境细节真实可信，电影级氛围，"
-                    f"不要文字，不要编号，不要水印。连续性要求：{rule}"
+                    f"{style}，基础场景广角建立图，场景名称：{name}，横向或竖向广角均可，完整展示主要空间、入口、出口、"
+                    f"关键背景物、可站位区域和纵深关系，空间层次清楚，远中近景分明，光线方向明确，"
+                    f"色调稳定，环境细节真实可信，电影级氛围，"
+                    f"无人物，无剧情动作，只展示空间布局，不要文字，不要编号，不要水印。连续性要求：{rule}"
                 ),
-                "acceptance": "空间结构、光线方向和关键道具位置清楚，能支撑后续分镜。",
+                "acceptance": "广角下能看清空间边界、入口出口、纵深和主要背景物，能作为后续镜头参考。",
+            },
+            {
+                "kind": "scene_top_down_layout",
+                "label": "场景俯视布局图",
+                "image_ref": f"{item.get('id', 'scene')}_top_down.png",
+                "prompt": (
+                    f"{style}，基础场景俯视布局图，场景名称：{name}，从上方俯视展示平面空间结构，"
+                    f"明确入口、出口、主要通道、可站位区域、关键家具或背景物位置，"
+                    f"保持比例关系清楚，便于后续安排人物走位和镜头调度，干净制片参考图，"
+                    f"无人物，无剧情动作，不要文字，不要编号，不要水印。连续性要求：{rule}"
+                ),
+                "acceptance": "俯视图能说明空间平面关系和走位区域，不依赖文字也能理解布局。",
             },
             {
                 "kind": "scene_camera_angles",
                 "label": "场景常用机位",
                 "image_ref": f"{item.get('id', 'scene')}_camera_angles.png",
                 "prompt": (
-                    f"{title}，{style}，{name}常用镜头角度，远景、中景、低角度、特写背景，"
-                    f"同一空间连续，光线与陈设一致，镜头语言清楚，适合导演分镜参考，电影构图，不要文字，不要编号，不要水印。"
+                    f"{style}，基础场景常用机位，场景名称：{name}，远景、中景、低角度、特写背景，"
+                    f"同一空间连续，光线与陈设一致，镜头语言清楚，适合导演分镜参考，电影构图，"
+                    f"无人物，无剧情冲突，不要文字，不要编号，不要水印。"
                 ),
                 "acceptance": "多个机位看起来属于同一个空间，不应像不同地点。",
             },
@@ -2012,10 +2252,10 @@ def _shot_plan(
             "characters": [c["id"] for c in shot_chars],
             "props": [p["id"] for p in shot_props],
             "scene": shot_scenes[0]["id"] if shot_scenes else "",
-            "image_ref": f"{shot_id}_storyboard.png",
+            "image_ref": "",
             "image_prompt": (
-                f"{visual_style}，{framing}，{beat}，场景：{scene_name}，人物：{char_names}，"
-                f"道具：{prop_names}，电影感竖屏漫剧分镜图"
+                f"{visual_style}，竖屏AI漫剧镜头画面提示词，{framing}，{beat}，场景：{scene_name}，人物：{char_names}，"
+                f"道具：{prop_names}，电影感画面，供图生视频或文生视频使用"
             ),
             "video_prompt": f"{movement}，保持{framing}构图，人物动作服务于“{beat}”，竖屏短剧节奏。",
             "negative_prompt": "脸型变化、服装不一致、多余手指、背景扭曲、随机logo、不可读文字、画风漂移",
@@ -2188,7 +2428,7 @@ def _format_package_overview(**data) -> str:
         format_creative_brief(data["creative_brief"]),
         "",
         "## 交付边界",
-        "- 本办公室交付剧本、内阁意见、人物图、道具图、场景图、分镜图、运镜方案、提示词和Word制片画布。",
+        "- 本办公室交付剧本、内阁意见、人物图、道具图、场景图、镜头画面提示词、视频生成提示词和Word制片画布。",
         "- 最终视频生成、配音、剪辑和发布不属于本办公室交付范围。",
         "",
         "## 一致性闭环",
@@ -2203,7 +2443,7 @@ def _format_package_overview(**data) -> str:
 # ---- AI comic production v2 helpers ----
 # These override the older template-heavy helpers above. The goal is to keep the
 # production package story-driven: confirmed story text must feed characters,
-# props, scenes, storyboard beats, prompts, and the final canvas.
+# props, scenes, shot beats, prompts, and the final canvas.
 
 
 def _normal_label_value(section: str, labels: tuple[str, ...]) -> str:
@@ -2382,6 +2622,18 @@ def _script_beats_from_preview(script: dict) -> list[dict]:
 def _detected_story_characters(script: dict) -> list[tuple[str, str]]:
     text = _story_asset_text(script)
     pairs: list[tuple[str, str]] = []
+    role_aliases = [
+        ("女主", "故事女主角，承担主要行动和情绪视角"),
+        ("男主", "故事男主角，承担主要行动和情绪视角"),
+        ("母亲", "核心亲情关系中的行动者"),
+        ("父亲", "核心亲情关系中的行动者"),
+        ("老板", "掌握信息或制造压力的人"),
+        ("老师", "校园或社会关系中的权威角色"),
+        ("学生", "故事中的年轻行动者或被影响者"),
+    ]
+    for name, role in role_aliases:
+        if name in text and all(existing != name for existing, _ in pairs):
+            pairs.append((name, role))
     generic_names = _probable_chinese_names(text)
     if "辅助阿衡" in text or "阿衡" in text or "辅助" in text:
         pairs.append(("辅助阿衡", "被长期忽视却照顾所有人的队伍辅助"))
@@ -2394,8 +2646,12 @@ def _detected_story_characters(script: dict) -> list[tuple[str, str]]:
     ]:
         if name in text:
             pairs.append((name, role))
-    if not pairs:
+    if len(pairs) < 4:
         for name in generic_names:
+            if any(existing == name for existing, _ in pairs):
+                continue
+            if pairs and text.count(name) < 2:
+                continue
             pairs.append((name, "故事主角或关键行动者"))
     return pairs[:4]
 
@@ -2406,6 +2662,8 @@ def _probable_chinese_names(text: str) -> list[str]:
         "同学", "教学", "校门", "未来", "故事", "主角", "视觉", "平台", "自然", "灯光",
         "在黑", "角落", "指向", "走向", "独自", "下课", "一起", "一个", "最后",
         "毕业", "季散", "高考", "前夜", "迷茫", "熟悉", "陌生", "接受", "未知",
+        "黄昏", "清晨", "夜晚", "傍晚", "办公室", "房间", "街道", "小巷", "走廊",
+        "方式", "从安", "安静", "身体", "前倾", "轻声", "追问", "真相", "秘密",
     }
     common_surnames = "赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜谢邹喻柏水窦章云苏潘葛奚范彭郎鲁韦昌马苗凤花方俞任袁柳鲍史唐费廉岑薛雷贺倪汤滕殷罗毕郝邬安常乐于时傅皮卞齐康伍余元卜顾孟平黄和穆萧尹姚邵湛汪祁毛禹狄米贝明臧计伏成戴谈宋庞熊纪舒屈项祝董梁杜阮蓝闵席季麻强贾路娄危江童颜郭梅盛林刁钟徐邱骆高夏蔡田胡凌霍虞万支柯昝管卢莫经房裘缪干解应宗丁宣邓郁单杭洪包诸左石崔吉龚程邢裴陆荣翁荀羊於惠甄曲家封芮羿储靳汲邴糜松井段富巫乌焦巴弓牧隗山谷车侯宓蓬全郗班仰秋仲伊宫宁仇栾暴甘斜厉戎祖武符刘景詹龙叶幸司韶黎蓟薄印宿白怀蒲邰从鄂索咸籍赖卓蔺屠蒙池乔阴胥能苍双闻莘党翟谭贡劳逄姬申扶堵冉宰郦雍桑桂濮牛寿通边扈燕冀郏浦尚农温别庄晏柴瞿阎充慕连茹习宦艾鱼容向古易慎戈廖庾终暨居衡步都耿满弘匡国文寇广禄阙东欧利师巩聂关荆"
     action_names = _action_context_names(text, common_surnames)
@@ -2524,11 +2782,10 @@ def _shot_plan(
     beats: list[dict],
 ) -> list[dict]:
     visual_style = _premium_visual_style(visual_style)
-    framings = ["特写", "中景", "超近特写", "插入镜头", "低角度双人镜头", "远景"]
-    movements = ["缓慢推进", "手持跟拍", "固定机位", "快速转焦", "缓慢环绕", "缓慢拉远"]
     result = []
     for index, beat in enumerate(beats[:6], start=1):
         shot_id = f"shot_{index:03d}"
+        beat_text = beat.get("content") or beat.get("name") or ""
         shot_chars = characters[:1] if index in (1, 3) else characters[:2]
         if index == 6:
             shot_chars = characters[:3]
@@ -2537,32 +2794,211 @@ def _shot_plan(
         char_names = "、".join(c["name"] for c in shot_chars) or "无可见人物"
         prop_names = "、".join(p["name"] for p in shot_props) or "无关键道具"
         scene_name = shot_scenes[0]["name"] if shot_scenes else "中性背景"
-        framing = framings[(index - 1) % len(framings)]
-        movement = movements[(index - 1) % len(movements)]
-        beat_text = beat.get("content") or beat.get("name") or ""
+        camera_plan = _camera_plan_for_beat(beat_text, index)
+        framing = camera_plan["framing"]
+        movement = camera_plan["movement"]
+        cinematography = camera_plan["cinematography"]
+        lighting = _lighting_for_beat(beat_text, index)
+        action_chain = _shot_action_chain(beat_text, index)
+        performance_intent = _shot_performance_intent(beat_text, index)
+        reference_assets = _shot_reference_assets(shot_chars, shot_props, shot_scenes)
+        director_prompt = _director_prompt(
+            visual_style=visual_style,
+            framing=framing,
+            movement=movement,
+            beat_text=beat_text,
+            scene_name=scene_name,
+            char_names=char_names,
+            prop_names=prop_names,
+            reference_assets=reference_assets,
+            action_chain=action_chain,
+            performance_intent=performance_intent,
+            cinematography=cinematography,
+            lighting=lighting,
+        )
         result.append({
             "id": shot_id,
             "order": index,
             "beat": beat_text,
             "framing": framing,
             "camera_movement": movement,
+            "reference_assets": reference_assets,
+            "performance_intent": performance_intent,
+            "action_chain": action_chain,
+            "cinematography": cinematography,
+            "lighting": lighting,
+            "director_prompt": director_prompt,
             "characters": [c["name"] for c in shot_chars],
             "character_ids": [c["id"] for c in shot_chars],
             "props": [p["name"] for p in shot_props],
             "prop_ids": [p["id"] for p in shot_props],
             "scene": scene_name,
             "scene_id": shot_scenes[0]["id"] if shot_scenes else "",
-            "image_ref": f"{shot_id}_storyboard.png",
-            "image_prompt": (
-                f"{visual_style}，竖屏AI漫剧关键分镜，{framing}，{beat_text}，场景：{scene_name}，"
-                f"人物：{char_names}，道具：{prop_names}。电影级画面，主体清晰，前景/中景/背景层次明确，"
-                f"情绪表达强，镜头有叙事目的，光影统一，角色脸型和服装必须参考已生成角色设定，"
-                f"道具和场景必须参考资产设定，不要文字，不要字幕，不要标签，不要编号，不要水印。"
+            "image_ref": "",
+            "image_prompt": director_prompt,
+            "video_prompt": (
+                f"{movement}，{framing}。{reference_assets}。{action_chain}。"
+                f"表演意图：{performance_intent}。摄影：{cinematography}。灯光：{lighting}。"
+                "保持人物脸型、服装、道具和场景连续，不要自行改变剧情目的。"
             ),
-            "video_prompt": f"{movement}，保持{framing}构图，人物动作服务于“{beat_text}”，镜头运动克制但有情绪推进，竖屏短剧节奏，保持人物脸型、服装、道具和场景连续。",
-            "negative_prompt": "脸型变化、服装不一致、多余手指、背景扭曲、随机logo、不可读文字、画风漂移、画面标签、编号文字",
+            "negative_prompt": _shot_negative_prompt(beat_text),
         })
     return result
+
+
+def _shot_reference_assets(characters: list[dict], props: list[dict], scenes: list[dict]) -> str:
+    char_refs = "、".join(f"{item.get('id', '')} {item.get('name', '')}".strip() for item in characters) or "无可见人物"
+    prop_refs = "、".join(f"{item.get('id', '')} {item.get('name', '')}".strip() for item in props) or "无关键道具"
+    scene_refs = "、".join(f"{item.get('id', '')} {item.get('name', '')}".strip() for item in scenes) or "中性背景"
+    return f"参考资产：人物={char_refs}；道具={prop_refs}；场景={scene_refs}"
+
+
+def _beat_parts(beat_text: str) -> dict[str, str]:
+    text = (beat_text or "").strip()
+    parts = {"cause": "", "action": "", "turn": "", "hook": ""}
+    for key, label in (("cause", "起因"), ("action", "行动"), ("turn", "转折"), ("hook", "钩子")):
+        match = re.search(rf"{label}[:：]\s*(.*?)(?:[；;]\s*(?:起因|行动|转折|钩子)[:：]|$)", text)
+        if match:
+            parts[key] = match.group(1).strip(" ；;。")
+    if any(parts.values()):
+        return parts
+    sentences = _story_sentences(text, limit=4)
+    if sentences:
+        parts["cause"] = sentences[0]
+    if len(sentences) > 1:
+        parts["action"] = sentences[1]
+    if len(sentences) > 2:
+        parts["turn"] = sentences[2]
+    if len(sentences) > 3:
+        parts["hook"] = sentences[3]
+    return parts
+
+
+def _camera_plan_for_beat(beat_text: str, index: int) -> dict[str, str]:
+    text = beat_text or ""
+    if any(word in text for word in ("说", "问", "开口", "台词", "诱导", "追问", "对话")):
+        return {
+            "framing": "特写平行视角",
+            "movement": "固定镜头一镜到底",
+            "cinematography": "变形宽荧幕电影质感，镜头贴近面部但不压迫五官，浅景深保留眼神、嘴角和呼吸变化，背景轻微虚化",
+        }
+    if any(word in text for word in ("尸体", "死亡", "死在", "撞", "倒下", "失踪", "跳楼")):
+        return {
+            "framing": "中近景跟随到低角度停顿",
+            "movement": "手持轻微跟随后突然停住",
+            "cinematography": "先让人物或道具遮挡一部分画面，再露出关键结果；镜头不追求刺激，重点放在迟来的意识和空白感",
+        }
+    if any(word in text for word in ("发现", "看见", "意识到", "线索", "证据", "秘密")):
+        return {
+            "framing": "道具插入镜头接人物反应特写",
+            "movement": "固定机位慢慢转焦",
+            "cinematography": "焦点先落在可见线索的材质和位置，再转向人物眼神反应，让观众跟着角色完成一次认知变化",
+        }
+    if any(word in text for word in ("拒绝", "决定", "选择", "离开", "复仇", "追查")):
+        return {
+            "framing": "中景侧面视角",
+            "movement": "固定机位轻微推进",
+            "cinematography": "人物站位和身体方向表达选择，画面留出前后空间，让关系压力和行动方向清楚",
+        }
+    if any(word in text for word in ("空间", "门", "入口", "街", "巷", "房间", "办公室", "山路", "驻地")):
+        return {
+            "framing": "广角建立视角",
+            "movement": "缓慢拉远或横移",
+            "cinematography": "广角先交代空间边界、出口、关键道具和人物位置，再让主体动作进入画面中心",
+        }
+    fallback = [
+        ("特写平行视角", "固定镜头一镜到底", "长焦浅景深，主体面部细节稳定，背景轻微虚化"),
+        ("中景侧面视角", "手持轻微跟随", "中景留出人物动作空间，前景遮挡制造窥视感"),
+        ("超近特写", "固定机位轻微推进", "超近距离捕捉眼神、嘴角和呼吸变化，避免夸张表演"),
+        ("远景建立视角", "缓慢拉远", "广角建立空间关系，让人物、出口、关键道具的位置一眼清楚"),
+    ][(index - 1) % 4]
+    return {"framing": fallback[0], "movement": fallback[1], "cinematography": fallback[2]}
+
+
+def _lighting_for_beat(beat_text: str, index: int) -> str:
+    text = beat_text or ""
+    if any(word in text for word in ("黄昏", "傍晚", "夕阳")):
+        return "黄昏低色温侧逆光，柔和高光，亮部偏橙黄，暗部偏红棕但不死黑"
+    if any(word in text for word in ("尸体", "死亡", "死在", "失踪", "倒下")):
+        return "压低环境亮度，只给尸体或缺席位置一圈冷色轮廓光，人物脸部保留极弱眼神光，避免猎奇血腥"
+    if any(word in text for word in ("夜", "雨", "巷", "雨水")):
+        return "潮湿街巷反射微弱冷光，地面有水面高光，远处暖光被雨雾压散，整体阴冷但细节可辨"
+    if any(word in text for word in ("办公室", "房间", "室内", "谈话", "开口")):
+        return "室内柔和侧光混合屏幕或窗边弱光，面部保留细腻高光，背景保持安静层次"
+    if any(word in text for word in ("发现", "线索", "证据", "道具")):
+        return "窄光束或局部高光落在关键线索上，其他区域保持柔和阴影"
+    return [
+        "柔和电影主光，主体和背景分离清楚，暗部不死黑",
+        "冷暖对比环境光，人物面部保留眼神光，背景压暗",
+        "空间环境光统一，远处轮廓光分离人物和背景",
+    ][(index - 1) % 3]
+
+
+def _shot_action_chain(beat_text: str, index: int) -> str:
+    parts = _beat_parts(beat_text)
+    cause = parts.get("cause") or "先用安静动作建立人物当前状态"
+    action = parts.get("action") or "人物做出一个能推动剧情的明确动作"
+    turn = parts.get("turn") or "动作中暴露关系变化或新的信息"
+    hook = parts.get("hook") or "停在观众能继续追问的画面"
+    return f"起始：{cause}；过程：{action}，并让“{turn}”在动作中显形；结束：{hook}"
+
+
+def _shot_performance_intent(beat_text: str, index: int) -> str:
+    text = beat_text or ""
+    if any(word in text for word in ("诱导", "开口", "追问", "说", "问", "谈话")):
+        return "语气温柔缓慢但有目的，眼睛先下看像在思考，再抬眼观察对方反应，用停顿诱导对方继续说"
+    if any(word in text for word in ("死亡", "尸体", "死在", "失踪", "缺席")):
+        return "不要大哭大喊，先是不敢相信的空白，再用呼吸停顿、手部僵住和眼神失焦表现迟来的悲伤"
+    if any(word in text for word in ("复仇", "愤怒", "追查", "凶手")):
+        return "愤怒压在表面之下，台词或动作保持克制，眼神逐渐变硬，身体重心从犹豫转向行动"
+    if any(word in text for word in ("发现", "线索", "证据", "秘密", "真相")):
+        return "先让人物没有立刻反应，随后眼神停住、呼吸变轻，像意识到一个不能说出口的事实"
+    if any(word in text for word in ("拒绝", "决定", "选择", "离开")):
+        return "表情不夸张，用短暂停顿、转身或收回手表达决定，情绪集中在眼神和肩颈细节"
+    return [
+        "克制、试探，动作幅度小，眼神和停顿承担主要情绪",
+        "带着不安和警觉，像发现事情开始失控，但仍努力维持表面平静",
+        "情绪压在脸上，重点表现眼神、呼吸和手指的小动作",
+    ][(index - 1) % 3]
+
+
+def _shot_negative_prompt(beat_text: str) -> str:
+    issues = ["不要文字", "不要字幕", "不要画面标签", "不要随机logo"]
+    text = beat_text or ""
+    if any(word in text for word in ("对话", "说", "问", "开口")):
+        issues.extend(["不要嘴型夸张", "不要表情僵硬"])
+    if any(word in text for word in ("复仇", "追查", "凶手", "贵人", "权势")):
+        issues.extend(["不要武打化", "不要爆炸特效", "不要无关反派脸谱化"])
+    if any(word in text for word in ("动作", "走", "跑", "倒", "转身")):
+        issues.extend(["不要肢体扭曲", "不要多余手指"])
+    if any(word in text for word in ("死亡", "尸体", "血", "撞")):
+        issues.extend(["不要血腥猎奇", "不要恐怖夸张"])
+    return "、".join(dict.fromkeys(issues))
+
+
+def _director_prompt(
+    visual_style: str,
+    framing: str,
+    movement: str,
+    beat_text: str,
+    scene_name: str,
+    char_names: str,
+    prop_names: str,
+    reference_assets: str,
+    action_chain: str,
+    performance_intent: str,
+    cinematography: str,
+    lighting: str,
+) -> str:
+    return (
+        f"{movement}，{framing}，首帧参考使用已审核资产：{reference_assets}。"
+        f"场景锁定为{scene_name}，出镜人物为{char_names}，关键道具为{prop_names}。"
+        f"本镜头剧情目的：{beat_text}。{action_chain}。"
+        f"表演意图：{performance_intent}。"
+        f"摄影：{cinematography}。灯光与色彩：{lighting}。"
+        f"风格核心：{visual_style}。"
+        "保持同一人物脸型、发型、服装主色、道具外观和场景空间关系，画面干净，主体明确，不要文字、字幕、标签、编号和水印。"
+    )
 
 
 def _build_consistency_bindings(

@@ -23,11 +23,11 @@ class ComicProductionChainTests(unittest.TestCase):
         self.assertEqual(departments["zhongshu"]["status"], "completed")
         self.assertEqual(departments["menxia"]["depends_on"], ["zhongshu"])
         self.assertIn("production_brief", departments["zhongshu"]["outputs"])
-        self.assertIn("storyboard_handoff", departments["bingbu"]["outputs"])
+        self.assertIn("shot_prompt_handoff", departments["bingbu"]["outputs"])
         self.assertEqual(departments["xingbu"]["status"], "completed")
         self.assertEqual(state["overall_status"], "ready_for_handoff")
 
-    def test_quality_gate_blocks_when_storyboard_or_assets_are_missing(self):
+    def test_quality_gate_blocks_when_shot_prompts_or_assets_are_missing(self):
         package = {
             "title": "Broken Package",
             "script_binding": {"confirmed": True, "script_hash": "hash-2", "script_version": 1},
@@ -42,7 +42,7 @@ class ComicProductionChainTests(unittest.TestCase):
 
         self.assertEqual(gate["status"], "blocked")
         self.assertIn("character assets missing", gate["blocking_issues"])
-        self.assertIn("storyboard shots missing", gate["blocking_issues"])
+        self.assertIn("shot prompts missing", gate["blocking_issues"])
         self.assertLess(gate["score"], 80)
 
     def test_quality_gate_blocks_when_required_image_model_is_not_configured(self):
@@ -60,13 +60,11 @@ class ComicProductionChainTests(unittest.TestCase):
             package,
             model_readiness={
                 "gongbu": {"ready": False, "detail": "工部需要生图模型，例如 doubao-seedream-5。"},
-                "bingbu": {"ready": False, "detail": "兵部需要生图模型，例如 doubao-seedream-5。"},
             },
         )
 
         self.assertEqual(gate["status"], "blocked")
         self.assertIn("工部需要生图模型", " ".join(gate["blocking_issues"]))
-        self.assertIn("兵部需要生图模型", " ".join(gate["blocking_issues"]))
 
 
 if __name__ == "__main__":

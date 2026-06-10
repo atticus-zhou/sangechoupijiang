@@ -44,13 +44,13 @@ DEPARTMENT_CHAIN = [
         "name": "兵部",
         "depends_on": ["libu", "hubu"],
         "inputs": ["script_beats", "asset_registry"],
-        "outputs": ["storyboard_handoff", "camera_plan"],
+        "outputs": ["shot_prompt_handoff"],
     },
     {
         "department_id": "gongbu",
         "name": "工部",
         "depends_on": ["bingbu"],
-        "inputs": ["asset_registry", "storyboard_handoff", "camera_plan"],
+        "inputs": ["asset_registry", "shot_prompt_handoff"],
         "outputs": ["generated_image", "prompt_package", "word_canvas"],
     },
     {
@@ -109,7 +109,7 @@ def build_production_quality_gate(package: dict, model_readiness: dict | None = 
         issues.append("scene assets missing")
     shots = package.get("shots") or []
     if not shots:
-        issues.append("storyboard shots missing")
+        issues.append("shot prompts missing")
     else:
         if any(not shot.get("image_prompt") for shot in shots):
             issues.append("shot image prompts missing")
@@ -161,7 +161,7 @@ def _department_blockers(department_id: str, package: dict, gate: dict) -> list[
     if department_id == "hubu":
         return [item for item in issues if "asset" in item]
     if department_id == "bingbu":
-        return [item for item in issues if "shot" in item or "storyboard" in item]
+        return [item for item in issues if "shot" in item]
     if department_id in {"gongbu", "libu_comm", "xingbu"}:
         return list(issues)
     return []

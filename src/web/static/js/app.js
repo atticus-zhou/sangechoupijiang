@@ -1,10 +1,28 @@
 /** 三个臭皮匠 · Web UI */
 
+async function apiJson(url, options = {}) {
+    const response = await fetch(url, options);
+    let payload = {};
+    try {
+        payload = await response.json();
+    } catch (e) {
+        payload = {};
+    }
+    if (!response.ok || payload.detail) {
+        const detail = payload.detail || response.statusText || '请求失败';
+        const message = Array.isArray(detail)
+            ? detail.join('；')
+            : (typeof detail === 'object' ? JSON.stringify(detail) : String(detail));
+        throw new Error(message);
+    }
+    return payload;
+}
+
 const API = {
-    get: async (url) => (await fetch(url)).json(),
-    post: async (url, data) => (await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })).json(),
-    put: async (url, data) => (await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })).json(),
-    del: async (url) => (await fetch(url, { method: 'DELETE' })).json(),
+    get: async (url) => apiJson(url),
+    post: async (url, data) => apiJson(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+    put: async (url, data) => apiJson(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+    del: async (url) => apiJson(url, { method: 'DELETE' }),
 };
 
 // ============================================================
@@ -793,8 +811,7 @@ const COMIC_REQUIRED_ARTIFACTS = [
     ['prop_sheet', '道具'],
     ['scene_sheet', '场景'],
     ['style_bible', '风格'],
-    ['storyboard_table', '分镜'],
-    ['camera_plan', '运镜'],
+    ['shot_prompt_table', '镜头提示'],
     ['prompt_package', '提示词'],
     ['production_canvas', '制片画布'],
     ['word_canvas', 'Word'],
@@ -1003,8 +1020,8 @@ async function loadComicArtifacts(workspaceId) {
         return;
     }
     list.innerHTML = renderComicArtifactNavigator(artifacts);
-    const pendingReviewIndex = latestComicAssetReviewIndex(artifacts, 'pending');
-    selectComicArtifact(pendingReviewIndex >= 0 ? pendingReviewIndex : 0);
+    const blockingReviewIndex = latestBlockingComicAssetReviewIndex(artifacts);
+    selectComicArtifact(blockingReviewIndex >= 0 ? blockingReviewIndex : 0);
 }
 
 function renderComicArtifactNavigator(artifacts) {
@@ -1034,8 +1051,8 @@ function comicArtifactGroups(artifacts) {
         { key: 'review', title: '待确认', hint: '需要你做决定的内容', types: ['asset_review_package'], filter: a => a.artifact_type === 'asset_review_package' && (a.metadata || {}).review_status !== 'approved' },
         { key: 'script', title: '剧本与确认', hint: '故事、确认稿、内阁意见', types: ['creative_brief', 'script_preview', 'story_draft', 'confirmed_script', 'cabinet_review', 'script'] },
         { key: 'asset_docs', title: '资产拆解', hint: '人物、道具、场景和审核包', types: ['asset_review_package', 'style_bible', 'character_sheet', 'prop_sheet', 'scene_sheet', 'asset_registry'] },
-        { key: 'images', title: '图片资产库', hint: '人物、道具、场景、分镜生成图', types: ['generated_image'] },
-        { key: 'shot_docs', title: '分镜与运镜', hint: '分镜表、运镜方案、交接台', types: ['storyboard_table', 'camera_plan', 'storyboard_handoff'] },
+        { key: 'images', title: '图片资产库', hint: '人物、道具、场景基础资产图', types: ['generated_image'] },
+        { key: 'shot_docs', title: '镜头提示词', hint: '镜头画面提示词、视频生成提示词、交接台', types: ['shot_prompt_table', 'shot_prompt_handoff'] },
         { key: 'delivery', title: '交付文件', hint: 'Word 画布、提示词包、执行材料', types: ['word_canvas', 'prompt_package', 'production_canvas', 'production_brief', 'dispatch_plan'] },
         { key: 'quality', title: '质检与问题', hint: '质量报告、错误记录、链路状态', types: ['image_quality_report', 'image_generation_error', 'consistency_checklist', 'production_chain_state'] },
     ];
@@ -1143,9 +1160,11 @@ function comicImageKindLabel(kind) {
         prop_turnaround: '道具多角度',
         prop_usage_sheet: '道具使用',
         scene: '场景概念',
+        scene_wide_establishing: '场景广角',
+        scene_top_down_layout: '场景俯视',
         scene_layout: '场景空间',
         scene_camera_angles: '场景机位',
-        storyboard: '分镜图',
+        storyboard: '镜头参考',
     };
     return labels[kind] || kind || '图片';
 }
@@ -1165,14 +1184,44 @@ function latestComicAssetReview(artifacts) {
     return index >= 0 ? { artifact: artifacts[index], index } : null;
 }
 
+function latestBlockingComicAssetReviewIndex(artifacts) {
+    for (let i = (artifacts || []).length - 1; i >= 0; i -= 1) {
+        const artifact = artifacts[i];
+        if (artifact.artifact_type !== 'asset_review_package') continue;
+        const reviewStatus = (artifact.metadata || {}).review_status || 'pending';
+        if (reviewStatus !== 'approved') return i;
+    }
+    return -1;
+}
+
+function comicAssetReviewStatusText(status) {
+    const labels = {
+        pending: '待审核',
+        revision_requested: '已退回',
+        approved: '已通过',
+    };
+    return labels[status || 'pending'] || status || '待审核';
+}
+
 function renderComicAssetReviewPanel(artifacts) {
     const panel = document.getElementById('comic-asset-review-panel');
     const approveBtn = document.getElementById('comic-approve-assets-btn');
     const startBtn = document.getElementById('comic-start-production-btn');
+    const statusBadge = document.getElementById('comic-asset-review-status');
+    const copy = document.getElementById('comic-asset-review-copy');
     const review = latestComicAssetReview(artifacts || []);
     const status = review ? ((review.artifact.metadata || {}).review_status || 'pending') : '';
     const pending = Boolean(review && status !== 'approved');
     if (panel) panel.style.display = pending ? '' : 'none';
+    if (statusBadge) {
+        statusBadge.textContent = comicAssetReviewStatusText(status);
+        statusBadge.className = `badge ${status === 'revision_requested' ? 'badge-err' : 'badge-info'}`;
+    }
+    if (copy) {
+        copy.textContent = status === 'revision_requested'
+            ? '这份资产拆解已经被退回。请在上方继续补充故事或资产要求，重新生成后再确认。'
+            : '中书省和门下省已经把人物、道具、场景和分镜输入拆完。确认它们符合故事后，再继续生成图片和 Word 画布。';
+    }
     if (approveBtn) approveBtn.style.display = pending ? '' : 'none';
     if (startBtn) {
         startBtn.textContent = pending ? '等待资产审核通过' : '生成资产拆解审核包';
@@ -1252,7 +1301,7 @@ function selectComicArtifact(index) {
         ? `<button class="ghost btn-sm" onclick="regenerateComicImage(${index})">重生成这张图</button>`
         : '';
     const assetReviewAction = artifact.artifact_type === 'asset_review_package' && (artifact.metadata || {}).review_status !== 'approved'
-        ? `<button class="btn-sm" onclick="approveComicAssetsAndSubmit()">确认拆解无误，继续生成</button>`
+        ? `<button class="ghost btn-sm" onclick="requestComicAssetRevision()">退回补充</button><button class="btn-sm" onclick="approveComicAssetsAndSubmit()">确认拆解无误，继续生成</button>`
         : '';
     const bindingPanel = renderComicArtifactBinding(artifact);
     detail.innerHTML = `
@@ -1412,7 +1461,14 @@ async function confirmComicScript() {
     }
     const confirmationNotes = document.getElementById('comic-chat-input')?.value.trim() || '';
     const productionRequest = buildComicDraftProductionRequest(confirmationNotes);
+    const button = document.getElementById('comic-confirm-start-btn');
+    const originalText = button?.textContent || '确认故事并开始生成';
+    if (button) {
+        button.disabled = true;
+        button.textContent = '确认中...';
+    }
     try {
+        toast('正在确认故事，并创建资产拆解任务...', 'success');
         const result = await API.post('/api/comic/confirm-and-start', {
             workspace_id: currentComicWorkspace,
             office_id: activeComicOfficeId(),
@@ -1420,21 +1476,30 @@ async function confirmComicScript() {
             confirmation_notes: confirmationNotes,
             user_request: productionRequest,
         });
+        if (!result.task_id) {
+            throw new Error('后端没有返回任务编号，请查看日志确认任务是否创建成功。');
+        }
         currentComicConfirmedScript = result.confirmed_script || null;
         if (currentComicCabinetSession) {
             currentComicCabinetSession.confirmed_script = result.confirmed_script || null;
             currentComicCabinetSession.confirmed = true;
         }
         renderComicCabinet();
+        document.getElementById('comic-confirmed-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        watchComicTask(result.task_id, currentComicWorkspace);
         await loadComicWorkspaces();
         await Promise.all([
             loadComicArtifacts(currentComicWorkspace),
             loadComicTimeline(currentComicWorkspace),
         ]);
-        watchComicTask(result.task_id, currentComicWorkspace);
-        toast(`确认版故事已锁定，制片包任务已开始${result.task_id ? `：${result.task_id}` : ''}`, 'success');
+        toast(`确认版故事已锁定，资产拆解审核包正在生成：${result.task_id}`, 'success');
     } catch (e) {
         toast('确认并开始生成失败: ' + e.message, 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
     }
 }
 
@@ -1449,8 +1514,8 @@ function unconfirmComicScript() {
 }
 
 async function submitComicTask() {
-    const pendingReviewIndex = latestComicAssetReviewIndex(currentComicArtifacts || [], 'pending');
-    if (pendingReviewIndex >= 0) {
+    const blockingReviewIndex = latestBlockingComicAssetReviewIndex(currentComicArtifacts || []);
+    if (blockingReviewIndex >= 0) {
         focusComicAssetReview();
         toast('请先确认资产拆解包，再继续生成图片和 Word 画布', 'error');
         return;
@@ -1483,12 +1548,41 @@ async function approveComicAssetsAndSubmit() {
         return;
     }
     try {
-        await API.post(`/api/workspaces/${currentComicWorkspace}/comic/asset-review/approve`, {});
+        const reviewerNotes = document.getElementById('comic-asset-review-notes')?.value.trim() || '';
+        await API.post(`/api/workspaces/${currentComicWorkspace}/comic/asset-review/decision`, {
+            status: 'approved',
+            reviewer_notes: reviewerNotes,
+        });
         toast('资产拆解已确认，开始继续生成图片和 Word 画布', 'success');
         await loadComicArtifacts(currentComicWorkspace);
         await submitComicTask();
     } catch (e) {
         toast('资产审核确认失败: ' + e.message, 'error');
+    }
+}
+
+async function requestComicAssetRevision() {
+    if (!currentComicWorkspace) {
+        toast('请先选择一个漫剧项目', 'error');
+        return;
+    }
+    const reviewerNotes = document.getElementById('comic-asset-review-notes')?.value.trim() || '';
+    if (!reviewerNotes) {
+        toast('请先写一句要改什么，系统才知道退回补充的方向', 'error');
+        return;
+    }
+    try {
+        await API.post(`/api/workspaces/${currentComicWorkspace}/comic/asset-review/decision`, {
+            status: 'revision_requested',
+            reviewer_notes: reviewerNotes,
+        });
+        toast('已退回资产拆解。你可以继续补充故事或资产要求后重新生成。', 'success');
+        await Promise.all([
+            loadComicArtifacts(currentComicWorkspace),
+            loadComicTimeline(currentComicWorkspace),
+        ]);
+    } catch (e) {
+        toast('退回资产拆解失败: ' + e.message, 'error');
     }
 }
 
@@ -1690,15 +1784,39 @@ function formatComicScriptPreviewForRequest(script) {
     ].filter(Boolean).join('\n');
 }
 
+function deriveComicStoryDraft(script) {
+    if (!script) return '';
+    if (script.story_draft) return script.story_draft;
+    const lines = [];
+    if (script.logline) lines.push(script.logline);
+    if (script.why_it_happens) lines.push(`起因：${script.why_it_happens}`);
+    if (script.how_it_happens) lines.push(`推进：${script.how_it_happens}`);
+    if (script.protagonist_arc) lines.push(`人物变化：${script.protagonist_arc}`);
+    const episodes = script.episode_outline || [];
+    if (episodes.length) {
+        lines.push('分集推进：');
+        lines.push(...episodes.map(ep => {
+            const label = ep.episode ? `第 ${ep.episode} 段` : '剧情段落';
+            const title = ep.title ? `《${ep.title}》` : '';
+            const action = ep.action || ep.cause || '';
+            const hook = ep.hook ? `结尾：${ep.hook}` : '';
+            return [label + title, action, hook].filter(Boolean).join('，');
+        }));
+    }
+    return lines.filter(Boolean).join('\n\n');
+}
+
 function formatComicStoryForDisplay(script, options = {}) {
     script = script || {};
     const episodes = script.episode_outline || [];
-    const story = script.story_draft || '';
+    const story = deriveComicStoryDraft(script);
     if (!story) {
         return [
-            `# ${script.title || '当前故事稿'}`,
+            `# ${script.title || (options.confirmed ? '已确认故事' : '当前故事稿')}`,
             '',
-            '故事稿还没有生成完整。你可以补充一句最重要的方向，比如谁是主角、这顿饭为什么重要、结尾想留下什么感觉。',
+            options.confirmed
+                ? '故事已经确认，但当前确认稿缺少可展示正文。你可以退回修改故事，或继续生成资产拆解审核包。'
+                : '故事稿还没有生成完整。你可以补充一句最重要的方向，比如谁是主角、这顿饭为什么重要、结尾想留下什么感觉。',
         ].join('\n');
     }
     const lines = [
@@ -2058,6 +2176,74 @@ const AGENT_DESC = {
     bingbu: '执行操作', xingbu: '质量验证', gongbu: '产出报告',
 };
 
+const OFFICE_AGENT_DESC = {
+    research: {
+        zhongshu: '调研方案',
+        menxia: '调研审议',
+        shangshu: '流程统筹',
+        libu: '资料归档',
+        hubu: '数据表格',
+        libu_comm: '交接说明',
+        bingbu: '平台取证',
+        xingbu: '证据质检',
+        gongbu: '报告产出',
+    },
+    comic_production: {
+        zhongshu: '任务拆解',
+        menxia: '资产审议',
+        shangshu: '制片调度',
+        libu: '连续性',
+        hubu: '资产台账',
+        libu_comm: '交付说明',
+        bingbu: '分镜生图',
+        xingbu: '视觉质检',
+        gongbu: '资产组装',
+    },
+};
+
+function agentDesc(id) {
+    return ((OFFICE_AGENT_DESC[MODEL_OFFICE_ID] || {})[id]) || AGENT_DESC[id] || '';
+}
+
+const MODEL_REQUIREMENTS = {
+    default: {
+        zhongshu: { type: '文本推理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '理解用户任务，起草方案和任务结构。' },
+        menxia: { type: '文本推理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '审查方案漏洞、遗漏项和风险。' },
+        shangshu: { type: '文本推理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '统筹多部门执行顺序和交付状态。' },
+        libu: { type: '文本推理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '整理上下文、历史记忆和规则。' },
+        hubu: { type: '文本推理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '结构化数据、表格和资产台账。' },
+        libu_comm: { type: '文本推理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '整理给人的交接说明和状态更新。' },
+        bingbu: { type: '文本推理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '执行检索、采集、分镜或操作计划。' },
+        xingbu: { type: '文本/视觉质检模型', key: '普通任务可用文本 Key；涉及图片时建议千问 VL / GPT 多模态 Key', use: '检查来源、逻辑、图片或交付完整度。' },
+        gongbu: { type: '文本生成模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '撰写报告、提示词和最终材料。' },
+    },
+    research: {
+        hubu: { type: '文本 + 数据整理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '整理竞品表、价格带、销量字段和评论痛点。' },
+        bingbu: { type: '文本 + 网页取证辅助模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key；截图识别建议千问 VL', use: '规划平台数据采集、截图目标和证据提取。' },
+        xingbu: { type: '文本/视觉质检模型', key: '普通质检用文本 Key；截图识别建议千问 VL API Key', use: '核验数据年份、来源质量、截图内容和报告完整度。' },
+        gongbu: { type: '文本生成模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '生成调研报告、老板简报、表格和可导出材料。' },
+    },
+    comic_production: {
+        neige: { type: '文本创作模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '和人对话，确认故事合约。' },
+        zhongshu: { type: '文本编剧/拆解模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '把确认故事拆成生产任务书。' },
+        menxia: { type: '文本审稿模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '审核故事、人物、道具、场景和分镜是否缺漏。' },
+        shangshu: { type: '文本调度模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '把制片模板分派给各部门并追踪阻塞。' },
+        libu: { type: '文本连续性模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '维护人物、道具、场景和版本连续性。' },
+        hubu: { type: '文本/结构化资产模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '维护资产登记表和资源台账。' },
+        libu_comm: { type: '文本交付模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '整理给下游生图、视频和剪辑平台的交接说明。' },
+        bingbu: { type: '文本镜头模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '生成镜头画面提示词和视频生成提示词，不负责生图。' },
+        xingbu: { type: '视觉理解/质检模型', key: '千问 VL / GPT 多模态等图片理解 API Key', use: '检查生成图是否符合人物、道具、场景和画风一致性。' },
+        gongbu: { type: '生图模型 + 文本组装', key: '豆包 Seedream / 火山方舟等生图 API Key；文本组装可复用文本模型', use: '生成人物图、道具图、场景图，并组装 Word 制片画布。' },
+    },
+};
+
+function modelRequirement(agentId) {
+    return {
+        ...(MODEL_REQUIREMENTS.default[agentId] || {}),
+        ...((MODEL_REQUIREMENTS[MODEL_OFFICE_ID] || {})[agentId] || {}),
+    };
+}
+
 function agentName(id) {
     return AGENT_NAMES[id] || id;
 }
@@ -2073,12 +2259,18 @@ async function loadModels() {
         const prov = cfg.provider || 'deepseek';
         const curModel = cfg.model || 'deepseek-chat';
         const modelsForProvider = PROVIDER_MODELS[prov] || [];
+        const requirement = modelRequirement(id);
         const hasAdvanced = cfg.api_base || (cfg.temperature && cfg.temperature !== 0.3) || (cfg.max_tokens && cfg.max_tokens !== 4096);
         return `
         <div class="card model-card">
             <div class="model-card-head">
-                <h4>${name} <span class="agent-tag">${AGENT_DESC[id]}</span></h4>
+                <h4>${name} <span class="agent-tag">${escapeHtml(agentDesc(id))}</span></h4>
                 <span id="model-test-status-${id}" class="badge badge-info model-test-status">未测试</span>
+            </div>
+            <div class="model-requirement">
+                <strong>需要：${escapeHtml(requirement.type || '文本模型')}</strong>
+                <span>${escapeHtml(requirement.key || '填写对应模型供应商的 API Key')}</span>
+                <p>${escapeHtml(requirement.use || '')}</p>
             </div>
             <div class="form-row">
                 <div>

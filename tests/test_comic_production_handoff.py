@@ -40,10 +40,10 @@ class ComicProductionHandoffTests(unittest.TestCase):
         self.assertIn("production_brief", by_type)
         self.assertIn("dispatch_plan", by_type)
         self.assertIn("asset_registry", by_type)
-        self.assertIn("storyboard_handoff", by_type)
+        self.assertIn("shot_prompt_handoff", by_type)
         self.assertIn("Ah Heng", by_type["asset_registry"]["content"])
-        self.assertIn("shot_001", by_type["storyboard_handoff"]["content"])
-        self.assertIn("Ah Heng in the alley", by_type["storyboard_handoff"]["content"])
+        self.assertIn("shot_001", by_type["shot_prompt_handoff"]["content"])
+        self.assertIn("Ah Heng in the alley", by_type["shot_prompt_handoff"]["content"])
         self.assertEqual(by_type["production_brief"]["metadata"]["office_id"], "comic_production")
         self.assertEqual(by_type["production_brief"]["metadata"]["script_hash"], "hash-1")
 

@@ -30,6 +30,7 @@ from src.comic_office import (
     build_comic_brief,
     build_comic_result,
     build_comic_script_preview,
+    enhance_comic_prompts_llm,
     format_confirmed_script,
     start_comic_cabinet_session,
     start_comic_cabinet_session_llm,
@@ -184,6 +185,11 @@ class ComicConfirmScriptRequest(BaseModel):
 class ComicConfirmAndStartRequest(ComicConfirmScriptRequest):
     user_request: str = ""
     template_id: Optional[str] = None
+
+
+class ComicAssetReviewDecisionRequest(BaseModel):
+    status: str = "approved"
+    reviewer_notes: str = ""
 
 
 class BrowserStartRequest(BaseModel):
@@ -355,6 +361,14 @@ def _comic_cabinet_model_configs(office_id: str = "comic_production") -> dict:
     }
 
 
+def _comic_prompt_model_configs(office_id: str = "comic_production") -> dict:
+    office_id = _normalize_comic_office_id(office_id)
+    return {
+        agent: config_manager.get_model_config(agent, office_id=office_id)
+        for agent in ("gongbu", "bingbu", "xingbu", "shangshu")
+    }
+
+
 def _load_comic_cabinet_session(workspace_id: str) -> dict:
     raw = config_manager.get_kv(_comic_cabinet_key(workspace_id), "")
     if not raw:
@@ -396,10 +410,23 @@ def _latest_workspace_artifact_by_type(workspace_id: str, artifact_type: str) ->
     return {}
 
 
-def _asset_review_approved(workspace_id: str) -> bool:
+def _current_confirmed_script_metadata(workspace_id: str) -> dict:
+    artifact = _latest_workspace_artifact_by_type(workspace_id, "confirmed_script")
+    return artifact.get("metadata") or {}
+
+
+def _asset_review_approved(workspace_id: str, script_hash: str = "") -> bool:
     artifact = _latest_workspace_artifact_by_type(workspace_id, "asset_review_package")
     metadata = artifact.get("metadata") or {}
-    return metadata.get("review_status") == "approved"
+    if metadata.get("review_status") != "approved":
+        return False
+    expected_hash = script_hash or _current_confirmed_script_metadata(workspace_id).get("script_hash", "")
+    review_hash = metadata.get("script_hash", "")
+    if expected_hash and review_hash and expected_hash != review_hash:
+        return False
+    if expected_hash and not review_hash:
+        return False
+    return True
 
 
 def _rewrite_artifact_with_metadata(artifact: dict, metadata: dict) -> None:
@@ -673,29 +700,74 @@ async def confirm_and_start_comic_api(req: ComicConfirmAndStartRequest):
     }
 
 
-@app.post("/api/workspaces/{workspace_id}/comic/asset-review/approve")
-async def approve_comic_asset_review_api(workspace_id: str):
+def _record_comic_asset_review_decision(
+    workspace_id: str,
+    *,
+    status: str,
+    reviewer_notes: str = "",
+) -> dict:
     workspace = config_manager.get_workspace(workspace_id)
     if not workspace or not _is_comic_office_id(workspace.get("office_id")):
         raise HTTPException(status_code=404, detail=f"Comic workspace {workspace_id} does not exist")
+    normalized_status = (status or "approved").strip().lower()
+    allowed_statuses = {"approved", "revision_requested", "pending"}
+    if normalized_status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail="Unsupported asset review status")
     artifact = _latest_workspace_artifact_by_type(workspace_id, "asset_review_package")
     if not artifact:
         raise HTTPException(status_code=404, detail="Asset review package is not ready yet")
+    confirmed_metadata = _current_confirmed_script_metadata(workspace_id)
+    current_hash = confirmed_metadata.get("script_hash", "")
+    current_version = confirmed_metadata.get("script_version", 0)
     metadata = dict(artifact.get("metadata") or {})
+    artifact_hash = metadata.get("script_hash", "")
+    if current_hash and artifact_hash and artifact_hash != current_hash:
+        raise HTTPException(status_code=409, detail="资产审核包属于旧剧本版本，请先重新生成当前剧本的资产拆解包")
     metadata.update({
         "requires_human_review": True,
-        "review_status": "approved",
+        "review_status": normalized_status,
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
     })
+    if current_hash:
+        metadata["script_hash"] = current_hash
+    if current_version:
+        metadata["script_version"] = current_version
+    if reviewer_notes.strip():
+        metadata["reviewer_notes"] = reviewer_notes.strip()
     _rewrite_artifact_with_metadata(artifact, metadata)
+    event_type = "comic_asset_review_approved" if normalized_status == "approved" else "comic_asset_review_revision_requested"
     config_manager.append_task_event(
         task_id=artifact.get("task_id") or f"asset_review_{workspace_id}",
-        event_type="comic_asset_review_approved",
-        status="completed",
-        summary="Comic production assets approved by user",
-        payload={"workspace_id": workspace_id, "artifact_id": artifact.get("artifact_id")},
+        event_type=event_type,
+        status="completed" if normalized_status == "approved" else "needs_revision",
+        summary="Comic production asset review decision recorded",
+        payload={
+            "workspace_id": workspace_id,
+            "artifact_id": artifact.get("artifact_id"),
+            "review_status": normalized_status,
+            "script_hash": metadata.get("script_hash", ""),
+        },
     )
-    return {"workspace_id": workspace_id, "status": "approved", "artifact_id": artifact.get("artifact_id")}
+    return {"workspace_id": workspace_id, "status": normalized_status, "artifact_id": artifact.get("artifact_id"), "metadata": metadata}
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/asset-review/decision")
+async def decide_comic_asset_review_api(workspace_id: str, req: ComicAssetReviewDecisionRequest):
+    return _record_comic_asset_review_decision(
+        workspace_id,
+        status=req.status,
+        reviewer_notes=req.reviewer_notes,
+    )
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/asset-review/approve")
+async def approve_comic_asset_review_api(workspace_id: str, req: Optional[ComicAssetReviewDecisionRequest] = None):
+    decision = req or ComicAssetReviewDecisionRequest(status="approved")
+    return _record_comic_asset_review_decision(
+        workspace_id,
+        status="approved",
+        reviewer_notes=decision.reviewer_notes,
+    )
 
 
 @app.get("/api/comic/cabinet/{workspace_id}")
@@ -1401,16 +1473,6 @@ def _comic_image_specs(result: dict, limit: int) -> list[dict]:
         })
         for spec in item.get("asset_specs", []) or []:
             specs.append(_comic_asset_image_spec(item, spec, "gongbu", script_binding))
-    for shot in (package.get("shots") or []):
-        specs.append({
-            "kind": "storyboard",
-            "agent": "bingbu",
-            "title": f"{shot.get('id', 'shot')} 分镜图",
-            "prompt": shot.get("image_prompt", ""),
-            "source_id": shot.get("id", ""),
-            "binding": shot.get("binding", {}),
-            "script_binding": script_binding,
-        })
     return [spec for spec in specs if spec.get("prompt")][:limit]
 
 
@@ -1436,7 +1498,7 @@ def _extract_comic_prompt_from_content(content: str) -> str:
 
 
 def _agent_for_comic_image_kind(kind: str) -> str:
-    return "bingbu" if kind == "storyboard" else "gongbu"
+    return "gongbu"
 
 
 def _comic_required_image_agents(result: dict) -> set[str]:
@@ -1709,9 +1771,9 @@ def _build_comic_word_canvas_artifact(
             "已生成 .docx 交付文档。",
             f"下载链接：/api/workspaces/{workspace_id}/files/delivery/{filename}",
             "",
-            "文档内容按镜头组织，展示对应图片、画面内容、人物、场景、道具、分镜图提示词、视频/运镜提示词和负面提示词。",
+            "文档内容按镜头组织，展示画面内容、人物、场景、道具、镜头画面提示词、视频生成提示词和负面提示词。",
             "",
-            "新增平台执行表：逐镜列出上传图片、视频时长、平台提示词、运镜、动作重点和失败重试建议，方便交给 Libtv 或其他图生视频平台继续制作。",
+            "新增平台执行表：逐镜列出参考资产、视频时长、平台提示词、镜头运动、动作重点和失败重试建议，方便交给 Libtv 或其他视频生成平台继续制作。",
         ]),
         "metadata": {"office_id": office_id, "path": str(docx_path)},
         "created_by": "gongbu",
@@ -1950,6 +2012,29 @@ async def _run_task(
                 payload={"office_id": office.id, "workspace_id": workspace_id},
             )
             result = build_comic_result(task_id=task_id, user_request=user_request)
+            if office.id == "comic_production":
+                config_manager.update_task_run(task_id, "running", current_phase="comic_prompt_preflight")
+                config_manager.append_task_event(
+                    task_id=task_id,
+                    event_type="comic_prompt_preflight_started",
+                    status="running",
+                    summary="Prompt writing and Xingbu preflight review started before human asset review",
+                    payload={"office_id": office.id, "workspace_id": workspace_id},
+                )
+                result = await enhance_comic_prompts_llm(result, _comic_prompt_model_configs(office.id))
+                prompt_generation = (result.get("comic_package", {}) or {}).get("prompt_generation", {})
+                config_manager.append_task_event(
+                    task_id=task_id,
+                    event_type="comic_prompt_preflight_completed",
+                    status="running",
+                    summary="Prompt writing and preflight review completed",
+                    payload={
+                        "office_id": office.id,
+                        "workspace_id": workspace_id,
+                        "mode": prompt_generation.get("mode", ""),
+                        "quality_review": prompt_generation.get("quality_review", {}),
+                    },
+                )
             final_status = result.get("status", "completed")
             artifacts = build_comic_artifacts(task_id, result)
             if office.id == "comic_production":
