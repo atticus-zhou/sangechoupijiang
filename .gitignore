@@ -10,6 +10,7 @@ data/chroma/
 tmp_canvas_media/
 tmp_canvas_render/
 _docx_inputs/
+docx_analysis.json
 
 # Local secrets and generated files
 config.yaml
