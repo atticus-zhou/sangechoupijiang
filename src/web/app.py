@@ -37,6 +37,8 @@ from src.comic_office import (
     validate_confirmed_script_session,
 )
 from src.comic_word_canvas import build_comic_word_canvas
+from src.comic_office.v2.contracts import ContractValidationError
+from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
 from src.research_artifacts import build_research_artifacts
 from src.research_quality import assess_research_package
 from src.evidence_artifacts import build_evidence_artifacts
@@ -192,6 +194,11 @@ class ComicAssetReviewDecisionRequest(BaseModel):
     reviewer_notes: str = ""
 
 
+class ComicV2StartRequest(BaseModel):
+    source_story: str
+    planner_payload: dict = Field(default_factory=dict)
+
+
 class BrowserStartRequest(BaseModel):
     url: str = "https://dy3.feigua.cn/"
 
@@ -306,6 +313,84 @@ async def list_workspace_tasks_api(workspace_id: str):
     if not config_manager.get_workspace(workspace_id):
         raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
     return {"tasks": config_manager.list_workspace_task_runs(workspace_id=workspace_id)}
+
+
+def _comic_v2_key(workspace_id: str) -> str:
+    return f"comic_v2_state:{workspace_id}"
+
+
+def _comic_v2_workspace(workspace_id: str) -> dict:
+    workspace = config_manager.get_workspace(workspace_id)
+    if not workspace or workspace.get("office_id") != "comic_production":
+        raise HTTPException(status_code=404, detail=f"AI漫剧制片工作空间 {workspace_id} 不存在")
+    return workspace
+
+
+def _load_comic_v2_state(workspace_id: str) -> dict:
+    raw = config_manager.get_kv(_comic_v2_key(workspace_id), "")
+    if not raw:
+        return {}
+    try:
+        return ComicProductionV2.from_dict(json.loads(raw)).to_dict()
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=500, detail=f"V2制片状态损坏：{exc}") from exc
+
+
+def _save_comic_v2_state(workspace_id: str, state: dict) -> None:
+    config_manager.set_kv(_comic_v2_key(workspace_id), json.dumps(state, ensure_ascii=False))
+
+
+@app.get("/api/workspaces/{workspace_id}/comic/v2/status")
+async def get_comic_v2_status_api(workspace_id: str):
+    _comic_v2_workspace(workspace_id)
+    return _load_comic_v2_state(workspace_id) or not_started_state(workspace_id)
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/start")
+async def start_comic_v2_api(workspace_id: str, req: ComicV2StartRequest):
+    workspace = _comic_v2_workspace(workspace_id)
+    try:
+        state = ComicProductionV2.start(
+            req.source_story,
+            req.planner_payload,
+            workspace_id=workspace_id,
+        )
+    except ContractValidationError as exc:
+        raise HTTPException(status_code=400, detail=f"无法建立正式制片合同：{exc}") from exc
+    payload = state.to_dict()
+    _save_comic_v2_state(workspace_id, payload)
+    config_manager.create_artifact(
+        artifact_id=f"art_{workspace_id}_comic_v2_contract_v{state.story_version}",
+        workspace_id=workspace_id,
+        task_id="",
+        artifact_type="comic_v2_contract",
+        title=f"{workspace.get('title') or 'AI漫剧'} - V2故事合同与视觉母版",
+        content=json.dumps(state.contract, ensure_ascii=False, indent=2),
+        metadata={
+            "office_id": "comic_production",
+            "pipeline_version": 2,
+            "story_id": state.story_id,
+            "story_version": state.story_version,
+            "style_id": state.style_id,
+            "style_version": state.style_version,
+            "review_status": "awaiting_user_review",
+        },
+        created_by="zhongshu",
+    )
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_visual_bible_ready",
+        status="waiting_for_human",
+        summary="V2故事合同与视觉母版等待用户确认",
+        payload={
+            "workspace_id": workspace_id,
+            "stage": state.stage,
+            "current_agent": state.current_agent,
+            "current_object": state.current_object,
+            "next_action": state.next_action,
+        },
+    )
+    return payload
 
 
 @app.post("/api/comic/brief")

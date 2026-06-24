@@ -72,6 +72,16 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("Asset revision notes:", js)
         self.assertIn("资产拆解已退回。你可以修改上方要求，然后点击“按退回意见重新拆解”。", js)
 
+    def test_v2_stage_board_loads_honest_current_work_state(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("async function loadComicV2Status", js)
+        self.assertIn("/comic/v2/status", js)
+        self.assertIn("currentComicV2Status.current_agent", js)
+        self.assertIn("currentComicV2Status.current_object", js)
+        self.assertIn("currentComicV2Status.blocking_reason", js)
+        self.assertIn("currentComicV2Status.next_action", js)
+
 
 if __name__ == "__main__":
     unittest.main()

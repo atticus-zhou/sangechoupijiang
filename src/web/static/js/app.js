@@ -806,6 +806,7 @@ let currentComicScriptPreview = null;
 let currentComicConfirmedScript = null;
 let currentComicCabinetSession = null;
 let currentComicCabinetReady = false;
+let currentComicV2Status = null;
 let comicTaskPoller = null;
 
 const COMIC_REQUIRED_ARTIFACTS = [
@@ -903,6 +904,7 @@ async function selectComicWorkspace(workspaceId) {
     
     if (!workspaceId) {
         stopComicTaskPolling();
+        currentComicV2Status = null;
         // 如果是选择了“新建漫剧项目”，不仅清空变量，还要清空页面上的表单输入
         document.getElementById('comic-idea').value = '';
         const scriptSource = document.getElementById('comic-script-source');
@@ -935,7 +937,31 @@ async function selectComicWorkspace(workspaceId) {
         }
     });
 
+    await loadComicV2Status(workspaceId);
     await Promise.all([loadComicArtifacts(workspaceId), loadComicTimeline(workspaceId), loadComicCabinetSession(workspaceId)]);
+}
+
+async function loadComicV2Status(workspaceId) {
+    if (!workspaceId || activeComicOfficeId() !== 'comic_production') {
+        currentComicV2Status = null;
+        return null;
+    }
+    try {
+        currentComicV2Status = await API.get(`/api/workspaces/${workspaceId}/comic/v2/status`);
+    } catch (e) {
+        currentComicV2Status = {
+            pipeline_version: 2,
+            status: 'status_error',
+            stage: 'blocked',
+            current_agent: '系统',
+            current_object: 'V2制片状态',
+            blocking_reason: e.message || String(e),
+            next_action: '刷新页面；若仍失败，请检查后端日志。',
+            completed: 0,
+            total: 0,
+        };
+    }
+    return currentComicV2Status;
 }
 
 async function loadComicCabinetSession(workspaceId) {
@@ -1057,7 +1083,7 @@ function comicArtifactGroups(artifacts) {
     const defs = [
         { key: 'review', title: '待确认', hint: '需要你做决定的内容', types: ['asset_review_package'], filter: a => a.artifact_type === 'asset_review_package' && (a.metadata || {}).review_status !== 'approved' },
         { key: 'script', title: '剧本与确认', hint: '故事、确认稿、内阁意见', types: ['creative_brief', 'script_preview', 'story_draft', 'confirmed_script', 'cabinet_review', 'script'] },
-        { key: 'asset_docs', title: '资产拆解', hint: '人物、道具、场景和审核包', types: ['asset_review_package', 'style_bible', 'character_sheet', 'prop_sheet', 'scene_sheet', 'asset_registry'] },
+        { key: 'asset_docs', title: '资产拆解', hint: '人物、道具、场景和审核包', types: ['comic_v2_contract', 'asset_review_package', 'style_bible', 'character_sheet', 'prop_sheet', 'scene_sheet', 'asset_registry'] },
         { key: 'images', title: '图片资产库', hint: '人物、道具、场景基础资产图', types: ['generated_image'] },
         { key: 'shot_docs', title: '镜头提示词', hint: '镜头画面提示词、视频生成提示词、交接台', types: ['shot_prompt_table', 'shot_prompt_handoff'] },
         { key: 'delivery', title: '交付文件', hint: 'Word 画布、提示词包、执行材料', types: ['word_canvas', 'prompt_package', 'production_canvas', 'production_brief', 'dispatch_plan'] },
@@ -1298,6 +1324,9 @@ function latestComicProductionChain(artifacts) {
 }
 
 function renderComicProductionFlow(artifacts) {
+    if (currentComicV2Status && currentComicV2Status.pipeline_version === 2 && currentComicV2Status.status !== 'not_started') {
+        return renderComicV2ProductionFlow();
+    }
     const chainItem = latestComicProductionChain(artifacts);
     if (!chainItem) {
         return `
@@ -1327,6 +1356,29 @@ function renderComicProductionFlow(artifacts) {
             </div>
             <div class="department-flow">
                 ${departments.map(dept => renderComicDepartmentStep(dept)).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderComicV2ProductionFlow() {
+    const completed = Number(currentComicV2Status.completed || 0);
+    const total = Number(currentComicV2Status.total || 0);
+    const progress = total > 0 ? `${completed}/${total}` : '等待状态';
+    const blocked = currentComicV2Status.blocking_reason || '';
+    return `
+        <div class="production-flow v2-flow">
+            <div class="production-flow-head">
+                <div>
+                    <strong>V2 制片管线 · ${escapeHtml(progress)}</strong>
+                    <span>当前 Agent：${escapeHtml(currentComicV2Status.current_agent || '等待分配')}</span>
+                </div>
+                <span class="badge badge-info">${escapeHtml(currentComicV2Status.stage || '未开始')}</span>
+            </div>
+            <div class="package-summary">
+                <strong>${escapeHtml(currentComicV2Status.current_object || '等待生产对象')}</strong>
+                <span>${escapeHtml(blocked || '当前没有阻塞项')}</span>
+                <small>下一步：${escapeHtml(currentComicV2Status.next_action || '等待状态更新')}</small>
             </div>
         </div>
     `;
