@@ -38,6 +38,7 @@ from src.comic_office import (
 )
 from src.comic_word_canvas import build_comic_word_canvas
 from src.comic_office.v2.contracts import ContractValidationError
+from src.comic_office.v2.planner import PlannerError, plan_contract, revise_visual_bible
 from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
 from src.research_artifacts import build_research_artifacts
 from src.research_quality import assess_research_package
@@ -199,6 +200,10 @@ class ComicV2StartRequest(BaseModel):
     planner_payload: dict = Field(default_factory=dict)
 
 
+class ComicV2RevisionRequest(BaseModel):
+    revision_request: str
+
+
 class BrowserStartRequest(BaseModel):
     url: str = "https://dy3.feigua.cn/"
 
@@ -340,6 +345,40 @@ def _save_comic_v2_state(workspace_id: str, state: dict) -> None:
     config_manager.set_kv(_comic_v2_key(workspace_id), json.dumps(state, ensure_ascii=False))
 
 
+def _persist_comic_v2_contract(workspace: dict, state, review_status: str) -> None:
+    workspace_id = state.workspace_id
+    config_manager.create_artifact(
+        artifact_id=(
+            f"art_{workspace_id}_comic_v2_contract_"
+            f"s{state.story_version}_v{state.style_version}"
+        ),
+        workspace_id=workspace_id,
+        task_id="",
+        artifact_type="comic_v2_contract",
+        title=f"{workspace.get('title') or 'AI漫剧'} - V2故事合同与视觉母版",
+        content=json.dumps(state.contract, ensure_ascii=False, indent=2),
+        metadata={
+            "office_id": "comic_production",
+            "pipeline_version": 2,
+            "story_id": state.story_id,
+            "story_version": state.story_version,
+            "style_id": state.style_id,
+            "style_version": state.style_version,
+            "review_status": review_status,
+        },
+        created_by="zhongshu",
+    )
+
+
+def _confirmed_story_for_v2(workspace_id: str) -> tuple[str, dict]:
+    session = _load_comic_cabinet_session(workspace_id)
+    confirmed = (session or {}).get("confirmed_script") or {}
+    story = str(confirmed.get("story_draft") or "")
+    if not session.get("confirmed") or not story.strip():
+        raise HTTPException(status_code=400, detail="请先确认完整故事，再生成视觉母版")
+    return story, confirmed
+
+
 @app.get("/api/workspaces/{workspace_id}/comic/v2/status")
 async def get_comic_v2_status_api(workspace_id: str):
     _comic_v2_workspace(workspace_id)
@@ -359,24 +398,7 @@ async def start_comic_v2_api(workspace_id: str, req: ComicV2StartRequest):
         raise HTTPException(status_code=400, detail=f"无法建立正式制片合同：{exc}") from exc
     payload = state.to_dict()
     _save_comic_v2_state(workspace_id, payload)
-    config_manager.create_artifact(
-        artifact_id=f"art_{workspace_id}_comic_v2_contract_v{state.story_version}",
-        workspace_id=workspace_id,
-        task_id="",
-        artifact_type="comic_v2_contract",
-        title=f"{workspace.get('title') or 'AI漫剧'} - V2故事合同与视觉母版",
-        content=json.dumps(state.contract, ensure_ascii=False, indent=2),
-        metadata={
-            "office_id": "comic_production",
-            "pipeline_version": 2,
-            "story_id": state.story_id,
-            "story_version": state.story_version,
-            "style_id": state.style_id,
-            "style_version": state.style_version,
-            "review_status": "awaiting_user_review",
-        },
-        created_by="zhongshu",
-    )
+    _persist_comic_v2_contract(workspace, state, "awaiting_user_review")
     config_manager.append_task_event(
         task_id=f"comic_v2_{workspace_id}",
         event_type="comic_v2_visual_bible_ready",
@@ -391,6 +413,88 @@ async def start_comic_v2_api(workspace_id: str, req: ComicV2StartRequest):
         },
     )
     return payload
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/plan-confirmed")
+async def plan_confirmed_comic_v2_api(workspace_id: str):
+    workspace = _comic_v2_workspace(workspace_id)
+    source_story, confirmed = _confirmed_story_for_v2(workspace_id)
+    config = config_manager.get_model_config("zhongshu", office_id="comic_production")
+    try:
+        bundle = await plan_contract(
+            source_story,
+            config,
+            source_mode="full_story",
+            story_version=int(confirmed.get("script_version") or 1),
+        )
+    except PlannerError as exc:
+        raise HTTPException(status_code=502, detail=f"视觉母版规划失败：{exc}") from exc
+    state = ComicProductionV2.from_bundle(bundle, workspace_id=workspace_id)
+    _save_comic_v2_state(workspace_id, state.to_dict())
+    _persist_comic_v2_contract(workspace, state, "awaiting_user_review")
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_visual_bible_ready",
+        status="waiting_for_human",
+        summary="故事合同与视觉母版等待用户确认",
+        payload={"workspace_id": workspace_id, "style_version": state.style_version},
+    )
+    return state.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/visual-bible/approve")
+async def approve_comic_v2_visual_bible_api(workspace_id: str):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="请先生成视觉母版")
+    try:
+        state = ComicProductionV2.approve_visual_bible(ComicProductionV2.from_dict(raw))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _save_comic_v2_state(workspace_id, state.to_dict())
+    _persist_comic_v2_contract(workspace, state, "approved")
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_visual_bible_approved",
+        status="completed",
+        summary="视觉母版已确认，可以进入资产拆解",
+        payload={"workspace_id": workspace_id, "style_version": state.style_version},
+    )
+    return state.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/visual-bible/revise")
+async def revise_comic_v2_visual_bible_api(workspace_id: str, req: ComicV2RevisionRequest):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="请先生成视觉母版")
+    state = ComicProductionV2.from_dict(raw)
+    config = config_manager.get_model_config("zhongshu", office_id="comic_production")
+    try:
+        bundle = await revise_visual_bible(
+            state.contract,
+            req.revision_request,
+            config,
+        )
+        revised = ComicProductionV2.replace_visual_bible(state, bundle)
+    except (PlannerError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"视觉母版修改失败：{exc}") from exc
+    _save_comic_v2_state(workspace_id, revised.to_dict())
+    _persist_comic_v2_contract(workspace, revised, "awaiting_user_review")
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_visual_bible_revised",
+        status="waiting_for_human",
+        summary="视觉母版已按退回意见生成新版本",
+        payload={
+            "workspace_id": workspace_id,
+            "style_version": revised.style_version,
+            "revision_request": req.revision_request,
+        },
+    )
+    return revised.to_dict()
 
 
 @app.post("/api/comic/brief")

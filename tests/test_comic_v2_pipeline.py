@@ -1,10 +1,13 @@
+import json
 import sqlite3
 import unittest
 import uuid
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
 from src.comic_office.v2.pipeline import ComicProductionV2
+from src.comic_office.v2.contracts import build_contract_bundle
 from src.web.app import app, config_manager
 
 
@@ -69,6 +72,31 @@ class ComicV2PipelineTests(unittest.TestCase):
         self.assertEqual(restored, state)
         self.assertEqual(restored.pipeline_version, 2)
 
+    def test_visual_bible_approval_opens_asset_planning(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+
+        approved = ComicProductionV2.approve_visual_bible(state)
+
+        self.assertEqual(approved.stage, "asset_planning")
+        self.assertEqual(approved.current_agent, "尚书省")
+        self.assertEqual(approved.contract["status"], "visual_bible_approved")
+        self.assertFalse(approved.can_generate_images)
+
+    def test_visual_bible_revision_invalidates_downstream_state(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        state = state.with_status(assets_status="approved", shots_status="approved", document_status="ready")
+        revised_payload = planner_payload()
+        revised_payload["visual"] = {**revised_payload["visual"], "lighting": "黎明冷雾中的银蓝顶光"}
+        revised_bundle = build_contract_bundle(STORY, revised_payload, style_version=2)
+
+        revised = ComicProductionV2.replace_visual_bible(state, revised_bundle)
+
+        self.assertEqual(revised.stage, "visual_bible_review")
+        self.assertEqual(revised.style_version, 2)
+        self.assertEqual(revised.assets_status, "stale")
+        self.assertEqual(revised.shots_status, "stale")
+        self.assertEqual(revised.document_status, "stale")
+
 
 class ComicV2PipelineApiTests(unittest.TestCase):
     def setUp(self):
@@ -86,6 +114,7 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         conn.execute("DELETE FROM artifacts WHERE workspace_id=?", (self.workspace_id,))
         conn.execute("DELETE FROM workspaces WHERE workspace_id=?", (self.workspace_id,))
         conn.execute("DELETE FROM config_store WHERE key=?", (f"comic_v2_state:{self.workspace_id}",))
+        conn.execute("DELETE FROM config_store WHERE key=?", (f"comic_cabinet_session:{self.workspace_id}",))
         conn.execute("DELETE FROM task_events WHERE task_id=?", (f"comic_v2_{self.workspace_id}",))
         conn.commit()
         conn.close()
@@ -131,6 +160,80 @@ class ComicV2PipelineApiTests(unittest.TestCase):
             conn.execute("DELETE FROM workspaces WHERE workspace_id=?", (research_id,))
             conn.commit()
             conn.close()
+
+    @patch("src.web.app.config_manager.get_model_config")
+    @patch("src.web.app.plan_contract", new_callable=AsyncMock)
+    def test_plan_confirmed_uses_server_owned_story_and_office_model(self, mock_plan, mock_get_model):
+        bundle = build_contract_bundle(STORY, planner_payload())
+        mock_plan.return_value = bundle
+        confirmed = {
+            "title": "借月人",
+            "story_draft": STORY,
+            "script_hash": "server-hash",
+            "script_version": 1,
+        }
+        config_manager.set_kv(
+            f"comic_cabinet_session:{self.workspace_id}",
+            json.dumps({"confirmed": True, "confirmed_script": confirmed}, ensure_ascii=False),
+        )
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/plan-confirmed",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["stage"], "visual_bible_review")
+        self.assertEqual(mock_plan.await_args.args[0], STORY)
+        mock_get_model.assert_called_once_with("zhongshu", office_id="comic_production")
+
+    def test_plan_confirmed_blocks_without_server_confirmed_story(self):
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/plan-confirmed",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("确认", response.json()["detail"])
+
+    def test_visual_bible_approval_persists_next_stage(self):
+        started = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/start",
+            json={"source_story": STORY, "planner_payload": planner_payload()},
+        )
+        self.assertEqual(started.status_code, 200)
+
+        approved = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/visual-bible/approve",
+            json={},
+        )
+
+        self.assertEqual(approved.status_code, 200)
+        self.assertEqual(approved.json()["stage"], "asset_planning")
+        reloaded = self.client.get(f"/api/workspaces/{self.workspace_id}/comic/v2/status")
+        self.assertEqual(reloaded.json()["contract"]["status"], "visual_bible_approved")
+
+    @patch("src.web.app.config_manager.get_model_config")
+    @patch("src.web.app.revise_visual_bible", new_callable=AsyncMock)
+    def test_visual_bible_revision_persists_a_new_style_version(self, mock_revise, mock_get_model):
+        started = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/start",
+            json={"source_story": STORY, "planner_payload": planner_payload()},
+        )
+        self.assertEqual(started.status_code, 200)
+        revised_payload = planner_payload()
+        revised_payload["visual"] = {**revised_payload["visual"], "lighting": "黎明银蓝冷雾"}
+        mock_revise.return_value = build_contract_bundle(STORY, revised_payload, style_version=2)
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/visual-bible/revise",
+            json={"revision_request": "改成黎明银蓝冷雾"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["style_version"], 2)
+        self.assertEqual(response.json()["stage"], "visual_bible_review")
+        mock_get_model.assert_called_once_with("zhongshu", office_id="comic_production")
 
 
 if __name__ == "__main__":
