@@ -147,6 +147,93 @@ def revise_asset_manifest(
     )
 
 
+def replace_asset_manifest(
+    previous: AssetManifest,
+    user_note: str,
+    proposed_assets: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+) -> AssetManifest:
+    """Replace the full inventory so a revision can both add and remove assets."""
+    note = (user_note or "").strip()
+    if not note:
+        raise ManifestValidationError("revision note is required")
+    if not isinstance(proposed_assets, (list, tuple)) or not proposed_assets:
+        raise ManifestValidationError("revision did not provide a full asset inventory")
+    items = tuple(_asset_plan_from_manifest(previous, payload) for payload in proposed_assets)
+    _reject_duplicate_assets(items)
+    content_hash = _manifest_content_hash(
+        previous.story_id,
+        previous.story_version,
+        previous.style_id,
+        previous.style_version,
+        items,
+    )
+    if content_hash == previous.manifest_hash:
+        raise NoManifestChangeError("revision produced no asset changes")
+    return AssetManifest(
+        manifest_id=previous.manifest_id,
+        manifest_hash=content_hash,
+        version=previous.version + 1,
+        story_id=previous.story_id,
+        story_version=previous.story_version,
+        style_id=previous.style_id,
+        style_version=previous.style_version,
+        source_hash=previous.source_hash,
+        source_story=previous.source_story,
+        items=items,
+        review_status="awaiting_user_review",
+        revision_note=note,
+    )
+
+
+def asset_manifest_from_dict(payload: dict[str, Any], *, source_story: str) -> AssetManifest:
+    """Restore a persisted manifest while rechecking its source-story binding."""
+    if not isinstance(payload, dict):
+        raise ManifestValidationError("manifest payload must be an object")
+    if story_hash(source_story) != str(payload.get("source_hash") or ""):
+        raise ManifestValidationError("manifest source story hash does not match")
+    items = []
+    for raw in payload.get("items") or []:
+        evidence = raw.get("evidence") or {}
+        items.append(AssetPlan(
+            asset_id=str(raw.get("asset_id") or ""),
+            asset_type=str(raw.get("asset_type") or ""),
+            name=str(raw.get("name") or ""),
+            evidence=AssetEvidence(
+                evidence_quote=str(evidence.get("evidence_quote") or ""),
+                scene_ids=tuple(evidence.get("scene_ids") or ()),
+            ),
+            story_purpose=str(raw.get("story_purpose") or ""),
+            visual_locks=tuple(raw.get("visual_locks") or ()),
+            allowed_changes=tuple(raw.get("allowed_changes") or ()),
+            planned_images=tuple(raw.get("planned_images") or ()),
+            review_status=str(raw.get("review_status") or "awaiting_user_review"),
+        ))
+    restored = AssetManifest(
+        manifest_id=str(payload.get("manifest_id") or ""),
+        manifest_hash=str(payload.get("manifest_hash") or ""),
+        version=_positive_version(payload.get("version")),
+        story_id=str(payload.get("story_id") or ""),
+        story_version=_positive_version(payload.get("story_version")),
+        style_id=str(payload.get("style_id") or ""),
+        style_version=_positive_version(payload.get("style_version")),
+        source_hash=str(payload.get("source_hash") or ""),
+        source_story=source_story,
+        items=tuple(items),
+        review_status=str(payload.get("review_status") or "awaiting_user_review"),
+        revision_note=str(payload.get("revision_note") or ""),
+    )
+    expected_hash = _manifest_content_hash(
+        restored.story_id,
+        restored.story_version,
+        restored.style_id,
+        restored.style_version,
+        restored.items,
+    )
+    if expected_hash != restored.manifest_hash:
+        raise ManifestValidationError("manifest content hash does not match")
+    return restored
+
+
 def _asset_plan(bundle: ContractBundle, payload: dict[str, Any]) -> AssetPlan:
     return _normalize_asset_plan(
         story_id=bundle.creative.story_id,

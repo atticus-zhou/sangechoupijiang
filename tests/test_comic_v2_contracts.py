@@ -3,6 +3,7 @@ import unittest
 from src.comic_office.v2.contracts import (
     ContractValidationError,
     build_contract_bundle,
+    contract_bundle_from_dict,
     story_hash,
 )
 
@@ -68,6 +69,13 @@ class ComicV2ContractTests(unittest.TestCase):
         self.assertEqual(payload["creative"]["story_id"], payload["visual"]["story_id"])
         self.assertEqual(payload["creative"]["story_version"], 1)
         self.assertEqual(payload["visual"]["style_version"], 1)
+
+    def test_contract_round_trip_revalidates_story_and_style_links(self):
+        first = build_contract_bundle("同一个完整故事。", self._planner())
+
+        restored = contract_bundle_from_dict(first.to_dict())
+
+        self.assertEqual(restored, first)
 
     @staticmethod
     def _planner():

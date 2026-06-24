@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from src.comic_office.v2.pipeline import ComicProductionV2
 from src.comic_office.v2.contracts import build_contract_bundle
+from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.web.app import app, config_manager
 
 
@@ -96,6 +97,39 @@ class ComicV2PipelineTests(unittest.TestCase):
         self.assertEqual(revised.assets_status, "stale")
         self.assertEqual(revised.shots_status, "stale")
         self.assertEqual(revised.document_status, "stale")
+
+    def test_asset_manifest_waits_for_human_review_before_prompt_planning(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        state = ComicProductionV2.approve_visual_bible(state)
+        manifest = build_asset_manifest(build_contract_bundle(STORY, planner_payload()), [{
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭发现月灯燃烧记忆",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "主角",
+            "visual_locks": ["靛青长袍"],
+            "allowed_changes": ["表情"],
+        }])
+
+        waiting = ComicProductionV2.attach_asset_manifest(state, manifest)
+
+        self.assertEqual(waiting.stage, "asset_review")
+        self.assertEqual(waiting.assets_status, "awaiting_user_review")
+        self.assertEqual(waiting.asset_manifest["version"], 1)
+        self.assertFalse(waiting.can_generate_images)
+
+        approved = ComicProductionV2.approve_asset_manifest(waiting)
+        self.assertEqual(approved.stage, "prompt_planning")
+        self.assertEqual(approved.assets_status, "approved")
+
+    def test_old_state_payload_can_be_loaded_before_asset_manifest_exists(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        payload = state.to_dict()
+        payload.pop("asset_manifest", None)
+
+        restored = ComicProductionV2.from_dict(payload)
+
+        self.assertEqual(restored.asset_manifest, {})
 
 
 class ComicV2PipelineApiTests(unittest.TestCase):
@@ -234,6 +268,122 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(response.json()["style_version"], 2)
         self.assertEqual(response.json()["stage"], "visual_bible_review")
         mock_get_model.assert_called_once_with("zhongshu", office_id="comic_production")
+
+    @patch("src.web.app.config_manager.get_model_config")
+    @patch("src.web.app.plan_asset_manifest", new_callable=AsyncMock)
+    def test_asset_plan_runs_after_visual_approval_and_waits_for_human(self, mock_plan, mock_get_model):
+        started = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/start",
+            json={"source_story": STORY, "planner_payload": planner_payload()},
+        )
+        self.assertEqual(started.status_code, 200)
+        approved = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/visual-bible/approve",
+            json={},
+        )
+        self.assertEqual(approved.status_code, 200)
+        manifest = build_asset_manifest(build_contract_bundle(STORY, planner_payload()), [{
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭发现月灯燃烧记忆",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "主角",
+            "visual_locks": ["靛青长袍"],
+            "allowed_changes": ["表情"],
+        }])
+        mock_plan.return_value = manifest
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/plan",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["stage"], "asset_review")
+        self.assertEqual(response.json()["asset_manifest"]["version"], 1)
+        self.assertEqual(
+            mock_get_model.call_args_list,
+            [
+                unittest.mock.call("zhongshu", office_id="comic_production"),
+                unittest.mock.call("menxia", office_id="comic_production"),
+            ],
+        )
+
+    def test_asset_approval_opens_prompt_planning(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        state = ComicProductionV2.approve_visual_bible(state)
+        manifest = build_asset_manifest(build_contract_bundle(STORY, planner_payload()), [{
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭发现月灯燃烧记忆",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "主角",
+            "visual_locks": ["靛青长袍"],
+            "allowed_changes": ["表情"],
+        }])
+        state = ComicProductionV2.attach_asset_manifest(state, manifest)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/approve",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["stage"], "prompt_planning")
+        self.assertEqual(response.json()["assets_status"], "approved")
+
+    @patch("src.web.app.config_manager.get_model_config")
+    @patch("src.web.app.plan_asset_manifest", new_callable=AsyncMock)
+    def test_asset_revision_replaces_manifest_and_returns_to_review(self, mock_plan, mock_get_model):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        state = ComicProductionV2.approve_visual_bible(state)
+        first = build_asset_manifest(build_contract_bundle(STORY, planner_payload()), [{
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭发现月灯燃烧记忆",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "主角",
+            "visual_locks": ["靛青长袍"],
+            "allowed_changes": ["表情"],
+        }])
+        state = ComicProductionV2.attach_asset_manifest(state, first)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+        second = build_asset_manifest(
+            build_contract_bundle(STORY, planner_payload()),
+            [
+                {
+                    "asset_type": "character",
+                    "name": "林昭",
+                    "evidence_quote": "林昭发现月灯燃烧记忆",
+                    "scene_ids": ["scene_01"],
+                    "story_purpose": "主角",
+                    "visual_locks": ["靛青长袍"],
+                    "allowed_changes": ["表情"],
+                },
+                {
+                    "asset_type": "scene",
+                    "name": "月塔",
+                    "evidence_quote": "月塔",
+                    "scene_ids": ["scene_02"],
+                    "story_purpose": "故事高潮空间",
+                    "visual_locks": ["古代木石结构"],
+                    "allowed_changes": ["光线"],
+                },
+            ],
+            version=2,
+            revision_note="补充月塔",
+        )
+        mock_plan.return_value = second
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/revise",
+            json={"revision_request": "缺少故事高潮发生的月塔"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["stage"], "asset_review")
+        self.assertEqual(response.json()["asset_manifest"]["version"], 2)
 
 
 if __name__ == "__main__":

@@ -37,7 +37,9 @@ from src.comic_office import (
     validate_confirmed_script_session,
 )
 from src.comic_word_canvas import build_comic_word_canvas
-from src.comic_office.v2.contracts import ContractValidationError
+from src.comic_office.v2.asset_manifest import asset_manifest_from_dict
+from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
+from src.comic_office.v2.contracts import ContractValidationError, contract_bundle_from_dict
 from src.comic_office.v2.planner import PlannerError, plan_contract, revise_visual_bible
 from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
 from src.research_artifacts import build_research_artifacts
@@ -370,6 +372,33 @@ def _persist_comic_v2_contract(workspace: dict, state, review_status: str) -> No
     )
 
 
+def _persist_comic_v2_manifest(workspace: dict, state, review_status: str) -> None:
+    manifest = state.asset_manifest or {}
+    version = int(manifest.get("version") or 0)
+    if version < 1:
+        raise ValueError("V2资产拆解包缺少有效版本")
+    config_manager.create_artifact(
+        artifact_id=f"art_{state.workspace_id}_comic_v2_asset_manifest_v{version}",
+        workspace_id=state.workspace_id,
+        task_id="",
+        artifact_type="comic_v2_asset_manifest",
+        title=f"{workspace.get('title') or 'AI漫剧'} - V2资产拆解包 v{version}",
+        content=json.dumps(manifest, ensure_ascii=False, indent=2),
+        metadata={
+            "office_id": "comic_production",
+            "pipeline_version": 2,
+            "story_id": state.story_id,
+            "story_version": state.story_version,
+            "style_id": state.style_id,
+            "style_version": state.style_version,
+            "manifest_version": version,
+            "manifest_hash": manifest.get("manifest_hash", ""),
+            "review_status": review_status,
+        },
+        created_by="zhongshu",
+    )
+
+
 def _confirmed_story_for_v2(workspace_id: str) -> tuple[str, dict]:
     session = _load_comic_cabinet_session(workspace_id)
     confirmed = (session or {}).get("confirmed_script") or {}
@@ -495,6 +524,107 @@ async def revise_comic_v2_visual_bible_api(workspace_id: str, req: ComicV2Revisi
         },
     )
     return revised.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/assets/plan")
+async def plan_comic_v2_assets_api(workspace_id: str):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="请先生成并确认视觉母版")
+    state = ComicProductionV2.from_dict(raw)
+    if state.stage != "asset_planning":
+        raise HTTPException(status_code=409, detail="当前阶段不能生成资产拆解包")
+    try:
+        bundle = contract_bundle_from_dict(state.contract)
+        manifest = await plan_asset_manifest(
+            bundle,
+            config_manager.get_model_config("zhongshu", office_id="comic_production"),
+            config_manager.get_model_config("menxia", office_id="comic_production"),
+        )
+        waiting = ComicProductionV2.attach_asset_manifest(state, manifest)
+    except (ContractValidationError, AssetPlanningError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"资产拆解失败：{exc}") from exc
+    _save_comic_v2_state(workspace_id, waiting.to_dict())
+    _persist_comic_v2_manifest(workspace, waiting, "awaiting_user_review")
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_asset_manifest_ready",
+        status="waiting_for_human",
+        summary="人物、道具和场景清单等待用户确认",
+        payload={
+            "workspace_id": workspace_id,
+            "manifest_version": manifest.version,
+            "asset_count": len(manifest.items),
+        },
+    )
+    return waiting.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/assets/approve")
+async def approve_comic_v2_assets_api(workspace_id: str):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="请先生成资产拆解包")
+    try:
+        approved = ComicProductionV2.approve_asset_manifest(ComicProductionV2.from_dict(raw))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _save_comic_v2_state(workspace_id, approved.to_dict())
+    _persist_comic_v2_manifest(workspace, approved, "approved")
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_asset_manifest_approved",
+        status="completed",
+        summary="资产拆解包已确认，可以生成逐项提示词",
+        payload={
+            "workspace_id": workspace_id,
+            "manifest_version": approved.asset_manifest.get("version", 0),
+        },
+    )
+    return approved.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/assets/revise")
+async def revise_comic_v2_assets_api(workspace_id: str, req: ComicV2RevisionRequest):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="请先生成资产拆解包")
+    state = ComicProductionV2.from_dict(raw)
+    if state.stage != "asset_review" or not state.asset_manifest:
+        raise HTTPException(status_code=409, detail="当前没有可退回修改的资产拆解包")
+    try:
+        bundle = contract_bundle_from_dict(state.contract)
+        previous = asset_manifest_from_dict(
+            state.asset_manifest,
+            source_story=bundle.creative.source_story,
+        )
+        manifest = await plan_asset_manifest(
+            bundle,
+            config_manager.get_model_config("zhongshu", office_id="comic_production"),
+            config_manager.get_model_config("menxia", office_id="comic_production"),
+            revision_request=req.revision_request,
+            previous_manifest=previous,
+        )
+        waiting = ComicProductionV2.attach_asset_manifest(state, manifest)
+    except (ContractValidationError, AssetPlanningError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"资产重拆失败：{exc}") from exc
+    _save_comic_v2_state(workspace_id, waiting.to_dict())
+    _persist_comic_v2_manifest(workspace, waiting, "awaiting_user_review")
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_asset_manifest_revised",
+        status="waiting_for_human",
+        summary="资产拆解包已按退回意见生成新版本",
+        payload={
+            "workspace_id": workspace_id,
+            "manifest_version": manifest.version,
+            "revision_request": req.revision_request,
+        },
+    )
+    return waiting.to_dict()
 
 
 @app.post("/api/comic/brief")

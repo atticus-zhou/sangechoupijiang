@@ -4,6 +4,8 @@ from src.comic_office.v2.asset_manifest import (
     ManifestValidationError,
     NoManifestChangeError,
     build_asset_manifest,
+    asset_manifest_from_dict,
+    replace_asset_manifest,
     revise_asset_manifest,
 )
 from src.comic_office.v2.contracts import build_contract_bundle
@@ -145,6 +147,32 @@ class ComicV2AssetManifestTests(unittest.TestCase):
         second_ids = {item.name: item.asset_id for item in added.items}
         self.assertEqual(first_ids["林昭"], second_ids["林昭"])
         self.assertEqual(first_ids["月税司"], second_ids["月税司"])
+
+    def test_manifest_round_trip_restores_source_story_for_later_revision(self):
+        first = build_asset_manifest(contract_bundle(), VALID_ASSETS)
+
+        restored = asset_manifest_from_dict(first.to_dict(), source_story=STORY)
+
+        self.assertEqual(restored, first)
+        self.assertEqual(restored.source_story, STORY)
+
+    def test_full_replacement_can_remove_an_incorrect_asset(self):
+        first = build_asset_manifest(contract_bundle(), VALID_ASSETS)
+        corrected = [VALID_ASSETS[0], {
+            "asset_type": "prop",
+            "name": "裂纹月灯",
+            "evidence_quote": "裂纹月灯",
+            "scene_ids": ["scene_01", "scene_02"],
+            "story_purpose": "推动真相被发现的核心证物",
+            "visual_locks": ["裂纹位置固定"],
+            "allowed_changes": ["发光强度"],
+        }]
+
+        second = replace_asset_manifest(first, "删除错误场景并补充核心道具", corrected)
+
+        self.assertEqual(second.version, 2)
+        self.assertEqual({item.name for item in second.items}, {"林昭", "裂纹月灯"})
+        self.assertNotEqual(second.manifest_hash, first.manifest_hash)
 
 
 if __name__ == "__main__":

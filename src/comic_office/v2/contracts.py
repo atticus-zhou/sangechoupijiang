@@ -174,6 +174,54 @@ def validate_contract_bundle(bundle: ContractBundle) -> None:
         raise ContractValidationError("confirmed story was modified")
 
 
+def contract_bundle_from_dict(payload: dict[str, Any]) -> ContractBundle:
+    """Restore a persisted bundle through the same validation used for model output."""
+    if not isinstance(payload, dict):
+        raise ContractValidationError("contract payload must be an object")
+    creative = payload.get("creative") or {}
+    visual = payload.get("visual") or {}
+    planner_payload = {
+        "title": creative.get("title", ""),
+        "genre": creative.get("genre", ""),
+        "theme": creative.get("theme", ""),
+        "protagonist_goal": creative.get("protagonist_goal", ""),
+        "main_conflict": creative.get("main_conflict", ""),
+        "causal_chain": list(creative.get("causal_chain") or []),
+        "ending": creative.get("ending", ""),
+        "episodes": [
+            {
+                "episode": item.get("episode"),
+                "summary": item.get("summary", ""),
+                "evidence_quote": item.get("evidence_quote", ""),
+            }
+            for item in (creative.get("episodes") or [])
+        ],
+        "must_keep": list(creative.get("must_keep") or []),
+        "must_avoid": list(creative.get("must_avoid") or []),
+        "visual": {
+            key: value
+            for key, value in visual.items()
+            if key not in {"style_id", "style_version", "story_id", "story_version"}
+        },
+    }
+    restored = build_contract_bundle(
+        str(creative.get("source_story") or ""),
+        planner_payload,
+        source_mode=str(creative.get("source_mode") or "full_story"),
+        story_version=int(creative.get("story_version") or 1),
+        style_version=int(visual.get("style_version") or 1),
+    )
+    if restored.creative.story_id != str(creative.get("story_id") or ""):
+        raise ContractValidationError("persisted story id does not match")
+    if restored.visual.style_id != str(visual.get("style_id") or ""):
+        raise ContractValidationError("persisted style id does not match")
+    return ContractBundle(
+        creative=restored.creative,
+        visual=restored.visual,
+        status=str(payload.get("status") or restored.status),
+    )
+
+
 def _episode_contract(payload: Any, source_story: str) -> EpisodeContract:
     if not isinstance(payload, dict):
         raise ContractValidationError("episode must be an object")

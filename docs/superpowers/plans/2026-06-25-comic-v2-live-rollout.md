@@ -35,11 +35,11 @@
 - Modify: `src/web/app.py`
 - Modify: `tests/test_web_comic_api.py`
 
-- [ ] Write failing tests for evidence-grounded characters, props, and scenes; reject invented assets and missing evidence.
-- [ ] Implement online asset planning through the configured `zhongshu` model and validation through `build_asset_manifest()`.
-- [ ] Write failing tests for approve and revise transitions, including no-op revision rejection and manifest version increment.
-- [ ] Implement `/assets/plan`, `/assets/approve`, and `/assets/revise`, persisting a versioned manifest artifact and user-visible events.
-- [ ] Run focused tests and commit the slice.
+- [x] Write failing tests for evidence-grounded characters, props, and scenes; reject invented assets and missing evidence.
+- [x] Implement online asset planning through the configured `zhongshu` model and validation through `build_asset_manifest()`.
+- [x] Write failing tests for approve and revise transitions, including no-op revision rejection and manifest version increment.
+- [x] Implement `/assets/plan`, `/assets/approve`, and `/assets/revise`, persisting a versioned manifest artifact and user-visible events.
+- [x] Run focused tests and commit the slice.
 
 ### Task 3: Prompt directing, image generation, and cross-image review
 

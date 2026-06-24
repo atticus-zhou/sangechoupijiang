@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
+from .asset_manifest import AssetManifest
 from .contracts import ContractBundle, build_contract_bundle, story_hash, validate_contract_bundle
 
 
@@ -31,6 +32,7 @@ class ComicProductionV2State:
     shots_status: str
     document_status: str
     contract: dict[str, Any]
+    asset_manifest: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -118,10 +120,12 @@ class ComicProductionV2:
         if not isinstance(payload, dict) or int(payload.get("pipeline_version") or 0) != 2:
             raise ValueError("not a comic production V2 state")
         fields = ComicProductionV2State.__dataclass_fields__
-        missing = [name for name in fields if name not in payload]
+        normalized = dict(payload)
+        normalized.setdefault("asset_manifest", {})
+        missing = [name for name in fields if name not in normalized]
         if missing:
             raise ValueError(f"V2 state missing fields: {', '.join(missing)}")
-        return ComicProductionV2State(**{name: payload[name] for name in fields})
+        return ComicProductionV2State(**{name: normalized[name] for name in fields})
 
     @staticmethod
     def approve_visual_bible(state: ComicProductionV2State) -> ComicProductionV2State:
@@ -169,6 +173,50 @@ class ComicProductionV2:
             shots_status="stale",
             document_status="stale",
             contract=contract,
+            asset_manifest={},
+        )
+
+    @staticmethod
+    def attach_asset_manifest(
+        state: ComicProductionV2State,
+        manifest: AssetManifest,
+    ) -> ComicProductionV2State:
+        if state.stage not in {"asset_planning", "asset_review"}:
+            raise ValueError("当前阶段不能写入资产拆解包")
+        if manifest.story_id != state.story_id or manifest.story_version != state.story_version:
+            raise ValueError("资产拆解包属于另一版故事")
+        if manifest.style_id != state.style_id or manifest.style_version != state.style_version:
+            raise ValueError("资产拆解包属于另一版视觉母版")
+        return state.with_status(
+            status="waiting_for_human",
+            stage="asset_review",
+            current_agent="门下省",
+            current_object=f"资产拆解包 v{manifest.version}",
+            completed=3,
+            blocking_reason="等待用户确认人物、道具和场景清单。",
+            next_action="确认资产拆解包，或写明遗漏、误判和多余项后退回重拆。",
+            can_generate_images=False,
+            assets_status="awaiting_user_review",
+            asset_manifest=manifest.to_dict(),
+        )
+
+    @staticmethod
+    def approve_asset_manifest(state: ComicProductionV2State) -> ComicProductionV2State:
+        if state.stage != "asset_review" or not state.asset_manifest:
+            raise ValueError("当前没有可确认的资产拆解包")
+        manifest = copy.deepcopy(state.asset_manifest)
+        manifest["review_status"] = "approved"
+        return state.with_status(
+            status="active",
+            stage="prompt_planning",
+            current_agent="工部",
+            current_object="逐项资产提示词",
+            completed=4,
+            blocking_reason="",
+            next_action="为每张人物、道具和场景基础图生成专属提示词。",
+            can_generate_images=False,
+            assets_status="approved",
+            asset_manifest=manifest,
         )
 
 
