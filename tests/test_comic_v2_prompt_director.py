@@ -1,0 +1,163 @@
+import json
+import unittest
+
+from src.comic_office.v2.asset_manifest import build_asset_manifest
+from src.comic_office.v2.contracts import build_contract_bundle
+from src.comic_office.v2.prompt_director import (
+    build_asset_prompt_plan,
+    build_shot_card,
+    parse_prompt_director_response,
+)
+
+
+STORY = "林昭抱着裂纹月灯冲向中央月塔。她逆向转动控制环，最终熄灭月塔。"
+
+
+def package_parts():
+    bundle = build_contract_bundle(
+        STORY,
+        {
+            "title": "借月人",
+            "genre": "古风幻想",
+            "theme": "记忆与光明的代价",
+            "protagonist_goal": "熄灭月塔",
+            "main_conflict": "守塔人阻止林昭",
+            "causal_chain": ["进入月塔", "转动控制环", "月塔熄灭"],
+            "ending": "林昭最终熄灭月塔",
+            "episodes": [{"episode": 1, "summary": "熄灭月塔", "evidence_quote": "林昭抱着裂纹月灯冲向中央月塔"}],
+            "visual": {
+                "medium": "电影级国风厚涂动画",
+                "era": "架空古代",
+                "aspect_ratio": "9:16",
+                "palette": ["靛青", "银白", "暗朱红"],
+                "lighting": "冷银月光与暗红火光对照",
+                "camera_language": "稳定构图，克制运镜",
+                "character_rules": ["脸型、发髻和服装主色固定"],
+                "costume_rules": ["古代窄袖长袍"],
+                "prop_rules": ["裂纹位置固定"],
+                "architecture_rules": ["石塔与古铜机械结构"],
+                "visual_motifs": ["裂纹月灯", "逐层熄灭的灯火"],
+                "prohibited_elements": ["现代服装", "现代机械", "可读文字"],
+            },
+        },
+    )
+    manifest = build_asset_manifest(bundle, [
+        {
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "抱着月灯冲向塔心并熄灭月塔",
+            "visual_locks": ["靛青窄袖长袍", "高发髻"],
+            "allowed_changes": ["表情", "姿势"],
+        },
+        {
+            "asset_type": "prop",
+            "name": "裂纹月灯",
+            "evidence_quote": "裂纹月灯",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "承载亡者记忆并触发最终选择",
+            "visual_locks": ["右上方固定弧形裂纹", "古铜框架"],
+            "allowed_changes": ["亮度"],
+        },
+        {
+            "asset_type": "scene",
+            "name": "中央月塔",
+            "evidence_quote": "中央月塔",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "最终抉择发生地",
+            "visual_locks": ["圆形外环", "中央控制环", "三条石桥"],
+            "allowed_changes": ["灯火亮灭状态"],
+        },
+    ])
+    by_type = {item.asset_type: item for item in manifest.items}
+    return bundle.visual, by_type
+
+
+class ComicV2PromptDirectorTests(unittest.TestCase):
+    def test_base_character_prompt_has_no_story_action(self):
+        visual, assets = package_parts()
+
+        plan = build_asset_prompt_plan(assets["character"], visual, image_kind="three_view")
+
+        self.assertEqual(plan.purpose, "identity_reference")
+        self.assertIn("纯白或近白色干净背景", plan.generator_prompt)
+        self.assertNotIn("冲向", plan.generator_prompt)
+        self.assertNotIn("熄灭月塔", plan.generator_prompt)
+        self.assertTrue(all("不要" not in item for item in plan.negative_prompt))
+
+    def test_base_prop_prompt_is_clean_and_not_a_story_scene(self):
+        visual, assets = package_parts()
+
+        plan = build_asset_prompt_plan(assets["prop"], visual, image_kind="turnaround")
+
+        self.assertIn("纯白或近白色干净背景", plan.generator_prompt)
+        self.assertIn("右上方固定弧形裂纹", plan.generator_prompt)
+        self.assertNotIn("亡者记忆", plan.generator_prompt)
+
+    def test_scene_prompt_preserves_space_without_white_background(self):
+        visual, assets = package_parts()
+
+        plan = build_asset_prompt_plan(assets["scene"], visual, image_kind="top_down")
+
+        self.assertIn("俯视布局", plan.generator_prompt)
+        self.assertIn("圆形外环", plan.generator_prompt)
+        self.assertNotIn("纯白或近白色干净背景", plan.generator_prompt)
+
+    def test_shot_card_references_assets_and_contains_execution_fields(self):
+        visual, assets = package_parts()
+        payload = {
+            "shot_id": "SHOT-01",
+            "scene_id": "scene_01",
+            "story_beat": "林昭抵达塔心并决定熄灭月塔",
+            "action_chain": ["林昭走向控制环", "双手握住控制环", "逆向转动", "灯火逐层熄灭"],
+            "performance_intent": "克制、坚定，不喊叫",
+            "framing": "35mm 中广角",
+            "camera_movement": "从侧后方缓慢跟随并绕到正面",
+            "lighting": "冷银顶光逐步熄灭，暗红绳保留暖色",
+            "dialogue": "林昭：够了。",
+            "sound": "控制环摩擦声，随后全城寂静",
+            "retry_strategy": "三人调度不稳定时只保留林昭与控制环，其余改为画外声音。",
+        }
+
+        card = build_shot_card(
+            payload,
+            characters=[assets["character"]],
+            props=[assets["prop"]],
+            scene=assets["scene"],
+            visual=visual,
+        )
+
+        self.assertEqual(
+            card.reference_asset_ids,
+            (assets["character"].asset_id, assets["prop"].asset_id, assets["scene"].asset_id),
+        )
+        self.assertEqual(card.action_chain[-1], "灯火逐层熄灭")
+        self.assertIn("首帧参考", card.generator_prompt)
+        self.assertIn("失败重试", card.retry_strategy_label)
+        self.assertTrue(card.production_ready)
+
+    def test_prompt_failure_has_no_silent_rule_fallback(self):
+        result = parse_prompt_director_response("not-json")
+
+        self.assertEqual(result.status, "prompt_failed")
+        self.assertFalse(result.production_ready)
+        self.assertEqual(result.prompts, ())
+
+    def test_valid_prompt_response_keeps_negative_prompt_separate(self):
+        result = parse_prompt_director_response(json.dumps({
+            "prompts": [{
+                "object_id": "character_1",
+                "purpose": "identity_reference",
+                "generator_prompt": "人物三视图，纯白背景",
+                "negative_prompt": ["禁止文字", "禁止剧情动作"],
+            }]
+        }, ensure_ascii=False))
+
+        self.assertEqual(result.status, "ready_for_prompt_review")
+        self.assertTrue(result.production_ready)
+        self.assertEqual(result.prompts[0].negative_prompt, ("禁止文字", "禁止剧情动作"))
+
+
+if __name__ == "__main__":
+    unittest.main()
