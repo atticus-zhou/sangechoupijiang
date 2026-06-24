@@ -2,6 +2,7 @@ import unittest
 
 from src.comic_office.v2.visual_review import (
     build_visual_review_request,
+    normalize_baseline_review,
     normalize_visual_review,
 )
 
@@ -106,6 +107,21 @@ class ComicV2VisualReviewTests(unittest.TestCase):
         self.assertIn("当前待检图", request.instruction)
         self.assertIn("批准参考图", request.instruction)
         self.assertIn("上一张合格图", request.instruction)
+
+    def test_first_identity_sheet_can_establish_baseline_without_false_cross_image_claim(self):
+        request = build_visual_review_request(
+            "character-three-view.png",
+            [],
+            visual_bible_summary="电影级国风厚涂动画",
+            acceptance_criteria=["三视图内部脸型一致", "纯白干净背景"],
+        )
+
+        result = normalize_baseline_review(review_payload(), request)
+
+        self.assertEqual(result.status, "pass")
+        self.assertEqual(result.consistency_status, "baseline_established")
+        self.assertTrue(result.handoff_ready)
+        self.assertNotIn("缺少批准参考图", result.issues)
 
 
 if __name__ == "__main__":

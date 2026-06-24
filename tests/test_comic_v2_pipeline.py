@@ -9,6 +9,9 @@ from fastapi.testclient import TestClient
 from src.comic_office.v2.pipeline import ComicProductionV2
 from src.comic_office.v2.contracts import build_contract_bundle
 from src.comic_office.v2.asset_manifest import build_asset_manifest
+from src.comic_office.v2.production import ImageProductionResult, PromptPackage
+from src.comic_office.v2.prompt_director import PromptPlan, ShotCard
+from src.llm.providers import ModelConfig
 from src.web.app import app, config_manager
 
 
@@ -130,6 +133,81 @@ class ComicV2PipelineTests(unittest.TestCase):
         restored = ComicProductionV2.from_dict(payload)
 
         self.assertEqual(restored.asset_manifest, {})
+
+    def test_prompt_and_image_packages_advance_to_document_generation(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        state = ComicProductionV2.approve_visual_bible(state)
+        manifest = build_asset_manifest(build_contract_bundle(STORY, planner_payload()), [{
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭发现月灯燃烧记忆",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "主角",
+            "visual_locks": ["靛青长袍"],
+            "allowed_changes": ["表情"],
+        }])
+        state = ComicProductionV2.attach_asset_manifest(state, manifest)
+        state = ComicProductionV2.approve_asset_manifest(state)
+        prompt = PromptPlan(
+            object_id=manifest.items[0].asset_id,
+            image_kind="three_view",
+            purpose="identity_reference",
+            generator_prompt="林昭三视图，靛青长袍，纯白干净背景",
+            negative_prompt=("禁止文字",),
+            style_id=state.style_id,
+        )
+        package = PromptPackage(
+            package_id="prompts_test",
+            story_id=state.story_id,
+            story_version=state.story_version,
+            style_id=state.style_id,
+            style_version=state.style_version,
+            manifest_id=manifest.manifest_id,
+            manifest_version=manifest.version,
+            prompts=(prompt,),
+            shots=(),
+        )
+
+        generating = ComicProductionV2.attach_prompt_package(state, package)
+
+        self.assertEqual(generating.stage, "image_generation")
+        self.assertTrue(generating.can_generate_images)
+        self.assertEqual(generating.prompt_package["package_id"], "prompts_test")
+
+        result = ImageProductionResult(
+            status="ready_for_delivery",
+            production_ready=True,
+            records=(),
+            failures=(),
+        )
+        delivering = ComicProductionV2.attach_image_production(generating, result)
+        self.assertEqual(delivering.stage, "document_generation")
+        self.assertFalse(delivering.can_generate_images)
+
+    def test_failed_visual_review_requires_reason_before_human_override(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        state = state.with_status(stage="visual_review", image_production={"production_ready": False})
+
+        with self.assertRaises(ValueError):
+            ComicProductionV2.override_visual_review(state, "")
+
+        overridden = ComicProductionV2.override_visual_review(state, "人物风格偏差可接受，后续平台继续修正")
+        self.assertEqual(overridden.stage, "document_generation")
+        self.assertEqual(
+            overridden.image_production["human_override"]["reason"],
+            "人物风格偏差可接受，后续平台继续修正",
+        )
+
+    def test_old_state_payload_can_be_loaded_before_prompt_and_image_fields_exist(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        payload = state.to_dict()
+        payload.pop("prompt_package", None)
+        payload.pop("image_production", None)
+
+        restored = ComicProductionV2.from_dict(payload)
+
+        self.assertEqual(restored.prompt_package, {})
+        self.assertEqual(restored.image_production, {})
 
 
 class ComicV2PipelineApiTests(unittest.TestCase):
@@ -384,6 +462,106 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["stage"], "asset_review")
         self.assertEqual(response.json()["asset_manifest"]["version"], 2)
+
+    @patch("src.web.app.direct_shot_cards", new_callable=AsyncMock)
+    @patch("src.web.app.direct_asset_prompts", new_callable=AsyncMock)
+    @patch("src.web.app.config_manager.get_model_config")
+    def test_prompt_plan_persists_package_and_opens_image_generation(self, mock_get_model, mock_assets, mock_shots):
+        state, manifest = self._state_with_approved_assets()
+        package = self._prompt_package(state, manifest)
+        mock_assets.return_value = package
+        mock_shots.return_value = package
+        mock_get_model.return_value = ModelConfig(provider="openai", model="fake", api_key="test")
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/prompts/plan",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["stage"], "image_generation")
+        self.assertTrue(response.json()["can_generate_images"])
+        self.assertEqual(response.json()["prompt_package"]["package_id"], package.package_id)
+
+    @patch("src.web.app.produce_asset_images", new_callable=AsyncMock)
+    @patch("src.web.app.config_manager.get_model_config")
+    def test_image_generation_ready_result_opens_document_generation(self, mock_get_model, mock_produce):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+        mock_get_model.return_value = ModelConfig(provider="doubao", model="doubao-seedream-5", api_key="test")
+        mock_produce.return_value = ImageProductionResult(
+            status="ready_for_delivery",
+            production_ready=True,
+            records=(),
+            failures=(),
+        )
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/generate",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["stage"], "document_generation")
+        self.assertFalse(response.json()["can_generate_images"])
+
+    def test_visual_review_override_endpoint_requires_explicit_reason(self):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        state = state.with_status(stage="visual_review", image_production={"production_ready": False})
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        blocked = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/override",
+            json={"reason": ""},
+        )
+        self.assertIn(blocked.status_code, {400, 422})
+
+        approved = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/override",
+            json={"reason": "人物风格偏差可接受，后续平台继续修正"},
+        )
+        self.assertEqual(approved.status_code, 200)
+        self.assertEqual(approved.json()["stage"], "document_generation")
+
+    def _state_with_approved_assets(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        state = ComicProductionV2.approve_visual_bible(state)
+        manifest = build_asset_manifest(build_contract_bundle(STORY, planner_payload()), [{
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭发现月灯燃烧记忆",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "主角",
+            "visual_locks": ["靛青长袍"],
+            "allowed_changes": ["表情"],
+        }])
+        state = ComicProductionV2.attach_asset_manifest(state, manifest)
+        return ComicProductionV2.approve_asset_manifest(state), manifest
+
+    @staticmethod
+    def _prompt_package(state, manifest):
+        prompt = PromptPlan(
+            object_id=manifest.items[0].asset_id,
+            image_kind="three_view",
+            purpose="identity_reference",
+            generator_prompt="林昭三视图，靛青长袍，纯白干净背景",
+            negative_prompt=("禁止文字",),
+            style_id=state.style_id,
+        )
+        return PromptPackage(
+            package_id="prompts_api",
+            story_id=state.story_id,
+            story_version=state.story_version,
+            style_id=state.style_id,
+            style_version=state.style_version,
+            manifest_id=manifest.manifest_id,
+            manifest_version=manifest.version,
+            prompts=(prompt,),
+            shots=(),
+        )
 
 
 if __name__ == "__main__":

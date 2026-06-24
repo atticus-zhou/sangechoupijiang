@@ -50,6 +50,7 @@ class ShotCard:
     retry_strategy: str
     retry_strategy_label: str
     style_id: str
+    evidence_quote: str = ""
     production_ready: bool = True
 
 
@@ -199,6 +200,7 @@ def build_shot_card(
         retry_strategy=retry,
         retry_strategy_label=f"失败重试：{retry}",
         style_id=visual.style_id,
+        evidence_quote=str(payload.get("evidence_quote") or "").strip(),
     )
 
 

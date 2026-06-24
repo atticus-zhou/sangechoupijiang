@@ -42,6 +42,13 @@ from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_man
 from src.comic_office.v2.contracts import ContractValidationError, contract_bundle_from_dict
 from src.comic_office.v2.planner import PlannerError, plan_contract, revise_visual_bible
 from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
+from src.comic_office.v2.production import (
+    ProductionError,
+    direct_asset_prompts,
+    direct_shot_cards,
+    produce_asset_images,
+    prompt_package_from_dict,
+)
 from src.research_artifacts import build_research_artifacts
 from src.research_quality import assess_research_package
 from src.evidence_artifacts import build_evidence_artifacts
@@ -204,6 +211,10 @@ class ComicV2StartRequest(BaseModel):
 
 class ComicV2RevisionRequest(BaseModel):
     revision_request: str
+
+
+class ComicV2VisualOverrideRequest(BaseModel):
+    reason: str
 
 
 class BrowserStartRequest(BaseModel):
@@ -406,6 +417,28 @@ def _confirmed_story_for_v2(workspace_id: str) -> tuple[str, dict]:
     if not session.get("confirmed") or not story.strip():
         raise HTTPException(status_code=400, detail="请先确认完整故事，再生成视觉母版")
     return story, confirmed
+
+
+def _comic_v2_capability_model(
+    capability_agent: str,
+    fallback_agents: tuple[str, ...],
+    *,
+    kind: str,
+):
+    candidates = (capability_agent,) + fallback_agents
+    selected = None
+    for agent in candidates:
+        config = config_manager.get_model_config(agent, office_id="comic_production")
+        selected = selected or config
+        has_access = bool(config.api_key) or config.provider.lower() == "ollama" or config.api_base.startswith("http://localhost") or config.api_base.startswith("http://127.0.0.1")
+        if not has_access:
+            continue
+        is_image = is_image_generation_config(config)
+        if kind == "image" and is_image:
+            return config
+        if kind in {"text", "vision"} and not is_image:
+            return config
+    return selected or config_manager.get_model_config(fallback_agents[-1], office_id="comic_production")
 
 
 @app.get("/api/workspaces/{workspace_id}/comic/v2/status")
@@ -625,6 +658,175 @@ async def revise_comic_v2_assets_api(workspace_id: str, req: ComicV2RevisionRequ
         },
     )
     return waiting.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/prompts/plan")
+async def plan_comic_v2_prompts_api(workspace_id: str):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="请先确认资产拆解包")
+    state = ComicProductionV2.from_dict(raw)
+    if state.stage != "prompt_planning" or state.assets_status != "approved":
+        raise HTTPException(status_code=409, detail="资产拆解包尚未确认，不能生成提示词")
+    try:
+        bundle = contract_bundle_from_dict(state.contract)
+        manifest = asset_manifest_from_dict(
+            state.asset_manifest,
+            source_story=bundle.creative.source_story,
+        )
+        package = await direct_asset_prompts(
+            bundle,
+            manifest,
+            _comic_v2_capability_model("gongbu_text", ("zhongshu",), kind="text"),
+        )
+        package = await direct_shot_cards(
+            bundle,
+            manifest,
+            package,
+            _comic_v2_capability_model("bingbu_text", ("bingbu", "zhongshu"), kind="text"),
+        )
+        generating = ComicProductionV2.attach_prompt_package(state, package)
+    except (ContractValidationError, ProductionError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"提示词规划失败：{exc}") from exc
+    _save_comic_v2_state(workspace_id, generating.to_dict())
+    config_manager.create_artifact(
+        artifact_id=f"art_{workspace_id}_comic_v2_prompt_package_m{package.manifest_version}",
+        workspace_id=workspace_id,
+        task_id="",
+        artifact_type="comic_v2_prompt_package",
+        title=f"{workspace.get('title') or 'AI漫剧'} - V2资产与镜头提示词包",
+        content=json.dumps(package.to_dict(), ensure_ascii=False, indent=2),
+        metadata={
+            "office_id": "comic_production",
+            "pipeline_version": 2,
+            "story_id": state.story_id,
+            "style_id": state.style_id,
+            "manifest_version": package.manifest_version,
+            "asset_prompt_count": len(package.prompts),
+            "shot_prompt_count": len(package.shots),
+            "review_status": "system_validated",
+        },
+        created_by="gongbu",
+    )
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_prompts_ready",
+        status="completed",
+        summary="逐项资产提示词和镜头提示词卡已生成",
+        payload={
+            "workspace_id": workspace_id,
+            "asset_prompt_count": len(package.prompts),
+            "shot_prompt_count": len(package.shots),
+        },
+    )
+    return generating.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/images/generate")
+async def generate_comic_v2_images_api(workspace_id: str):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="请先生成提示词包")
+    state = ComicProductionV2.from_dict(raw)
+    if state.stage not in {"image_generation", "visual_review"}:
+        raise HTTPException(status_code=409, detail="当前阶段不能生成资产图片")
+    try:
+        bundle = contract_bundle_from_dict(state.contract)
+        manifest = asset_manifest_from_dict(
+            state.asset_manifest,
+            source_story=bundle.creative.source_story,
+        )
+        package = prompt_package_from_dict(state.prompt_package)
+        task_dir = f"comic_v2_m{manifest.version}"
+        output_dir = (
+            Path(__file__).parent.parent.parent
+            / "output" / "workspaces" / workspace_id / "generated" / task_dir
+        )
+        result = await produce_asset_images(
+            package,
+            manifest,
+            bundle.visual,
+            _comic_v2_capability_model("gongbu_image", ("gongbu",), kind="image"),
+            _comic_v2_capability_model("xingbu_vision", ("xingbu",), kind="vision"),
+            output_dir,
+            max_attempts=max(1, int(os.getenv("COMIC_IMAGE_MAX_ATTEMPTS", "2"))),
+        )
+        next_state = ComicProductionV2.attach_image_production(state, result)
+    except (ContractValidationError, ProductionError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"资产图片生产失败：{exc}") from exc
+    _save_comic_v2_state(workspace_id, next_state.to_dict())
+    for record in result.records:
+        filename = Path(record.path).name
+        config_manager.create_artifact(
+            artifact_id=f"art_{workspace_id}_{record.image_id}",
+            workspace_id=workspace_id,
+            task_id=f"comic_v2_{workspace_id}",
+            artifact_type="comic_v2_generated_image",
+            title=f"{record.asset_id} / {record.image_kind}",
+            uri=f"/api/workspaces/{workspace_id}/files/generated/{task_dir}/{filename}",
+            content=json.dumps(record.to_dict(), ensure_ascii=False, indent=2),
+            metadata={
+                **record.to_dict(),
+                "office_id": "comic_production",
+                "pipeline_version": 2,
+            },
+            created_by="gongbu",
+        )
+    config_manager.create_artifact(
+        artifact_id=f"art_{workspace_id}_comic_v2_visual_review_m{manifest.version}",
+        workspace_id=workspace_id,
+        task_id=f"comic_v2_{workspace_id}",
+        artifact_type="comic_v2_visual_review",
+        title=f"{workspace.get('title') or 'AI漫剧'} - V2跨图质检",
+        content=json.dumps(result.to_dict(), ensure_ascii=False, indent=2),
+        metadata={
+            "office_id": "comic_production",
+            "pipeline_version": 2,
+            "production_ready": result.production_ready,
+            "record_count": len(result.records),
+            "failure_count": len(result.failures),
+        },
+        created_by="xingbu",
+    )
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_images_reviewed",
+        status="completed" if result.production_ready else "waiting_for_human",
+        summary="基础资产图已完成跨图质检" if result.production_ready else "部分基础资产图需要人工处理",
+        payload={
+            "workspace_id": workspace_id,
+            "generated": len(result.records),
+            "failures": list(result.failures),
+            "next_stage": next_state.stage,
+        },
+    )
+    return next_state.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/images/override")
+async def override_comic_v2_visual_review_api(workspace_id: str, req: ComicV2VisualOverrideRequest):
+    _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="当前没有待人工处理的视觉质检")
+    try:
+        state = ComicProductionV2.override_visual_review(
+            ComicProductionV2.from_dict(raw),
+            req.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _save_comic_v2_state(workspace_id, state.to_dict())
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_visual_review_overridden",
+        status="completed_with_risk",
+        summary="用户已人工放行未完全通过的资产图片",
+        payload={"workspace_id": workspace_id, "reason": req.reason.strip()},
+    )
+    return state.to_dict()
 
 
 @app.post("/api/comic/brief")

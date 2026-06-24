@@ -8,6 +8,7 @@ from typing import Any
 
 from .asset_manifest import AssetManifest
 from .contracts import ContractBundle, build_contract_bundle, story_hash, validate_contract_bundle
+from .production import ImageProductionResult, PromptPackage
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,8 @@ class ComicProductionV2State:
     document_status: str
     contract: dict[str, Any]
     asset_manifest: dict[str, Any] = field(default_factory=dict)
+    prompt_package: dict[str, Any] = field(default_factory=dict)
+    image_production: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -69,6 +72,9 @@ class ComicProductionV2State:
                     "source_story": source_story,
                 },
             },
+            asset_manifest={},
+            prompt_package={},
+            image_production={},
         )
 
 
@@ -122,6 +128,8 @@ class ComicProductionV2:
         fields = ComicProductionV2State.__dataclass_fields__
         normalized = dict(payload)
         normalized.setdefault("asset_manifest", {})
+        normalized.setdefault("prompt_package", {})
+        normalized.setdefault("image_production", {})
         missing = [name for name in fields if name not in normalized]
         if missing:
             raise ValueError(f"V2 state missing fields: {', '.join(missing)}")
@@ -174,6 +182,8 @@ class ComicProductionV2:
             document_status="stale",
             contract=contract,
             asset_manifest={},
+            prompt_package={},
+            image_production={},
         )
 
     @staticmethod
@@ -198,6 +208,8 @@ class ComicProductionV2:
             can_generate_images=False,
             assets_status="awaiting_user_review",
             asset_manifest=manifest.to_dict(),
+            prompt_package={},
+            image_production={},
         )
 
     @staticmethod
@@ -217,6 +229,91 @@ class ComicProductionV2:
             can_generate_images=False,
             assets_status="approved",
             asset_manifest=manifest,
+        )
+
+    @staticmethod
+    def attach_prompt_package(
+        state: ComicProductionV2State,
+        package: PromptPackage,
+    ) -> ComicProductionV2State:
+        if state.stage != "prompt_planning" or state.assets_status != "approved":
+            raise ValueError("资产未确认，不能写入提示词包")
+        manifest = state.asset_manifest or {}
+        if package.story_id != state.story_id or package.story_version != state.story_version:
+            raise ValueError("提示词包属于另一版故事")
+        if package.style_id != state.style_id or package.style_version != state.style_version:
+            raise ValueError("提示词包属于另一版视觉母版")
+        if package.manifest_id != manifest.get("manifest_id") or package.manifest_version != manifest.get("version"):
+            raise ValueError("提示词包属于另一版资产清单")
+        return state.with_status(
+            status="active",
+            stage="image_generation",
+            current_agent="工部",
+            current_object="基础资产图片",
+            completed=5,
+            blocking_reason="",
+            next_action="生成基础资产图，并由刑部按参考链逐张质检。",
+            can_generate_images=True,
+            shots_status="ready",
+            prompt_package=package.to_dict(),
+            image_production={},
+        )
+
+    @staticmethod
+    def attach_image_production(
+        state: ComicProductionV2State,
+        result: ImageProductionResult,
+    ) -> ComicProductionV2State:
+        if state.stage not in {"image_generation", "visual_review"}:
+            raise ValueError("当前阶段不能写入图片生产结果")
+        if result.production_ready:
+            return state.with_status(
+                status="active",
+                stage="document_generation",
+                current_agent="礼部",
+                current_object="页面式 Word 制片画布",
+                completed=6,
+                blocking_reason="",
+                next_action="组装通过质检的资产图与镜头提示词卡，并执行文档审计。",
+                can_generate_images=False,
+                image_production=result.to_dict(),
+            )
+        return state.with_status(
+            status="waiting_for_human",
+            stage="visual_review",
+            current_agent="刑部",
+            current_object="未通过的资产图片",
+            blocking_reason="部分图片未通过跨图一致性质检，需要人工决定重试或放行。",
+            next_action="查看失败原因并重试；确需保留时填写人工放行理由。",
+            can_generate_images=False,
+            image_production=result.to_dict(),
+        )
+
+    @staticmethod
+    def override_visual_review(
+        state: ComicProductionV2State,
+        reason: str,
+    ) -> ComicProductionV2State:
+        note = str(reason or "").strip()
+        if state.stage != "visual_review":
+            raise ValueError("当前没有待人工处理的视觉质检")
+        if not note:
+            raise ValueError("人工放行必须填写具体理由")
+        production = copy.deepcopy(state.image_production)
+        production["human_override"] = {
+            "status": "approved_with_risk",
+            "reason": note,
+        }
+        return state.with_status(
+            status="active",
+            stage="document_generation",
+            current_agent="礼部",
+            current_object="带人工风险说明的 Word 制片画布",
+            completed=6,
+            blocking_reason="",
+            next_action="将人工放行理由写入交付文档，并继续文档审计。",
+            can_generate_images=False,
+            image_production=production,
         )
 
 

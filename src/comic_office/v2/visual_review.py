@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 
@@ -138,6 +138,28 @@ def normalize_visual_review(
         missing_dimensions=tuple(missing),
         failed_dimensions=tuple(failed),
         reference_count=reference_count,
+    )
+
+
+def normalize_baseline_review(
+    payload: dict[str, Any],
+    request: VisualReviewRequest,
+    *,
+    minimum_score: int = 80,
+) -> VisualReviewResult:
+    """Approve the first identity sheet as a baseline without claiming cross-image consistency."""
+    result = normalize_visual_review(payload, request, minimum_score=minimum_score)
+    declared = str(payload.get("status") or "").strip().lower() if isinstance(payload, dict) else ""
+    complete = not result.missing_dimensions and not result.failed_dimensions
+    passed = declared in {"pass", "passed", "ok", "通过"} and complete
+    issues = tuple(issue for issue in result.issues if issue != "缺少批准参考图")
+    return replace(
+        result,
+        status="pass" if passed else ("fail" if result.failed_dimensions else "needs_review"),
+        handoff_ready=passed,
+        consistency_status="baseline_established" if passed else "baseline_failed",
+        issues=issues,
+        reference_count=0,
     )
 
 

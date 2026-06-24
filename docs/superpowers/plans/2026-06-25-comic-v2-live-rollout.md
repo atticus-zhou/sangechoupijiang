@@ -50,12 +50,12 @@
 - Modify: `src/web/app.py`
 - Modify: `tests/test_comic_image_pipeline.py`
 
-- [ ] Write failing tests proving each asset and shot receives its own model-generated prompt bound to story, style, and asset versions.
-- [ ] Implement prompt batches using `gongbu`, rejecting malformed model output instead of silently substituting templates.
-- [ ] Write failing tests proving character/prop images use clean white backgrounds, scenes use spatial views, and generation records image IDs and reference IDs.
-- [ ] Integrate the existing image provider behind V2 generation records.
-- [ ] Write failing tests for `xingbu` cross-image review with approved identity references, previous accepted images, retries, and explicit human override.
-- [ ] Implement production and review transitions, run focused tests, and commit the slice.
+- [x] Write failing tests proving each asset and shot receives its own model-generated prompt bound to story, style, and asset versions.
+- [x] Implement prompt batches using `gongbu`, rejecting malformed model output instead of silently substituting templates.
+- [x] Write failing tests proving character/prop images use clean white backgrounds, scenes use spatial views, and generation records image IDs and reference IDs.
+- [x] Integrate the existing image provider behind V2 generation records.
+- [x] Write failing tests for `xingbu` cross-image review with approved identity references, previous accepted images, retries, and explicit human override.
+- [x] Implement production and review transitions, run focused tests, and commit the slice.
 
 ### Task 4: Audited Word delivery
 
