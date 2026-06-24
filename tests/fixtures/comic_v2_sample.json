@@ -1,0 +1,107 @@
+{
+  "source_story": "林昭在月税司登记月灯，发现裂纹月灯里出现亡兄的影子。她带着裂纹月灯前往中央月塔，查明月塔以全城记忆维持光明。林昭最终逆向转动控制环，熄灭月塔，让全城重新想起被遗忘的亲人。",
+  "planner_payload": {
+    "title": "借月人",
+    "genre": "古风幻想",
+    "theme": "记忆与光明的代价",
+    "protagonist_goal": "查明亡兄消失的真相并终止月税",
+    "main_conflict": "城市依靠燃烧记忆维持光明，真相会让全城重新面对黑暗",
+    "causal_chain": [
+      "林昭在裂纹月灯里发现亡兄影子",
+      "林昭进入中央月塔查明记忆被燃烧",
+      "林昭逆向转动控制环熄灭月塔"
+    ],
+    "ending": "林昭熄灭月塔，全城重新想起被遗忘的亲人",
+    "episodes": [
+      {
+        "episode": 1,
+        "summary": "发现灯中亡兄并进入月塔",
+        "evidence_quote": "林昭在月税司登记月灯，发现裂纹月灯里出现亡兄的影子"
+      },
+      {
+        "episode": 2,
+        "summary": "查明真相并熄灭月塔",
+        "evidence_quote": "林昭最终逆向转动控制环，熄灭月塔"
+      }
+    ],
+    "must_keep": ["裂纹月灯", "真正黎明"],
+    "must_avoid": ["改写故事结局", "加入现代科技"],
+    "visual": {
+      "medium": "电影级国风厚涂动画",
+      "era": "架空古代",
+      "aspect_ratio": "9:16",
+      "palette": ["靛青", "银白", "暗朱红"],
+      "lighting": "冷月光与暖灯火形成叙事对照",
+      "camera_language": "克制稳定，以缓慢移动积累压迫感",
+      "character_rules": ["脸型、发髻、年龄感和服装主色固定"],
+      "costume_rules": ["古代窄袖长袍与手工织物"],
+      "prop_rules": ["月灯裂纹、材质和磨损位置固定"],
+      "architecture_rules": ["古代木石建筑与古铜机械结构"],
+      "visual_motifs": ["裂纹月灯", "逐层熄灭的灯火"],
+      "prohibited_elements": ["现代服装", "现代车辆", "塑料材质", "可读文字"]
+    }
+  },
+  "assets": [
+    {
+      "asset_type": "character",
+      "name": "林昭",
+      "evidence_quote": "林昭",
+      "scene_ids": ["scene_01", "scene_02"],
+      "story_purpose": "发现真相并完成最终选择的主角",
+      "visual_locks": ["靛青窄袖长袍", "高发髻", "克制的年轻女性面孔"],
+      "allowed_changes": ["表情", "姿势", "衣物受光"]
+    },
+    {
+      "asset_type": "prop",
+      "name": "裂纹月灯",
+      "evidence_quote": "裂纹月灯",
+      "scene_ids": ["scene_01", "scene_02"],
+      "story_purpose": "承载亡兄影子并引导主角发现真相",
+      "visual_locks": ["右上方固定弧形裂纹", "古铜框架", "银白内光"],
+      "allowed_changes": ["发光强度", "完整或熄灭状态"]
+    },
+    {
+      "asset_type": "scene",
+      "name": "中央月塔",
+      "evidence_quote": "中央月塔",
+      "scene_ids": ["scene_02"],
+      "story_purpose": "真相揭示和最终抉择发生地",
+      "visual_locks": ["圆形外环", "三条石桥", "中央控制环", "下方深井"],
+      "allowed_changes": ["灯火亮灭状态", "人物站位"]
+    }
+  ],
+  "shots": [
+    {
+      "shot_id": "SHOT-01",
+      "scene_id": "scene_01",
+      "story_beat": "林昭发现裂纹月灯中的亡兄影子",
+      "characters": ["林昭"],
+      "props": ["裂纹月灯"],
+      "scene": "中央月塔",
+      "action_chain": ["林昭举起月灯", "焦点移向固定裂纹", "灯中影子抬手", "林昭停住呼吸"],
+      "performance_intent": "震惊但不尖叫，只用眼神和呼吸变化表达",
+      "framing": "固定机位特写",
+      "camera_movement": "焦点从裂纹缓慢转向灯内影子",
+      "lighting": "银白内光照亮半张脸，背景逐步压暗",
+      "dialogue": "林昭：哥？",
+      "sound": "灯芯低鸣和一次短促吸气",
+      "retry_strategy": "影子实体化时改为磨砂灯壁后的低对比剪影。"
+    },
+    {
+      "shot_id": "SHOT-02",
+      "scene_id": "scene_02",
+      "story_beat": "林昭逆向转动控制环并熄灭月塔",
+      "characters": ["林昭"],
+      "props": ["裂纹月灯"],
+      "scene": "中央月塔",
+      "action_chain": ["林昭走向控制环", "双手握紧", "逆向转动", "灯火由近到远逐层熄灭"],
+      "performance_intent": "克制而坚定，不喊叫",
+      "framing": "35mm 中广角",
+      "camera_movement": "从侧后方缓慢跟随并绕到正面",
+      "lighting": "冷银顶光逐层熄灭，最后保留真实晨光",
+      "dialogue": "林昭：够了。",
+      "sound": "控制环摩擦声，随后全城寂静",
+      "retry_strategy": "调度不稳定时只保留林昭与控制环，其余信息改为画外声音。"
+    }
+  ]
+}

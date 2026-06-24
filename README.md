@@ -49,6 +49,7 @@ src/
   web/                 # Web API 与静态页面
   offices.py           # 办公室注册与元数据
   comic_office/        # AI 漫剧制片办公室核心流程
+    v2/                # 隔离的 V2 故事合同、资产、提示词、质检与 Word 管线
   comic_artifacts.py   # 漫剧制片画布与交付物
   comic_word_canvas.py # Word 制片画布导出
 tests/                 # 单元测试与接口测试
@@ -135,6 +136,18 @@ python -m unittest discover -s tests -v
 ```
 
 部分测试会启动本地服务或生成文档，运行时间可能较长。
+
+### AI 漫剧 V2 固定交付验证
+
+V2 管线把确认故事视为不可改写的合同，再依次建立视觉母版、带原文证据的资产清单、镜头执行卡、跨图质检和页面式 Word 画布。可以在不调用任何模型、也不使用 API Key 的情况下运行固定样例：
+
+```powershell
+python scripts/verify_comic_v2_delivery.py
+```
+
+成功时会输出 `V2 delivery verified`，并在本地 `output/comic_v2_verification/` 生成测试画布。`output/` 已被忽略，不会提交到 GitHub。
+
+当前 V2 通过 `comic_production` 办公室专属 API 和状态看板逐步接入，旧项目及默认生产链仍可继续使用。只有在 V2 的人物审核、图片生成和跨图质检动作全部接通并通过端到端验证后，默认“确认故事”按钮才会切换到 V2，避免用户进入无法完成的半成品流程。
 
 ## 当前限制
 
