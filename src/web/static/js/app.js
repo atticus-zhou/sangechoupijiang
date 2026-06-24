@@ -395,6 +395,8 @@ function phaseLabel(phase) {
         queued: '排队中',
         preparing: '准备中',
         agent_workflow: 'Agent 协作中',
+        comic_image_generation: '逐张生成与视觉检查',
+        visual_review_pending: '等待图片审核',
         artifact_packaging: '整理材料包',
         completed: '已完成',
         finished: '已结束',
@@ -412,6 +414,11 @@ function eventLabel(type) {
         office_template_applied: '应用办公室流程',
         agent_workflow_started: 'Agent 开始协作',
         agent_workflow_finished: 'Agent 协作结束',
+        comic_image_generation_started: '开始批量生成图片',
+        comic_image_item_started: '正在生成图片',
+        comic_image_item_completed: '图片生成完成',
+        comic_image_item_failed: '图片生成失败',
+        comic_artifacts_created: '漫剧制片包已生成',
         artifact_packaging_started: '开始整理产物',
         artifacts_created: '产物已生成',
         artifacts_recovered: '产物已恢复',
@@ -1189,7 +1196,7 @@ function latestBlockingComicAssetReviewIndex(artifacts) {
         const artifact = artifacts[i];
         if (artifact.artifact_type !== 'asset_review_package') continue;
         const reviewStatus = (artifact.metadata || {}).review_status || 'pending';
-        if (reviewStatus !== 'approved') return i;
+        if (reviewStatus !== 'approved' && reviewStatus !== 'revision_requested') return i;
     }
     return -1;
 }
@@ -1212,20 +1219,22 @@ function renderComicAssetReviewPanel(artifacts) {
     const review = latestComicAssetReview(artifacts || []);
     const status = review ? ((review.artifact.metadata || {}).review_status || 'pending') : '';
     const pending = Boolean(review && status !== 'approved');
+    const returned = status === 'revision_requested';
     if (panel) panel.style.display = pending ? '' : 'none';
     if (statusBadge) {
         statusBadge.textContent = comicAssetReviewStatusText(status);
         statusBadge.className = `badge ${status === 'revision_requested' ? 'badge-err' : 'badge-info'}`;
     }
     if (copy) {
-        copy.textContent = status === 'revision_requested'
-            ? '这份资产拆解已经被退回。请在上方继续补充故事或资产要求，重新生成后再确认。'
+        copy.textContent = returned
+            ? '资产拆解已退回。你可以修改上方要求，然后点击“按退回意见重新拆解”。'
             : '中书省和门下省已经把人物、道具、场景和分镜输入拆完。确认它们符合故事后，再继续生成图片和 Word 画布。';
     }
-    if (approveBtn) approveBtn.style.display = pending ? '' : 'none';
+    if (approveBtn) approveBtn.style.display = pending && !returned ? '' : 'none';
     if (startBtn) {
-        startBtn.textContent = pending ? '等待资产审核通过' : '生成资产拆解审核包';
-        startBtn.disabled = pending;
+        startBtn.textContent = returned ? '按退回意见重新拆解' : (pending ? '等待资产审核通过' : '生成资产拆解审核包');
+        startBtn.disabled = pending && !returned;
+        startBtn.onclick = () => submitComicTask(returned ? { revisionMode: true } : {});
     }
 }
 
@@ -1277,6 +1286,66 @@ function renderComicPackageBoard(artifacts) {
                 `;
             }).join('')}
         </div>
+        ${renderComicProductionFlow(items)}
+    `;
+}
+
+function latestComicProductionChain(artifacts) {
+    const chainItems = (artifacts || [])
+        .map((artifact, index) => ({ artifact, index }))
+        .filter(item => item.artifact.artifact_type === 'production_chain_state');
+    return chainItems.length ? chainItems[chainItems.length - 1] : null;
+}
+
+function renderComicProductionFlow(artifacts) {
+    const chainItem = latestComicProductionChain(artifacts);
+    if (!chainItem) {
+        return `
+            <div class="production-flow empty">
+                <div>
+                    <strong>三省六部流程</strong>
+                    <span>确认故事并生成资产拆解包后，这里会显示谁在处理、卡在哪里、下一步需要做什么。</span>
+                </div>
+            </div>
+        `;
+    }
+    const meta = chainItem.artifact.metadata || {};
+    const departments = meta.departments || [];
+    const nextAction = meta.next_action || '等待下一步生产状态。';
+    const currentDepartment = meta.current_department || '尚书省';
+    const actionButton = meta.human_action_required
+        ? '<button class="ghost btn-sm" onclick="focusComicAssetReview()">查看待审核资产</button>'
+        : `<button class="ghost btn-sm" onclick="selectComicArtifact(${chainItem.index})">查看链路详情</button>`;
+    return `
+        <div class="production-flow">
+            <div class="production-flow-head">
+                <div>
+                    <strong>三省六部流程</strong>
+                    <span>当前：${escapeHtml(currentDepartment)} · ${escapeHtml(nextAction)}</span>
+                </div>
+                ${actionButton}
+            </div>
+            <div class="department-flow">
+                ${departments.map(dept => renderComicDepartmentStep(dept)).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderComicDepartmentStep(dept) {
+    const uiStatus = dept.ui_status || dept.status || 'waiting';
+    const issues = dept.blocking_issues || [];
+    const checkpoint = dept.human_checkpoint || '';
+    return `
+        <div class="department-step ${escapeHtml(uiStatus)}">
+            <div class="department-step-top">
+                <strong>${escapeHtml(dept.name || dept.department_id || '')}</strong>
+                <span>${escapeHtml(dept.status_label || uiStatus)}</span>
+            </div>
+            <p>${escapeHtml((dept.outputs || []).join('、') || '等待产出')}</p>
+            ${checkpoint ? `<small>${escapeHtml(checkpoint)}</small>` : ''}
+            ${issues.length ? `<small class="danger">${escapeHtml(issues.join('；'))}</small>` : ''}
+        </div>
     `;
 }
 
@@ -1300,8 +1369,11 @@ function selectComicArtifact(index) {
     const regenerateAction = artifact.artifact_type === 'generated_image'
         ? `<button class="ghost btn-sm" onclick="regenerateComicImage(${index})">重生成这张图</button>`
         : '';
-    const assetReviewAction = artifact.artifact_type === 'asset_review_package' && (artifact.metadata || {}).review_status !== 'approved'
-        ? `<button class="ghost btn-sm" onclick="requestComicAssetRevision()">退回补充</button><button class="btn-sm" onclick="approveComicAssetsAndSubmit()">确认拆解无误，继续生成</button>`
+    const reviewStatus = (artifact.metadata || {}).review_status || 'pending';
+    const assetReviewAction = artifact.artifact_type === 'asset_review_package' && reviewStatus !== 'approved'
+        ? (reviewStatus === 'revision_requested'
+            ? `<button class="btn-sm" onclick="submitComicTask({ revisionMode: true })">按退回意见重新拆解</button>`
+            : `<button class="ghost btn-sm" onclick="requestComicAssetRevision()">退回补充</button><button class="btn-sm" onclick="approveComicAssetsAndSubmit()">确认拆解无误，继续生成</button>`)
         : '';
     const bindingPanel = renderComicArtifactBinding(artifact);
     detail.innerHTML = `
@@ -1396,6 +1468,9 @@ function applyComicCabinetResult(result) {
     currentComicScriptPreview = result.script_preview || null;
     currentComicConfirmedScript = result.confirmed_script || null;
     renderComicCabinet();
+    if (currentComicCabinetSession?.llm_fallback_error) {
+        toast(`主创大模型没有正常返回，当前是规则兜底：${currentComicCabinetSession.llm_fallback_error}`, 'error');
+    }
     loadComicWorkspaces();
     if (currentComicWorkspace) {
         loadComicTimeline(currentComicWorkspace);
@@ -1513,14 +1588,17 @@ function unconfirmComicScript() {
     toast('已退回修改模式，可继续在聊天框中补充修改意见。', 'success');
 }
 
-async function submitComicTask() {
+async function submitComicTask(options = {}) {
+    const revisionMode = Boolean(options.revisionMode);
     const blockingReviewIndex = latestBlockingComicAssetReviewIndex(currentComicArtifacts || []);
-    if (blockingReviewIndex >= 0) {
+    if (blockingReviewIndex >= 0 && !revisionMode) {
         focusComicAssetReview();
         toast('请先确认资产拆解包，再继续生成图片和 Word 画布', 'error');
         return;
     }
-    const req = buildComicRequest();
+    const req = buildComicRequest(revisionMode ? {
+        revisionNotes: document.getElementById('comic-asset-review-notes')?.value.trim() || latestComicAssetRevisionNotes(),
+    } : {});
     if (!req) return;
     try {
         const r = await API.post('/api/tasks', {
@@ -1530,7 +1608,7 @@ async function submitComicTask() {
             workspace_id: currentComicWorkspace,
         });
         currentComicWorkspace = r.workspace_id;
-        toast('已开始生成漫剧制片包和 Word 画布', 'success');
+        toast(revisionMode ? '已按退回意见重新生成资产拆解审核包' : '已开始生成漫剧制片包和 Word 画布', 'success');
         await loadComicWorkspaces();
         await Promise.all([
             loadComicArtifacts(currentComicWorkspace),
@@ -1540,6 +1618,11 @@ async function submitComicTask() {
     } catch (e) {
         toast('提交失败: ' + e.message, 'error');
     }
+}
+
+function latestComicAssetRevisionNotes() {
+    const review = latestComicAssetReview(currentComicArtifacts || []);
+    return ((review?.artifact?.metadata || {}).reviewer_notes || '').trim();
 }
 
 async function approveComicAssetsAndSubmit() {
@@ -1576,7 +1659,7 @@ async function requestComicAssetRevision() {
             status: 'revision_requested',
             reviewer_notes: reviewerNotes,
         });
-        toast('已退回资产拆解。你可以继续补充故事或资产要求后重新生成。', 'success');
+        toast('已退回资产拆解。请修改要求，然后点击“按退回意见重新拆解”。', 'success');
         await Promise.all([
             loadComicArtifacts(currentComicWorkspace),
             loadComicTimeline(currentComicWorkspace),
@@ -1635,7 +1718,7 @@ function watchComicTask(taskId, workspaceId) {
     comicTaskPoller = setInterval(tick, 5000);
 }
 
-function buildComicRequest() {
+function buildComicRequest(options = {}) {
     const fields = readComicFormFields();
     if (!fields.idea && !fields.script_text) {
         toast('请先输入灵感，或粘贴完整剧本', 'error');
@@ -1654,7 +1737,10 @@ function buildComicRequest() {
         return '';
     }
     const answers = (currentComicCabinetSession.user_notes || []).join('\n').trim();
-    const scriptNotes = '';
+    const revisionNotes = (options.revisionNotes || '').trim();
+    const scriptNotes = revisionNotes
+        ? `Asset revision notes: ${revisionNotes}\n本次任务只需要根据退回意见重新生成资产拆解审核包，暂时无需继续生成图片和 Word 画布。`
+        : '';
     const scriptSource = comicScriptSourceForRequest(fields);
     return [
         `Idea: ${fields.idea}`,
@@ -2289,7 +2375,7 @@ async function loadModels() {
                 </div>
                 <div>
                     <label>API Key</label>
-                    <input type="password" value="${cfg.api_key || ''}" placeholder="sk-..." onchange="updateModel('${id}', 'api_key', this.value)">
+                    <input type="password" value="" placeholder="${cfg.has_api_key ? '已配置，留空保持不变' : '尚未配置，请填写'}" onchange="updateModel('${id}', 'api_key', this.value)">
                 </div>
             </div>
             <div class="model-card-actions">

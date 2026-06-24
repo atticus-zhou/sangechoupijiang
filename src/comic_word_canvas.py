@@ -46,6 +46,7 @@ def build_comic_word_canvas(package: dict, image_artifacts: list[dict], output_d
         doc.add_paragraph(global_negative)
 
     _add_asset_tables(doc, package, image_by_ref)
+    _add_shot_template_table(doc, package)
 
     table = doc.add_table(rows=1, cols=9)
     table.style = "Table Grid"
@@ -57,7 +58,7 @@ def build_comic_word_canvas(package: dict, image_artifacts: list[dict], output_d
         cells = table.add_row().cells
         cells[0].text = shot.get("id", "")
         cells[1].text = shot.get("beat", "")
-        cells[2].text = shot.get("reference_assets", "") or _execution_asset_note(shot)
+        cells[2].text = shot.get("identity_references") or shot.get("reference_assets", "") or _execution_asset_note(shot)
         cells[3].text = shot.get("action_chain", "")
         cells[4].text = shot.get("performance_intent", "")
         cells[5].text = shot.get("cinematography", "")
@@ -79,7 +80,7 @@ def build_comic_word_canvas(package: dict, image_artifacts: list[dict], output_d
         cells = exec_table.add_row().cells
         shot_id = shot.get("id", "")
         cells[0].text = shot_id
-        cells[1].text = _execution_asset_note(shot)
+        cells[1].text = shot.get("identity_references") or _execution_asset_note(shot)
         cells[2].text = _shot_duration(shot)
         cells[3].text = _platform_prompt(shot)
         cells[4].text = shot.get("camera_movement") or shot.get("camera") or "保持主体稳定，轻微推进。"
@@ -128,8 +129,37 @@ def _add_asset_tables(doc, package: dict, image_by_ref: dict[str, Path]) -> None
             _append_asset_spec_pictures(cells[4], item, image_by_ref)
 
 
+def _add_shot_template_table(doc, package: dict) -> None:
+    shots = package.get("shots", []) or []
+    if not shots:
+        return
+    doc.add_heading("镜头模板与执行说明", level=2)
+    doc.add_paragraph(
+        "这一页给导演/图生视频平台使用：先看镜头模板和构图，再复制后面的导演提示词。"
+    )
+    table = doc.add_table(rows=1, cols=7)
+    table.style = "Table Grid"
+    headers = ["镜头", "模板", "用途", "构图", "参考身份证", "平台执行说明", "失败重试优先级"]
+    for index, header in enumerate(headers):
+        table.rows[0].cells[index].text = header
+    for shot in shots:
+        cells = table.add_row().cells
+        cells[0].text = shot.get("id", "")
+        cells[1].text = shot.get("shot_template") or shot.get("framing", "")
+        cells[2].text = shot.get("shot_template_purpose") or shot.get("beat", "")
+        cells[3].text = shot.get("composition") or shot.get("cinematography", "")
+        cells[4].text = shot.get("identity_references") or shot.get("reference_assets", "")
+        cells[5].text = shot.get("platform_note") or shot.get("camera_movement", "")
+        cells[6].text = _retry_advice(shot)
+
+
 def _asset_specs_text(item: dict) -> str:
     lines = []
+    card = item.get("identity_card") or {}
+    if card:
+        lines.append(f"{card.get('label', '资产身份证')}：{', '.join(card.get('image_refs') or [])}")
+        if card.get("usage_rule"):
+            lines.append(f"使用规则：{card.get('usage_rule')}")
     for spec in item.get("asset_specs", []) or []:
         lines.append(f"{spec.get('label', spec.get('kind', 'asset'))}：{spec.get('prompt', '')}")
         if spec.get("acceptance"):

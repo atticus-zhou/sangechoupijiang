@@ -46,7 +46,7 @@ class GongbuAgent(BaseAgent):
 4. 基础的模块骨架
 5. README 和说明文档
 
-请输出实质性内容，不要留空。"""
+请输出实质性内容，禁止留空。"""
 
         result = await self.call_llm(prompt=prompt, max_tokens=8192)
         content = result.get("content", "")
@@ -102,12 +102,12 @@ class GongbuAgent(BaseAgent):
 请生成一份可以提交给老板的研究报告。
 
 硬性要求:
-1. 不要写“X百万台”“Y亿元”等占位符。
+1. 禁止写“X百万台”“Y亿元”等占位符。
 2. 没有来源支撑的具体数字必须写“待核验”，不能编造。
 3. 报告必须包含: 执行摘要、关键结论、市场/行业现状、竞争格局、趋势判断、风险与不确定性、图表建议、来源与待核验清单。
 4. 图表建议要说明图表类型、用途、需要的数据字段。
 5. 如果原始材料不足，要明确列出缺口，而不是假装完整。
-6. 输出 Markdown 正文，不要输出调度决策 JSON。"""
+6. 输出 Markdown 正文，禁止输出调度决策 JSON。"""
 
         result = await self.call_llm(prompt=prompt, max_tokens=8192)
         content = result.get("content", "")

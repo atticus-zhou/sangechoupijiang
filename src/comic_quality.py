@@ -61,7 +61,7 @@ def build_revised_prompt(original_prompt: str, review: ComicImageReview, attempt
         "",
         f"第{attempt}次修正要求：{fix}",
         f"必须避免的问题：{issues}",
-        "保持原始设定，不要改变角色身份、画风方向、镜头用途和关键道具。",
+        "保持原始设定，禁止改变角色身份、画风方向、镜头用途和关键道具。",
     ]).strip()
 
 
@@ -95,7 +95,7 @@ def _review_instruction(spec: dict) -> str:
         f"原始提示词：{spec.get('prompt', '')}",
         "",
         "重点检查：人物脸型/服装是否稳定，关键道具是否存在，场景是否符合，画风是否一致，是否有明显畸形或不可用文字。",
-        "只返回JSON，不要 Markdown：",
+        "只返回JSON，禁止 Markdown：",
         '{"status":"pass|fail|needs_review","score":0-100,"issues":["问题1"],"revision_prompt":"给生图模型的修正提示词"}',
     ])
 

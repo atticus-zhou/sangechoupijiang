@@ -123,7 +123,7 @@ class BaseAgent(ABC):
         for _round in range(max_tool_rounds):
             # 搜索过多时提醒 LLM 输出
             if search_count >= 6 and output_schema:
-                messages.append(LLMMessage(role="user", content="已收集足够数据。请调用 output 输出最终结果，不要再搜索。"))
+                messages.append(LLMMessage(role="user", content="已收集足够数据。请调用 output 输出最终结果，禁止继续搜索。"))
                 tool_choice = {"type": "function", "function": {"name": "output"}}
             elif search_count >= 4 and output_schema:
                 messages.append(LLMMessage(role="user", content="信息已较为充分，请调用 output 输出结果。"))

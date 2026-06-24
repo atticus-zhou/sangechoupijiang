@@ -81,7 +81,7 @@ class BingbuAgent(BaseAgent):
 工作要求:
 1. 搜索 2-4 组不同关键词，优先找近期、权威、可引用来源。
 2. 如有必要，抓取 1-2 个关键页面。
-3. 不要编造具体数字。无法确认的数字请写“待核验”，并在 notes 中说明。
+3. 禁止编造具体数字。无法确认的数字请写“待核验”，并在 notes 中说明。
 4. data_sources 填 URL 字符串列表。
 5. sources 填来源明细，包含 title/url/publisher/published_at/note。
 6. data_points 填可用于报告或图表的数据点，包含 metric/value/period/source_url/confidence/note。
@@ -89,7 +89,7 @@ class BingbuAgent(BaseAgent):
 8. competitors 尽量填 Top 竞品字段: product_name/brand/sales/price/selling_points/target_user/positive_keywords/negative_pain_points。
 9. output 写成可交给工部继续写报告的资料简报，必须包含“来源摘录”“数据要点”“竞品要点”“图表建议”四个小节。
 
-重要: 搜索足够后必须调用 output，不要无限搜索。"""
+重要: 搜索足够后必须调用 output，禁止无限搜索。"""
 
         prompt += """
 

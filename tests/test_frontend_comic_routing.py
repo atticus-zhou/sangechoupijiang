@@ -7,6 +7,12 @@ INDEX_HTML = Path("src/web/static/index.html")
 
 
 class FrontendComicRoutingTests(unittest.TestCase):
+    def test_comic_image_progress_events_have_human_labels(self):
+        source = Path("src/web/static/js/app.js").read_text(encoding="utf-8")
+        self.assertIn("comic_image_item_started: '正在生成图片'", source)
+        self.assertIn("comic_image_item_completed: '图片生成完成'", source)
+        self.assertIn("comic_image_item_failed: '图片生成失败'", source)
+
     def test_legacy_comic_hall_card_routes_to_production_office(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
@@ -45,6 +51,26 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("button.textContent = '确认中...'", js)
         self.assertIn("确认版故事已锁定", js)
         self.assertIn("deriveComicStoryDraft", js)
+
+
+    def test_comic_stage_board_renders_department_flow_and_review_action(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function renderComicProductionFlow", js)
+        self.assertIn("function renderComicDepartmentStep", js)
+        self.assertIn("production_chain_state", js)
+        self.assertIn("meta.current_department", js)
+        self.assertIn("meta.next_action", js)
+        self.assertIn("focusComicAssetReview()", js)
+
+    def test_returned_asset_review_can_be_regenerated_from_frontend(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("按退回意见重新拆解", js)
+        self.assertIn("reviewStatus !== 'approved' && reviewStatus !== 'revision_requested'", js)
+        self.assertIn("submitComicTask({ revisionMode: true })", js)
+        self.assertIn("Asset revision notes:", js)
+        self.assertIn("资产拆解已退回。你可以修改上方要求，然后点击“按退回意见重新拆解”。", js)
 
 
 if __name__ == "__main__":

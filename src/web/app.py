@@ -392,15 +392,19 @@ def _workspace_comic_session(workspace_id: str, client_session: dict | None = No
 
 
 def _request_with_server_confirmed_script(user_request: str, confirmed_artifact: dict) -> str:
-    base_request = (user_request or "").split("Confirmed script:", 1)[0].strip()
+    request_text = user_request or ""
+    base_request = request_text.split("Confirmed script:", 1)[0].strip()
+    script_notes = request_text.rsplit("Script notes:", 1)[1].strip() if "Script notes:" in request_text else ""
     confirmed_content = (confirmed_artifact or {}).get("content", "").strip()
-    return "\n".join([
+    sections = [
         base_request,
         "",
         "Confirmed script:",
         confirmed_content,
-    ]).strip()
-
+    ]
+    if script_notes:
+        sections.extend(["", "Script notes:", script_notes])
+    return "\n".join(sections).strip()
 
 def _latest_workspace_artifact_by_type(workspace_id: str, artifact_type: str) -> dict:
     artifacts = config_manager.list_artifacts(workspace_id=workspace_id)
@@ -829,10 +833,11 @@ async def export_workspace_api(workspace_id: str):
             zf.writestr(filename, "\n".join(body))
             uri = artifact.get("uri") or ""
             if uri.startswith("/api/workspaces/") and "/files/generated/" in uri:
-                generated_name = uri.rsplit("/", 1)[-1]
-                generated_path = export_dir / workspace_id / "generated" / generated_name
+                generated_relative = uri.split("/files/generated/", 1)[1]
+                generated_parts = [Path(part).name for part in generated_relative.split("/") if part]
+                generated_path = export_dir / workspace_id / "generated" / Path(*generated_parts)
                 if generated_path.exists():
-                    zf.write(generated_path, f"generated/{generated_name}")
+                    zf.write(generated_path, str(Path("generated", *generated_parts)).replace("\\", "/"))
             if uri.startswith("/api/workspaces/") and "/files/delivery/" in uri:
                 delivery_name = uri.rsplit("/", 1)[-1]
                 delivery_path = export_dir / workspace_id / "delivery" / delivery_name
@@ -958,6 +963,22 @@ async def get_workspace_generated_file_api(workspace_id: str, filename: str):
     return FileResponse(str(file_path))
 
 
+@app.get("/api/workspaces/{workspace_id}/files/generated/{task_id}/{filename}")
+async def get_workspace_task_generated_file_api(workspace_id: str, task_id: str, filename: str):
+    """Return an image from one isolated comic production task."""
+    if not config_manager.get_workspace(workspace_id):
+        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+    safe_task_id = Path(task_id).name
+    safe_name = Path(filename).name
+    file_path = (
+        Path(__file__).parent.parent.parent
+        / "output" / "workspaces" / workspace_id / "generated" / safe_task_id / safe_name
+    )
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="生成图片不存在")
+    return FileResponse(str(file_path))
+
+
 @app.get("/api/workspaces/{workspace_id}/files/delivery/{filename}")
 async def get_workspace_delivery_file_api(workspace_id: str, filename: str):
     """Return a generated delivery document."""
@@ -985,10 +1006,14 @@ async def regenerate_comic_image_api(artifact_id: str, req: ComicImageRegenerate
     if not spec.get("prompt"):
         raise HTTPException(status_code=400, detail="没有找到原始生图提示词")
     max_attempts = max(1, min(4, int(os.getenv("COMIC_IMAGE_MAX_ATTEMPTS", "2") or "2")))
-    output_dir = Path(__file__).parent.parent.parent / "output" / "workspaces" / source["workspace_id"] / "generated"
+    source_task_id = source.get("task_id") or str(uuid.uuid4())[:8]
+    output_dir = (
+        Path(__file__).parent.parent.parent
+        / "output" / "workspaces" / source["workspace_id"] / "generated" / Path(source_task_id).name
+    )
     index = int(str(uuid.uuid4().int)[:6])
     artifact, quality_row, errors = await _generate_reviewed_comic_image(
-        source.get("task_id") or str(uuid.uuid4())[:8],
+        source_task_id,
         source["workspace_id"],
         index,
         spec,
@@ -1305,7 +1330,7 @@ async def _extract_evidence_artifact(
     model_config = config_manager.get_model_config(agent_id, office_id="research")
     image_base64 = base64.b64encode(file_path.read_bytes()).decode("ascii")
     system_prompt = (
-        "你是研究办公室的截图数据识别员。只根据图片内容输出，不要臆造。"
+        "你是研究办公室的截图数据识别员。只根据图片内容输出，禁止臆造。"
         "如果看不清或无法确认，请写待核验。"
     )
     user_prompt = "\n".join([
@@ -1451,16 +1476,16 @@ def _comic_image_specs(result: dict, limit: int) -> list[dict]:
             "kind": "character",
             "agent": "gongbu",
             "title": f"{item.get('id', 'character')} 人物设定图",
-            "prompt": item.get("image_prompt", ""),
+            "prompt": _clean_base_asset_image_prompt("character", item.get("image_prompt", "")),
             "source_id": item.get("id", ""),
             "binding": item.get("binding", {}),
             "script_binding": script_binding,
         })
         for spec in item.get("asset_specs", []) or []:
-            specs.append(_comic_asset_image_spec(item, spec, "gongbu", script_binding))
+            specs.append(_comic_asset_image_spec(item, spec, "gongbu", script_binding, asset_family="character"))
     for item in (package.get("props") or []):
         for spec in item.get("asset_specs", []) or []:
-            specs.append(_comic_asset_image_spec(item, spec, "gongbu", script_binding))
+            specs.append(_comic_asset_image_spec(item, spec, "gongbu", script_binding, asset_family="prop"))
     for item in (package.get("scenes") or []):
         specs.append({
             "kind": "scene",
@@ -1476,20 +1501,56 @@ def _comic_image_specs(result: dict, limit: int) -> list[dict]:
     return [spec for spec in specs if spec.get("prompt")][:limit]
 
 
-def _comic_asset_image_spec(item: dict, asset_spec: dict, agent: str, script_binding: dict) -> dict:
+def _comic_asset_image_spec(
+    item: dict,
+    asset_spec: dict,
+    agent: str,
+    script_binding: dict,
+    asset_family: str = "",
+) -> dict:
     source_id = item.get("id", "")
     kind = asset_spec.get("kind") or "asset"
     return {
         "kind": kind,
         "agent": agent,
         "title": f"{source_id} {asset_spec.get('label') or kind}",
-        "prompt": asset_spec.get("prompt", ""),
+        "prompt": _clean_base_asset_image_prompt(asset_family, asset_spec.get("prompt", "")),
         "source_id": f"{source_id}_{kind}",
         "binding": item.get("binding", {}),
         "script_binding": script_binding,
         "image_ref": asset_spec.get("image_ref", ""),
         "acceptance": asset_spec.get("acceptance", ""),
     }
+
+
+def _clean_base_asset_image_prompt(asset_family: str, prompt: str) -> str:
+    """Final hard gate before image generation for reusable base assets."""
+    prompt = (prompt or "").strip()
+    if asset_family == "character":
+        guard = (
+            "基础人物资产设定图，只生成单独角色参考，不生成剧情画面；"
+            "纯白或近白色干净背景，工作室柔光，主体完整清晰；"
+            "即使原提示词包含山路、街道、房间、战斗或剧情动作，也只保留人物外观、脸型、发型、服装主色、年龄感和标志物；"
+            "负面提示词：禁止场景背景、禁止山路、禁止街道、禁止室内剧情现场、禁止其他人物、禁止手持剧情道具、禁止文字、禁止标签、禁止水印、禁止编号。"
+        )
+        return _append_generation_guard(prompt, guard)
+    if asset_family == "prop":
+        guard = (
+            "基础道具资产设定图，只生成单独道具参考，不生成剧情画面；"
+            "纯白或近白色干净背景，工作室柔光，展示形状、材质、颜色、尺寸、磨损状态和多角度结构；"
+            "即使原提示词包含人物、手持、山路、街道、房间或剧情现场，也只保留道具本身；"
+            "负面提示词：禁止人物手持、禁止人物入镜、禁止剧情现场、禁止场景背景、禁止文字、禁止标签、禁止水印、禁止编号。"
+        )
+        return _append_generation_guard(prompt, guard)
+    return prompt
+
+
+def _append_generation_guard(prompt: str, guard: str) -> str:
+    if not prompt:
+        return guard
+    if "纯白或近白色干净背景" in prompt and "禁止场景背景" in prompt:
+        return prompt
+    return f"{prompt}。{guard}"
 
 
 def _extract_comic_prompt_from_content(content: str) -> str:
@@ -1553,7 +1614,7 @@ def _build_comic_regeneration_spec(artifact: dict, instruction: str = "") -> dic
             prompt,
             "",
             f"用户本次修改要求：{instruction.strip()}",
-            "保持原资产身份、画风方向、连续性规则和镜头用途，不要偏离项目设定。",
+            "保持原资产身份、画风方向、连续性规则和镜头用途，禁止偏离项目设定。",
         ]).strip()
     return {
         "kind": kind,
@@ -1632,7 +1693,7 @@ async def _generate_reviewed_comic_image(
         "task_id": task_id,
         "artifact_type": "generated_image",
         "title": spec["title"],
-        "uri": f"/api/workspaces/{workspace_id}/files/generated/{filename}",
+        "uri": f"/api/workspaces/{workspace_id}/files/generated/{Path(task_id).name}/{filename}",
         "content": "\n".join([
             f"# {spec['title']}",
             "",
@@ -1678,6 +1739,7 @@ async def _generate_reviewed_comic_image(
     }
     quality_row = {
         "title": spec["title"],
+        "source_id": spec["source_id"],
         "status": review_status,
         "score": review_score,
         "attempts": attempt,
@@ -1696,17 +1758,73 @@ async def _generate_comic_images(task_id: str, workspace_id: str, result: dict, 
     max_attempts = max(1, min(4, int(os.getenv("COMIC_IMAGE_MAX_ATTEMPTS", "2") or "2")))
     if limit <= 0:
         return []
-    output_dir = Path(__file__).parent.parent.parent / "output" / "workspaces" / workspace_id / "generated"
+    output_dir = (
+        Path(__file__).parent.parent.parent
+        / "output" / "workspaces" / workspace_id / "generated" / Path(task_id).name
+    )
     artifacts: list[dict] = []
     quality_rows: list[dict] = []
     errors: list[str] = []
-    for index, spec in enumerate(_comic_image_specs(result, limit), start=1):
+    specs = list(_comic_image_specs(result, limit))
+    total = len(specs)
+    completed = 0
+    failed = 0
+    for index, spec in enumerate(specs, start=1):
+        config_manager.append_task_event(
+            task_id=task_id,
+            event_type="comic_image_item_started",
+            status="running",
+            summary=f"正在生成第 {index}/{total} 张：{spec.get('title', spec.get('source_id', '图片'))}",
+            payload={
+                "workspace_id": workspace_id,
+                "index": index,
+                "total": total,
+                "source_id": spec.get("source_id", ""),
+                "kind": spec.get("kind", ""),
+                "completed": completed,
+                "failed": failed,
+            },
+        )
         artifact, quality_row, image_errors = await _generate_reviewed_comic_image(
             task_id, workspace_id, index, spec, output_dir, max_attempts, office_id=office_id
         )
         errors.extend(image_errors)
         if artifact:
             artifacts.append(artifact)
+            completed += 1
+            config_manager.append_task_event(
+                task_id=task_id,
+                event_type="comic_image_item_completed",
+                status="completed",
+                summary=f"第 {index}/{total} 张已完成：{spec.get('title', spec.get('source_id', '图片'))}",
+                payload={
+                    "workspace_id": workspace_id,
+                    "index": index,
+                    "total": total,
+                    "source_id": spec.get("source_id", ""),
+                    "kind": spec.get("kind", ""),
+                    "completed": completed,
+                    "failed": failed,
+                },
+            )
+        else:
+            failed += 1
+            config_manager.append_task_event(
+                task_id=task_id,
+                event_type="comic_image_item_failed",
+                status="failed",
+                summary=f"第 {index}/{total} 张生成失败：{spec.get('title', spec.get('source_id', '图片'))}",
+                payload={
+                    "workspace_id": workspace_id,
+                    "index": index,
+                    "total": total,
+                    "source_id": spec.get("source_id", ""),
+                    "kind": spec.get("kind", ""),
+                    "completed": completed,
+                    "failed": failed,
+                    "errors": image_errors,
+                },
+            )
         if quality_row:
             quality_rows.append(quality_row)
     if quality_rows:
@@ -1731,6 +1849,12 @@ async def _generate_comic_images(task_id: str, workspace_id: str, result: dict, 
             "metadata": {"office_id": office_id, "error_count": len(errors)},
             "created_by": "xingbu",
         })
+    result.setdefault("comic_package", {})["image_quality_summary"] = {
+        "expected": total,
+        "generated": completed,
+        "failed": failed,
+        "reviews": quality_rows,
+    }
     return artifacts
 
 
@@ -1788,7 +1912,12 @@ def _format_comic_quality_report(rows: list[dict]) -> str:
         "| --- | --- | --- | --- | --- |",
     ]
     for row in rows:
-        issues = "；".join(row.get("issues") or []) or "未发现明显问题"
+        if row.get("issues"):
+            issues = "；".join(row.get("issues") or [])
+        elif row.get("status") == "pass":
+            issues = "自动视觉检查通过"
+        else:
+            issues = "尚未完成有效视觉检查，需要人工复核"
         lines.append(
             f"| {row.get('title', '')} | {row.get('status', '')} | {row.get('score', 0)} | "
             f"{row.get('attempts', 1)} | {issues} |"
@@ -2041,7 +2170,12 @@ async def _run_task(
                 asset_review_already_approved = _asset_review_approved(workspace_id)
                 artifacts.extend(build_production_handoff_artifacts(task_id, result))
                 model_readiness = _comic_model_readiness(office.id, result)
-                chain_state = build_production_chain_state(result.get("comic_package", {}) or {}, model_readiness=model_readiness)
+                asset_review_status = "approved" if asset_review_already_approved else "pending"
+                chain_state = build_production_chain_state(
+                    result.get("comic_package", {}) or {},
+                    model_readiness=model_readiness,
+                    asset_review_status=asset_review_status,
+                )
                 artifacts.append({
                     "artifact_id": f"art_{task_id}_production_chain_state",
                     "task_id": task_id,
@@ -2052,6 +2186,12 @@ async def _run_task(
                     "metadata": {
                         "office_id": office.id,
                         "overall_status": chain_state.get("overall_status", ""),
+                        "asset_review_status": chain_state.get("asset_review_status", ""),
+                        "current_department": chain_state.get("current_department", ""),
+                        "next_action": chain_state.get("next_action", ""),
+                        "human_action_required": chain_state.get("human_action_required", False),
+                        "stage_summary": chain_state.get("stage_summary", ""),
+                        "departments": chain_state.get("departments", []),
                         "quality_gate": chain_state.get("quality_gate", {}),
                         "model_readiness": model_readiness,
                     },
@@ -2116,6 +2256,31 @@ async def _run_task(
             )
             image_artifacts = await _generate_comic_images(task_id, workspace_id, result, office_id=office.id)
             artifacts.extend(image_artifacts)
+            if office.id == "comic_production":
+                chain_state = build_production_chain_state(
+                    result.get("comic_package", {}) or {},
+                    model_readiness=model_readiness,
+                    asset_review_status="approved",
+                )
+                for artifact in artifacts:
+                    if artifact.get("artifact_type") != "production_chain_state":
+                        continue
+                    artifact["content"] = format_production_chain_state(chain_state)
+                    artifact["metadata"] = {
+                        **(artifact.get("metadata") or {}),
+                        "overall_status": chain_state.get("overall_status", ""),
+                        "asset_review_status": chain_state.get("asset_review_status", ""),
+                        "current_department": chain_state.get("current_department", ""),
+                        "next_action": chain_state.get("next_action", ""),
+                        "human_action_required": chain_state.get("human_action_required", False),
+                        "stage_summary": chain_state.get("stage_summary", ""),
+                        "departments": chain_state.get("departments", []),
+                        "quality_gate": chain_state.get("quality_gate", {}),
+                    }
+                result.setdefault("comic_package", {})["production_chain_state"] = chain_state
+                if chain_state.get("quality_gate", {}).get("status") != "passed":
+                    final_status = "needs_review"
+                    result["status"] = "needs_review"
             word_artifact = _build_comic_word_canvas_artifact(task_id, workspace_id, result, image_artifacts, office_id=office.id)
             if word_artifact:
                 artifacts = [
@@ -2144,7 +2309,7 @@ async def _run_task(
             config_manager.update_task_run(
                 task_id,
                 final_status,
-                current_phase="completed",
+                current_phase="visual_review_pending" if final_status == "needs_review" else "completed",
                 result=result,
                 completed=True,
             )
@@ -2152,7 +2317,11 @@ async def _run_task(
                 task_id=task_id,
                 event_type="comic_artifacts_created",
                 status=final_status,
-                summary="AI comic office artifacts created",
+                summary=(
+                    "漫剧制片包已生成，部分图片等待视觉审核"
+                    if final_status == "needs_review"
+                    else "漫剧制片包已生成并通过质量闸门"
+                ),
                 payload={
                     "workspace_id": workspace_id,
                     "artifact_count": len(artifacts),
@@ -2548,8 +2717,32 @@ async def get_task_report(task_id: str):
 
 @app.get("/api/config")
 async def get_config():
-    """获取完整配置"""
-    return config_manager.load_yaml()
+    """获取不包含明文凭据的公开配置。"""
+    return _public_full_config(config_manager.load_yaml())
+
+
+def _public_model_config(config: dict | None) -> dict:
+    source = dict(config or {})
+    has_api_key = bool(str(source.pop("api_key", "") or "").strip())
+    source["has_api_key"] = has_api_key
+    source["api_key_hint"] = "已配置" if has_api_key else "未配置"
+    return source
+
+
+def _public_full_config(config: dict | None) -> dict:
+    public = dict(config or {})
+    public["models"] = {
+        agent_id: _public_model_config(model)
+        for agent_id, model in (public.get("models", {}) or {}).items()
+    }
+    public["office_models"] = {
+        office_id: {
+            agent_id: _public_model_config(model)
+            for agent_id, model in (models or {}).items()
+        }
+        for office_id, models in (public.get("office_models", {}) or {}).items()
+    }
+    return public
 
 
 @app.get("/api/config/models")
@@ -2558,7 +2751,10 @@ async def get_models(office_id: str = ""):
     config = config_manager.load_yaml()
     global_models = config.get("models", {}) or {}
     if not office_id:
-        return {"models": global_models, "office_id": ""}
+        return {
+            "models": {agent_id: _public_model_config(model) for agent_id, model in global_models.items()},
+            "office_id": "",
+        }
     scoped_models = ((config.get("office_models", {}) or {}).get(office_id, {}) or {})
     agent_ids = set(global_models) | set(scoped_models)
     effective = {
@@ -2566,7 +2762,7 @@ async def get_models(office_id: str = ""):
         for agent_id in agent_ids
     }
     return {
-        "models": effective,
+        "models": {agent_id: _public_model_config(model) for agent_id, model in effective.items()},
         "office_id": office_id,
         "scope": "office",
         "inherits_from_global": True,
@@ -2602,7 +2798,13 @@ async def update_model(agent_id: str, update: ModelConfigUpdate, office_id: str 
         agent_config["max_tokens"] = update.max_tokens
 
     config_manager.save_yaml(config)
-    return {"status": "ok", "agent": agent_id, "office_id": office_id, "config": agent_config, "warnings": warnings}
+    return {
+        "status": "ok",
+        "agent": agent_id,
+        "office_id": office_id,
+        "config": _public_model_config(agent_config),
+        "warnings": warnings,
+    }
 
 
 @app.post("/api/config/models/{agent_id}/test")

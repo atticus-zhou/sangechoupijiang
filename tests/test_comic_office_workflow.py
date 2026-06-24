@@ -23,6 +23,106 @@ from src.llm.providers import LLMResponse, LiteLLMProvider, ModelConfig
 
 
 class ComicOfficeWorkflowTests(unittest.TestCase):
+    def test_complete_full_script_is_ready_to_confirm_without_extra_answer(self):
+        full_script = (
+            "主角阿衡独自护送宗门密信下山。追兵在山路截杀他，逼他交出密信。"
+            "阿衡负伤逃进废弃驿站，用假信引开追兵。师姐赶到时，他把真信交给她。"
+            "最终密信救下宗门，阿衡也决定不再独自承担所有危险。"
+        )
+
+        result = start_comic_cabinet_session(
+            idea="宗门密信",
+            genre="古风仙侠",
+            length="3集，每集60秒",
+            platform="竖屏短视频",
+            visual_style="电影级国风厚涂",
+            extra="Input mode: full_script\nFull script:\n" + full_script,
+        )
+
+        self.assertTrue(result["ready_to_produce"])
+        self.assertEqual(result["stage"], "ready_to_confirm")
+        self.assertEqual(result["session"]["story_state"]["questions"], [])
+        self.assertEqual(result["script_preview"]["story_draft"], full_script)
+
+    def test_full_script_episode_outline_matches_requested_three_episode_length(self):
+        full_script = (
+            "阿衡接到护送密信的任务。追兵在山路出现。"
+            "他用假信引开追兵。师姐找到重伤的阿衡。"
+            "师姐带信返回宗门。最终阿衡得到应有的尊重。"
+        )
+
+        result = start_comic_cabinet_session(
+            idea="宗门密信",
+            genre="古风仙侠",
+            length="3集，每集60秒",
+            platform="竖屏短视频",
+            visual_style="电影级国风厚涂",
+            extra="Input mode: full_script\nFull script:\n" + full_script,
+        )
+
+        outline = result["script_preview"]["episode_outline"]
+        self.assertEqual(len(outline), 3)
+        self.assertEqual([item["episode"] for item in outline], [1, 2, 3])
+        self.assertIn("最终阿衡得到应有的尊重", outline[-1]["hook"])
+
+    def test_prompt_enhancement_parser_skips_invalid_braces_before_fenced_json(self):
+        from src.comic_office.workflow import _parse_prompt_enhancement_json
+
+        payload = _parse_prompt_enhancement_json(
+            "先说明一下：{这不是有效JSON}\n```json\n"
+            '{"characters": [{"id": "char_01", "image_prompt": "有效提示词"}], "quality_review": {"status": "pass"}}'
+            "\n```\n以上是结果。"
+        )
+
+        self.assertEqual(payload["characters"][0]["image_prompt"], "有效提示词")
+
+    def test_prompt_enhancement_retries_once_when_first_structured_output_is_invalid(self):
+        class RetryPromptProvider:
+            def __init__(self):
+                self.calls = 0
+
+            async def chat(self, messages, **kwargs):
+                self.calls += 1
+                if self.calls == 1:
+                    return LLMResponse(content="这轮结构没有生成成功", model="fake")
+                return LLMResponse(
+                    content=(
+                        '```json\n{"characters":[{"id":"char_01","image_prompt":"第二轮有效人物提示词"}],'
+                        '"quality_review":{"status":"pass","summary":"结构有效","issues":[]}}\n```'
+                    ),
+                    model="fake",
+                )
+
+        request = build_comic_request(
+            idea="古风侠客守护一封密信",
+            genre="古风仙侠",
+            visual_style="电影级国风厚涂",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "密信",
+                "story_draft": "侠客护送密信穿过山门，最终把密信交给师父。",
+                "story_promise": "一次护送揭开门派秘密。",
+                "main_conflict": "侠客必须避开追兵。",
+                "why_it_happens": "密信关系门派存亡。",
+                "how_it_happens": "护送、追逐、交付。",
+                "script_version": 1,
+                "script_hash": "retry-json",
+            },
+        )
+        result = build_comic_result("task-retry-json", request)
+        provider = RetryPromptProvider()
+        with patch("src.comic_office.workflow.LLMFactory.create", return_value=provider):
+            enhanced = asyncio.run(enhance_comic_prompts_llm(
+                result,
+                {"gongbu": ModelConfig(provider="ollama", model="prompt-writer")},
+            ))
+
+        package = enhanced["comic_package"]
+        self.assertEqual(provider.calls, 2)
+        self.assertEqual(package["prompt_generation"]["mode"], "llm_enhanced")
+        self.assertIn("第二轮有效人物提示词", package["characters"][0]["image_prompt"])
+        self.assertIn(package["visual_style_contract"]["style_id"], package["characters"][0]["image_prompt"])
+
     def test_word_canvas_contains_platform_execution_table(self):
         from docx import Document
 
@@ -40,6 +140,10 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
                     "props": ["红盖头"],
                     "image_prompt": "新娘，红盖头，山村堂屋，惊恐表情",
                     "video_prompt": "镜头缓慢推进，新娘掀开红盖头",
+                    "shot_template": "发现死亡停顿镜头",
+                    "shot_template_purpose": "用于关键真相揭露",
+                    "composition": "先遮挡再揭露关键结果",
+                    "platform_note": "失败时优先重试表情和遮挡关系",
                     "negative_prompt": "角色变脸，服装变化",
                 }
             ],
@@ -51,7 +155,10 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
             table_text = "\n".join(cell.text for table in doc.tables for row in table.rows for cell in row.cells)
 
         self.assertIn("平台执行表", text)
+        self.assertIn("镜头模板与执行说明", text)
         self.assertIn("参考资产", table_text)
+        self.assertIn("发现死亡停顿镜头", table_text)
+        self.assertIn("先遮挡再揭露关键结果", table_text)
         self.assertIn("镜头运动", table_text)
         self.assertIn("失败重试建议", table_text)
         self.assertIn("Libtv", text)
@@ -185,6 +292,124 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         self.assertTrue(review["metadata"]["requires_human_review"])
         self.assertIn("待审核", review["content"])
 
+    def test_asset_review_package_is_human_facing_inventory_not_prompt_dump(self):
+        request = build_comic_request(
+            idea="辅助阿衡下山采购后死亡，队友追查真相",
+            genre="古风幻想",
+            visual_style="ink wash Chinese fantasy",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "无名之坟",
+                "story_draft": "辅助阿衡下山采购后死亡，队友追查真相。",
+                "story_promise": "队友通过缺席理解辅助的价值。",
+                "main_conflict": "队友想复仇，但必须先面对自己长期忽视阿衡。",
+                "why_it_happens": "阿衡一直照顾所有人却不被看见。",
+                "how_it_happens": "采购、遇害、缺席、寻找尸体、沉默收尸。",
+                "script_version": 1,
+                "script_hash": "review-inventory",
+            },
+        )
+
+        result = build_comic_result("task-review-inventory", request)
+        review = next(item for item in build_comic_artifacts("task-review-inventory", result) if item["artifact_type"] == "asset_review_package")
+
+        self.assertIn("你只需要确认下面这些是否符合故事", review["content"])
+        self.assertIn("默认将生成：人物设定图、人物三视图、人物表情表", review["content"])
+        self.assertIn("默认将生成：道具设定图、道具多角度设定、道具基础状态", review["content"])
+        self.assertIn("默认将生成：场景设定图、场景广角建立图、场景俯视布局图、场景常用机位", review["content"])
+        self.assertNotIn("提示词：", review["content"])
+        self.assertNotIn("负面提示词", review["content"])
+
+    def test_asset_revision_notes_override_asset_inventory(self):
+        request = build_comic_request(
+            idea="高三天台危机",
+            genre="family emotion",
+            visual_style="Korean webtoon style",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "黄昏的天台",
+                "story_draft": (
+                    "高三黄昏，林晓站在教学楼天台边缘。张秀兰被保安带上天台，"
+                    "她拿出林晓写过的许愿小卡片，试图劝他下来。"
+                ),
+                "story_promise": "母亲和孩子在天台上面对长期伤害。",
+                "main_conflict": "张秀兰想救下林晓，但过去的言语伤害不断刺痛他。",
+                "why_it_happens": "长期压力让林晓走到天台边缘。",
+                "how_it_happens": "张秀兰拿许愿小卡片哀求，保安在旁边保持距离。",
+                "script_version": 1,
+                "script_hash": "revision-assets",
+            },
+            script_notes=(
+                "Asset revision notes: 人物只有林晓、张秀兰和保安。"
+                "场景只有天台。道具只有背包和许愿小卡片。"
+                "删除转动的笔、关键来信和山下街市。必须保留人物姓名。"
+            ),
+        )
+
+        package = build_comic_result("task-revision-assets", request)["comic_package"]
+
+        self.assertEqual([item["name"] for item in package["characters"]], ["林晓", "张秀兰", "保安"])
+        self.assertEqual([item["name"] for item in package["props"]], ["背包", "许愿小卡片"])
+        self.assertEqual([item["name"] for item in package["scenes"]], ["天台"])
+
+    def test_asset_revision_notes_can_add_missing_props_without_replacing_other_assets(self):
+        request = build_comic_request(
+            idea="修仙队伍辅助死亡",
+            genre="古风幻想",
+            visual_style="ink wash Chinese fantasy",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "无名之坟",
+                "story_draft": (
+                    "清晨，辅助阿衡下山采购。大师兄、二师姐和小师弟继续修炼，"
+                    "直到夜晚才发现阿衡没有回来。他们在山路边找到阿衡的尸体。"
+                ),
+                "story_promise": "队友通过缺席理解辅助的价值。",
+                "main_conflict": "队友想追查真相，但必须先面对自己长期忽视阿衡。",
+                "why_it_happens": "阿衡一直照顾所有人却不被看见。",
+                "how_it_happens": "采购、缺席、寻找尸体、沉默收尸。",
+                "script_version": 1,
+                "script_hash": "missing-props-revision",
+            },
+            script_notes=(
+                "Asset revision notes: 第一次拆解人物和场景都准确，但是缺少道具。"
+                "请补充道具：止血散、聚气丹、备用药瓶。人物和场景沿用上一版。"
+            ),
+        )
+
+        package = build_comic_result("task-missing-props-revision", request)["comic_package"]
+
+        self.assertIn("辅助阿衡", [item["name"] for item in package["characters"]])
+        self.assertTrue(package["scenes"])
+        self.assertEqual([item["name"] for item in package["props"]], ["止血散", "聚气丹", "备用药瓶"])
+
+    def test_confirmed_story_asset_split_does_not_invent_people_props_or_scenes(self):
+        request = build_comic_request(
+            idea="高三天台危机",
+            genre="family emotion",
+            visual_style="Korean webtoon style",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "黄昏的天台",
+                "story_draft": (
+                    "高三黄昏，林晓站在教学楼天台边缘。张秀兰被保安带上天台，"
+                    "她背着旧背包，拿出林晓写过的许愿小卡片，试图劝他下来。"
+                ),
+                "story_promise": "张秀兰和林晓在天台上面对长期伤害。",
+                "main_conflict": "张秀兰想救下林晓，但过去的言语伤害不断刺痛他。",
+                "why_it_happens": "长期压力让林晓走到天台边缘。",
+                "how_it_happens": "张秀兰拿许愿小卡片哀求，保安在旁边保持距离。",
+                "script_version": 1,
+                "script_hash": "no-phantom-assets",
+            },
+        )
+
+        package = build_comic_result("task-no-phantom-assets", request)["comic_package"]
+
+        self.assertEqual([item["name"] for item in package["characters"]], ["林晓", "张秀兰", "保安"])
+        self.assertEqual([item["name"] for item in package["props"]], ["背包", "许愿小卡片"])
+        self.assertEqual([item["name"] for item in package["scenes"]], ["天台"])
+
     def test_crisis_family_idea_generates_humane_story_instead_of_generic_template(self):
         brief = build_comic_brief(
             idea="学生要跳楼母亲苦苦哀求",
@@ -226,6 +451,16 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         self.assertNotIn("物件", rendered)
         self.assertNotIn("秘密", rendered)
         self.assertNotIn("更狠", rendered)
+
+    def test_story_writer_prompt_behaves_like_conversation_not_questionnaire(self):
+        from src.comic_office.workflow import _story_writer_system_prompt
+
+        prompt = _story_writer_system_prompt()
+
+        self.assertIn("像真人编剧在聊天", prompt)
+        self.assertIn("只能问 1 个最值得问的问题", prompt)
+        self.assertIn("禁止模板化追问", prompt)
+        self.assertNotIn("最多 2 个", prompt)
 
     def test_domestic_warm_story_uses_life_drama_outline_not_mystery_defaults(self):
         preview = build_comic_script_preview(
@@ -354,6 +589,8 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         self.assertIn("LLM人物设定", package["characters"][0]["image_prompt"])
         self.assertIn("LLM三视图", package["characters"][0]["asset_specs"][0]["prompt"])
         self.assertIn("LLM分镜", package["shots"][0]["image_prompt"])
+        self.assertNotIn("不要", package["shots"][0]["negative_prompt"])
+        self.assertIn("禁止现代车辆", package["shots"][0]["negative_prompt"])
         self.assertEqual(package["prompt_generation"]["mode"], "llm_enhanced")
         self.assertEqual(package["prompt_generation"]["quality_review"]["status"], "pass")
 
@@ -394,6 +631,78 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         self.assertTrue(any("基础设定" in prompt or "设定图" in prompt for prompt in asset_prompts))
         self.assertTrue(any("被车驾" in shot.get("image_prompt", "") or "被车驾" in shot.get("beat", "") for shot in package["shots"]))
 
+    def test_character_and_prop_assets_use_clean_white_backgrounds(self):
+        request = build_comic_request(
+            idea="女主在黄昏办公室诱导老板开口",
+            genre="modern suspense dialogue",
+            visual_style="photorealism cinematic dusk office",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "黄昏办公室的试探",
+                "story_draft": "女主在办公室诱导老板开口，桌上有一封关键合同。",
+                "story_promise": "一场谈话逐步变成心理试探。",
+                "main_conflict": "女主想让老板开口，但老板回避秘密。",
+                "why_it_happens": "女主发现老板说谎。",
+                "how_it_happens": "女主倾听、靠近、追问。",
+                "script_version": 1,
+                "script_hash": "white-bg-123",
+            },
+        )
+
+        package = build_comic_result("task-white-background-assets", request)["comic_package"]
+        character_and_prop_prompts = []
+        for group in ("characters", "props"):
+            for item in package[group]:
+                character_and_prop_prompts.append(item.get("image_prompt", ""))
+                character_and_prop_prompts.extend(spec.get("prompt", "") for spec in item.get("asset_specs", []))
+
+        self.assertTrue(character_and_prop_prompts)
+        for prompt in character_and_prop_prompts:
+            self.assertIn("纯白或近白色干净背景", prompt)
+            self.assertNotIn("不要", prompt)
+            self.assertIn("负面提示词：禁止", prompt)
+
+        scene_prompts = []
+        for item in package["scenes"]:
+            scene_prompts.append(item.get("image_prompt", ""))
+            scene_prompts.extend(spec.get("prompt", "") for spec in item.get("asset_specs", []))
+        self.assertTrue(scene_prompts)
+        self.assertTrue(any("空间" in prompt or "场景" in prompt for prompt in scene_prompts))
+        self.assertTrue(all("不要" not in prompt for prompt in scene_prompts))
+
+    def test_ancient_fantasy_assets_share_one_style_contract_and_reject_modern_elements(self):
+        request = build_comic_request(
+            idea="辅助阿衡下山采购后死亡",
+            genre="古风仙侠",
+            visual_style="电影级国风厚涂动画，克制冷色",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "无名木牌",
+                "story_draft": "辅助阿衡背着药箱下山采购丹药，在废弃驿站为保护求救符引开妖兽而死。",
+                "story_promise": "队友通过缺席理解辅助的价值。",
+                "main_conflict": "队友寻找失踪的阿衡。",
+                "why_it_happens": "阿衡独自承担采购任务。",
+                "how_it_happens": "沿山路找到药箱、求救符和遗体。",
+                "script_version": 1,
+                "script_hash": "ancient-style-contract",
+            },
+        )
+
+        package = build_comic_result("task-ancient-style-contract", request)["comic_package"]
+        contract = package["visual_style_contract"]
+
+        self.assertTrue(contract["style_id"].startswith("style_"))
+        self.assertEqual(contract["period"], "古风仙侠")
+        self.assertIn("现代服装", contract["forbidden_elements"])
+        for group in ("characters", "props", "scenes"):
+            for item in package[group]:
+                self.assertEqual(item["style_id"], contract["style_id"])
+                prompts = [item.get("image_prompt", "")]
+                prompts.extend(spec.get("prompt", "") for spec in item.get("asset_specs", []))
+                for prompt in prompts:
+                    self.assertIn("古风仙侠", prompt)
+                    self.assertIn("禁止现代", prompt)
+
     def test_scenes_include_spatial_reference_assets_and_shots_are_prompt_only(self):
         request = build_comic_request(
             idea="一队修仙队伍中的辅助死亡了",
@@ -428,6 +737,46 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         self.assertTrue(all((shot.get("image_ref") or "") == "" for shot in package["shots"]))
         self.assertTrue(all("storyboard" not in (shot.get("image_ref") or "") for shot in package["shots"]))
 
+    def test_assets_have_identity_cards_and_shots_reference_them(self):
+        request = build_comic_request(
+            idea="女主在黄昏办公室诱导老板开口",
+            genre="modern suspense dialogue",
+            visual_style="photorealism cinematic dusk office",
+            confirmed_script={
+                "status": "confirmed",
+                "title": "黄昏办公室的试探",
+                "story_draft": "女主在办公室诱导老板开口，桌上有一封关键合同。",
+                "story_promise": "一场谈话逐步变成心理试探。",
+                "main_conflict": "女主想让老板开口，但老板回避秘密。",
+                "why_it_happens": "女主发现老板说谎。",
+                "how_it_happens": "女主倾听、靠近、追问。",
+                "script_version": 1,
+                "script_hash": "identity-card-123",
+            },
+        )
+
+        package = build_comic_result("task-identity-cards", request)["comic_package"]
+
+        for group, expected_kind in (
+            ("characters", "character_identity_card"),
+            ("props", "prop_identity_card"),
+            ("scenes", "scene_identity_card"),
+        ):
+            self.assertTrue(package[group], group)
+            first = package[group][0]
+            self.assertIn("identity_card", first)
+            self.assertEqual(first["identity_card"]["kind"], expected_kind)
+            self.assertTrue(first["identity_card"]["image_refs"])
+            self.assertIn("验收", first["identity_card"]["usage_rule"])
+
+        first_shot = package["shots"][0]
+        self.assertIn("identity_references", first_shot)
+        self.assertIn("角色身份证", first_shot["identity_references"])
+        self.assertIn("道具身份证", first_shot["identity_references"])
+        self.assertIn("场景身份证", first_shot["identity_references"])
+        self.assertIn("角色身份证", first_shot["director_prompt"])
+        self.assertIn("场景身份证", first_shot["video_prompt"])
+
     def test_shots_include_flexible_director_prompt_fields(self):
         request = build_comic_request(
             idea="女主在黄昏办公室诱导老板开口",
@@ -450,6 +799,10 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         first = package["shots"][0]
 
         for key in (
+            "shot_template",
+            "shot_template_purpose",
+            "composition",
+            "platform_note",
             "reference_assets",
             "performance_intent",
             "action_chain",
@@ -470,6 +823,10 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         self.assertIn("摄影", first["director_prompt"])
         self.assertIn("灯光", first["director_prompt"])
         self.assertIn("固定镜头", first["video_prompt"])
+        self.assertNotIn("不要", first["director_prompt"])
+        self.assertNotIn("不要", first["video_prompt"])
+        self.assertNotIn("不要", first["negative_prompt"])
+        self.assertIn("禁止", first["negative_prompt"])
         self.assertNotEqual(package["shots"][0]["director_prompt"], package["shots"][1]["director_prompt"])
 
     def test_rule_fallback_director_prompts_follow_story_beat_not_static_template(self):
@@ -606,6 +963,50 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
             result["comic_package"]["script_binding"]["script_hash"],
             confirmed["script_hash"],
         )
+
+    def test_full_script_cabinet_session_preserves_original_story_text(self):
+        full_script = (
+            "清晨，林晓站在教学楼天台边缘。张秀兰被保安带上天台，"
+            "她背着旧背包，拿出林晓写过的许愿小卡片，试图劝他下来。"
+            "最后林晓没有立刻说话，只是看向那张卡片。"
+        )
+
+        result = start_comic_cabinet_session(
+            idea="高三天台危机",
+            genre="现实情感",
+            length="3集",
+            platform="竖屏短剧",
+            visual_style="Korean webtoon style",
+            extra="Input mode: full_script\nFull script:\n" + full_script,
+        )
+
+        self.assertEqual(result["script_preview"]["story_draft"], full_script)
+        self.assertEqual(result["session"]["input_mode"], "full_script")
+        self.assertIn("不改写原文", result["session"]["summary"])
+
+    def test_full_script_mode_ignores_llm_rewritten_story_draft(self):
+        from src.comic_office.workflow import _apply_llm_story_payload
+
+        full_script = "原文第一句。原文第二句。"
+        result = start_comic_cabinet_session(
+            idea="完整故事测试",
+            genre="现实情感",
+            extra="Input mode: full_script\nFull script:\n" + full_script,
+        )
+        rewritten = {
+            "assistant_message": "我提一个确认点。",
+            "story": {
+                "title": "被改写的标题",
+                "story_draft": "模型擅自改写后的故事。",
+                "episode_outline": [],
+            },
+        }
+
+        protected = _apply_llm_story_payload(result, rewritten)
+
+        self.assertEqual(protected["script_preview"]["story_draft"], full_script)
+        self.assertEqual(protected["session"]["script_preview"]["story_draft"], full_script)
+
     def test_comic_result_contains_brief_assets_shots_and_prompts(self):
         brief = build_comic_brief(
             idea="民国侦探在雨夜发现一封会改写身份的信",

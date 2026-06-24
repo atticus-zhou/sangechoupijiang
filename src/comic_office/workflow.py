@@ -16,6 +16,7 @@ import re
 from src.llm.providers import LLMFactory, LLMMessage, ModelConfig
 from src.llm.robust_json import parse_json_object, retry_async
 from src.comic_office.memory import build_core_memory_vault, build_memory_context_prompt
+from src.comic_office.shot_templates import select_shot_template
 
 
 DEFAULT_STYLE = "竖屏AI漫剧，电影感分镜，角色形象保持一致"
@@ -59,7 +60,7 @@ def build_comic_brief(
         "main_conflict": _main_conflict(core, inferred_genre),
         "must_keep": (extra or "").strip() or "保留用户灵感中的核心人物、冲突、情绪方向和关键视觉元素。",
         "risk_of_drift": [
-            "不要只拿灵感当关键词扩写，必须围绕核心冲突推进。",
+            "禁止只拿灵感当关键词扩写，必须围绕核心冲突推进。",
             "人物、道具、场景和分镜都必须能回扣剧本。",
             "用户确认前不进入批量生图和分镜生产。",
         ],
@@ -205,16 +206,45 @@ def build_comic_result(task_id: str, user_request: str) -> dict:
             genre=genre,
             platform=platform,
             visual_style=visual_style,
+            length=length,
         )
     confirmed_script = spec["confirmed_script"] or {}
     script_source = confirmed_script or script_preview
+    requested_episode_count = _episode_count(length, default=3)
+    script_source["episode_outline"] = _normalize_episode_outline_count(
+        script_source.get("episode_outline") or [],
+        requested_episode_count,
+        script_source.get("story_draft", "") or script_source.get("logline", ""),
+    )
+    visual_style_contract = build_visual_style_contract(
+        genre=genre,
+        visual_style=visual_style,
+        story_context="\n".join(
+            str(script_source.get(key, ""))
+            for key in ("title", "story_draft", "story_promise", "main_conflict")
+        ),
+    )
     if confirmed_script:
         script_preview = {**script_preview, **confirmed_script}
     script_beats = _script_beats_from_preview(script_source)
     characters = _characters_for(title, genre, creative_brief, spec["user_answers"], script_source)
     props = _props_for(genre, script_source)
     scenes = _scenes_for(genre, script_source)
-    _enrich_production_assets(title, visual_style, characters, props, scenes)
+    revision_inventory = _asset_revision_inventory(spec.get("script_notes", ""))
+    characters, props, scenes = _apply_asset_revision_inventory(
+        characters=characters,
+        props=props,
+        scenes=scenes,
+        inventory=revision_inventory,
+    )
+    _enrich_production_assets(
+        title,
+        visual_style,
+        characters,
+        props,
+        scenes,
+        style_contract=visual_style_contract,
+    )
     episodes = _episodes_from_preview(script_source)
     shots = _shot_plan(characters, props, scenes, visual_style, script_beats)
     global_negative_prompt = "脸型变化、服装不一致、多余手指、背景扭曲、随机logo、不可读文字、画风漂移、画面标签、编号文字"
@@ -246,32 +276,165 @@ def build_comic_result(task_id: str, user_request: str) -> dict:
         episodes=episodes,
         shots=shots,
     )
+    comic_package = {
+        "title": title,
+        "genre": genre,
+        "length": length,
+        "platform": platform,
+        "visual_style": visual_style,
+        "visual_style_contract": visual_style_contract,
+        "creative_brief": creative_brief,
+        "script_preview": script_preview,
+        "confirmed_script": confirmed_script,
+        "script_notes": spec["script_notes"],
+        "user_answers": spec["user_answers"],
+        "script_binding": script_binding,
+        "consistency_bindings": consistency_bindings,
+        "script_beats": script_beats,
+        "global_negative_prompt": global_negative_prompt,
+        "characters": characters,
+        "props": props,
+        "scenes": scenes,
+        "episodes": episodes,
+        "shots": shots,
+    }
+    _apply_visual_style_contract(comic_package)
     return {
         "status": "completed",
         "task_id": task_id,
         "plan": {"title": f"{title} - AI漫剧前期制作包"},
         "final_report": final_report,
-        "comic_package": {
-            "title": title,
-            "genre": genre,
-            "length": length,
-            "platform": platform,
-            "visual_style": visual_style,
-            "creative_brief": creative_brief,
-            "script_preview": script_preview,
-            "confirmed_script": confirmed_script,
-            "script_notes": spec["script_notes"],
-            "user_answers": spec["user_answers"],
-            "script_binding": script_binding,
-            "consistency_bindings": consistency_bindings,
-            "script_beats": script_beats,
-            "global_negative_prompt": global_negative_prompt,
-            "characters": characters,
-            "props": props,
-            "scenes": scenes,
-            "episodes": episodes,
-            "shots": shots,
-        },
+        "comic_package": comic_package,
+    }
+
+
+def _asset_revision_inventory(script_notes: str) -> dict[str, list[str]]:
+    """Parse hard asset boundaries from human revision notes."""
+    text = (script_notes or "").strip()
+    if not text:
+        return {"characters": [], "props": [], "scenes": []}
+    marker = "Asset revision notes:"
+    if marker in text:
+        text = text.split(marker, 1)[1]
+    text = text.replace("\r", "\n")
+    label_terms = r"(?:人物|角色|场景|地点|道具|物件)"
+    verb_terms = r"(?:只有|包括|有|为|是|限定为)"
+    patterns = {
+        "characters": r"(?:人物|角色)\s*" + verb_terms + r"\s*([^。；;\n]+)",
+        "scenes": r"(?:场景|地点)\s*" + verb_terms + r"\s*([^。；;\n]+)",
+        "props": r"(?:道具|物件)\s*" + verb_terms + r"\s*([^。；;\n]+)",
+    }
+    inventory: dict[str, list[str]] = {"characters": [], "props": [], "scenes": []}
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text, flags=re.S)
+        if match:
+            inventory[key] = _split_revision_asset_names(match.group(1))
+    addition_patterns = {
+        "characters": [
+            r"(?:补充|增加|添加|补上|补齐|加入|加上)(?:缺少的|遗漏的)?\s*(?:人物|角色)\s*[:：]?\s*(.+?)(?=(?:。|；|;|\n)|$)",
+            r"(?:人物|角色)\s*(?:缺少|漏了|遗漏|补充|增加|添加|补上|补齐|加入|加上)\s*[:：]?\s*(.+?)(?=(?:。|；|;|\n)|$)",
+        ],
+        "scenes": [
+            r"(?:补充|增加|添加|补上|补齐|加入|加上)(?:缺少的|遗漏的)?\s*(?:场景|地点)\s*[:：]?\s*(.+?)(?=(?:。|；|;|\n)|$)",
+            r"(?:场景|地点)\s*(?:缺少|漏了|遗漏|补充|增加|添加|补上|补齐|加入|加上)\s*[:：]?\s*(.+?)(?=(?:。|；|;|\n)|$)",
+        ],
+        "props": [
+            r"(?:补充|增加|添加|补上|补齐|加入|加上)(?:缺少的|遗漏的)?\s*(?:道具|物件)\s*[:：]?\s*(.+?)(?=(?:。|；|;|\n)|$)",
+            r"(?:道具|物件)\s*(?:缺少|漏了|遗漏|补充|增加|添加|补上|补齐|加入|加上)\s*[:：]?\s*(.+?)(?=(?:。|；|;|\n)|$)",
+        ],
+    }
+    for key, key_patterns in addition_patterns.items():
+        if inventory[key]:
+            continue
+        for pattern in key_patterns:
+            match = re.search(pattern, text, flags=re.S)
+            if not match:
+                continue
+            names = _split_revision_asset_names(match.group(1))
+            if names:
+                inventory[key] = names
+                break
+    return inventory
+
+
+def _split_revision_asset_names(raw: str) -> list[str]:
+    text = (raw or "").strip()
+    if not text:
+        return []
+    text = re.split(r"(?:本次任务|暂时|重新生成|继续生成|直接生成)", text, maxsplit=1)[0]
+    text = re.split(r"(?:人物|角色|场景|地点|道具|物件)\s*(?:沿用|保持|不变|准确)", text, maxsplit=1)[0]
+    for word in ("以及", "还有", "和", "与", "、"):
+        text = text.replace(word, "、")
+    names: list[str] = []
+    for part in re.split(r"[、,，;；。.\n]+", text):
+        name = part.strip(" \t:：-—|/，。；;,.")
+        name = re.sub(r"^(?:人物|角色|场景|地点|道具|物件)\s*(?:只有|包括|有|为|是|限定为)\s*", "", name).strip()
+        if not name:
+            continue
+        if len(name) > 24:
+            continue
+        if name in names:
+            continue
+        names.append(name)
+    return names
+
+
+def _apply_asset_revision_inventory(
+    characters: list[dict],
+    props: list[dict],
+    scenes: list[dict],
+    inventory: dict[str, list[str]],
+) -> tuple[list[dict], list[dict], list[dict]]:
+    if not any(inventory.values()):
+        return characters, props, scenes
+    return (
+        _replace_named_assets(characters, inventory.get("characters", []), "char", _revision_character_asset),
+        _replace_named_assets(props, inventory.get("props", []), "prop", _revision_prop_asset),
+        _replace_named_assets(scenes, inventory.get("scenes", []), "scene", _revision_scene_asset),
+    )
+
+
+def _replace_named_assets(
+    current: list[dict],
+    names: list[str],
+    id_prefix: str,
+    factory,
+) -> list[dict]:
+    if not names:
+        return current
+    existing = {str(item.get("name", "")): item for item in current or []}
+    result: list[dict] = []
+    for index, name in enumerate(names, start=1):
+        item = dict(existing.get(name) or factory(name))
+        item["id"] = f"{id_prefix}_{index:02d}"
+        item["name"] = name
+        result.append(item)
+    return result
+
+
+def _revision_character_asset(name: str) -> dict:
+    return {
+        "name": name,
+        "role": "退回意见指定人物",
+        "visual_lock": "保持同一脸型、发型、服装主色、年龄感和体型；负面提示词：禁止角色编号、文字标签。",
+        "personality": "以后续剧本和人工审核为准。",
+        "image_prompt": f"{name}人物设定图，基础角色外观，半身肖像和全身站姿结合，纯白或近白色干净背景。",
+    }
+
+
+def _revision_prop_asset(name: str) -> dict:
+    return {
+        "name": name,
+        "continuity_rule": "形状、尺寸、颜色、材质、磨损状态和归属关系必须保持一致。",
+        "image_prompt": f"{name}，基础道具设定图，单独展示，纯白或近白色干净背景。",
+    }
+
+
+def _revision_scene_asset(name: str) -> dict:
+    return {
+        "name": name,
+        "continuity_rule": "空间布局、主光方向、入口出口和关键背景物必须保持一致。",
+        "image_prompt": f"{name}，场景设定图，包含广角建立视角和空间布局参考。",
     }
 
 
@@ -293,35 +456,31 @@ async def enhance_comic_prompts_llm(result: dict, model_configs: dict[str, Model
         return result
     llm = LLMFactory.create(config)
     try:
-        response = await retry_async(
-            lambda: llm.chat(
+        async def request_enhancement_payload() -> dict:
+            response = await llm.chat(
                 [
                     LLMMessage(role="system", content=_prompt_enhancer_system_prompt()),
                     LLMMessage(role="user", content=_prompt_enhancer_user_prompt(package)),
                 ],
                 response_format={"type": "json_object"},
-            ),
+            )
+            parsed = _parse_prompt_enhancement_json(response.content)
+            if not parsed:
+                raise ValueError("invalid_prompt_enhancement_json")
+            return parsed
+
+        payload = await retry_async(
+            request_enhancement_payload,
             attempts=2,
             delay_seconds=0.2,
         )
-        payload = _parse_prompt_enhancement_json(response.content)
     except Exception as e:
         package["prompt_generation"] = {
             "mode": "rule_template",
             "quality_review": {
                 "status": "fallback",
-                "summary": "提示词增强模型调用失败，暂用规则模板提示词。",
+                "summary": "提示词增强模型调用或结构化输出失败，暂用规则模板提示词。",
                 "issues": [str(e)[:160]],
-            },
-        }
-        return result
-    if not payload:
-        package["prompt_generation"] = {
-            "mode": "rule_template",
-            "quality_review": {
-                "status": "fallback",
-                "summary": "提示词增强模型没有返回可用结构化结果，暂用规则模板提示词。",
-                "issues": ["invalid_prompt_enhancement_json"],
             },
         }
         return result
@@ -363,6 +522,7 @@ def _prompt_enhancer_user_prompt(package: dict) -> str:
     compact = {
         "title": package.get("title", ""),
         "visual_style": package.get("visual_style", ""),
+        "visual_style_contract": package.get("visual_style_contract", {}),
         "confirmed_script": package.get("confirmed_script", {}),
         "characters": _compact_prompt_items(package.get("characters", [])),
         "props": _compact_prompt_items(package.get("props", [])),
@@ -383,6 +543,10 @@ def _prompt_enhancer_user_prompt(package: dict) -> str:
                 "action_chain": shot.get("action_chain", ""),
                 "cinematography": shot.get("cinematography", ""),
                 "lighting": shot.get("lighting", ""),
+                "shot_template": shot.get("shot_template", ""),
+                "shot_template_purpose": shot.get("shot_template_purpose", ""),
+                "composition": shot.get("composition", ""),
+                "platform_note": shot.get("platform_note", ""),
                 "director_prompt": shot.get("director_prompt", ""),
             }
             for shot in package.get("shots", [])[:12]
@@ -391,23 +555,24 @@ def _prompt_enhancer_user_prompt(package: dict) -> str:
     return "\n".join([
         "请把下面的模板化提示词重写为更贴合故事的制片提示词。",
         "要求：",
-        "1. 不要只替换名字；每条提示词都要具体，但必须区分职责。",
-        "2. 人物资产要能支撑一致性：脸型、发型、服装主色、标志物、年龄感。",
-        "3. 道具资产只展示形状、材质、尺寸、颜色、磨损状态和多角度参考，不要人物手持，不要剧情现场。",
-        "4. 场景资产只展示空间结构、光线、入口、站位区和机位参考，尽量无人物，不要正在发生的剧情。",
-        "5. 镜头提示词必须使用导演字段：reference_assets、action_chain、performance_intent、cinematography、lighting、director_prompt。",
-        "6. action_chain 要写成“起始/过程/结束”，不要只写一个静态画面。",
-        "7. performance_intent 要写演员状态、眼神、语气、节奏或心理，不要只写“悲伤/紧张”。",
-        "8. cinematography 和 lighting 要贴合故事，不要每个镜头都复制同一套摄影机和灯光。",
-        "9. director_prompt 是给图生视频/文生视频平台的完整镜头提示词，必须引用人物/道具/场景资产，不要求单独为镜头出图。",
+        "1. 禁止只替换名字；每条提示词都要具体，但必须区分职责。",
+        "2. 人物资产要能支撑一致性：脸型、发型、服装主色、标志物、年龄感；背景必须是纯白或近白色干净背景，禁止剧情环境。",
+        "3. 道具资产只展示形状、材质、尺寸、颜色、磨损状态和多角度参考；背景必须是纯白或近白色干净背景，禁止人物手持，禁止剧情现场。",
+        "4. 场景资产只展示空间结构、光线、入口、站位区和机位参考，尽量无人物，禁止正在发生的剧情。",
+        "5. 镜头提示词必须使用导演字段：shot_template、composition、reference_assets、action_chain、performance_intent、cinematography、lighting、director_prompt。",
+        "6. action_chain 要写成“起始/过程/结束”，禁止只写一个静态画面。",
+        "7. performance_intent 要写演员状态、眼神、语气、节奏或心理，禁止只写“悲伤/紧张”。",
+        "8. cinematography 和 lighting 要贴合故事，禁止每个镜头都复制同一套摄影机和灯光。",
+        "9. director_prompt 是给图生视频/文生视频平台的完整镜头提示词，必须引用人物/道具/场景资产，无需单独为镜头出图。",
         "10. video_prompt 要和镜头方式、动作链、表演意图相关，不能只写泛泛的“慢推/拉远”。",
-        "11. 不要添加不存在的核心剧情，不要改资产ID。",
+        "11. 禁止添加不存在的核心剧情，禁止改资产ID。",
         "12. director_prompt 建议采用这类信息密度：镜头方式 + 参考资产 + 角色动作/台词或无台词表演 + 摄影镜头 + 色彩光线 + 一致性禁忌。",
-        "13. negative_prompt 只写该镜头特别需要避免的问题，通用限制已有 global_negative_prompt，不要每条机械重复同一长串。",
-        "14. 最后给出刑部预审 quality_review，检查基础资产是否误讲故事、提示词是否模板化、镜头提示词是否可执行。",
+        "13. negative_prompt 只写该镜头特别需要避免的问题，通用限制已有 global_negative_prompt，禁止每条机械重复同一长串。",
+        "14. visual_style_contract 是全项目唯一风格身份证，所有人物、道具、场景和镜头必须继承同一 style_id、时代、材质、建筑和禁用元素，禁止改写或删除。",
+        "15. 最后给出刑部预审 quality_review，检查基础资产是否误讲故事、提示词是否模板化、镜头提示词是否可执行。",
         "",
         "返回JSON格式：",
-        '{"characters":[{"id":"char_01","image_prompt":"...","asset_specs":[{"kind":"character_three_view","label":"人物三视图","image_ref":"char_01_three_view.png","prompt":"...","acceptance":"..."}]}],"props":[{"id":"prop_01","image_prompt":"...","asset_specs":[]}],"scenes":[{"id":"scene_01","image_prompt":"...","asset_specs":[]}],"shots":[{"id":"shot_001","reference_assets":"参考资产：...","action_chain":"起始：...；过程：...；结束：...","performance_intent":"...","cinematography":"...","lighting":"...","director_prompt":"...","image_prompt":"...","video_prompt":"...","negative_prompt":"..."}],"quality_review":{"status":"pass|needs_revision","summary":"...","issues":[]}}',
+        '{"characters":[{"id":"char_01","image_prompt":"...","asset_specs":[{"kind":"character_three_view","label":"人物三视图","image_ref":"char_01_three_view.png","prompt":"...","acceptance":"..."}]}],"props":[{"id":"prop_01","image_prompt":"...","asset_specs":[]}],"scenes":[{"id":"scene_01","image_prompt":"...","asset_specs":[]}],"shots":[{"id":"shot_001","shot_template":"...","shot_template_purpose":"...","composition":"...","platform_note":"...","reference_assets":"参考资产：...","action_chain":"起始：...；过程：...；结束：...","performance_intent":"...","cinematography":"...","lighting":"...","director_prompt":"...","image_prompt":"...","video_prompt":"...","negative_prompt":"..."}],"quality_review":{"status":"pass|needs_revision","summary":"...","issues":[]}}',
         "",
         "待处理资产：",
         json.dumps(compact, ensure_ascii=False),
@@ -441,8 +606,18 @@ def _parse_prompt_enhancement_json(content: str) -> dict:
     raw = (content or "").strip()
     if not raw or raw.startswith("[API错误]"):
         return {}
-    data = parse_json_object(raw)
-    return data if isinstance(data, dict) else {}
+    expected_keys = {"characters", "props", "scenes", "shots", "quality_review"}
+    candidates = [raw]
+    candidates.extend(
+        match.group(1).strip()
+        for match in re.finditer(r"```(?:json)?\s*(.*?)```", raw, flags=re.IGNORECASE | re.DOTALL)
+    )
+    candidates.extend(raw[index:] for index, char in enumerate(raw) if char == "{")
+    for candidate in candidates:
+        data = parse_json_object(candidate)
+        if isinstance(data, dict) and expected_keys.intersection(data):
+            return data
+    return {}
 
 
 def _apply_prompt_enhancement(package: dict, payload: dict) -> None:
@@ -453,7 +628,7 @@ def _apply_prompt_enhancement(package: dict, payload: dict) -> None:
             if not item:
                 continue
             if incoming.get("image_prompt"):
-                item["image_prompt"] = str(incoming["image_prompt"]).strip()
+                item["image_prompt"] = _normalize_negative_language(str(incoming["image_prompt"]).strip())
             incoming_specs = incoming.get("asset_specs") or []
             if incoming_specs:
                 item["asset_specs"] = _merge_asset_specs(item.get("asset_specs", []), incoming_specs)
@@ -471,10 +646,16 @@ def _apply_prompt_enhancement(package: dict, payload: dict) -> None:
             "action_chain",
             "cinematography",
             "lighting",
+            "shot_template",
+            "shot_template_purpose",
+            "composition",
+            "platform_note",
             "director_prompt",
         ):
             if incoming.get(key):
-                shot[key] = str(incoming[key]).strip()
+                shot[key] = _normalize_negative_language(str(incoming[key]).strip())
+    _refresh_production_identity_cards(package)
+    _apply_visual_style_contract(package)
 
 
 def _merge_asset_specs(current_specs: list[dict], incoming_specs: list[dict]) -> list[dict]:
@@ -487,9 +668,68 @@ def _merge_asset_specs(current_specs: list[dict], incoming_specs: list[dict]) ->
         merged = {**original}
         for field in ("kind", "label", "image_ref", "prompt", "acceptance"):
             if incoming.get(field):
-                merged[field] = str(incoming[field]).strip()
+                merged[field] = _normalize_negative_language(str(incoming[field]).strip())
         by_key[key] = merged
     return list(by_key.values())
+
+
+def _refresh_production_identity_cards(package: dict) -> None:
+    """Refresh identity cards and shot references after LLM prompt enhancement."""
+    for item in package.get("characters", []) or []:
+        item["identity_card"] = _asset_identity_card(
+            item,
+            kind="character_identity_card",
+            label="角色身份证",
+            usage_rule="验收通过后，后续所有出镜镜头都必须参考人物设定图、三视图和表情表；脸型、发型、服装主色和年龄感不得漂移。",
+        )
+    for item in package.get("props", []) or []:
+        item["identity_card"] = _asset_identity_card(
+            item,
+            kind="prop_identity_card",
+            label="道具身份证",
+            usage_rule="验收通过后，后续所有道具出镜镜头都必须参考基础道具图、多角度图和状态图；形状、颜色、材质、磨损状态不得漂移。",
+        )
+    for item in package.get("scenes", []) or []:
+        item["identity_card"] = _asset_identity_card(
+            item,
+            kind="scene_identity_card",
+            label="场景身份证",
+            usage_rule="验收通过后，后续所有镜头都必须参考场景设定图、广角建立图、俯视布局图和常用机位图；空间结构、入口出口、光线方向不得漂移。",
+        )
+    _refresh_shot_identity_references(package)
+
+
+def _refresh_shot_identity_references(package: dict) -> None:
+    characters_by_id = {item.get("id", ""): item for item in package.get("characters", []) or []}
+    props_by_id = {item.get("id", ""): item for item in package.get("props", []) or []}
+    scenes_by_id = {item.get("id", ""): item for item in package.get("scenes", []) or []}
+    scenes_by_name = {item.get("name", ""): item for item in package.get("scenes", []) or []}
+    for shot in package.get("shots", []) or []:
+        shot_chars = [characters_by_id[item_id] for item_id in shot.get("character_ids", []) or [] if item_id in characters_by_id]
+        shot_props = [props_by_id[item_id] for item_id in shot.get("prop_ids", []) or [] if item_id in props_by_id]
+        scene_id = shot.get("scene_id", "")
+        shot_scenes = []
+        if scene_id in scenes_by_id:
+            shot_scenes.append(scenes_by_id[scene_id])
+        elif shot.get("scene", "") in scenes_by_name:
+            shot_scenes.append(scenes_by_name[shot.get("scene", "")])
+        shot["identity_references"] = _shot_identity_references(shot_chars, shot_props, shot_scenes)
+        _ensure_shot_identity_in_prompts(shot)
+
+
+def _ensure_shot_identity_in_prompts(shot: dict) -> None:
+    identity = shot.get("identity_references", "")
+    if not identity:
+        return
+    for key in ("director_prompt", "image_prompt", "video_prompt"):
+        prompt = shot.get(key, "")
+        if prompt and "身份证" not in prompt:
+            shot[key] = f"{identity}。{prompt}"
+
+
+def _normalize_negative_language(text: str) -> str:
+    """Avoid unreadable colloquial negation in generation prompts."""
+    return (text or "").replace("\u4e0d\u8981", "禁止")
 
 
 def parse_comic_request(user_request: str) -> dict:
@@ -539,6 +779,7 @@ def _script_preview_from_full_script(
     genre: str,
     platform: str,
     visual_style: str,
+    length: str = "",
 ) -> dict:
     """Turn a user-provided script into the same structure as an idea draft."""
     script_text = (full_script or "").strip()
@@ -556,7 +797,10 @@ def _script_preview_from_full_script(
         "how_it_happens": "从完整剧本文本中提取人物行动、关键转折、场景变化和视觉资产。",
         "protagonist_arc": _extract_arc_from_text(script_text) or "按完整剧本中的人物变化执行。",
         "story_draft": script_text,
-        "episode_outline": _episode_outline_from_full_script(script_text),
+        "episode_outline": _episode_outline_from_full_script(
+            script_text,
+            expected_count=_episode_count(length, default=3),
+        ),
         "key_turns": key_turns,
         "platform": platform,
         "visual_style": visual_style,
@@ -579,11 +823,22 @@ def _extract_arc_from_text(text: str) -> str:
     return ""
 
 
-def _episode_outline_from_full_script(text: str) -> list[dict]:
+def _episode_outline_from_full_script(text: str, expected_count: int = 0) -> list[dict]:
     sentences = _story_sentences(text, limit=9)
     if not sentences:
         return []
-    chunks = [sentences[i:i + 3] for i in range(0, min(len(sentences), 9), 3)]
+    if expected_count:
+        count = max(1, min(30, expected_count))
+        chunks = []
+        for index in range(count):
+            start = (index * len(sentences)) // count
+            end = ((index + 1) * len(sentences)) // count
+            chunk = sentences[start:end]
+            if not chunk:
+                chunk = [sentences[min(start, len(sentences) - 1)]]
+            chunks.append(chunk)
+    else:
+        chunks = [sentences[i:i + 3] for i in range(0, min(len(sentences), 9), 3)]
     outline = []
     for index, chunk in enumerate(chunks, start=1):
         outline.append({
@@ -595,6 +850,28 @@ def _episode_outline_from_full_script(text: str) -> list[dict]:
             "hook": chunk[-1] if chunk else "",
         })
     return outline
+
+
+def _normalize_episode_outline_count(outline: list[dict], expected_count: int, story_text: str) -> list[dict]:
+    """Match the requested episode count without changing the underlying story text."""
+    count = max(1, min(30, int(expected_count or 1)))
+    derived = _episode_outline_from_full_script(story_text, expected_count=count)
+    existing = [dict(item) for item in (outline or [])]
+    normalized = []
+    for index in range(count):
+        base = dict(derived[index]) if index < len(derived) else {
+            "episode": index + 1,
+            "title": f"第{index + 1}集",
+            "cause": story_text[:80],
+            "action": story_text[:120],
+            "turn": story_text[-120:],
+            "hook": story_text[-80:],
+        }
+        if index < len(existing):
+            base.update({key: value for key, value in existing[index].items() if value not in (None, "")})
+        base["episode"] = index + 1
+        normalized.append(base)
+    return normalized
 
 
 def format_creative_brief(brief: dict) -> str:
@@ -801,11 +1078,24 @@ def start_comic_cabinet_session(
         "platform": (platform or "").strip(),
         "visual_style": (visual_style or "").strip(),
         "extra": (extra or "").strip(),
+        **_session_script_source_fields(extra),
         "messages": [],
         "user_notes": [],
         "turn_count": 0,
     }
     return advance_comic_cabinet_session(session, "")
+
+
+def _session_script_source_fields(extra: str) -> dict:
+    text = extra or ""
+    full_script = _section_after(
+        text,
+        "Full script",
+        stop_markers=("Creative brief:", "User answers:", "Script preview:", "Confirmed script:", "Script notes:"),
+    )
+    if "Input mode: full_script" in text and full_script.strip():
+        return {"input_mode": "full_script", "full_script": full_script.strip()}
+    return {"input_mode": "", "full_script": ""}
 
 
 async def start_comic_cabinet_session_llm(
@@ -825,6 +1115,7 @@ async def start_comic_cabinet_session_llm(
         "platform": (platform or "").strip(),
         "visual_style": (visual_style or "").strip(),
         "extra": (extra or "").strip(),
+        **_session_script_source_fields(extra),
         "messages": [],
         "user_notes": [],
         "turn_count": 0,
@@ -841,10 +1132,14 @@ def advance_comic_cabinet_session(session: dict, user_message: str = "") -> dict
         "platform": (session or {}).get("platform", ""),
         "visual_style": (session or {}).get("visual_style", ""),
         "extra": (session or {}).get("extra", ""),
+        "input_mode": (session or {}).get("input_mode", ""),
+        "full_script": (session or {}).get("full_script", ""),
         "messages": list((session or {}).get("messages") or []),
         "user_notes": list((session or {}).get("user_notes") or []),
         "turn_count": int((session or {}).get("turn_count") or 0),
     }
+    if not session["full_script"]:
+        session.update(_session_script_source_fields(session["extra"]))
     note = (user_message or "").strip()
     if note:
         session["messages"].append({"role": "user", "content": note})
@@ -862,17 +1157,27 @@ def advance_comic_cabinet_session(session: dict, user_message: str = "") -> dict
         extra=extra_text,
     )
     creative_brief = brief_payload["creative_brief"]
-    script_payload = build_comic_script_preview(
-        idea=session["idea"],
-        genre=session["genre"],
-        length=session["length"],
-        platform=session["platform"],
-        visual_style=session["visual_style"],
-        extra=session["extra"],
-        creative_brief=creative_brief,
-        user_answers=aggregated_answers,
-    )
-    script_preview = script_payload["script_preview"]
+    if session.get("input_mode") == "full_script" and session.get("full_script"):
+        script_preview = _script_preview_from_full_script(
+            title=session["idea"],
+            full_script=session["full_script"],
+            genre=session["genre"],
+            platform=session["platform"],
+            visual_style=session["visual_style"],
+            length=session["length"],
+        )
+    else:
+        script_payload = build_comic_script_preview(
+            idea=session["idea"],
+            genre=session["genre"],
+            length=session["length"],
+            platform=session["platform"],
+            visual_style=session["visual_style"],
+            extra=session["extra"],
+            creative_brief=creative_brief,
+            user_answers=aggregated_answers,
+        )
+        script_preview = script_payload["script_preview"]
 
     story_state = _cabinet_story_state(
         idea=session["idea"],
@@ -881,6 +1186,14 @@ def advance_comic_cabinet_session(session: dict, user_message: str = "") -> dict
         creative_brief=creative_brief,
         script_preview=script_preview,
     )
+    if session.get("input_mode") == "full_script" and _full_script_ready_for_confirmation(session.get("full_script", "")):
+        story_state = {
+            "missing": [],
+            "questions": [],
+            "completeness": 1.0,
+            "stage": "ready_to_confirm",
+            "ready_to_produce": True,
+        }
     # 对于仅作内部逻辑计算而不调用 LLM 的 advance 流程，不再向 messages 注入任何假数据
     session["creative_brief"] = creative_brief
     session["script_preview"] = script_preview
@@ -889,6 +1202,8 @@ def advance_comic_cabinet_session(session: dict, user_message: str = "") -> dict
     session["stage"] = story_state["stage"]
     session["ready_to_produce"] = story_state["ready_to_produce"]
     session["summary"] = _cabinet_summary_block(story_state, creative_brief)
+    if session.get("input_mode") == "full_script":
+        session["summary"] = "完整故事模式：已读取你的原文，默认不改写原文，只做结构校对、风险提醒和生产前确认。"
 
     return {
         "status": "script_ready" if story_state["ready_to_produce"] else "needs_more_discussion",
@@ -992,6 +1307,7 @@ def _apply_llm_story_payload(result: dict, payload: dict) -> dict:
     if not story.get("story_draft"):
         return result
     script = dict(result.get("script_preview") or {})
+    original_full_script = (result.get("session") or {}).get("full_script", "").strip()
     for key in (
         "title",
         "genre",
@@ -1005,6 +1321,13 @@ def _apply_llm_story_payload(result: dict, payload: dict) -> dict:
     ):
         if story.get(key):
             script[key] = story[key]
+    if (result.get("session") or {}).get("input_mode") == "full_script" and original_full_script:
+        script["story_draft"] = original_full_script
+    script["episode_outline"] = _normalize_episode_outline_count(
+        script.get("episode_outline") or [],
+        _episode_count((result.get("session") or {}).get("length", ""), default=3),
+        script.get("story_draft", "") or script.get("logline", ""),
+    )
     script.setdefault("production_gate", result.get("script_preview", {}).get("production_gate", "用户确认故事后再进入制片包生产。"))
     result["script_preview"] = script
     result["session"]["script_preview"] = script
@@ -1259,20 +1582,21 @@ def _cabinet_role_system_prompt(role: str, focus: str) -> str:
         "输出必须是 JSON 对象，字段固定为：verdict, comment, question。",
         "要求：",
         "1. verdict 要短，像“继续打磨”“可进入确认”“钩子待加强”这种。",
-        "2. comment 要具体，不要重复用户原话，不要空泛鼓励。",
+        "2. comment 要具体，禁止重复用户原话，禁止空泛鼓励。",
         "3. question 只问一个你最在意的问题；如果已基本成型，也可以让问题变成确认式追问。",
-        "4. 不要输出 Markdown，不要解释 JSON 以外的内容。",
+        "4. 禁止输出 Markdown，禁止解释 JSON 以外的内容。",
     ])
 
 
 def _story_writer_system_prompt() -> str:
     return "\n".join([
-        "你现在是 AI 漫剧办公室的“主创对话官”。你的任务是像一位懂故事的编剧助手一样，和用户自然对话，把模糊的灵感变成可生产的剧本。",
+        "你现在是 AI 漫剧办公室的“主创对话官”。你的任务是像真人编剧在聊天一样，陪用户把模糊灵感变成可生产的剧本。",
         "你的输出必须是一个 JSON 对象，包含 assistant_message 和 story 两个字段。",
-        "assistant_message：这是你说给用户听的话。必须自然、口语化。在理解用户灵感后，你每轮最多只问 1 个最关键的问题（最多 2 个）。不要像填表一样连问一堆，不要生硬地罗列问题。",
+        "assistant_message：这是你说给用户听的话。必须自然、口语化、接住用户上一句话。每轮只能问 1 个最值得问的问题，问题要服务于下一版故事，禁止模板化追问，禁止像填表一样连问一堆。",
         "story：这是你后台生成的故事提案，包含 title, genre, logline, why_it_happens, how_it_happens, protagonist_arc, story_draft, episode_outline, key_turns, questions。",
         "story_draft 要用中文自然段写完整故事，至少包含开端、发展、高潮、结尾。",
-        "如果用户灵感不足，优先在 assistant_message 里追问；如果已经成型，生成一版完整故事稿让用户确认。",
+        "如果用户提供的是完整剧本/完整故事，story_draft 必须保留用户原文，不得擅自改写、续写、换角色、换结局；你只能在 assistant_message 里提出一个最关键的确认或修改建议。",
+        "如果用户灵感不足，先用一句话复述你理解到的戏剧核心，再追问一个最关键缺口；如果已经成型，生成一版完整故事稿让用户确认。",
     ])
 
 
@@ -1293,7 +1617,11 @@ def _story_writer_user_prompt(session: dict, creative_brief: dict, script_previe
         f"补充要求：{session.get('extra', '')}",
         f"用户后续对话：{' / '.join(session.get('user_notes') or [])}",
         "",
-        "当前的剧本草案（仅供参考，请根据你们的聊天进度更新）：",
+        "输入模式：完整故事原文模式。请把下面完整故事视为用户原稿，默认锁定；除非用户明确要求重写，否则 story_draft 必须逐字保留原文。"
+        if session.get("input_mode") == "full_script" else
+        "输入模式：灵感发展模式。可以根据用户灵感生成故事提案。",
+        "",
+        "当前的剧本草案（只是后台草稿，不能机械照抄；如果它和用户最新表达冲突，以用户最新表达为准）：",
         format_script_preview(script_preview),
     ])
 
@@ -1435,10 +1763,17 @@ def _has_story_anchor(text: str, anchor: str) -> bool:
     if anchor == "protagonist":
         keywords = ("主角", "女主", "男主", "主人公", "她是", "他是", "我是")
     elif anchor == "conflict":
-        keywords = ("反派", "对手", "阻止", "陷害", "追杀", "危机", "秘密", "误会", "冲突", "倒计时")
+        keywords = ("反派", "对手", "阻止", "陷害", "追杀", "追兵", "截杀", "逼迫", "危机", "秘密", "误会", "冲突", "倒计时")
     else:
         keywords = ("结尾", "最后", "最终", "收尾", "反转", "钩子", "悬念", "爽点", "治愈")
     return any(keyword in text for keyword in keywords)
+
+
+def _full_script_ready_for_confirmation(text: str) -> bool:
+    script = (text or "").strip()
+    if len(_story_sentences(script, limit=12)) < 4:
+        return False
+    return all(_has_story_anchor(script, anchor) for anchor in ("protagonist", "conflict", "ending"))
 
 
 def _first_hook(script_preview: dict) -> str:
@@ -1908,6 +2243,7 @@ def _enrich_production_assets(
     characters: list[dict],
     props: list[dict],
     scenes: list[dict],
+    style_contract: dict | None = None,
 ) -> None:
     """Attach production-grade asset specs before image generation."""
     style = _premium_visual_style(visual_style)
@@ -1917,10 +2253,10 @@ def _enrich_production_assets(
         lock = item.get("visual_lock", "")
         item["image_prompt"] = (
             f"{style}，基础人物设定图，角色名称：{name}，角色功能：{role}，"
-            f"只展示角色基础外观，不演剧情动作，不出现其他角色。半身肖像和全身站姿结合，"
+            f"只展示角色基础外观。半身肖像和全身站姿结合，"
             f"锁定脸型、发型、年龄感、体型、服装主色、服装材质和标志性随身物，"
-            f"干净中性背景，柔和工作室布光，适合后续角色一致性参考，"
-            f"不要文字，不要标签，不要编号，不要剧情场景。连续性要求：{lock}"
+            f"纯白或近白色干净背景，柔和工作室布光，适合后续角色一致性参考，"
+            f"连续性要求：{lock}。负面提示词：禁止文字、标签、编号、剧情动作、剧情场景、其他角色"
         )
         item.setdefault("asset_specs", [
             {
@@ -1930,9 +2266,9 @@ def _enrich_production_assets(
                 "prompt": (
                     f"{style}，基础人物三视图，角色名称：{name}，角色功能：{role}，"
                     f"正面、侧面、背面，统一脸型骨相、统一发型轮廓、统一服装主色和材质，"
-                    f"完整站姿，干净中性背景，专业设定稿排版，柔和工作室布光，"
-                    f"只用于锁定角色外观，不演剧情，不出现道具散落或冲突事件，"
-                    f"不要文字，不要编号，不要水印。连续性要求：{lock}"
+                    f"完整站姿，纯白或近白色干净背景，专业设定稿排版，柔和工作室布光，"
+                    f"只用于锁定角色外观，连续性要求：{lock}。"
+                    f"负面提示词：禁止文字、编号、水印、剧情动作、道具散落、冲突事件"
                 ),
                 "acceptance": "正面、侧面、背面必须像同一个角色；服装、发型、年龄感稳定。",
             },
@@ -1943,20 +2279,26 @@ def _enrich_production_assets(
                 "prompt": (
                     f"{style}，基础人物表情表，角色名称：{name}，角色功能：{role}，中性、震惊、愤怒、悲伤、克制、决绝，"
                     f"六个半身表情，同一脸型和发型，同一服装，同一年龄感，眼神和嘴角情绪清晰，"
-                    f"干净中性背景，适合做角色一致性参考，只展示表情，不演剧情，"
-                    f"不要文字，不要编号，不要水印。"
+                    f"纯白或近白色干净背景，适合做角色一致性参考，只展示表情。"
+                    f"负面提示词：禁止文字、编号、水印、剧情动作、场景互动"
                 ),
                 "acceptance": "六个表情可区分，但脸型、发型、服装不能漂移。",
             },
         ])
+        item["identity_card"] = _asset_identity_card(
+            item,
+            kind="character_identity_card",
+            label="角色身份证",
+            usage_rule="验收通过后，后续所有出镜镜头都必须参考人物设定图、三视图和表情表；脸型、发型、服装主色和年龄感不得漂移。",
+        )
     for item in props or []:
         name = item.get("name", "")
         rule = item.get("continuity_rule", "")
         item["image_prompt"] = (
             f"{style}，基础道具设定图，道具名称：{name}，单独展示，"
             f"只锁定道具的形状、尺寸、颜色、材质、纹理、磨损状态和识别特征，"
-            f"边缘干净，适合后续分镜重复引用，工作室柔光，干净中性背景，"
-            f"不要人物，不要剧情动作，不要散落现场，不要文字，不要标签，不要编号。连续性要求：{rule}"
+            f"边缘干净，适合后续分镜重复引用，工作室柔光，纯白或近白色干净背景，"
+            f"连续性要求：{rule}。负面提示词：禁止人物、剧情动作、散落现场、文字、标签、编号"
         )
         item.setdefault("asset_specs", [
             {
@@ -1966,8 +2308,8 @@ def _enrich_production_assets(
                 "prompt": (
                     f"{style}，基础道具多角度设定，道具名称：{name}，正面、侧面、细节特写，"
                     f"材质纹理清晰，颜色和磨损稳定，比例真实，边缘干净，能被后续分镜反复识别，"
-                    f"柔和工作室布光，干净中性背景，不出现人物手持、尸体、打斗或剧情现场，"
-                    f"不要文字，不要编号，不要水印。连续性要求：{rule}"
+                    f"柔和工作室布光，纯白或近白色干净背景，连续性要求：{rule}。"
+                    f"负面提示词：禁止文字、编号、水印、人物手持、尸体、打斗、剧情现场"
                 ),
                 "acceptance": "道具形状、颜色、材质稳定，后续镜头能一眼认出。",
             },
@@ -1977,21 +2319,26 @@ def _enrich_production_assets(
                 "image_ref": f"{item.get('id', 'prop')}_usage.png",
                 "prompt": (
                     f"{style}，基础道具状态表，道具名称：{name}，静置状态、打开/关闭或完整/轻微磨损状态、细节特写，"
-                    f"保持同一物件的材质、体积、颜色和破损状态，干净中性背景，细节清晰，"
-                    f"只做道具参考，不演剧情使用，不出现角色手部、血迹、尸体或冲突场面，"
-                    f"不要文字，不要编号，不要水印。"
+                    f"保持同一物件的材质、体积、颜色和破损状态，纯白或近白色干净背景，细节清晰，"
+                    f"只做道具参考。负面提示词：禁止文字、编号、水印、剧情使用、角色手部、血迹、尸体、冲突场面"
                 ),
                 "acceptance": "不同状态仍然是同一个道具，形状、颜色、材质稳定。",
             },
         ])
+        item["identity_card"] = _asset_identity_card(
+            item,
+            kind="prop_identity_card",
+            label="道具身份证",
+            usage_rule="验收通过后，后续所有道具出镜镜头都必须参考基础道具图、多角度图和状态图；形状、颜色、材质、磨损状态不得漂移。",
+        )
     for item in scenes or []:
         name = item.get("name", "")
         rule = item.get("continuity_rule", "")
         item["image_prompt"] = (
-            f"{style}，基础场景设定图，场景名称：{name}，竖屏漫剧背景，无人物，"
+            f"{style}，基础场景设定图，场景名称：{name}，竖屏漫剧空场景背景，"
             f"空间透视清楚，光线方向明确，环境细节真实可信，远中近景层次分明，"
-            f"电影氛围和色彩统一，适合后续分镜复用，只锁定空间结构，不演剧情事件，"
-            f"不要文字，不要标签，不要编号，不要角色互动。连续性要求：{rule}"
+            f"电影氛围和色彩统一，适合后续分镜复用，只锁定空间结构，"
+            f"连续性要求：{rule}。负面提示词：禁止文字、标签、编号、人物、剧情事件、角色互动"
         )
         item.setdefault("asset_specs", [
             {
@@ -2002,7 +2349,7 @@ def _enrich_production_assets(
                     f"{style}，基础场景广角建立图，场景名称：{name}，横向或竖向广角均可，完整展示主要空间、入口、出口、"
                     f"关键背景物、可站位区域和纵深关系，空间层次清楚，远中近景分明，光线方向明确，"
                     f"色调稳定，环境细节真实可信，电影级氛围，"
-                    f"无人物，无剧情动作，只展示空间布局，不要文字，不要编号，不要水印。连续性要求：{rule}"
+                    f"空场景，只展示空间布局。连续性要求：{rule}。负面提示词：禁止文字、编号、水印、人物、剧情动作"
                 ),
                 "acceptance": "广角下能看清空间边界、入口出口、纵深和主要背景物，能作为后续镜头参考。",
             },
@@ -2014,7 +2361,7 @@ def _enrich_production_assets(
                     f"{style}，基础场景俯视布局图，场景名称：{name}，从上方俯视展示平面空间结构，"
                     f"明确入口、出口、主要通道、可站位区域、关键家具或背景物位置，"
                     f"保持比例关系清楚，便于后续安排人物走位和镜头调度，干净制片参考图，"
-                    f"无人物，无剧情动作，不要文字，不要编号，不要水印。连续性要求：{rule}"
+                    f"空场景制片参考图。连续性要求：{rule}。负面提示词：禁止文字、编号、水印、人物、剧情动作"
                 ),
                 "acceptance": "俯视图能说明空间平面关系和走位区域，不依赖文字也能理解布局。",
             },
@@ -2025,11 +2372,48 @@ def _enrich_production_assets(
                 "prompt": (
                     f"{style}，基础场景常用机位，场景名称：{name}，远景、中景、低角度、特写背景，"
                     f"同一空间连续，光线与陈设一致，镜头语言清楚，适合导演分镜参考，电影构图，"
-                    f"无人物，无剧情冲突，不要文字，不要编号，不要水印。"
+                    f"空场景机位参考图。负面提示词：禁止文字、编号、水印、人物、剧情冲突"
                 ),
                 "acceptance": "多个机位看起来属于同一个空间，不应像不同地点。",
             },
         ])
+        item["identity_card"] = _asset_identity_card(
+            item,
+            kind="scene_identity_card",
+            label="场景身份证",
+            usage_rule="验收通过后，后续所有镜头都必须参考场景设定图、广角建立图、俯视布局图和常用机位图；空间结构、入口出口、光线方向不得漂移。",
+        )
+    if style_contract:
+        _apply_visual_style_contract_to_assets(characters, props, scenes, style_contract)
+
+
+def _asset_identity_card(item: dict, kind: str, label: str, usage_rule: str) -> dict:
+    """Build a reusable identity card from an asset and its supporting specs."""
+    item_id = item.get("id", "")
+    image_refs = [item_id] if item_id else []
+    spec_refs = []
+    for spec in item.get("asset_specs", []) or []:
+        spec_kind = spec.get("kind", "")
+        source_id = f"{item_id}_{spec_kind}".strip("_")
+        image_ref = spec.get("image_ref", "")
+        if source_id:
+            image_refs.append(source_id)
+        spec_refs.append({
+            "kind": spec_kind,
+            "label": spec.get("label", spec_kind),
+            "source_id": source_id,
+            "image_ref": image_ref,
+            "acceptance": spec.get("acceptance", ""),
+        })
+    return {
+        "kind": kind,
+        "label": label,
+        "asset_id": item_id,
+        "asset_name": item.get("name", ""),
+        "image_refs": list(dict.fromkeys(ref for ref in image_refs if ref)),
+        "specs": spec_refs,
+        "usage_rule": usage_rule,
+    }
 
 
 def _premium_visual_style(visual_style: str) -> str:
@@ -2039,6 +2423,110 @@ def _premium_visual_style(visual_style: str) -> str:
         "人物五官稳定，服装材质清晰，真实光影层次，背景有空间深度，"
         "画面干净，高分辨率，非廉价插画感，非塑料质感，非低清截图"
     )
+
+
+def build_visual_style_contract(genre: str, visual_style: str, story_context: str = "") -> dict:
+    """Build one deterministic visual identity shared by every production asset."""
+    source = " ".join(part.strip() for part in (genre, visual_style, story_context) if part and part.strip())
+    ancient_fantasy = _genre_has(
+        source,
+        "古风",
+        "仙侠",
+        "修仙",
+        "武侠",
+        "国风",
+        "ancient",
+        "xianxia",
+        "wuxia",
+        "costume",
+    )
+    period = "古风仙侠" if ancient_fantasy else ((genre or "用户指定时代").strip() or "用户指定时代")
+    digest = hashlib.sha256(f"{period}|{visual_style}".encode("utf-8")).hexdigest()[:10]
+    if ancient_fantasy:
+        return {
+            "style_id": f"style_{digest}",
+            "period": period,
+            "medium": (visual_style or DEFAULT_STYLE).strip(),
+            "character_anchors": "古代发髻与束发结构，交领、窄袖或门派法衣，布帛、皮革、木质与锻造金属配件",
+            "prop_anchors": "木、竹、陶、铜、布帛、手工纸、天然药材与传统锻造工艺",
+            "scene_anchors": "木石结构、瓦檐、山路、驿站或宗门建筑，油灯、烛火与自然天光",
+            "palette": "克制的天然矿物色与旧化材质，角色、道具、场景共享同一色彩体系",
+            "forbidden_elements": [
+                "现代服装",
+                "现代发型",
+                "塑料包装",
+                "现代玻璃药瓶",
+                "印刷标签",
+                "汽车",
+                "电灯",
+                "现代家具",
+                "现代建筑",
+            ],
+        }
+    return {
+        "style_id": f"style_{digest}",
+        "period": period,
+        "medium": (visual_style or DEFAULT_STYLE).strip(),
+        "character_anchors": "人物脸型、发型、年龄感、服装轮廓与主色保持稳定",
+        "prop_anchors": "道具形状、比例、材质、颜色与使用痕迹保持稳定",
+        "scene_anchors": "空间结构、建筑语言、陈设逻辑与主光方向保持稳定",
+        "palette": "人物、道具、场景共享同一主色调与光影体系",
+        "forbidden_elements": ["跨时代元素", "画风漂移", "随机文字标签", "无关品牌标识"],
+    }
+
+
+def _visual_style_contract_prefix(contract: dict, asset_group: str = "") -> str:
+    anchors = {
+        "characters": contract.get("character_anchors", ""),
+        "props": contract.get("prop_anchors", ""),
+        "scenes": contract.get("scene_anchors", ""),
+        "shots": "人物、道具与场景必须引用已审核资产，不得跨时代或更换画风",
+    }
+    forbidden = "、".join(str(item) for item in contract.get("forbidden_elements", []) if str(item).strip())
+    return (
+        f"风格身份证：{contract.get('style_id', '')}；时代：{contract.get('period', '')}；"
+        f"媒介：{contract.get('medium', '')}；视觉锚点：{anchors.get(asset_group, '')}；"
+        f"色彩体系：{contract.get('palette', '')}；禁止现代与跨时代元素：{forbidden}"
+    )
+
+
+def _prepend_style_contract(prompt: str, contract: dict, asset_group: str) -> str:
+    prefix = _visual_style_contract_prefix(contract, asset_group)
+    current = _normalize_negative_language(str(prompt or "").strip())
+    if contract.get("style_id") and str(contract["style_id"]) in current:
+        return current
+    return f"{prefix}。{current}".strip("。")
+
+
+def _apply_visual_style_contract_to_assets(
+    characters: list[dict],
+    props: list[dict],
+    scenes: list[dict],
+    contract: dict,
+) -> None:
+    for group, items in (("characters", characters), ("props", props), ("scenes", scenes)):
+        for item in items or []:
+            item["style_id"] = contract.get("style_id", "")
+            item["image_prompt"] = _prepend_style_contract(item.get("image_prompt", ""), contract, group)
+            for spec in item.get("asset_specs", []) or []:
+                spec["prompt"] = _prepend_style_contract(spec.get("prompt", ""), contract, group)
+
+
+def _apply_visual_style_contract(package: dict) -> None:
+    contract = package.get("visual_style_contract") or {}
+    if not contract:
+        return
+    _apply_visual_style_contract_to_assets(
+        package.get("characters", []),
+        package.get("props", []),
+        package.get("scenes", []),
+        contract,
+    )
+    for shot in package.get("shots", []) or []:
+        shot["style_id"] = contract.get("style_id", "")
+        for field in ("image_prompt", "director_prompt", "video_prompt"):
+            if shot.get(field):
+                shot[field] = _prepend_style_contract(shot[field], contract, "shots")
 
 
 def _characters_for(title: str, genre: str, brief: dict, user_answers: str, script: dict) -> list[dict]:
@@ -2083,6 +2571,7 @@ def _story_asset_text(script: dict | None) -> str:
         for ep in outline
     )
     return "\n".join(filter(None, [
+        script.get("story_draft", ""),
         script.get("title", ""),
         script.get("logline", ""),
         script.get("story_promise", ""),
@@ -2090,7 +2579,6 @@ def _story_asset_text(script: dict | None) -> str:
         script.get("why_it_happens", ""),
         script.get("how_it_happens", ""),
         script.get("protagonist_arc", ""),
-        script.get("story_draft", ""),
         outline_text,
     ]))
 
@@ -2138,6 +2626,9 @@ def _story_asset_names(script: dict | None, asset_type: str) -> list[str]:
 def _story_specific_asset_names(text: str, asset_type: str) -> list[str]:
     if asset_type == "props":
         candidates = [
+            ("许愿小卡片", "许愿小卡片"),
+            ("小卡片", "许愿小卡片"),
+            ("背包", "背包"),
             ("粉笔", "粉笔"),
             ("黑板", "倒计时黑板"),
             ("练习册", "最后一本练习册"),
@@ -2147,6 +2638,7 @@ def _story_specific_asset_names(text: str, asset_type: str) -> list[str]:
         ]
     else:
         candidates = [
+            ("天台", "天台"),
             ("教室", "高三晚自习教室"),
             ("晚自习", "高三晚自习教室"),
             ("靠窗", "教室靠窗座位"),
@@ -2155,20 +2647,30 @@ def _story_specific_asset_names(text: str, asset_type: str) -> list[str]:
             ("校门", "夜晚校门"),
         ]
     names: list[str] = []
+    hits: list[tuple[int, str]] = []
     for keyword, name in candidates:
-        if keyword in text and name not in names:
+        position = text.find(keyword)
+        if position >= 0 and name not in names:
+            hits.append((position, name))
             names.append(name)
+    names = []
+    for _, name in sorted(hits, key=lambda item: item[0]):
+        if name not in names:
+            names.append(name)
+    if asset_type != "props" and "天台" in names:
+        names = [name for name in names if name not in {"夜晚教学楼"}]
     return names
 
 
 def _props_for(genre: str, script: dict | None = None) -> list[dict]:
     story_props = _story_asset_names(script, "props")
+    allow_defaults = not _is_confirmed_story_source(script)
     if story_props:
-        fallback_names = [name for _, name in _default_props_for_genre(genre) if name not in story_props]
-        names = (story_props + fallback_names)[:3]
+        fallback_names = [] if not allow_defaults else [name for _, name in _default_props_for_genre(genre) if name not in story_props]
+        names = (story_props + fallback_names)[:6]
         base = [(f"prop_{index:02d}", name) for index, name in enumerate(names, start=1)]
     else:
-        base = _default_props_for_genre(genre)
+        base = [] if _story_asset_text(script) and not allow_defaults else _default_props_for_genre(genre)
     return [
         {
             "id": prop_id,
@@ -2194,18 +2696,19 @@ def _default_props_for_genre(genre: str) -> list[tuple[str, str]]:
 
 def _scenes_for(genre: str, script: dict | None = None) -> list[dict]:
     story_scenes = _story_asset_names(script, "scenes")
+    allow_defaults = not _is_confirmed_story_source(script)
     if story_scenes:
-        fallback_names = [name for _, name in _default_scenes_for_genre(genre) if name not in story_scenes]
-        names = (story_scenes + fallback_names)[:3]
+        fallback_names = [] if not allow_defaults else [name for _, name in _default_scenes_for_genre(genre) if name not in story_scenes]
+        names = (story_scenes + fallback_names)[:6]
         base = [(f"scene_{index:02d}", name) for index, name in enumerate(names, start=1)]
     else:
-        base = _default_scenes_for_genre(genre)
+        base = [] if _story_asset_text(script) and not allow_defaults else _default_scenes_for_genre(genre)
     return [
         {
             "id": scene_id,
             "name": name,
             "continuity_rule": "空间布局、主光方向和关键背景物必须保持一致。",
-            "image_prompt": f"{name}，环境概念图，竖屏漫剧背景，无人物",
+            "image_prompt": f"{name}，环境概念图，竖屏漫剧空场景背景。负面提示词：禁止人物",
         }
         for scene_id, name in base
     ]
@@ -2221,6 +2724,14 @@ def _default_scenes_for_genre(genre: str) -> list[tuple[str, str]]:
     elif _genre_has(genre, "科幻", "science", "sci-fi", "future"):
         return [("scene_01", "未来城市路口"), ("scene_02", "高架交通站"), ("scene_03", "废弃控制室")]
     return [("scene_01", "现代办公室"), ("scene_02", "狭窄夜街"), ("scene_03", "私密对峙房间")]
+
+
+def _is_confirmed_story_source(script: dict | None) -> bool:
+    if not script:
+        return False
+    if str(script.get("status", "")).lower() == "confirmed":
+        return True
+    return bool(script.get("script_hash") or script.get("script_version"))
 
 
 def _shot_plan(
@@ -2622,18 +3133,6 @@ def _script_beats_from_preview(script: dict) -> list[dict]:
 def _detected_story_characters(script: dict) -> list[tuple[str, str]]:
     text = _story_asset_text(script)
     pairs: list[tuple[str, str]] = []
-    role_aliases = [
-        ("女主", "故事女主角，承担主要行动和情绪视角"),
-        ("男主", "故事男主角，承担主要行动和情绪视角"),
-        ("母亲", "核心亲情关系中的行动者"),
-        ("父亲", "核心亲情关系中的行动者"),
-        ("老板", "掌握信息或制造压力的人"),
-        ("老师", "校园或社会关系中的权威角色"),
-        ("学生", "故事中的年轻行动者或被影响者"),
-    ]
-    for name, role in role_aliases:
-        if name in text and all(existing != name for existing, _ in pairs):
-            pairs.append((name, role))
     generic_names = _probable_chinese_names(text)
     if "辅助阿衡" in text or "阿衡" in text or "辅助" in text:
         pairs.append(("辅助阿衡", "被长期忽视却照顾所有人的队伍辅助"))
@@ -2644,16 +3143,35 @@ def _detected_story_characters(script: dict) -> list[tuple[str, str]]:
         ("贵人", "制造死亡事件却漠视生命的权势者"),
         ("护卫", "直接造成辅助死亡的执行者"),
     ]:
-        if name in text:
+        if name in text and all(existing != name for existing, _ in pairs):
             pairs.append((name, role))
-    if len(pairs) < 4:
-        for name in generic_names:
-            if any(existing == name for existing, _ in pairs):
-                continue
-            if pairs and text.count(name) < 2:
-                continue
+    for name in generic_names:
+        if all(existing != name for existing, _ in pairs) and len(pairs) < 4:
             pairs.append((name, "故事主角或关键行动者"))
-    return pairs[:4]
+    role_aliases = [
+        ("女主", "故事女主角，承担主要行动和情绪视角"),
+        ("男主", "故事男主角，承担主要行动和情绪视角"),
+        ("母亲", "核心亲情关系中的行动者"),
+        ("父亲", "核心亲情关系中的行动者"),
+        ("老板", "掌握信息或制造压力的人"),
+        ("老师", "校园或社会关系中的权威角色"),
+        ("学生", "故事中的年轻行动者或被影响者"),
+    ]
+    for name, role in role_aliases:
+        if generic_names and name in {"母亲", "父亲", "学生"}:
+            continue
+        if name in text and all(existing != name for existing, _ in pairs):
+            pairs.append((name, role))
+    material_roles = [
+        ("保安", "现场秩序和危机阻隔中的行动者"),
+        ("医生", "救援或诊断场景中的行动者"),
+        ("警察", "调查、救援或秩序维护中的行动者"),
+        ("同学", "校园关系中的见证者或推动者"),
+    ]
+    for name, role in material_roles:
+        if name in text and all(existing != name for existing, _ in pairs):
+            pairs.append((name, role))
+    return list(dict((name, role) for name, role in pairs).items())[:4]
 
 
 def _probable_chinese_names(text: str) -> list[str]:
@@ -2694,9 +3212,13 @@ def _action_context_names(text: str, common_surnames: str) -> list[str]:
     names: list[str] = []
     invalid_names = {"解释", "关系", "线索", "关键", "故事", "人物", "身份", "主角", "对手", "镜头", "场景"}
     bad_name_second_chars = set("会的了在是和与被将能要有不中后前着过到这那更最就很还把给对从向，。、；：")
-    for match in re.finditer(r"([\u4e00-\u9fff]{2,3})(?:坐在|拒绝|留到|走到|拿起|画了|画下|回到|走出|回头|加快|决定|没有加入)", text or ""):
+    action_verbs = (
+        "站在|坐在|拒绝|留到|走到|拿起|拿出|画了|画下|写过|试图|哀求|"
+        "回到|走出|回头|加快|决定|没有加入|被|追查|发现|寻找|劝|救"
+    )
+    for match in re.finditer(rf"([\u4e00-\u9fff]{{2,3}})(?:{action_verbs})", text or ""):
         raw = match.group(1)
-        name = raw[:2] if raw[:1] in common_surnames else raw[-2:]
+        name = raw if raw[:1] in common_surnames else raw[-2:]
         if name[:1] not in common_surnames:
             continue
         if name in invalid_names:
@@ -2718,9 +3240,9 @@ def _characters_for(title: str, genre: str, brief: dict, user_answers: str, scri
             "id": f"char_{index:02d}",
             "name": name,
             "role": role,
-            "visual_lock": "保持同一脸型、发型、服装主色和年龄感；不要在画面中出现角色编号或文字标签。",
+            "visual_lock": "保持同一脸型、发型、服装主色和年龄感；负面提示词：禁止角色编号、文字标签。",
             "personality": script.get("protagonist_arc", "") if index == 1 else role,
-            "image_prompt": f"{title}，{name}人物设定图，{role}，清晰正脸参考，全身站姿，中性表情，角色三视图，制作设定稿，不要文字，不要标签",
+            "image_prompt": f"{title}，{name}人物设定图，{role}，清晰正脸参考，全身站姿，中性表情，角色三视图，制作设定稿。负面提示词：禁止文字、标签",
         })
     return result
 
@@ -2798,10 +3320,16 @@ def _shot_plan(
         framing = camera_plan["framing"]
         movement = camera_plan["movement"]
         cinematography = camera_plan["cinematography"]
+        shot_template = camera_plan.get("shot_template", "")
+        shot_template_id = camera_plan.get("shot_template_id", "")
+        shot_template_purpose = camera_plan.get("shot_template_purpose", "")
+        composition = camera_plan.get("composition", "")
+        platform_note = camera_plan.get("platform_note", "")
         lighting = _lighting_for_beat(beat_text, index)
         action_chain = _shot_action_chain(beat_text, index)
         performance_intent = _shot_performance_intent(beat_text, index)
         reference_assets = _shot_reference_assets(shot_chars, shot_props, shot_scenes)
+        identity_references = _shot_identity_references(shot_chars, shot_props, shot_scenes)
         director_prompt = _director_prompt(
             visual_style=visual_style,
             framing=framing,
@@ -2811,10 +3339,14 @@ def _shot_plan(
             char_names=char_names,
             prop_names=prop_names,
             reference_assets=reference_assets,
+            identity_references=identity_references,
             action_chain=action_chain,
             performance_intent=performance_intent,
             cinematography=cinematography,
             lighting=lighting,
+            shot_template=shot_template,
+            shot_template_purpose=shot_template_purpose,
+            composition=composition,
         )
         result.append({
             "id": shot_id,
@@ -2822,7 +3354,13 @@ def _shot_plan(
             "beat": beat_text,
             "framing": framing,
             "camera_movement": movement,
+            "shot_template_id": shot_template_id,
+            "shot_template": shot_template,
+            "shot_template_purpose": shot_template_purpose,
+            "composition": composition,
+            "platform_note": platform_note,
             "reference_assets": reference_assets,
+            "identity_references": identity_references,
             "performance_intent": performance_intent,
             "action_chain": action_chain,
             "cinematography": cinematography,
@@ -2837,9 +3375,9 @@ def _shot_plan(
             "image_ref": "",
             "image_prompt": director_prompt,
             "video_prompt": (
-                f"{movement}，{framing}。{reference_assets}。{action_chain}。"
+                f"{movement}，{framing}。镜头模板：{shot_template}。构图：{composition}。{identity_references}。{reference_assets}。{action_chain}。"
                 f"表演意图：{performance_intent}。摄影：{cinematography}。灯光：{lighting}。"
-                "保持人物脸型、服装、道具和场景连续，不要自行改变剧情目的。"
+                f"平台执行：{platform_note}。保持人物脸型、服装、道具和场景连续，剧情目的保持不变。"
             ),
             "negative_prompt": _shot_negative_prompt(beat_text),
         })
@@ -2851,6 +3389,28 @@ def _shot_reference_assets(characters: list[dict], props: list[dict], scenes: li
     prop_refs = "、".join(f"{item.get('id', '')} {item.get('name', '')}".strip() for item in props) or "无关键道具"
     scene_refs = "、".join(f"{item.get('id', '')} {item.get('name', '')}".strip() for item in scenes) or "中性背景"
     return f"参考资产：人物={char_refs}；道具={prop_refs}；场景={scene_refs}"
+
+
+def _shot_identity_references(characters: list[dict], props: list[dict], scenes: list[dict]) -> str:
+    """Render identity-card references that downstream image/video tools must use."""
+    def render(items: list[dict], fallback: str) -> str:
+        refs = []
+        for item in items:
+            card = item.get("identity_card") or {}
+            label = card.get("label") or "资产身份证"
+            source_refs = "、".join(card.get("image_refs") or [])
+            if not source_refs:
+                source_refs = item.get("id", "")
+            if source_refs:
+                refs.append(f"{item.get('name', '')}={label}({source_refs})")
+        return "；".join(refs) if refs else fallback
+
+    return (
+        "身份证引用："
+        f"角色身份证={render(characters, '无可见人物')}；"
+        f"道具身份证={render(props, '无关键道具')}；"
+        f"场景身份证={render(scenes, '中性背景')}"
+    )
 
 
 def _beat_parts(beat_text: str) -> dict[str, str]:
@@ -2875,6 +3435,17 @@ def _beat_parts(beat_text: str) -> dict[str, str]:
 
 
 def _camera_plan_for_beat(beat_text: str, index: int) -> dict[str, str]:
+    template = select_shot_template(beat_text, index)
+    return {
+        "framing": template.get("framing", ""),
+        "movement": template.get("movement", ""),
+        "cinematography": template.get("cinematography", ""),
+        "shot_template_id": template.get("template_id", ""),
+        "shot_template": template.get("name", ""),
+        "shot_template_purpose": template.get("purpose", ""),
+        "composition": template.get("composition", ""),
+        "platform_note": template.get("platform_note", ""),
+    }
     text = beat_text or ""
     if any(word in text for word in ("说", "问", "开口", "台词", "诱导", "追问", "对话")):
         return {
@@ -2948,7 +3519,7 @@ def _shot_performance_intent(beat_text: str, index: int) -> str:
     if any(word in text for word in ("诱导", "开口", "追问", "说", "问", "谈话")):
         return "语气温柔缓慢但有目的，眼睛先下看像在思考，再抬眼观察对方反应，用停顿诱导对方继续说"
     if any(word in text for word in ("死亡", "尸体", "死在", "失踪", "缺席")):
-        return "不要大哭大喊，先是不敢相信的空白，再用呼吸停顿、手部僵住和眼神失焦表现迟来的悲伤"
+        return "情绪克制，先是不敢相信的空白，再用呼吸停顿、手部僵住和眼神失焦表现迟来的悲伤"
     if any(word in text for word in ("复仇", "愤怒", "追查", "凶手")):
         return "愤怒压在表面之下，台词或动作保持克制，眼神逐渐变硬，身体重心从犹豫转向行动"
     if any(word in text for word in ("发现", "线索", "证据", "秘密", "真相")):
@@ -2963,16 +3534,16 @@ def _shot_performance_intent(beat_text: str, index: int) -> str:
 
 
 def _shot_negative_prompt(beat_text: str) -> str:
-    issues = ["不要文字", "不要字幕", "不要画面标签", "不要随机logo"]
+    issues = ["禁止文字", "禁止字幕", "禁止画面标签", "禁止随机logo"]
     text = beat_text or ""
     if any(word in text for word in ("对话", "说", "问", "开口")):
-        issues.extend(["不要嘴型夸张", "不要表情僵硬"])
+        issues.extend(["禁止嘴型夸张", "禁止表情僵硬"])
     if any(word in text for word in ("复仇", "追查", "凶手", "贵人", "权势")):
-        issues.extend(["不要武打化", "不要爆炸特效", "不要无关反派脸谱化"])
+        issues.extend(["禁止武打化", "禁止爆炸特效", "禁止无关反派脸谱化"])
     if any(word in text for word in ("动作", "走", "跑", "倒", "转身")):
-        issues.extend(["不要肢体扭曲", "不要多余手指"])
+        issues.extend(["禁止肢体扭曲", "禁止多余手指"])
     if any(word in text for word in ("死亡", "尸体", "血", "撞")):
-        issues.extend(["不要血腥猎奇", "不要恐怖夸张"])
+        issues.extend(["禁止血腥猎奇", "禁止恐怖夸张"])
     return "、".join(dict.fromkeys(issues))
 
 
@@ -2985,19 +3556,25 @@ def _director_prompt(
     char_names: str,
     prop_names: str,
     reference_assets: str,
+    identity_references: str,
     action_chain: str,
     performance_intent: str,
     cinematography: str,
     lighting: str,
+    shot_template: str = "",
+    shot_template_purpose: str = "",
+    composition: str = "",
 ) -> str:
     return (
-        f"{movement}，{framing}，首帧参考使用已审核资产：{reference_assets}。"
+        f"镜头模板：{shot_template}；用途：{shot_template_purpose}；构图：{composition}。"
+        f"{movement}，{framing}，首帧参考使用已审核资产身份证：{identity_references}。"
+        f"基础资产索引：{reference_assets}。"
         f"场景锁定为{scene_name}，出镜人物为{char_names}，关键道具为{prop_names}。"
         f"本镜头剧情目的：{beat_text}。{action_chain}。"
         f"表演意图：{performance_intent}。"
         f"摄影：{cinematography}。灯光与色彩：{lighting}。"
         f"风格核心：{visual_style}。"
-        "保持同一人物脸型、发型、服装主色、道具外观和场景空间关系，画面干净，主体明确，不要文字、字幕、标签、编号和水印。"
+        "保持同一人物脸型、发型、服装主色、道具外观和场景空间关系，画面干净，主体明确。负面提示词：禁止文字、字幕、标签、编号、水印。"
     )
 
 

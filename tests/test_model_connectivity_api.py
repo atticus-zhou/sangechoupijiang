@@ -83,6 +83,44 @@ class ModelConnectivityApiTests(unittest.TestCase):
         self.assertEqual(len(payload["results"]), 9)
         self.assertEqual({item["office_id"] for item in payload["results"]}, {"comic"})
 
+    def test_model_config_reads_never_expose_api_keys(self):
+        config = {
+            "models": {
+                "hubu": {"provider": "deepseek", "model": "deepseek-chat", "api_key": "global-secret"},
+            },
+            "office_models": {
+                "comic": {
+                    "hubu": {"api_key": "comic-secret"},
+                }
+            },
+        }
+
+        with patch("src.web.app.config_manager.load_yaml", return_value=config):
+            response = self.client.get("/api/config/models?office_id=comic")
+
+        self.assertEqual(response.status_code, 200)
+        model = response.json()["models"]["hubu"]
+        self.assertNotIn("api_key", model)
+        self.assertTrue(model["has_api_key"])
+        self.assertEqual(model["api_key_hint"], "已配置")
+
+    def test_full_config_read_never_exposes_api_keys(self):
+        config = {
+            "models": {"hubu": {"provider": "deepseek", "api_key": "global-secret"}},
+            "office_models": {"comic": {"gongbu": {"provider": "doubao", "api_key": "comic-secret"}}},
+            "system": {"language": "zh-CN"},
+        }
+
+        with patch("src.web.app.config_manager.load_yaml", return_value=config):
+            response = self.client.get("/api/config")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertNotIn("api_key", body["models"]["hubu"])
+        self.assertNotIn("api_key", body["office_models"]["comic"]["gongbu"])
+        self.assertTrue(body["models"]["hubu"]["has_api_key"])
+        self.assertEqual(body["system"], {"language": "zh-CN"})
+
     def test_provider_change_clears_existing_key_in_office_scope(self):
         config = {
             "models": {},
@@ -110,7 +148,8 @@ class ModelConnectivityApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["config"]["provider"], "deepseek")
-        self.assertEqual(payload["config"]["api_key"], "")
+        self.assertNotIn("api_key", payload["config"])
+        self.assertFalse(payload["config"]["has_api_key"])
         self.assertIn("warnings", payload)
         self.assertEqual(saved["office_models"]["comic"]["hubu"]["api_key"], "")
 

@@ -360,7 +360,13 @@ class WebComicApiTests(unittest.TestCase):
         result = {
             "comic_package": {
                 "script_binding": {"script_hash": "abc", "script_version": 1, "confirmed": True},
-                "characters": [{"id": "char_01", "image_prompt": "人物设定"}],
+                "characters": [{"id": "char_01", "image_prompt": "人物站在山路上讲故事"}],
+                "props": [{
+                    "id": "prop_01",
+                    "asset_specs": [
+                        {"kind": "prop_turnaround", "label": "道具多角度", "prompt": "人物手持药瓶站在街道剧情现场"}
+                    ],
+                }],
                 "scenes": [{
                     "id": "scene_01",
                     "image_prompt": "场景设定",
@@ -382,9 +388,18 @@ class WebComicApiTests(unittest.TestCase):
 
         self.assertEqual(storyboard_ids, [])
         self.assertIn("character", spec_kinds)
+        self.assertIn("prop_turnaround", spec_kinds)
         self.assertIn("scene", spec_kinds)
         self.assertIn("scene_wide_establishing", spec_kinds)
         self.assertIn("scene_top_down_layout", spec_kinds)
+        character_prompt = next(item["prompt"] for item in specs if item["kind"] == "character")
+        prop_prompt = next(item["prompt"] for item in specs if item["kind"] == "prop_turnaround")
+        self.assertIn("纯白或近白色干净背景", character_prompt)
+        self.assertIn("禁止场景背景", character_prompt)
+        self.assertIn("只生成单独角色参考", character_prompt)
+        self.assertIn("纯白或近白色干净背景", prop_prompt)
+        self.assertIn("禁止人物手持", prop_prompt)
+        self.assertIn("只生成单独道具参考", prop_prompt)
 
     @patch("src.comic_office.workflow._model_config_usable", return_value=True)
     @patch("src.comic_office.workflow._cabinet_story_writer_llm", return_value={"assistant_message": "Mock LLM Message", "story": {}})
@@ -662,7 +677,11 @@ class WebComicApiTests(unittest.TestCase):
 
         with patch("src.web.app._schedule_background_task", side_effect=fake_create_task):
             started = self.client.post("/api/tasks", json={
-                "user_request": "Idea: 外部调用\nConfirmed script:\nMALICIOUS SCRIPT SHOULD NOT SURVIVE",
+                "user_request": (
+                    "Idea: 外部调用\n"
+                    "Confirmed script:\nMALICIOUS SCRIPT SHOULD NOT SURVIVE\n"
+                    "Script notes: Asset revision notes: 道具只有药箱、求救符、采购清单。"
+                ),
                 "office_id": "comic",
                 "workspace_id": workspace_id,
             })
@@ -671,6 +690,7 @@ class WebComicApiTests(unittest.TestCase):
         run = config_manager.get_task_run(started.json()["task_id"])
         self.assertIn(server_hash, run["user_request"])
         self.assertNotIn("MALICIOUS SCRIPT SHOULD NOT SURVIVE", run["user_request"])
+        self.assertIn("Asset revision notes: 道具只有药箱、求救符、采购清单。", run["user_request"])
 
     def test_reconfirming_script_invalidates_assets_bound_to_old_script_hash(self):
         response = self.client.post("/api/comic/cabinet/turn", json={

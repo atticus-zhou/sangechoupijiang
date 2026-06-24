@@ -400,7 +400,7 @@
                         <textarea id="comic-script-source" rows="7" placeholder="如果你已经有完整剧本，粘贴在这里。系统会按这版剧本拆人物、道具、场景、分镜、运镜和提示词，不再另起故事。"></textarea>
                     </div>
                     <label>创作指令</label>
-                    <textarea id="comic-extra" rows="2" placeholder="例如：女主更冷静克制；反派不要脸谱化；第1集要有强反转。"></textarea>
+                    <textarea id="comic-extra" rows="2" placeholder="例如：女主更冷静克制；反派禁止脸谱化；第1集要有强反转。"></textarea>
                     
                     <div class="office-submit-actions">
                         <select id="comic-workspace-select" onchange="selectComicWorkspace(this.value)">
@@ -453,7 +453,7 @@
                             <span id="comic-asset-review-status" class="badge badge-info">请先审核</span>
                         </div>
                         <p id="comic-asset-review-copy" class="desc mini-desc">中书省和门下省已经把人物、道具、场景和分镜输入拆完。确认它们符合故事后，再继续生成图片和 Word 画布。</p>
-                        <textarea id="comic-asset-review-notes" rows="2" placeholder="可选：写下要保留或修改的资产意见，例如：女主服装要固定为白衬衫黑外套；宗门大厅不要太现代。"></textarea>
+                        <textarea id="comic-asset-review-notes" rows="2" placeholder="可选：写下要保留或修改的资产意见，例如：女主服装要固定为白衬衫黑外套；宗门大厅禁止太现代。"></textarea>
                         <div class="office-submit-actions">
                             <button class="ghost" onclick="focusComicAssetReview()">查看资产拆解包</button>
                             <button class="ghost" onclick="requestComicAssetRevision()">退回补充拆解</button>

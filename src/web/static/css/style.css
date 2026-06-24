@@ -1104,6 +1104,91 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .package-item.missing strong {
     color: var(--text3);
 }
+.production-flow {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    background: rgba(88, 166, 255, 0.05);
+}
+.production-flow.empty {
+    color: var(--text2);
+}
+.production-flow-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.production-flow-head strong {
+    display: block;
+    color: var(--text);
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+.production-flow-head span {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.department-flow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+}
+.department-step {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px;
+    background: var(--panel);
+    min-height: 116px;
+}
+.department-step-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.department-step-top strong {
+    color: var(--text);
+    font-size: 14px;
+}
+.department-step-top span {
+    color: var(--text3);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.department-step p,
+.department-step small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0;
+}
+.department-step small {
+    margin-top: 8px;
+}
+.department-step.completed {
+    border-color: rgba(63, 185, 80, 0.28);
+}
+.department-step.completed .department-step-top span {
+    color: var(--green);
+}
+.department-step.waiting_for_human {
+    border-color: rgba(88, 166, 255, 0.48);
+    background: rgba(88, 166, 255, 0.09);
+}
+.department-step.waiting_for_human .department-step-top span {
+    color: var(--side-active);
+}
+.department-step.blocked {
+    border-color: rgba(239, 83, 80, 0.45);
+}
+.department-step .danger {
+    color: var(--red);
+}
 
 .timeline-list {
     display: flex;

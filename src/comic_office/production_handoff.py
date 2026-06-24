@@ -80,12 +80,16 @@ def _asset_registry(package: dict) -> str:
     rows = [
         "# 资产登记表",
         "",
-        "| 类型 | ID | 名称 | 生图提示词 |",
-        "| --- | --- | --- | --- |",
+        "| 类型 | ID | 名称 | 身份证引用 | 生图提示词 |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for asset_type, key in (("人物", "characters"), ("道具", "props"), ("场景", "scenes")):
         for item in package.get(key, []) or []:
-            rows.append(f"| {asset_type} | {item.get('id', '')} | {item.get('name', '')} | {item.get('image_prompt', '')} |")
+            card = item.get("identity_card") or {}
+            rows.append(
+                f"| {asset_type} | {item.get('id', '')} | {item.get('name', '')} | "
+                f"{card.get('label', '')}：{', '.join(card.get('image_refs') or [])} | {item.get('image_prompt', '')} |"
+            )
     return "\n".join(rows)
 
 
@@ -93,12 +97,12 @@ def _shot_prompt_handoff(package: dict) -> str:
     rows = [
         "# 镜头导演提示词交接台",
         "",
-        "| 镜头 | 画面内容 | 参考资产 | 动作链 | 表演意图 | 摄影 | 灯光 | 镜头导演提示词 | 视频生成提示词 |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| 镜头 | 镜头模板 | 画面内容 | 身份证引用 | 动作链 | 表演意图 | 摄影 | 灯光 | 镜头导演提示词 | 视频生成提示词 |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for shot in package.get("shots", []) or []:
         rows.append(
-            f"| {shot.get('id', '')} | {shot.get('beat', '')} | {shot.get('reference_assets', '')} | "
+            f"| {shot.get('id', '')} | {shot.get('shot_template') or shot.get('framing', '')} | {shot.get('beat', '')} | {shot.get('identity_references') or shot.get('reference_assets', '')} | "
             f"{shot.get('action_chain', '')} | {shot.get('performance_intent', '')} | {shot.get('cinematography', '')} | "
             f"{shot.get('lighting', '')} | {shot.get('director_prompt') or shot.get('image_prompt', '')} | {shot.get('video_prompt', '')} |"
         )
