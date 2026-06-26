@@ -1131,6 +1131,20 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 13px;
     line-height: 1.5;
 }
+.v2-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid rgba(139, 148, 158, 0.18);
+}
+.v2-action-row .btn-sm,
+.v2-action-row a.btn-sm {
+    min-height: 34px;
+    text-decoration: none;
+}
 .department-flow {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

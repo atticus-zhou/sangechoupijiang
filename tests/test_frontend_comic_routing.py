@@ -82,6 +82,49 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("currentComicV2Status.blocking_reason", js)
         self.assertIn("currentComicV2Status.next_action", js)
 
+    def test_comic_production_confirm_story_enters_v2_pipeline_not_legacy_task(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        confirm_fn = js[js.index("async function confirmComicScript"):js.index("function unconfirmComicScript")]
+
+        self.assertIn("/api/comic/confirm-script", confirm_fn)
+        self.assertIn("/comic/v2/plan-confirmed", confirm_fn)
+        self.assertIn("await refreshComicV2Panel", confirm_fn)
+        self.assertNotIn("/api/comic/confirm-and-start", confirm_fn)
+        self.assertNotIn("watchComicTask(", confirm_fn)
+
+    def test_v2_stage_board_exposes_real_next_step_actions(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function renderComicDepartmentStep")]
+
+        for action in [
+            "approveComicV2VisualBible",
+            "reviseComicV2VisualBible",
+            "planComicV2Assets",
+            "approveComicV2Assets",
+            "reviseComicV2Assets",
+            "planComicV2Prompts",
+            "generateComicV2Images",
+            "overrideComicV2VisualReview",
+            "buildComicV2Delivery",
+        ]:
+            self.assertIn(action, js)
+            self.assertIn(action, v2_flow)
+
+    def test_v2_action_row_has_responsive_button_spacing(self):
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn(".v2-action-row", css)
+        self.assertIn("flex-wrap: wrap", css)
+        self.assertIn(".v2-action-row .btn-sm", css)
+
+    def test_selecting_new_comic_project_clears_visible_v2_state_immediately(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        select_fn = js[js.index("async function selectComicWorkspace"):js.index("async function loadComicV2Status")]
+
+        self.assertIn("resetComicWorkspaceState", js)
+        self.assertIn("resetComicWorkspaceState({ clearInputs: true })", select_fn)
+        self.assertIn("renderComicPackageBoard()", select_fn)
+
 
 if __name__ == "__main__":
     unittest.main()

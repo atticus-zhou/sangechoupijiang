@@ -356,6 +356,63 @@ class WebComicApiTests(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_history_exposes_comic_v2_word_canvas_download(self):
+        task_id = f"hist_v2_{str(uuid.uuid4())[:8]}"
+        workspace_id = f"ws_hist_v2_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="V2 Word History",
+            brief="history download",
+        )
+        config_manager.save_task_record(
+            task_id,
+            "build V2 delivery",
+            "",
+            "completed",
+            {"final_report": "V2 delivery ready"},
+        )
+        config_manager.create_task_run(task_id, "build V2 delivery", "")
+        config_manager.append_task_event(
+            task_id=task_id,
+            event_type="comic_v2_delivery_ready",
+            status="completed",
+            summary="V2 delivery ready",
+            payload={"office_id": "comic_production", "workspace_id": workspace_id},
+        )
+        config_manager.update_task_run(
+            task_id,
+            "completed",
+            current_phase="completed",
+            result={"final_report": "V2 delivery ready"},
+            completed=True,
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_v2_word",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_word_canvas",
+            title="V2 Word Canvas",
+            uri=f"/api/workspaces/{workspace_id}/files/delivery/v2.docx",
+            content="ready",
+            metadata={"office_id": "comic_production"},
+            created_by="libu",
+        )
+        try:
+            response = self.client.get("/api/tasks/history?limit=20")
+            self.assertEqual(response.status_code, 200)
+            row = next(item for item in response.json()["history"] if item["task_id"] == task_id)
+            self.assertTrue(row["word_canvas_uri"].endswith("/v2.docx"))
+            self.assertEqual(row["word_canvas_title"], "V2 Word Canvas")
+        finally:
+            conn = sqlite3.connect("user_data/config.db")
+            conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_runs WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_events WHERE task_id=?", (task_id,))
+            conn.commit()
+            conn.close()
+
     def test_comic_image_specs_skip_shots_and_only_generate_base_assets(self):
         result = {
             "comic_package": {

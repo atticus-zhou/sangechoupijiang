@@ -904,6 +904,8 @@ async function selectComicWorkspace(workspaceId) {
     
     if (!workspaceId) {
         stopComicTaskPolling();
+        resetComicWorkspaceState({ clearInputs: true });
+        renderComicPackageBoard();
         currentComicV2Status = null;
         // 如果是选择了“新建漫剧项目”，不仅清空变量，还要清空页面上的表单输入
         document.getElementById('comic-idea').value = '';
@@ -941,6 +943,42 @@ async function selectComicWorkspace(workspaceId) {
     await Promise.all([loadComicArtifacts(workspaceId), loadComicTimeline(workspaceId), loadComicCabinetSession(workspaceId)]);
 }
 
+function resetComicWorkspaceState(options = {}) {
+    currentComicArtifacts = [];
+    currentComicBrief = null;
+    currentComicScriptPreview = null;
+    currentComicConfirmedScript = null;
+    currentComicCabinetSession = null;
+    currentComicCabinetReady = false;
+    currentComicV2Status = null;
+    if (options.clearInputs) {
+        const idea = document.getElementById('comic-idea');
+        if (idea) idea.value = '';
+        const scriptSource = document.getElementById('comic-script-source');
+        if (scriptSource) scriptSource.value = '';
+        const inputMode = document.getElementById('comic-input-mode');
+        if (inputMode) inputMode.value = 'idea';
+        toggleComicInputMode();
+        const extra = document.getElementById('comic-extra');
+        if (extra) extra.value = '';
+        const chat = document.getElementById('comic-chat-input');
+        if (chat) chat.value = '';
+    }
+    renderComicCabinet();
+    renderComicAssetReviewPanel([]);
+    const list = document.getElementById('comic-artifacts');
+    if (list) list.innerHTML = '<div class="empty-state">选择一个漫剧项目查看资产。</div>';
+    const detail = document.getElementById('comic-artifact-detail');
+    if (detail) {
+        detail.className = 'artifact-detail empty-state';
+        detail.textContent = '选择一个资产查看完整内容。';
+    }
+    const count = document.getElementById('comic-task-count');
+    if (count) count.textContent = '0';
+    const timeline = document.getElementById('comic-timeline');
+    if (timeline) timeline.innerHTML = '<div class="empty-state">选择一个漫剧项目后查看创作记录。</div>';
+}
+
 async function loadComicV2Status(workspaceId) {
     if (!workspaceId || activeComicOfficeId() !== 'comic_production') {
         currentComicV2Status = null;
@@ -962,6 +1000,18 @@ async function loadComicV2Status(workspaceId) {
         };
     }
     return currentComicV2Status;
+}
+
+async function refreshComicV2Panel(message = '') {
+    if (!currentComicWorkspace) return null;
+    const status = await loadComicV2Status(currentComicWorkspace);
+    await Promise.all([
+        loadComicArtifacts(currentComicWorkspace),
+        loadComicTimeline(currentComicWorkspace),
+    ]);
+    renderComicPackageBoard(currentComicArtifacts);
+    if (message) toast(message, 'success');
+    return status;
 }
 
 async function loadComicCabinetSession(workspaceId) {
@@ -1366,6 +1416,7 @@ function renderComicV2ProductionFlow() {
     const total = Number(currentComicV2Status.total || 0);
     const progress = total > 0 ? `${completed}/${total}` : '等待状态';
     const blocked = currentComicV2Status.blocking_reason || '';
+    const actions = renderComicV2StageActions(currentComicV2Status);
     return `
         <div class="production-flow v2-flow">
             <div class="production-flow-head">
@@ -1380,8 +1431,48 @@ function renderComicV2ProductionFlow() {
                 <span>${escapeHtml(blocked || '当前没有阻塞项')}</span>
                 <small>下一步：${escapeHtml(currentComicV2Status.next_action || '等待状态更新')}</small>
             </div>
+            ${actions ? `<div class="v2-action-row">${actions}</div>` : ''}
         </div>
     `;
+}
+
+function renderComicV2StageActions(status) {
+    const stage = status?.stage || '';
+    const deliveryUri = status?.delivery?.uri || '';
+    if (stage === 'visual_bible_review') {
+        return [
+            '<button class="btn-sm" onclick="approveComicV2VisualBible(this)">确认视觉母版</button>',
+            '<button class="ghost btn-sm" onclick="reviseComicV2VisualBible()">退回视觉母版</button>',
+        ].join('');
+    }
+    if (stage === 'asset_planning') {
+        return '<button class="btn-sm" onclick="planComicV2Assets(this)">生成资产拆解审核包</button>';
+    }
+    if (stage === 'asset_review') {
+        return [
+            '<button class="btn-sm" onclick="approveComicV2Assets(this)">确认资产拆解</button>',
+            '<button class="ghost btn-sm" onclick="reviseComicV2Assets()">按意见重新拆解</button>',
+        ].join('');
+    }
+    if (stage === 'prompt_planning') {
+        return '<button class="btn-sm" onclick="planComicV2Prompts(this)">生成专属提示词</button>';
+    }
+    if (stage === 'image_generation') {
+        return '<button class="btn-sm" onclick="generateComicV2Images(this)">生成并质检基础资产图</button>';
+    }
+    if (stage === 'visual_review') {
+        return [
+            '<button class="btn-sm" onclick="generateComicV2Images(this)">重新生成未通过图片</button>',
+            '<button class="ghost btn-sm" onclick="overrideComicV2VisualReview()">人工放行质检风险</button>',
+        ].join('');
+    }
+    if (stage === 'document_generation') {
+        return '<button class="btn-sm" onclick="buildComicV2Delivery(this)">生成 Word 制片画布</button>';
+    }
+    if (stage === 'ready_for_handoff' && deliveryUri) {
+        return `<a class="btn-sm" href="${escapeHtml(deliveryUri)}" target="_blank">下载 Word 制片画布</a>`;
+    }
+    return '';
 }
 
 function renderComicDepartmentStep(dept) {
@@ -1587,7 +1678,6 @@ async function confirmComicScript() {
         return;
     }
     const confirmationNotes = document.getElementById('comic-chat-input')?.value.trim() || '';
-    const productionRequest = buildComicDraftProductionRequest(confirmationNotes);
     const button = document.getElementById('comic-confirm-start-btn');
     const originalText = button?.textContent || '确认故事并开始生成';
     if (button) {
@@ -1596,15 +1686,15 @@ async function confirmComicScript() {
     }
     try {
         toast('正在确认故事，并创建资产拆解任务...', 'success');
-        const result = await API.post('/api/comic/confirm-and-start', {
+        const result = await API.post('/api/comic/confirm-script', {
             workspace_id: currentComicWorkspace,
             office_id: activeComicOfficeId(),
             session: currentComicCabinetSession,
             confirmation_notes: confirmationNotes,
-            user_request: productionRequest,
         });
-        if (!result.task_id) {
-            throw new Error('后端没有返回任务编号，请查看日志确认任务是否创建成功。');
+        await API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/plan-confirmed`, {});
+        if (!result.confirmed_script) {
+            throw new Error('后端没有返回确认版故事，请查看日志确认故事是否锁定成功。');
         }
         currentComicConfirmedScript = result.confirmed_script || null;
         if (currentComicCabinetSession) {
@@ -1613,13 +1703,8 @@ async function confirmComicScript() {
         }
         renderComicCabinet();
         document.getElementById('comic-confirmed-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        watchComicTask(result.task_id, currentComicWorkspace);
+        await refreshComicV2Panel('确认版故事已锁定，请先审核视觉母版。');
         await loadComicWorkspaces();
-        await Promise.all([
-            loadComicArtifacts(currentComicWorkspace),
-            loadComicTimeline(currentComicWorkspace),
-        ]);
-        toast(`确认版故事已锁定，资产拆解审核包正在生成：${result.task_id}`, 'success');
     } catch (e) {
         toast('确认并开始生成失败: ' + e.message, 'error');
     } finally {
@@ -1638,6 +1723,95 @@ function unconfirmComicScript() {
     }
     renderComicCabinet();
     toast('已退回修改模式，可继续在聊天框中补充修改意见。', 'success');
+}
+
+async function runComicV2Action(button, label, action) {
+    if (!currentComicWorkspace) {
+        toast('请先选择一个漫剧项目', 'error');
+        return null;
+    }
+    const original = button?.textContent || '';
+    if (button) {
+        button.disabled = true;
+        button.textContent = `${label}...`;
+    }
+    try {
+        const result = await action();
+        await refreshComicV2Panel(`${label}完成`);
+        return result;
+    } catch (e) {
+        toast(`${label}失败: ${e.message || e}`, 'error');
+        return null;
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = original;
+        }
+    }
+}
+
+async function approveComicV2VisualBible(button) {
+    return runComicV2Action(button, '确认视觉母版', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/visual-bible/approve`, {})
+    );
+}
+
+async function reviseComicV2VisualBible() {
+    const revision = window.prompt('你希望视觉母版怎么改？例如：更偏古风水墨，禁止现代材质。', '');
+    if (!revision) return;
+    await runComicV2Action(null, '重写视觉母版', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/visual-bible/revise`, { revision_request: revision })
+    );
+}
+
+async function planComicV2Assets(button) {
+    return runComicV2Action(button, '生成资产拆解审核包', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/assets/plan`, {})
+    );
+}
+
+async function approveComicV2Assets(button) {
+    return runComicV2Action(button, '确认资产拆解', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/assets/approve`, {})
+    );
+}
+
+async function reviseComicV2Assets() {
+    const notes = document.getElementById('comic-asset-review-notes')?.value.trim()
+        || window.prompt('你希望这次拆解怎么改？例如：缺少玉佩道具；删除故事里没有出现的角色。', '');
+    if (!notes) {
+        toast('请先写清楚要补充或删除什么资产', 'error');
+        return;
+    }
+    await runComicV2Action(null, '重新拆解资产', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/assets/revise`, { revision_request: notes })
+    );
+}
+
+async function planComicV2Prompts(button) {
+    return runComicV2Action(button, '生成专属提示词', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/prompts/plan`, {})
+    );
+}
+
+async function generateComicV2Images(button) {
+    return runComicV2Action(button, '生成并质检基础资产图', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/images/generate`, {})
+    );
+}
+
+async function overrideComicV2VisualReview() {
+    const reason = window.prompt('为什么可以人工放行？请写清楚后续修正方式。', '');
+    if (!reason) return;
+    await runComicV2Action(null, '人工放行质检风险', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/images/override`, { reason })
+    );
+}
+
+async function buildComicV2Delivery(button) {
+    return runComicV2Action(button, '生成 Word 制片画布', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/delivery/build`, {})
+    );
 }
 
 async function submitComicTask(options = {}) {

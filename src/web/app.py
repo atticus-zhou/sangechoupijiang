@@ -3252,7 +3252,10 @@ def _enrich_history_item(item: dict) -> dict:
     if not workspace_id and run_record:
         workspace_id = _workspace_id_from_task_run(run_record)
     workspace = config_manager.get_workspace(workspace_id) if workspace_id else {}
-    word_canvas = next((a for a in reversed(artifacts) if a.get("artifact_type") == "word_canvas" and a.get("uri")), None)
+    word_canvas = next((
+        a for a in reversed(artifacts)
+        if a.get("artifact_type") in {"word_canvas", "comic_v2_word_canvas"} and a.get("uri")
+    ), None)
     report_record = config_manager.get_task_result(task_id) if task_id else {}
     result = report_record.get("result") or run_record.get("result") or {}
     final_report = result.get("final_report") or ""
