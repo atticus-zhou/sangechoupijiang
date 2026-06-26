@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from docx import Document
+from docx.shared import Inches
 
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
@@ -146,6 +147,22 @@ class ComicV2WordCanvasTests(unittest.TestCase):
             self.assertEqual(result.audit.missing_image_asset_ids, ())
             self.assertEqual(result.audit.structural_errors, ())
             self.assertTrue(result.audit.handoff_ready)
+
+    def test_canvas_uses_compact_print_margins_for_asset_cards(self):
+        bundle, manifest, shots = delivery_parts()
+        with tempfile.TemporaryDirectory() as tmp:
+            image = Path(tmp) / "asset.png"
+            image.write_bytes(PNG_1X1)
+            images = {item.asset_id: str(image) for item in manifest.items}
+
+            result = build_word_canvas_v2(bundle, manifest, shots, images, Path(tmp))
+            doc = Document(result.path)
+            section = doc.sections[0]
+
+            self.assertLessEqual(section.top_margin, Inches(0.8))
+            self.assertLessEqual(section.bottom_margin, Inches(0.8))
+            self.assertLessEqual(section.left_margin, Inches(0.8))
+            self.assertLessEqual(section.right_margin, Inches(0.8))
 
 
 if __name__ == "__main__":

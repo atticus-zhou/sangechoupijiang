@@ -104,12 +104,12 @@ def _configure_document(doc: Document) -> None:
     section = doc.sections[0]
     section.page_width = Inches(8.5)
     section.page_height = Inches(11)
-    section.top_margin = Inches(1)
-    section.right_margin = Inches(1)
-    section.bottom_margin = Inches(1)
-    section.left_margin = Inches(1)
-    section.header_distance = Inches(0.492)
-    section.footer_distance = Inches(0.492)
+    section.top_margin = Inches(0.75)
+    section.right_margin = Inches(0.75)
+    section.bottom_margin = Inches(0.72)
+    section.left_margin = Inches(0.75)
+    section.header_distance = Inches(0.35)
+    section.footer_distance = Inches(0.35)
 
     normal = doc.styles["Normal"]
     normal.font.name = "Microsoft YaHei"
@@ -250,7 +250,7 @@ def _add_asset_page(
     if image_path and image_path.exists():
         picture = doc.add_paragraph()
         picture.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        image_width = {"character": 4.4, "prop": 3.6, "scene": 3.0}[asset.asset_type]
+        image_width = {"character": 3.5, "prop": 3.2, "scene": 2.9}[asset.asset_type]
         picture.add_run().add_picture(str(image_path), width=Inches(image_width))
         caption = doc.add_paragraph(f"已批准基础资产：{image_path.name}")
         caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
