@@ -9,6 +9,7 @@ from typing import Any
 from .asset_manifest import AssetManifest
 from .contracts import ContractBundle, build_contract_bundle, story_hash, validate_contract_bundle
 from .production import ImageProductionResult, PromptPackage
+from .word_canvas import DocumentAudit
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,7 @@ class ComicProductionV2State:
     asset_manifest: dict[str, Any] = field(default_factory=dict)
     prompt_package: dict[str, Any] = field(default_factory=dict)
     image_production: dict[str, Any] = field(default_factory=dict)
+    delivery: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -75,6 +77,7 @@ class ComicProductionV2State:
             asset_manifest={},
             prompt_package={},
             image_production={},
+            delivery={},
         )
 
 
@@ -130,6 +133,7 @@ class ComicProductionV2:
         normalized.setdefault("asset_manifest", {})
         normalized.setdefault("prompt_package", {})
         normalized.setdefault("image_production", {})
+        normalized.setdefault("delivery", {})
         missing = [name for name in fields if name not in normalized]
         if missing:
             raise ValueError(f"V2 state missing fields: {', '.join(missing)}")
@@ -184,6 +188,7 @@ class ComicProductionV2:
             asset_manifest={},
             prompt_package={},
             image_production={},
+            delivery={},
         )
 
     @staticmethod
@@ -210,6 +215,7 @@ class ComicProductionV2:
             asset_manifest=manifest.to_dict(),
             prompt_package={},
             image_production={},
+            delivery={},
         )
 
     @staticmethod
@@ -257,6 +263,7 @@ class ComicProductionV2:
             shots_status="ready",
             prompt_package=package.to_dict(),
             image_production={},
+            delivery={},
         )
 
     @staticmethod
@@ -314,6 +321,38 @@ class ComicProductionV2:
             next_action="将人工放行理由写入交付文档，并继续文档审计。",
             can_generate_images=False,
             image_production=production,
+        )
+
+    @staticmethod
+    def attach_delivery(
+        state: ComicProductionV2State,
+        path: str,
+        audit: DocumentAudit,
+        *,
+        uri: str = "",
+    ) -> ComicProductionV2State:
+        if state.stage != "document_generation":
+            raise ValueError("当前阶段不能写入交付文档")
+        if not str(path or "").strip():
+            raise ValueError("交付文档路径为空")
+        if not audit.handoff_ready:
+            raise ValueError("Word 文档审计未通过")
+        return state.with_status(
+            status="completed",
+            stage="ready_for_handoff",
+            current_agent="礼部",
+            current_object="最终 Word 制片画布",
+            completed=7,
+            total=7,
+            blocking_reason="",
+            next_action="下载 Word 制片画布，交给下游视频生成或剪辑平台。",
+            can_generate_images=False,
+            document_status="ready",
+            delivery={
+                "path": str(path),
+                "uri": str(uri or ""),
+                "audit": asdict(audit),
+            },
         )
 
 

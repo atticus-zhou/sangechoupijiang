@@ -1,0 +1,180 @@
+import base64
+import tempfile
+import unittest
+from pathlib import Path
+
+from docx import Document
+
+from src.comic_office.v2.asset_manifest import build_asset_manifest
+from src.comic_office.v2.contracts import build_contract_bundle
+from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage
+from src.comic_office.v2.prompt_director import PromptPlan, ShotCard
+
+
+PNG_1X1 = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZrWQAAAAASUVORK5CYII="
+)
+STORY = "林昭走进月塔，最终熄灭月塔。"
+
+
+def parts(image_dir: Path):
+    bundle = build_contract_bundle(STORY, {
+        "title": "借月人",
+        "genre": "古风幻想",
+        "theme": "记忆与光明的代价",
+        "protagonist_goal": "熄灭月塔",
+        "main_conflict": "月塔燃烧记忆维持光明",
+        "causal_chain": ["进入月塔", "作出选择", "熄灭月塔"],
+        "ending": "林昭最终熄灭月塔",
+        "episodes": [{"episode": 1, "summary": "熄灭月塔", "evidence_quote": "林昭走进月塔"}],
+        "visual": {
+            "medium": "电影级国风厚涂动画",
+            "era": "架空古代",
+            "aspect_ratio": "9:16",
+            "palette": ["靛青", "银白", "暗朱红"],
+            "lighting": "冷月光与暖灯火对照",
+            "camera_language": "克制稳定",
+            "character_rules": ["脸型固定"],
+            "costume_rules": ["古代窄袖长袍"],
+            "prop_rules": ["材质固定"],
+            "architecture_rules": ["木石结构"],
+            "visual_motifs": ["裂纹月灯"],
+            "prohibited_elements": ["现代车辆"],
+        },
+    })
+    manifest = build_asset_manifest(bundle, [{
+        "asset_type": "character",
+        "name": "林昭",
+        "evidence_quote": "林昭走进月塔",
+        "scene_ids": ["scene_01"],
+        "story_purpose": "完成最终选择",
+        "visual_locks": ["靛青长袍"],
+        "allowed_changes": ["表情", "姿势"],
+    }])
+    asset = manifest.items[0]
+    prompts = tuple(
+        PromptPlan(
+            object_id=asset.asset_id,
+            image_kind=kind,
+            purpose="identity_reference",
+            generator_prompt=f"林昭 {kind}，靛青长袍，纯白干净背景",
+            negative_prompt=("禁止文字水印", "禁止现代服装"),
+            style_id=bundle.visual.style_id,
+        )
+        for kind in asset.planned_images
+    )
+    shot = ShotCard(
+        shot_id="shot_01",
+        scene_id="scene_01",
+        story_beat="林昭走进月塔",
+        reference_asset_ids=(asset.asset_id,),
+        action_chain=("林昭推开塔门", "她抬头望向塔心"),
+        performance_intent="恐惧逐渐转为决绝",
+        framing="中近景平视",
+        camera_movement="缓慢前推",
+        lighting="冷月光压住暖灯火",
+        dialogue="林昭：到此为止。",
+        sound="风声与灯芯爆裂声",
+        generator_prompt="首帧参考人物资产，林昭推开塔门，缓慢前推。",
+        negative_prompt=("禁止脸型变化",),
+        retry_strategy="优先修正脸型和动作顺序",
+        retry_strategy_label="失败重试",
+        style_id=bundle.visual.style_id,
+        evidence_quote="林昭走进月塔",
+    )
+    package = PromptPackage(
+        package_id="prompts_delivery",
+        story_id=bundle.creative.story_id,
+        story_version=bundle.creative.story_version,
+        style_id=bundle.visual.style_id,
+        style_version=bundle.visual.style_version,
+        manifest_id=manifest.manifest_id,
+        manifest_version=manifest.version,
+        prompts=prompts,
+        shots=(shot,),
+    )
+    records = []
+    for index, kind in enumerate(asset.planned_images):
+        path = image_dir / f"{asset.asset_id}_{kind}.png"
+        path.write_bytes(PNG_1X1)
+        records.append(ImageRecord(
+            image_id=f"img_{asset.asset_id}_{kind}",
+            asset_id=asset.asset_id,
+            image_kind=kind,
+            prompt_hash=f"hash-{kind}",
+            path=str(path),
+            provider="doubao",
+            model="seedream",
+            attempts=1,
+            status="approved",
+            is_identity_baseline=index == 0,
+            reference_image_ids=() if index == 0 else (f"img_{asset.asset_id}_{asset.planned_images[0]}",),
+            story_id=bundle.creative.story_id,
+            story_version=bundle.creative.story_version,
+            style_id=bundle.visual.style_id,
+            style_version=bundle.visual.style_version,
+            manifest_version=manifest.version,
+            review={"status": "pass"},
+        ))
+    result = ImageProductionResult(
+        status="ready_for_delivery",
+        production_ready=True,
+        records=tuple(records),
+        failures=(),
+    )
+    return bundle, manifest, package, result
+
+
+class ComicV2DeliveryTests(unittest.TestCase):
+    def test_delivery_blocks_when_any_planned_image_is_missing(self):
+        from src.comic_office.v2.delivery import DeliveryValidationError, build_delivery_from_v2
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, manifest, package, result = parts(root)
+            incomplete = ImageProductionResult(
+                status="ready_for_delivery",
+                production_ready=True,
+                records=result.records[:1],
+                failures=(),
+            )
+
+            with self.assertRaisesRegex(DeliveryValidationError, "缺少已批准图片"):
+                build_delivery_from_v2(bundle, manifest, package, incomplete, root / "out")
+
+    def test_delivery_blocks_stale_image_version(self):
+        from dataclasses import replace
+        from src.comic_office.v2.delivery import DeliveryValidationError, build_delivery_from_v2
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, manifest, package, result = parts(root)
+            stale = replace(result.records[0], style_version=99)
+            result = replace(result, records=(stale,) + result.records[1:])
+
+            with self.assertRaisesRegex(DeliveryValidationError, "版本"):
+                build_delivery_from_v2(bundle, manifest, package, result, root / "out")
+
+    def test_delivery_embeds_every_planned_image_and_shot_prompt(self):
+        from src.comic_office.v2.delivery import build_delivery_from_v2
+        from src.comic_office.v2.production import image_production_result_from_dict
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, manifest, package, result = parts(root)
+
+            delivery = build_delivery_from_v2(bundle, manifest, package, result, root / "out")
+
+            self.assertTrue(delivery.audit.handoff_ready)
+            self.assertEqual(delivery.audit.embedded_images, len(result.records))
+            doc = Document(delivery.path)
+            text = "\n".join(p.text for p in doc.paragraphs)
+            self.assertIn("three_view", text)
+            self.assertIn("expression_sheet", text)
+            self.assertIn("视频生成提示词", text)
+            self.assertIn("负面提示词", text)
+            self.assertEqual(image_production_result_from_dict(result.to_dict()), result)
+
+
+if __name__ == "__main__":
+    unittest.main()

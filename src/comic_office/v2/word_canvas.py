@@ -15,7 +15,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 from .asset_manifest import AssetManifest, AssetPlan
 from .contracts import ContractBundle
-from .prompt_director import ShotCard
+from .prompt_director import PromptPlan, ShotCard
 
 
 INK = "243246"
@@ -48,8 +48,11 @@ def build_word_canvas_v2(
     bundle: ContractBundle,
     manifest: AssetManifest,
     shots: tuple[ShotCard, ...] | list[ShotCard],
-    image_paths: dict[str, str],
+    image_paths: dict[str, str | dict[str, str]],
     output_dir: Path,
+    *,
+    asset_prompts: dict[tuple[str, str], PromptPlan] | None = None,
+    require_all_planned_images: bool = False,
 ) -> CanvasBuildResult:
     """Build and structurally audit a portrait, page-based production canvas."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -61,19 +64,39 @@ def build_word_canvas_v2(
     _add_story(doc, bundle)
     _add_visual_bible(doc, bundle)
 
+    prompt_lookup = asset_prompts or {}
     missing_images = []
+    expected_image_count = 0
     for asset in manifest.items:
-        image_path = Path(image_paths.get(asset.asset_id, "")) if image_paths.get(asset.asset_id) else None
-        if not image_path or not image_path.exists():
-            missing_images.append(asset.asset_id)
-        _add_asset_page(doc, asset, image_path)
+        resolved = _resolve_asset_images(asset, image_paths)
+        expected_kinds = asset.planned_images if require_all_planned_images else asset.planned_images[:1]
+        expected_image_count += len(expected_kinds)
+        for image_kind in expected_kinds:
+            image_path = resolved.get(image_kind)
+            if not image_path or not image_path.exists():
+                missing_images.append(
+                    f"{asset.asset_id}/{image_kind}" if require_all_planned_images else asset.asset_id
+                )
+            _add_asset_page(
+                doc,
+                asset,
+                image_path,
+                image_kind=image_kind,
+                prompt=prompt_lookup.get((asset.asset_id, image_kind)),
+            )
     _add_continuity_page(doc, manifest)
     for shot in shots:
         _add_shot_page(doc, shot)
     _add_handoff_page(doc, manifest, shots)
     doc.save(path)
 
-    audit = _audit_document(path, manifest, tuple(shots), tuple(missing_images))
+    audit = _audit_document(
+        path,
+        manifest,
+        tuple(shots),
+        tuple(missing_images),
+        expected_image_count=expected_image_count,
+    )
     return CanvasBuildResult(path=path, audit=audit)
 
 
@@ -210,9 +233,17 @@ def _add_visual_bible(doc: Document, bundle: ContractBundle) -> None:
     )
 
 
-def _add_asset_page(doc: Document, asset: AssetPlan, image_path: Path | None) -> None:
+def _add_asset_page(
+    doc: Document,
+    asset: AssetPlan,
+    image_path: Path | None,
+    *,
+    image_kind: str = "",
+    prompt: PromptPlan | None = None,
+) -> None:
     label = {"character": "人物", "prop": "道具", "scene": "场景"}[asset.asset_type]
-    _new_page_heading(doc, f"{asset.asset_id} | {asset.name}")
+    suffix = f" | {image_kind}" if image_kind else ""
+    _new_page_heading(doc, f"{asset.asset_id} | {asset.name}{suffix}")
     p = doc.add_paragraph()
     run = p.add_run(f"{label}资产身份证")
     _font(run, 10, VERMILION, bold=True)
@@ -233,8 +264,19 @@ def _add_asset_page(doc: Document, asset: AssetPlan, image_path: Path | None) ->
         ("出现场次", "、".join(asset.evidence.scene_ids)),
         ("固定项", "；".join(asset.visual_locks)),
         ("允许变化", "；".join(asset.allowed_changes)),
+        ("本页图种", image_kind or "基础身份图"),
         ("计划图片", "、".join(asset.planned_images)),
     ], compact=True)
+    if prompt is not None:
+        doc.add_heading("本图生成提示词", level=2)
+        paragraph = doc.add_paragraph(prompt.generator_prompt)
+        paragraph.paragraph_format.line_spacing = 1.08
+        for run in paragraph.runs:
+            _font(run, 8.8, INK)
+        doc.add_heading("负面提示词", level=3)
+        negative = doc.add_paragraph("；".join(prompt.negative_prompt))
+        for run in negative.runs:
+            _font(run, 8.8, INK)
 
 
 def _add_continuity_page(doc: Document, manifest: AssetManifest) -> None:
@@ -352,6 +394,8 @@ def _audit_document(
     manifest: AssetManifest,
     shots: tuple[ShotCard, ...],
     missing_images: tuple[str, ...],
+    *,
+    expected_image_count: int,
 ) -> DocumentAudit:
     doc = Document(path)
     asset_ids = {item.asset_id for item in manifest.items}
@@ -375,8 +419,29 @@ def _audit_document(
         missing_image_asset_ids=missing_images,
         structural_errors=tuple(errors),
         max_table_columns=max_columns,
-        handoff_ready=not missing_images and not errors and embedded >= len(manifest.items),
+        handoff_ready=not missing_images and not errors and embedded >= expected_image_count,
     )
+
+
+def _resolve_asset_images(
+    asset: AssetPlan,
+    image_paths: dict[str, str | dict[str, str]],
+) -> dict[str, Path]:
+    raw = image_paths.get(asset.asset_id)
+    if isinstance(raw, dict):
+        return {
+            str(kind): Path(path)
+            for kind, path in raw.items()
+            if str(path).strip()
+        }
+    if isinstance(raw, str) and raw.strip():
+        return {asset.planned_images[0]: Path(raw)}
+    resolved = {}
+    for kind in asset.planned_images:
+        value = image_paths.get(f"{asset.asset_id}:{kind}")
+        if isinstance(value, str) and value.strip():
+            resolved[kind] = Path(value)
+    return resolved
 
 
 def _set_table_geometry(table, widths: tuple[int, ...]) -> None:

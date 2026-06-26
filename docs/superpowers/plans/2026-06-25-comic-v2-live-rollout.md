@@ -65,10 +65,10 @@
 - Create: `tests/test_comic_v2_delivery.py`
 - Modify: `src/web/app.py`
 
-- [ ] Write failing tests that block delivery on missing approved images, stale references, missing prompt cards, or structural audit errors.
-- [ ] Build the final package from approved V2 records and generate one asset or shot per readable page.
-- [ ] Persist the DOCX artifact and expose a workspace download endpoint.
-- [ ] Render a representative DOCX, inspect every page, run focused tests, and commit the slice.
+- [x] Write failing tests that block delivery on missing approved images, stale references, missing prompt cards, or structural audit errors.
+- [x] Build the final package from approved V2 records and generate one asset or shot per readable page.
+- [x] Persist the DOCX artifact and expose a workspace download endpoint.
+- [x] Run focused tests and structural DOCX audit; LibreOffice/`soffice` was unavailable locally, so visual PNG render QA is deferred to a machine with the renderer.
 
 ### Task 5: Human-facing workflow and default cutover
 

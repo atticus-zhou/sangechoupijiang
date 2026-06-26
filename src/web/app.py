@@ -40,12 +40,14 @@ from src.comic_word_canvas import build_comic_word_canvas
 from src.comic_office.v2.asset_manifest import asset_manifest_from_dict
 from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
 from src.comic_office.v2.contracts import ContractValidationError, contract_bundle_from_dict
+from src.comic_office.v2.delivery import DeliveryValidationError, build_delivery_from_v2
 from src.comic_office.v2.planner import PlannerError, plan_contract, revise_visual_bible
 from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
 from src.comic_office.v2.production import (
     ProductionError,
     direct_asset_prompts,
     direct_shot_cards,
+    image_production_result_from_dict,
     produce_asset_images,
     prompt_package_from_dict,
 )
@@ -827,6 +829,73 @@ async def override_comic_v2_visual_review_api(workspace_id: str, req: ComicV2Vis
         payload={"workspace_id": workspace_id, "reason": req.reason.strip()},
     )
     return state.to_dict()
+
+
+@app.post("/api/workspaces/{workspace_id}/comic/v2/delivery/build")
+async def build_comic_v2_delivery_api(workspace_id: str):
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise HTTPException(status_code=409, detail="当前没有可组装的 V2 制片包")
+    state = ComicProductionV2.from_dict(raw)
+    if state.stage != "document_generation":
+        raise HTTPException(status_code=409, detail="图片生产与质检尚未完成")
+    try:
+        bundle = contract_bundle_from_dict(state.contract)
+        manifest = asset_manifest_from_dict(
+            state.asset_manifest,
+            source_story=bundle.creative.source_story,
+        )
+        package = prompt_package_from_dict(state.prompt_package)
+        images = image_production_result_from_dict(state.image_production)
+        output_dir = Path(__file__).parent.parent.parent / "output" / "workspaces" / workspace_id / "delivery"
+        delivery = build_delivery_from_v2(
+            bundle,
+            manifest,
+            package,
+            images,
+            output_dir,
+            allow_human_override=bool(state.image_production.get("human_override")),
+        )
+        uri = f"/api/workspaces/{workspace_id}/files/delivery/{delivery.path.name}"
+        ready = ComicProductionV2.attach_delivery(
+            state,
+            str(delivery.path),
+            delivery.audit,
+            uri=uri,
+        )
+    except (ContractValidationError, DeliveryValidationError, ProductionError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"Word 制片画布生成失败：{exc}") from exc
+    _save_comic_v2_state(workspace_id, ready.to_dict())
+    config_manager.create_artifact(
+        artifact_id=f"art_{workspace_id}_comic_v2_word_canvas",
+        workspace_id=workspace_id,
+        task_id=f"comic_v2_{workspace_id}",
+        artifact_type="comic_v2_word_canvas",
+        title=f"{workspace.get('title') or 'AI漫剧'} - V2制片画布",
+        uri=uri,
+        content="V2 制片画布已通过结构审计，可下载交付。",
+        metadata={
+            "office_id": "comic_production",
+            "pipeline_version": 2,
+            "story_id": state.story_id,
+            "story_version": state.story_version,
+            "style_id": state.style_id,
+            "style_version": state.style_version,
+            "manifest_version": state.asset_manifest.get("version", 0),
+            "audit": ready.delivery.get("audit", {}),
+            "download_uri": uri,
+        },
+        created_by="libu",
+    )
+    config_manager.append_task_event(
+        task_id=f"comic_v2_{workspace_id}",
+        event_type="comic_v2_delivery_ready",
+        status="completed",
+        summary="页面式 Word 制片画布已通过审计",
+        payload={"workspace_id": workspace_id, "download_uri": uri},
+    )
+    return ready.to_dict()
 
 
 @app.post("/api/comic/brief")

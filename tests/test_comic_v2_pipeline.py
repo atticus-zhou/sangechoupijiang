@@ -2,6 +2,7 @@ import json
 import sqlite3
 import unittest
 import uuid
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from src.comic_office.v2.contracts import build_contract_bundle
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.production import ImageProductionResult, PromptPackage
 from src.comic_office.v2.prompt_director import PromptPlan, ShotCard
+from src.comic_office.v2.word_canvas import CanvasBuildResult, DocumentAudit
 from src.llm.providers import ModelConfig
 from src.web.app import app, config_manager
 
@@ -197,6 +199,25 @@ class ComicV2PipelineTests(unittest.TestCase):
             overridden.image_production["human_override"]["reason"],
             "人物风格偏差可接受，后续平台继续修正",
         )
+
+    def test_document_audit_marks_pipeline_ready_for_handoff(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        state = state.with_status(stage="document_generation")
+        audit = DocumentAudit(
+            embedded_images=2,
+            asset_count=1,
+            shot_count=1,
+            missing_image_asset_ids=(),
+            structural_errors=(),
+            max_table_columns=2,
+            handoff_ready=True,
+        )
+
+        ready = ComicProductionV2.attach_delivery(state, "C:/delivery/canvas.docx", audit)
+
+        self.assertEqual(ready.stage, "ready_for_handoff")
+        self.assertEqual(ready.document_status, "ready")
+        self.assertEqual(ready.delivery["path"], "C:/delivery/canvas.docx")
 
     def test_old_state_payload_can_be_loaded_before_prompt_and_image_fields_exist(self):
         state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
@@ -525,6 +546,50 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         )
         self.assertEqual(approved.status_code, 200)
         self.assertEqual(approved.json()["stage"], "document_generation")
+
+    @patch("src.web.app.build_delivery_from_v2")
+    def test_delivery_endpoint_persists_downloadable_word_canvas(self, mock_build):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        state = state.with_status(
+            stage="document_generation",
+            can_generate_images=False,
+            image_production=ImageProductionResult(
+                status="ready_for_delivery",
+                production_ready=True,
+                records=(),
+                failures=(),
+            ).to_dict(),
+        )
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+        output_dir = Path("output") / "workspaces" / self.workspace_id / "delivery"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "test_v2_canvas.docx"
+        output_path.write_bytes(b"fake-docx")
+        mock_build.return_value = CanvasBuildResult(
+            path=output_path,
+            audit=DocumentAudit(
+                embedded_images=0,
+                asset_count=1,
+                shot_count=1,
+                missing_image_asset_ids=(),
+                structural_errors=(),
+                max_table_columns=2,
+                handoff_ready=True,
+            ),
+        )
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/delivery/build",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["stage"], "ready_for_handoff")
+        artifacts = config_manager.list_artifacts(workspace_id=self.workspace_id)
+        delivery = next(item for item in artifacts if item["artifact_type"] == "comic_v2_word_canvas")
+        self.assertIn("/files/delivery/test_v2_canvas.docx", delivery["uri"])
+        output_path.unlink(missing_ok=True)
 
     def _state_with_approved_assets(self):
         state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)

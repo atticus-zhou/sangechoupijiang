@@ -134,6 +134,40 @@ def prompt_package_from_dict(payload: dict[str, Any]) -> PromptPackage:
     )
 
 
+def image_production_result_from_dict(payload: dict[str, Any]) -> ImageProductionResult:
+    """Restore persisted image records for delivery validation."""
+    if not isinstance(payload, dict):
+        raise ProductionError("图片生产结果必须是对象")
+    records = tuple(
+        ImageRecord(
+            image_id=str(item.get("image_id") or ""),
+            asset_id=str(item.get("asset_id") or ""),
+            image_kind=str(item.get("image_kind") or ""),
+            prompt_hash=str(item.get("prompt_hash") or ""),
+            path=str(item.get("path") or ""),
+            provider=str(item.get("provider") or ""),
+            model=str(item.get("model") or ""),
+            attempts=int(item.get("attempts") or 0),
+            status=str(item.get("status") or ""),
+            is_identity_baseline=bool(item.get("is_identity_baseline")),
+            reference_image_ids=tuple(item.get("reference_image_ids") or ()),
+            story_id=str(item.get("story_id") or ""),
+            story_version=int(item.get("story_version") or 0),
+            style_id=str(item.get("style_id") or ""),
+            style_version=int(item.get("style_version") or 0),
+            manifest_version=int(item.get("manifest_version") or 0),
+            review=dict(item.get("review") or {}),
+        )
+        for item in (payload.get("records") or [])
+    )
+    return ImageProductionResult(
+        status=str(payload.get("status") or ""),
+        production_ready=bool(payload.get("production_ready")),
+        records=records,
+        failures=tuple(payload.get("failures") or ()),
+    )
+
+
 async def direct_asset_prompts(
     bundle: ContractBundle,
     manifest: AssetManifest,

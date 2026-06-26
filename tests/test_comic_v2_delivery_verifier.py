@@ -20,7 +20,7 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertTrue(result["handoff_ready"])
         self.assertEqual(result["asset_count"], 3)
         self.assertEqual(result["shot_count"], 2)
-        self.assertEqual(result["embedded_images"], 3)
+        self.assertEqual(result["embedded_images"], 7)
         self.assertLessEqual(result["max_table_columns"], 2)
         self.assertEqual(result["missing_image_asset_ids"], [])
         self.assertEqual(result["structural_errors"], [])

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import base64
+import hashlib
 import json
 import sys
 from pathlib import Path
 
 from docx import Document
+from PIL import Image, ImageDraw
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -16,13 +17,9 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
-from src.comic_office.v2.prompt_director import build_shot_card
-from src.comic_office.v2.word_canvas import build_word_canvas_v2
-
-
-PLACEHOLDER_PNG = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZrWQAAAAASUVORK5CYII="
-)
+from src.comic_office.v2.delivery import build_delivery_from_v2
+from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage
+from src.comic_office.v2.prompt_director import build_asset_prompt_plan, build_shot_card
 
 
 def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
@@ -42,13 +39,51 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
 
     image_dir = output_dir / "fixture-images"
     image_dir.mkdir(parents=True, exist_ok=True)
-    image_paths = {}
+    prompts = []
+    records = []
     for asset in manifest.items:
-        image_path = image_dir / f"{asset.asset_id}.png"
-        image_path.write_bytes(PLACEHOLDER_PNG)
-        image_paths[asset.asset_id] = str(image_path)
-
-    build = build_word_canvas_v2(bundle, manifest, tuple(shots), image_paths, output_dir)
+        for index, image_kind in enumerate(asset.planned_images):
+            prompt = build_asset_prompt_plan(asset, bundle.visual, image_kind=image_kind)
+            prompts.append(prompt)
+            image_path = image_dir / f"{asset.asset_id}_{image_kind}.png"
+            _write_placeholder_image(image_path, asset.name, image_kind, asset.asset_type)
+            records.append(ImageRecord(
+                image_id=f"img_{asset.asset_id}_{image_kind}",
+                asset_id=asset.asset_id,
+                image_kind=image_kind,
+                prompt_hash=hashlib.sha256(prompt.render().encode("utf-8")).hexdigest(),
+                path=str(image_path),
+                provider="fixture",
+                model="deterministic-placeholder",
+                attempts=1,
+                status="approved",
+                is_identity_baseline=index == 0,
+                reference_image_ids=() if index == 0 else (f"img_{asset.asset_id}_{asset.planned_images[0]}",),
+                story_id=bundle.creative.story_id,
+                story_version=bundle.creative.story_version,
+                style_id=bundle.visual.style_id,
+                style_version=bundle.visual.style_version,
+                manifest_version=manifest.version,
+                review={"status": "pass", "fixture": True},
+            ))
+    prompt_package = PromptPackage(
+        package_id="prompts_fixture",
+        story_id=bundle.creative.story_id,
+        story_version=bundle.creative.story_version,
+        style_id=bundle.visual.style_id,
+        style_version=bundle.visual.style_version,
+        manifest_id=manifest.manifest_id,
+        manifest_version=manifest.version,
+        prompts=tuple(prompts),
+        shots=tuple(shots),
+    )
+    image_result = ImageProductionResult(
+        status="ready_for_delivery",
+        production_ready=True,
+        records=tuple(records),
+        failures=(),
+    )
+    build = build_delivery_from_v2(bundle, manifest, prompt_package, image_result, output_dir)
     doc = Document(build.path)
     text = "\n".join(
         [paragraph.text for paragraph in doc.paragraphs]
@@ -75,6 +110,19 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     if not result["handoff_ready"]:
         raise AssertionError(json.dumps(result, ensure_ascii=False, indent=2))
     return result
+
+
+def _write_placeholder_image(path: Path, name: str, image_kind: str, asset_type: str) -> None:
+    palette = {
+        "character": (229, 236, 245),
+        "prop": (244, 240, 232),
+        "scene": (225, 232, 228),
+    }
+    image = Image.new("RGB", (1200, 900), palette.get(asset_type, (235, 235, 235)))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((36, 36, 1164, 864), outline=(49, 76, 117), width=6)
+    draw.text((80, 90), f"{name}\n{image_kind}\nV2 DELIVERY FIXTURE", fill=(36, 50, 70), spacing=18)
+    image.save(path, format="PNG")
 
 
 def main() -> None:
