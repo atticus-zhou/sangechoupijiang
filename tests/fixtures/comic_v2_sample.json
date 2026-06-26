@@ -4,23 +4,23 @@
     "title": "借月人",
     "genre": "古风幻想",
     "theme": "记忆与光明的代价",
-    "protagonist_goal": "查明亡兄消失的真相并终止月税",
-    "main_conflict": "城市依靠燃烧记忆维持光明，真相会让全城重新面对黑暗",
+    "protagonist_goal": "查明亡兄消失的真相，并终止月税制度",
+    "main_conflict": "城市依靠燃烧记忆维持光明，真相会让全城重新面对黑暗和失去",
     "causal_chain": [
       "林昭在裂纹月灯里发现亡兄影子",
-      "林昭进入中央月塔查明记忆被燃烧",
-      "林昭逆向转动控制环熄灭月塔"
+      "林昭进入中央月塔，查明记忆被燃烧",
+      "林昭逆向转动控制环，熄灭月塔"
     ],
     "ending": "林昭熄灭月塔，全城重新想起被遗忘的亲人",
     "episodes": [
       {
         "episode": 1,
-        "summary": "发现灯中亡兄并进入月塔",
+        "summary": "林昭发现灯中亡兄，并进入月塔寻找真相。",
         "evidence_quote": "林昭在月税司登记月灯，发现裂纹月灯里出现亡兄的影子"
       },
       {
         "episode": 2,
-        "summary": "查明真相并熄灭月塔",
+        "summary": "林昭查明月塔燃烧记忆，并选择熄灭月塔。",
         "evidence_quote": "林昭最终逆向转动控制环，熄灭月塔"
       }
     ],
@@ -56,7 +56,7 @@
       "name": "裂纹月灯",
       "evidence_quote": "裂纹月灯",
       "scene_ids": ["scene_01", "scene_02"],
-      "story_purpose": "承载亡兄影子并引导主角发现真相",
+      "story_purpose": "承载亡兄影子，并引导主角发现真相",
       "visual_locks": ["右上方固定弧形裂纹", "古铜框架", "银白内光"],
       "allowed_changes": ["发光强度", "完整或熄灭状态"]
     },
@@ -67,7 +67,7 @@
       "scene_ids": ["scene_02"],
       "story_purpose": "真相揭示和最终抉择发生地",
       "visual_locks": ["圆形外环", "三条石桥", "中央控制环", "下方深井"],
-      "allowed_changes": ["灯火亮灭状态", "人物站位"]
+      "allowed_changes": ["灯火明灭状态", "人物站位"]
     }
   ],
   "shots": [
@@ -75,7 +75,7 @@
       "shot_id": "SHOT-01",
       "scene_id": "scene_01",
       "story_beat": "林昭发现裂纹月灯中的亡兄影子",
-      "evidence_quote": "发现裂纹月灯里出现亡兄的影子",
+      "evidence_quote": "裂纹月灯里出现亡兄的影子",
       "characters": ["林昭"],
       "props": ["裂纹月灯"],
       "scene": "中央月塔",
@@ -85,13 +85,13 @@
       "camera_movement": "焦点从裂纹缓慢转向灯内影子",
       "lighting": "银白内光照亮半张脸，背景逐步压暗",
       "dialogue": "林昭：哥？",
-      "sound": "灯芯低鸣和一次短促吸气",
-      "retry_strategy": "影子实体化时改为磨砂灯壁后的低对比剪影。"
+      "sound": "灯花低鸣和一次短促吸气",
+      "retry_strategy": "影子实体化时改为磨砂灯壁后的低对比剪影"
     },
     {
       "shot_id": "SHOT-02",
       "scene_id": "scene_02",
-      "story_beat": "林昭逆向转动控制环并熄灭月塔",
+      "story_beat": "林昭逆向转动控制环，并熄灭月塔",
       "evidence_quote": "林昭最终逆向转动控制环，熄灭月塔",
       "characters": ["林昭"],
       "props": ["裂纹月灯"],
@@ -103,7 +103,7 @@
       "lighting": "冷银顶光逐层熄灭，最后保留真实晨光",
       "dialogue": "林昭：够了。",
       "sound": "控制环摩擦声，随后全城寂静",
-      "retry_strategy": "调度不稳定时只保留林昭与控制环，其余信息改为画外声音。"
+      "retry_strategy": "调度不稳定时只保留林昭与控制环，其余信息改为画外声音"
     }
   ]
 }

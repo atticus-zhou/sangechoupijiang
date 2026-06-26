@@ -41,6 +41,14 @@ from src.comic_office.v2.asset_manifest import asset_manifest_from_dict
 from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
 from src.comic_office.v2.contracts import ContractValidationError, contract_bundle_from_dict
 from src.comic_office.v2.delivery import DeliveryValidationError, build_delivery_from_v2
+from src.comic_office.v2.fixture_flow import (
+    fixture_contract_bundle,
+    fixture_image_production,
+    fixture_initial_manifest,
+    fixture_mode_enabled,
+    fixture_prompt_package,
+    fixture_revised_manifest,
+)
 from src.comic_office.v2.planner import PlannerError, plan_contract, revise_visual_bible
 from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
 from src.comic_office.v2.production import (
@@ -483,14 +491,20 @@ async def start_comic_v2_api(workspace_id: str, req: ComicV2StartRequest):
 async def plan_confirmed_comic_v2_api(workspace_id: str):
     workspace = _comic_v2_workspace(workspace_id)
     source_story, confirmed = _confirmed_story_for_v2(workspace_id)
-    config = config_manager.get_model_config("zhongshu", office_id="comic_production")
     try:
-        bundle = await plan_contract(
-            source_story,
-            config,
-            source_mode="full_story",
-            story_version=int(confirmed.get("script_version") or 1),
-        )
+        if fixture_mode_enabled():
+            bundle = fixture_contract_bundle(
+                source_story,
+                story_version=int(confirmed.get("script_version") or 1),
+            )
+        else:
+            config = config_manager.get_model_config("zhongshu", office_id="comic_production")
+            bundle = await plan_contract(
+                source_story,
+                config,
+                source_mode="full_story",
+                story_version=int(confirmed.get("script_version") or 1),
+            )
     except PlannerError as exc:
         raise HTTPException(status_code=502, detail=f"视觉母版规划失败：{exc}") from exc
     state = ComicProductionV2.from_bundle(bundle, workspace_id=workspace_id)
@@ -535,13 +549,21 @@ async def revise_comic_v2_visual_bible_api(workspace_id: str, req: ComicV2Revisi
     if not raw:
         raise HTTPException(status_code=409, detail="请先生成视觉母版")
     state = ComicProductionV2.from_dict(raw)
-    config = config_manager.get_model_config("zhongshu", office_id="comic_production")
     try:
-        bundle = await revise_visual_bible(
-            state.contract,
-            req.revision_request,
-            config,
-        )
+        if fixture_mode_enabled():
+            bundle = fixture_contract_bundle(
+                state.contract.get("creative", {}).get("source_story", ""),
+                story_version=state.story_version,
+                style_version=state.style_version + 1,
+                revision_request=req.revision_request,
+            )
+        else:
+            config = config_manager.get_model_config("zhongshu", office_id="comic_production")
+            bundle = await revise_visual_bible(
+                state.contract,
+                req.revision_request,
+                config,
+            )
         revised = ComicProductionV2.replace_visual_bible(state, bundle)
     except (PlannerError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"视觉母版修改失败：{exc}") from exc
@@ -572,11 +594,14 @@ async def plan_comic_v2_assets_api(workspace_id: str):
         raise HTTPException(status_code=409, detail="当前阶段不能生成资产拆解包")
     try:
         bundle = contract_bundle_from_dict(state.contract)
-        manifest = await plan_asset_manifest(
-            bundle,
-            config_manager.get_model_config("zhongshu", office_id="comic_production"),
-            config_manager.get_model_config("menxia", office_id="comic_production"),
-        )
+        if fixture_mode_enabled():
+            manifest = fixture_initial_manifest(bundle)
+        else:
+            manifest = await plan_asset_manifest(
+                bundle,
+                config_manager.get_model_config("zhongshu", office_id="comic_production"),
+                config_manager.get_model_config("menxia", office_id="comic_production"),
+            )
         waiting = ComicProductionV2.attach_asset_manifest(state, manifest)
     except (ContractValidationError, AssetPlanningError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"资产拆解失败：{exc}") from exc
@@ -636,13 +661,16 @@ async def revise_comic_v2_assets_api(workspace_id: str, req: ComicV2RevisionRequ
             state.asset_manifest,
             source_story=bundle.creative.source_story,
         )
-        manifest = await plan_asset_manifest(
-            bundle,
-            config_manager.get_model_config("zhongshu", office_id="comic_production"),
-            config_manager.get_model_config("menxia", office_id="comic_production"),
-            revision_request=req.revision_request,
-            previous_manifest=previous,
-        )
+        if fixture_mode_enabled():
+            manifest = fixture_revised_manifest(bundle, previous, req.revision_request)
+        else:
+            manifest = await plan_asset_manifest(
+                bundle,
+                config_manager.get_model_config("zhongshu", office_id="comic_production"),
+                config_manager.get_model_config("menxia", office_id="comic_production"),
+                revision_request=req.revision_request,
+                previous_manifest=previous,
+            )
         waiting = ComicProductionV2.attach_asset_manifest(state, manifest)
     except (ContractValidationError, AssetPlanningError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"资产重拆失败：{exc}") from exc
@@ -677,17 +705,20 @@ async def plan_comic_v2_prompts_api(workspace_id: str):
             state.asset_manifest,
             source_story=bundle.creative.source_story,
         )
-        package = await direct_asset_prompts(
-            bundle,
-            manifest,
-            _comic_v2_capability_model("gongbu_text", ("zhongshu",), kind="text"),
-        )
-        package = await direct_shot_cards(
-            bundle,
-            manifest,
-            package,
-            _comic_v2_capability_model("bingbu_text", ("bingbu", "zhongshu"), kind="text"),
-        )
+        if fixture_mode_enabled():
+            package = fixture_prompt_package(bundle, manifest)
+        else:
+            package = await direct_asset_prompts(
+                bundle,
+                manifest,
+                _comic_v2_capability_model("gongbu_text", ("zhongshu",), kind="text"),
+            )
+            package = await direct_shot_cards(
+                bundle,
+                manifest,
+                package,
+                _comic_v2_capability_model("bingbu_text", ("bingbu", "zhongshu"), kind="text"),
+            )
         generating = ComicProductionV2.attach_prompt_package(state, package)
     except (ContractValidationError, ProductionError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"提示词规划失败：{exc}") from exc
@@ -746,15 +777,18 @@ async def generate_comic_v2_images_api(workspace_id: str):
             Path(__file__).parent.parent.parent
             / "output" / "workspaces" / workspace_id / "generated" / task_dir
         )
-        result = await produce_asset_images(
-            package,
-            manifest,
-            bundle.visual,
-            _comic_v2_capability_model("gongbu_image", ("gongbu",), kind="image"),
-            _comic_v2_capability_model("xingbu_vision", ("xingbu",), kind="vision"),
-            output_dir,
-            max_attempts=max(1, int(os.getenv("COMIC_IMAGE_MAX_ATTEMPTS", "2"))),
-        )
+        if fixture_mode_enabled():
+            result = fixture_image_production(package, manifest, output_dir)
+        else:
+            result = await produce_asset_images(
+                package,
+                manifest,
+                bundle.visual,
+                _comic_v2_capability_model("gongbu_image", ("gongbu",), kind="image"),
+                _comic_v2_capability_model("xingbu_vision", ("xingbu",), kind="vision"),
+                output_dir,
+                max_attempts=max(1, int(os.getenv("COMIC_IMAGE_MAX_ATTEMPTS", "2"))),
+            )
         next_state = ComicProductionV2.attach_image_production(state, result)
     except (ContractValidationError, ProductionError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"资产图片生产失败：{exc}") from exc
