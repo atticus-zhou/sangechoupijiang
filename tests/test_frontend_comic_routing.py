@@ -137,7 +137,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_index_uses_fresh_comic_v2_script_cache_key(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=comic-v2-clean-board-20260626", html)
+        self.assertIn("/static/js/app.js?v=comic-v2-review-summary-20260626", html)
         self.assertNotIn("comic-confirm-feedback-20260610", html)
 
     def test_empty_artifact_board_still_renders_v2_stage_actions(self):
@@ -154,6 +154,16 @@ class FrontendComicRoutingTests(unittest.TestCase):
         v2_check = board_fn.index("const hasV2Status = currentComicV2Status && currentComicV2Status.pipeline_version === 2")
         legacy_grid = board_fn.index("COMIC_REQUIRED_ARTIFACTS.map")
         self.assertLess(v2_check, legacy_grid)
+
+    def test_v2_stage_board_shows_human_review_summary(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function renderComicV2StageActions")]
+
+        self.assertIn("renderComicV2ReviewSummary(currentComicV2Status)", v2_flow)
+        self.assertIn("function renderComicV2ReviewSummary", js)
+        self.assertIn("status.contract?.visual", js)
+        self.assertIn("status.asset_manifest?.items", js)
+        self.assertIn("status.delivery?.audit", js)
 
 
 if __name__ == "__main__":

@@ -4,13 +4,13 @@
 
 **Goal:** Turn the isolated comic-production V2 contracts into the default, human-reviewable production chain from confirmed story to audited Word canvas.
 
-**Architecture:** Keep V2 logic under `src/comic_office/v2/` and expose narrow FastAPI transition endpoints. Every transition reads server-owned workspace state, writes a versioned artifact and an event, and blocks on explicit human or quality gates. The legacy workflow remains a fallback until browser and full-regression verification pass.
+**Architecture:** Keep V2 logic under `src/comic_office/v2/` and expose narrow FastAPI transition endpoints. Every transition reads server-owned workspace state, writes a versioned artifact and an event, and blocks on explicit human or quality gates. Legacy V1 task and recovery paths remain available for existing projects while new confirmed stories enter V2 by default.
 
 **Tech Stack:** Python 3, FastAPI, LiteLLM, dataclasses, python-docx, unittest, vanilla JavaScript.
 
 ---
 
-### Task 1: Online contract planner and visual-bible review
+### Task 1: Online Contract Planner And Visual-Bible Review
 
 **Files:**
 - Create: `src/comic_office/v2/planner.py`
@@ -26,7 +26,7 @@
 - [x] Implement `/comic/v2/plan-confirmed`, `/comic/v2/visual-bible/approve`, and `/comic/v2/visual-bible/revise`; revisions increment `style_version` and invalidate downstream state.
 - [x] Run focused tests and commit the slice.
 
-### Task 2: Evidence-backed asset planning and human review
+### Task 2: Evidence-Backed Asset Planning And Human Review
 
 **Files:**
 - Create: `src/comic_office/v2/asset_planner.py`
@@ -41,7 +41,7 @@
 - [x] Implement `/assets/plan`, `/assets/approve`, and `/assets/revise`, persisting a versioned manifest artifact and user-visible events.
 - [x] Run focused tests and commit the slice.
 
-### Task 3: Prompt directing, image generation, and cross-image review
+### Task 3: Prompt Directing, Image Generation, And Cross-Image Review
 
 **Files:**
 - Create: `src/comic_office/v2/production.py`
@@ -52,12 +52,12 @@
 
 - [x] Write failing tests proving each asset and shot receives its own model-generated prompt bound to story, style, and asset versions.
 - [x] Implement prompt batches using `gongbu`, rejecting malformed model output instead of silently substituting templates.
-- [x] Write failing tests proving character/prop images use clean white backgrounds, scenes use spatial views, and generation records image IDs and reference IDs.
+- [x] Write failing tests proving character and prop images use clean white backgrounds, scenes use spatial views, and generation records image IDs and reference IDs.
 - [x] Integrate the existing image provider behind V2 generation records.
 - [x] Write failing tests for `xingbu` cross-image review with approved identity references, previous accepted images, retries, and explicit human override.
 - [x] Implement production and review transitions, run focused tests, and commit the slice.
 
-### Task 4: Audited Word delivery
+### Task 4: Audited Word Delivery
 
 **Files:**
 - Modify: `src/comic_office/v2/word_canvas.py`
@@ -70,7 +70,7 @@
 - [x] Persist the DOCX artifact and expose a workspace download endpoint.
 - [x] Run focused tests and structural DOCX audit; LibreOffice/`soffice` was unavailable locally, so visual PNG render QA is deferred to a machine with the renderer.
 
-### Task 5: Human-facing workflow and default cutover
+### Task 5: Human-Facing Workflow And Default Cutover
 
 **Files:**
 - Modify: `src/web/static/js/app.js`
@@ -78,20 +78,20 @@
 - Modify: `src/web/static/css/style.css`
 - Modify: `tests/test_frontend_comic_routing.py`
 
-- [ ] Write failing source-level and API-contract tests for immediate loading, visible failures, visual-bible review, concise asset inventory, revision feedback, production progress, and download.
-- [ ] Implement context actions against V2 endpoints while keeping detailed prompts collapsed by default.
-- [ ] Verify workspace switching clears stale state immediately.
-- [ ] Switch “确认故事并开始生成” to V2 only after all downstream actions are reachable; retain a legacy recovery action for existing V1 projects.
-- [ ] Run focused frontend tests and commit the slice.
+- [x] Write failing source-level and API-contract tests for immediate loading, visible failures, visual-bible review, concise asset inventory, revision feedback, production progress, and download.
+- [x] Implement context actions against V2 endpoints while keeping detailed prompts collapsed by default.
+- [x] Verify workspace switching clears stale state immediately.
+- [x] Switch the confirmed-story production action to V2 after downstream actions became reachable; retain legacy task and recovery paths for existing V1 projects.
+- [x] Run focused frontend tests and commit the slice.
 
-### Task 6: End-to-end verification and publication
+### Task 6: End-To-End Verification And Publication
 
 **Files:**
 - Modify: `scripts/verify_comic_v2_delivery.py`
 - Modify: `README.md`
 
-- [ ] Run the deterministic V2 verifier and full unittest suite.
+- [x] Run the deterministic V2 verifier and full unittest suite.
 - [ ] Start the local server and complete a browser test as a user: confirm story, review/revise visual bible, review/revise assets, generate, observe review, and download Word.
 - [ ] Inspect logs, generated images, and every rendered Word page; record any blocker as a failing regression test before fixing it.
 - [ ] Run `git diff --check`, scan tracked files for secrets, commit, and push `codex/comic-quality-overhaul`.
-- [ ] Confirm other offices still use isolated model configuration and routes.
+- [x] Confirm other offices still use isolated model configuration and routes through existing tests.

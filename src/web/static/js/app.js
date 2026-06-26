@@ -1425,6 +1425,7 @@ function renderComicV2ProductionFlow() {
     const progress = total > 0 ? `${completed}/${total}` : '等待状态';
     const blocked = currentComicV2Status.blocking_reason || '';
     const actions = renderComicV2StageActions(currentComicV2Status);
+    const reviewSummary = renderComicV2ReviewSummary(currentComicV2Status);
     return `
         <div class="production-flow v2-flow">
             <div class="production-flow-head">
@@ -1439,9 +1440,53 @@ function renderComicV2ProductionFlow() {
                 <span>${escapeHtml(blocked || '当前没有阻塞项')}</span>
                 <small>下一步：${escapeHtml(currentComicV2Status.next_action || '等待状态更新')}</small>
             </div>
+            ${reviewSummary}
             ${actions ? `<div class="v2-action-row">${actions}</div>` : ''}
         </div>
     `;
+}
+
+function renderComicV2ReviewSummary(status) {
+    const stage = status?.stage || '';
+    if (stage === 'visual_bible_review') {
+        const visual = status.contract?.visual || {};
+        const palette = Array.isArray(visual.palette) ? visual.palette.join('、') : '';
+        const prohibited = Array.isArray(visual.prohibited_elements) ? visual.prohibited_elements.join('、') : '';
+        return `
+            <div class="package-summary v2-review-summary">
+                <strong>待确认：视觉母版</strong>
+                <span>风格：${escapeHtml(visual.medium || '未填写')}；时代：${escapeHtml(visual.era || '未填写')}；画幅：${escapeHtml(visual.aspect_ratio || '未填写')}</span>
+                <small>色板：${escapeHtml(palette || '未填写')}；禁止元素：${escapeHtml(prohibited || '未填写')}</small>
+            </div>
+        `;
+    }
+    if (stage === 'asset_review') {
+        const items = status.asset_manifest?.items || [];
+        const groups = {
+            character: items.filter(item => item.asset_type === 'character'),
+            prop: items.filter(item => item.asset_type === 'prop'),
+            scene: items.filter(item => item.asset_type === 'scene'),
+        };
+        const names = items.slice(0, 8).map(item => item.name).filter(Boolean).join('、');
+        return `
+            <div class="package-summary v2-review-summary">
+                <strong>待确认：资产拆解</strong>
+                <span>人物 ${groups.character.length} 个，道具 ${groups.prop.length} 个，场景 ${groups.scene.length} 个。</span>
+                <small>${escapeHtml(names || '暂无可展示资产名称')}</small>
+            </div>
+        `;
+    }
+    if (stage === 'ready_for_handoff' || stage === 'document_generation') {
+        const audit = status.delivery?.audit || {};
+        return `
+            <div class="package-summary v2-review-summary">
+                <strong>交付审计</strong>
+                <span>嵌入图片 ${Number(audit.embedded_images || 0)} 张；资产 ${Number(audit.asset_count || 0)} 个；镜头 ${Number(audit.shot_count || 0)} 个。</span>
+                <small>${audit.handoff_ready ? '结构审计已通过。' : '等待 Word 结构审计。'}</small>
+            </div>
+        `;
+    }
+    return '';
 }
 
 function renderComicV2StageActions(status) {
