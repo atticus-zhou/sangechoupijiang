@@ -95,5 +95,5 @@
 - [x] Start the local server and browser-inspect a retained V2 workspace, verifying the visible `ready_for_handoff` state, delivery audit, embedded-image count, and Word download link.
 - [x] Start the local server and complete a browser test as a user: confirm story, review/revise visual bible, review/revise assets, generate, observe review, and download Word.
 - [ ] Inspect logs, generated images, and every rendered Word page; record any blocker as a failing regression test before fixing it.
-- [ ] Run `git diff --check`, scan tracked files for secrets, commit, and push `codex/comic-quality-overhaul`.
+- [x] Run `git diff --check`, scan tracked files for secrets, commit, and push `codex/comic-quality-overhaul`.
 - [x] Confirm other offices still use isolated model configuration and routes through existing tests.
