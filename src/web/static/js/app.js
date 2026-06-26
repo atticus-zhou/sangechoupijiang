@@ -1328,6 +1328,14 @@ function renderComicPackageBoard(artifacts) {
     const board = document.getElementById('comic-package-board');
     const score = document.getElementById('comic-package-score');
     const items = artifacts || [];
+    const hasV2Status = currentComicV2Status && currentComicV2Status.pipeline_version === 2 && currentComicV2Status.status !== 'not_started';
+    if (hasV2Status) {
+        score.textContent = `${Number(currentComicV2Status.completed || 0)}/${Number(currentComicV2Status.total || 0)}`;
+        score.className = currentComicV2Status.stage === 'ready_for_handoff' ? 'badge badge-ok' : 'badge badge-info';
+        board.className = 'package-board';
+        board.innerHTML = renderComicV2ProductionFlow();
+        return;
+    }
     if (!items.length) {
         score.textContent = '未开始';
         score.className = 'badge badge-info';
@@ -2874,6 +2882,34 @@ async function viewReport(taskId) {
         scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
+
+function exposeInlineHandlers() {
+    window.navigate = navigate;
+    window.navigateActiveWorkbench = navigateActiveWorkbench;
+    window.showOfficeUnavailable = showOfficeUnavailable;
+    window.showSampleUnavailable = showSampleUnavailable;
+    window.selectComicWorkspace = selectComicWorkspace;
+    window.startComicCabinet = startComicCabinet;
+    window.continueComicCabinet = continueComicCabinet;
+    window.confirmComicScript = confirmComicScript;
+    window.unconfirmComicScript = unconfirmComicScript;
+    window.submitComicTask = submitComicTask;
+    window.approveComicAssetsAndSubmit = approveComicAssetsAndSubmit;
+    window.requestComicAssetRevision = requestComicAssetRevision;
+    window.approveComicV2VisualBible = approveComicV2VisualBible;
+    window.reviseComicV2VisualBible = reviseComicV2VisualBible;
+    window.planComicV2Assets = planComicV2Assets;
+    window.approveComicV2Assets = approveComicV2Assets;
+    window.reviseComicV2Assets = reviseComicV2Assets;
+    window.planComicV2Prompts = planComicV2Prompts;
+    window.generateComicV2Images = generateComicV2Images;
+    window.overrideComicV2VisualReview = overrideComicV2VisualReview;
+    window.buildComicV2Delivery = buildComicV2Delivery;
+    window.filterComicAssets = filterComicAssets;
+    window.selectComicArtifact = selectComicArtifact;
+    window.regenerateComicImage = regenerateComicImage;
+}
+exposeInlineHandlers();
 
 // ============================================================
 // Init

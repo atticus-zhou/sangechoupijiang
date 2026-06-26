@@ -125,6 +125,36 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("resetComicWorkspaceState({ clearInputs: true })", select_fn)
         self.assertIn("renderComicPackageBoard()", select_fn)
 
+    def test_inline_comic_handlers_are_exposed_on_window(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("window.selectComicWorkspace = selectComicWorkspace;", js)
+        self.assertIn("window.confirmComicScript = confirmComicScript;", js)
+        self.assertIn("window.buildComicV2Delivery = buildComicV2Delivery;", js)
+        self.assertIn("window.planComicV2Assets = planComicV2Assets;", js)
+        self.assertNotIn("window.regenerateComicStory = regenerateComicStory;", js)
+
+    def test_index_uses_fresh_comic_v2_script_cache_key(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn("/static/js/app.js?v=comic-v2-clean-board-20260626", html)
+        self.assertNotIn("comic-confirm-feedback-20260610", html)
+
+    def test_empty_artifact_board_still_renders_v2_stage_actions(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        board_fn = js[js.index("function renderComicPackageBoard"):js.index("function latestComicProductionChain")]
+
+        self.assertIn("currentComicV2Status && currentComicV2Status.pipeline_version === 2", board_fn)
+        self.assertIn("renderComicV2ProductionFlow()", board_fn)
+
+    def test_v2_package_board_does_not_mix_legacy_score_grid(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        board_fn = js[js.index("function renderComicPackageBoard"):js.index("function latestComicProductionChain")]
+
+        v2_check = board_fn.index("const hasV2Status = currentComicV2Status && currentComicV2Status.pipeline_version === 2")
+        legacy_grid = board_fn.index("COMIC_REQUIRED_ARTIFACTS.map")
+        self.assertLess(v2_check, legacy_grid)
+
 
 if __name__ == "__main__":
     unittest.main()
