@@ -27,7 +27,8 @@ RESEARCH_OFFICE = OfficeProfile(
     id="research",
     name="研究办公室",
     description=(
-        "用于产品调研、电商平台分析、竞品表格、证据截图、老板简报和开品决策的项目办公室。"
+        "用于产品调研、电商平台分析、竞品表格、证据截图、老板简报和开品决策的人机协作办公室；"
+        "第三方平台取证依赖账号权限、登录状态和页面可访问性，系统提供辅助截图与待补证据整理。"
     ),
     agent_duties={
         "zhongshu": "把用户需求拆成调研计划，明确行业、平台数据、竞品、评论痛点、机会点和开品判断。",
@@ -41,6 +42,7 @@ RESEARCH_OFFICE = OfficeProfile(
         "gongbu": "组装最终调研材料：报告、简报、表格、机会地图、截图计划和可导出文件。",
     },
     artifact_types=[
+        "research_plan",
         "report",
         "briefing",
         "data_table",
@@ -61,6 +63,7 @@ RESEARCH_OFFICE = OfficeProfile(
         "评论痛点和差异化机会要拆成独立产物，不能只埋在正文里。",
         "图表和表格要作为独立材料输出，方便复制到汇报文件。",
         "需要截图取证的平台页面要列出截图目标。",
+        "第三方平台截图受账号权限、登录状态和页面变化影响；无法访问时必须标注待补证据和人工补证路径。",
         "最终材料包应能直接用于职场交接或老板汇报。",
     ],
     default_template=(
@@ -68,7 +71,9 @@ RESEARCH_OFFICE = OfficeProfile(
         "Follow the research office playbook: industry overview, platform/channel data, top competitors, "
         "sales and price-band fields, title/selling-point keywords, user profile, review pain points, "
         "common success factors, differentiation opportunities, chart/table opportunities, screenshot/evidence "
-        "needs, and launch/development recommendations. User request: {user_input}"
+        "needs, pending evidence gaps, account-permission limits, and launch/development recommendations. "
+        "Do not promise fully automatic third-party-platform evidence capture; mark unavailable pages as pending. "
+        "User request: {user_input}"
     ),
 )
 

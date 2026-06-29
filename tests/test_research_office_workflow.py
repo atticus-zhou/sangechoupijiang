@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from src.research_office import (
     build_evidence_fallback_result,
@@ -6,9 +7,24 @@ from src.research_office import (
     needs_platform_evidence,
     research_capture_keyword,
 )
+from src.offices import RESEARCH_OFFICE
 
 
 class ResearchOfficeWorkflowTests(unittest.TestCase):
+    def test_research_office_declares_plan_and_human_assisted_evidence(self):
+        self.assertIn("research_plan", RESEARCH_OFFICE.artifact_types)
+        self.assertIn("辅助", RESEARCH_OFFICE.description)
+        self.assertNotIn("一键全自动", RESEARCH_OFFICE.description)
+        self.assertIn("账号权限", "；".join(RESEARCH_OFFICE.acceptance_criteria))
+
+    def test_frontend_research_evidence_copy_does_not_overpromise_feigua(self):
+        html = Path("src/web/static/index.html").read_text(encoding="utf-8")
+
+        self.assertIn("辅助飞瓜取证", html)
+        self.assertIn("账号权限", html)
+        self.assertNotIn("你只需要在弹出的浏览器里登录一次", html)
+        self.assertNotIn("飞瓜自动取证", html)
+
     def test_extracts_research_keyword(self):
         self.assertEqual(research_capture_keyword("研究对象：民用无人机\n需要截图"), "民用无人机")
         self.assertEqual(research_capture_keyword("开品调研：吹风机，重点看飞瓜"), "吹风机")

@@ -18,6 +18,16 @@ def build_research_artifacts(task_id: str, result: dict) -> list[dict]:
     results = result.get("results", []) or []
 
     artifacts: list[dict] = []
+    research_plan = _make_research_plan(plan, results, report)
+    if research_plan:
+        artifacts.append({
+            "artifact_type": "research_plan",
+            "title": f"{title} - 调研计划",
+            "content": research_plan,
+            "metadata": {"source": "plan"},
+            "created_by": "zhongshu",
+        })
+
     if report:
         artifacts.append({
             "artifact_type": "report",
@@ -111,6 +121,71 @@ def build_research_artifacts(task_id: str, result: dict) -> list[dict]:
         artifact["artifact_id"] = f"art_{task_id}_{artifact['artifact_type']}_{index}"
         artifact["task_id"] = task_id
     return artifacts
+
+
+def _make_research_plan(plan: dict, results: list[dict], report: str) -> str:
+    title = _strip_markdown(plan.get("title") or "调研项目")
+    goal = _strip_markdown(plan.get("goal") or plan.get("objective") or "")
+    user_request = _strip_markdown(plan.get("user_request") or plan.get("request") or "")
+
+    step_lines = []
+    for step in plan.get("steps", []) or []:
+        if isinstance(step, dict):
+            label = step.get("name") or step.get("title") or step.get("step_id") or "调研步骤"
+            detail = step.get("goal") or step.get("description") or step.get("task") or ""
+            step_lines.append(f"- {_cell(label)}：{_cell(detail)}")
+        elif step:
+            step_lines.append(f"- {_cell(str(step))}")
+
+    evidence_targets = []
+    for step in results:
+        for source in step.get("sources", []) or []:
+            if isinstance(source, dict):
+                target = source.get("title") or source.get("url")
+                if target:
+                    evidence_targets.append(_cell(target))
+        for ref in step.get("context_refs", []) or []:
+            if ref:
+                evidence_targets.append(_cell(str(ref)))
+
+    if not step_lines:
+        step_lines = [
+            "- 明确调研目标、交付用途和老板真正要判断的问题。",
+            "- 收集行业公开资料、平台数据、竞品信息、评论痛点和价格带。",
+            "- 将数据、截图、来源链接和待核验项拆成可追溯证据。",
+            "- 输出报告、老板摘要、数据表、竞品表、截图清单和机会判断。",
+        ]
+
+    if not evidence_targets:
+        evidence_targets = [
+            "平台搜索结果页、商品榜、品牌榜、达人榜或商品详情页截图",
+            "行业报告、公开新闻、官方资料或电商页面来源截图",
+        ]
+
+    report_hint = ""
+    if report:
+        first_line = next((_strip_markdown(line) for line in report.splitlines() if _strip_markdown(line)), "")
+        if first_line:
+            report_hint = f"\n## 已有阶段结论\n- {first_line[:180]}"
+
+    return "\n".join([
+        f"# {title} - 调研计划",
+        "",
+        "## 调研目标",
+        goal or user_request or "围绕用户提交的研究对象，形成可供职场汇报和开品判断使用的阶段性调研包。",
+        "",
+        "## 执行步骤",
+        *step_lines[:8],
+        "",
+        "## 证据与截图计划",
+        "截图不是一键全自动承诺；系统会在用户完成第三方平台登录、账号权限允许且页面可访问时辅助截图。无法访问的页面必须标记为待补证据。",
+        *[f"- {item}" for item in evidence_targets[:10]],
+        "",
+        "## 交付物",
+        "- 调研报告、老板摘要、数据要点表、竞品分析表、评论痛点表、机会地图、来源清单和截图清单。",
+        "- 若飞瓜、抖音或电商后台权限不足，仍需输出阶段性结论、缺口说明和下一步补证路径。",
+        report_hint,
+    ]).strip()
 
 
 def _make_briefing(report: str) -> str:

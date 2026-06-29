@@ -737,7 +737,7 @@ async function captureResearchUrl() {
         toast('页面截图已入库', 'success');
         await loadResearchArtifacts(currentResearchWorkspace);
     } catch (e) {
-        toast('自动截图失败: ' + e.message, 'error');
+        toast('截图取证失败: ' + e.message, 'error');
     }
 }
 
@@ -760,7 +760,7 @@ async function captureResearchFeigua() {
         return;
     }
     try {
-        toast('正在执行飞瓜自动取证', 'success');
+        toast('正在辅助飞瓜取证，请留意本地浏览器登录状态和账号权限', 'success');
         const result = await API.post(`/api/workspaces/${currentResearchWorkspace}/capture-feigua`, {
             keyword,
             wait_seconds: 6,
@@ -768,7 +768,7 @@ async function captureResearchFeigua() {
         });
         if (result.detail) throw new Error(result.detail);
         if (!result.created_count) {
-            toast(result.note || '飞瓜取证未生成截图，请先登录后重试', 'error');
+            toast(result.note || '飞瓜取证未生成截图，请检查登录状态、账号权限或稍后补证', 'error');
         } else {
             toast(`已生成 ${result.created_count} 张飞瓜截图证据`, 'success');
         }

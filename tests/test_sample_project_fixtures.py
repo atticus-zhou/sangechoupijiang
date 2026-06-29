@@ -28,6 +28,7 @@ class SampleProjectFixtureTests(unittest.TestCase):
         by_type = {item["artifact_type"]: item for item in artifacts}
 
         for artifact_type in (
+            "research_plan",
             "report",
             "briefing",
             "source_list",
@@ -39,6 +40,8 @@ class SampleProjectFixtureTests(unittest.TestCase):
         ):
             self.assertIn(artifact_type, by_type)
         self.assertIn("民用无人机", by_type["report"]["content"])
+        self.assertIn("调研计划", by_type["research_plan"]["title"])
+        self.assertIn("截图", by_type["research_plan"]["content"])
         self.assertIn("local://pending", by_type["source_list"]["content"])
         self.assertIn("evidence_01.png", by_type["screenshot_plan"]["content"])
 
