@@ -113,6 +113,14 @@ python scripts/verify_comic_v2_user_flow.py
 
 这个脚本会通过真实 FastAPI 端点模拟用户链路：确认故事、退回视觉母版、审核资产、退回资产、生成提示词、生成图片、构建 Word、下载交付文件。它使用确定性假模型和占位图片，不消耗真实 API Key。
 
+如果要检查当前真实本地产品是否具备主力办公室的基础上线条件，可以运行：
+
+```powershell
+python scripts/verify_product_readiness.py --format markdown
+```
+
+这个脚本不会调用模型，只会审计仓库内的证据：完整工作流状态、可下载交付物、模型预检、端到端验证、README 和失败处理策略。无 Key 演示模式当前仍按阶段计划暂缓，不计入这条 readiness。
+
 仓库保留两套稳定样例：
 
 - `tests/fixtures/comic_v2_sample.json`：AI 漫剧制片办公室样例，可用于验证资产、图片、镜头提示词和 Word 画布。
