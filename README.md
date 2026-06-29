@@ -121,6 +121,14 @@ python scripts/verify_product_readiness.py --format markdown
 
 这个脚本不会调用模型，只会审计仓库内的证据：完整工作流状态、可下载交付物、模型预检、端到端验证、README 和失败处理策略。无 Key 演示模式当前仍按阶段计划暂缓，不计入这条 readiness。
 
+如果要做更深一层的真实产品验收，可以加上运行时验证：
+
+```powershell
+python scripts/verify_product_readiness.py --format markdown --run-e2e
+```
+
+这会额外跑一遍确定性的 Word 交付链路和模拟用户操作链路，确认流程能到达 `ready_for_handoff`，能生成图片记录，并且能下载 Word 制片画布。它仍然使用假模型和占位图片，不消耗真实 API Key。
+
 仓库保留两套稳定样例：
 
 - `tests/fixtures/comic_v2_sample.json`：AI 漫剧制片办公室样例，可用于验证资产、图片、镜头提示词和 Word 画布。

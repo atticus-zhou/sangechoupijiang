@@ -126,6 +126,34 @@ def format_readiness_markdown(audit: dict) -> str:
     for item in audit.get("checks", []):
         evidence = "<br>".join(item.get("evidence", []))
         rows.append(f"| {item.get('title', '')} | {item.get('status', '')} | {evidence} |")
+    runtime = audit.get("runtime_verification") or {}
+    if runtime:
+        rows.extend([
+            "",
+            "## 运行时验证",
+            "",
+            "| 验证 | 状态 | 结果 |",
+            "| --- | --- | --- |",
+        ])
+        delivery = runtime.get("delivery") or {}
+        if delivery:
+            rows.append(
+                "| Word 交付链路 | "
+                f"{delivery.get('status', '')} | "
+                f"handoff_ready={delivery.get('handoff_ready', '')}; "
+                f"assets={delivery.get('asset_count', 0)}; "
+                f"shots={delivery.get('shot_count', 0)}; "
+                f"embedded_images={delivery.get('embedded_images', 0)} |"
+            )
+        user_flow = runtime.get("user_flow") or {}
+        if user_flow:
+            rows.append(
+                "| 用户操作链路 | "
+                f"{user_flow.get('status', '')} | "
+                f"final_stage={user_flow.get('final_stage', '')}; "
+                f"generated_images={user_flow.get('generated_images', 0)}; "
+                f"download_bytes={user_flow.get('download_bytes', 0)} |"
+            )
     return "\n".join(rows)
 
 
