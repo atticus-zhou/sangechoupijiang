@@ -96,9 +96,20 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     ]
     if missing_ids:
         raise AssertionError(f"delivery is missing IDs: {', '.join(missing_ids)}")
+    handoff_manifest_path = build.handoff_manifest_path
+    if handoff_manifest_path is None or not handoff_manifest_path.exists():
+        raise AssertionError("delivery handoff manifest was not created")
+    handoff_manifest = json.loads(handoff_manifest_path.read_text(encoding="utf-8"))
+    if handoff_manifest.get("word_canvas", {}).get("filename") != build.path.name:
+        raise AssertionError("handoff manifest does not point at the generated Word canvas")
     audit = build.audit
     result = {
         "path": str(build.path),
+        "handoff_manifest_path": str(handoff_manifest_path),
+        "handoff_manifest_exists": True,
+        "handoff_manifest_assets": len(handoff_manifest.get("assets") or []),
+        "handoff_manifest_images": len(handoff_manifest.get("images") or []),
+        "handoff_manifest_shots": len(handoff_manifest.get("shots") or []),
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,
         "shot_count": audit.shot_count,

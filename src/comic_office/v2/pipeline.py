@@ -330,6 +330,7 @@ class ComicProductionV2:
         audit: DocumentAudit,
         *,
         uri: str = "",
+        handoff_manifest_uri: str = "",
     ) -> ComicProductionV2State:
         if state.stage != "document_generation":
             raise ValueError("当前阶段不能写入交付文档")
@@ -351,6 +352,7 @@ class ComicProductionV2:
             delivery={
                 "path": str(path),
                 "uri": str(uri or ""),
+                "handoff_manifest_uri": str(handoff_manifest_uri or ""),
                 "audit": asdict(audit),
             },
         )

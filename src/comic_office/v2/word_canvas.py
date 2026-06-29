@@ -57,6 +57,7 @@ class DocumentAudit:
 class CanvasBuildResult:
     path: Path
     audit: DocumentAudit
+    handoff_manifest_path: Path | None = None
 
 
 def build_word_canvas_v2(

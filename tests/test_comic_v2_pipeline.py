@@ -946,6 +946,8 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "test_v2_canvas.docx"
         output_path.write_bytes(b"fake-docx")
+        handoff_manifest_path = output_dir / "test_v2_canvas_handoff_manifest.json"
+        handoff_manifest_path.write_text("{}", encoding="utf-8")
         mock_build.return_value = CanvasBuildResult(
             path=output_path,
             audit=DocumentAudit(
@@ -957,6 +959,7 @@ class ComicV2PipelineApiTests(unittest.TestCase):
                 max_table_columns=2,
                 handoff_ready=True,
             ),
+            handoff_manifest_path=handoff_manifest_path,
         )
 
         response = self.client.post(
@@ -965,11 +968,16 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["stage"], "ready_for_handoff")
+        payload = response.json()
+        self.assertEqual(payload["stage"], "ready_for_handoff")
+        self.assertIn("/files/delivery/test_v2_canvas_handoff_manifest.json", payload["delivery"]["handoff_manifest_uri"])
         artifacts = config_manager.list_artifacts(workspace_id=self.workspace_id)
         delivery = next(item for item in artifacts if item["artifact_type"] == "comic_v2_word_canvas")
         self.assertIn("/files/delivery/test_v2_canvas.docx", delivery["uri"])
+        handoff = next(item for item in artifacts if item["artifact_type"] == "comic_v2_handoff_manifest")
+        self.assertIn("/files/delivery/test_v2_canvas_handoff_manifest.json", handoff["uri"])
         output_path.unlink(missing_ok=True)
+        handoff_manifest_path.unlink(missing_ok=True)
 
     @patch("src.web.app.build_delivery_from_v2")
     def test_delivery_build_writes_visible_start_and_result_events(self, mock_build):

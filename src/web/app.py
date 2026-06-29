@@ -1465,11 +1465,17 @@ async def build_comic_v2_delivery_api(workspace_id: str):
             allow_human_override=bool(state.image_production.get("human_override")),
         )
         uri = f"/api/workspaces/{workspace_id}/files/delivery/{delivery.path.name}"
+        handoff_manifest_uri = (
+            f"/api/workspaces/{workspace_id}/files/delivery/{delivery.handoff_manifest_path.name}"
+            if delivery.handoff_manifest_path
+            else ""
+        )
         ready = ComicProductionV2.attach_delivery(
             state,
             str(delivery.path),
             delivery.audit,
             uri=uri,
+            handoff_manifest_uri=handoff_manifest_uri,
         )
     except (ContractValidationError, DeliveryValidationError, ProductionError, ValueError) as exc:
         config_manager.update_task_run(
@@ -1514,9 +1520,32 @@ async def build_comic_v2_delivery_api(workspace_id: str):
             "manifest_version": state.asset_manifest.get("version", 0),
             "audit": ready.delivery.get("audit", {}),
             "download_uri": uri,
+            "handoff_manifest_uri": handoff_manifest_uri,
         },
         created_by="libu",
     )
+    if handoff_manifest_uri:
+        config_manager.create_artifact(
+            artifact_id=f"art_{workspace_id}_comic_v2_handoff_manifest",
+            workspace_id=workspace_id,
+            task_id=f"comic_v2_{workspace_id}",
+            artifact_type="comic_v2_handoff_manifest",
+            title=f"{workspace.get('title') or 'AI漫剧'} - V2制片引用清单",
+            uri=handoff_manifest_uri,
+            content="V2 制片引用清单已生成，可用于排查资产、图片、镜头和 Word 画布的对应关系。",
+            metadata={
+                "office_id": "comic_production",
+                "pipeline_version": 2,
+                "story_id": state.story_id,
+                "story_version": state.story_version,
+                "style_id": state.style_id,
+                "style_version": state.style_version,
+                "manifest_version": state.asset_manifest.get("version", 0),
+                "download_uri": handoff_manifest_uri,
+                "word_canvas_uri": uri,
+            },
+            created_by="libu",
+        )
     config_manager.update_task_run(
         task_id,
         "completed",
@@ -1529,7 +1558,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
         event_type="comic_v2_delivery_ready",
         status="completed",
         summary="页面式 Word 制片画布已通过审计",
-        payload={"workspace_id": workspace_id, "download_uri": uri},
+        payload={"workspace_id": workspace_id, "download_uri": uri, "handoff_manifest_uri": handoff_manifest_uri},
     )
     return _comic_v2_state_response(ready)
 

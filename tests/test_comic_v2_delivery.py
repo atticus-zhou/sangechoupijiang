@@ -1,4 +1,5 @@
 import base64
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -174,6 +175,30 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("视频生成提示词", text)
             self.assertIn("负面提示词", text)
             self.assertEqual(image_production_result_from_dict(result.to_dict()), result)
+
+    def test_delivery_writes_machine_readable_handoff_manifest(self):
+        from src.comic_office.v2.delivery import build_delivery_from_v2
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, manifest, package, result = parts(root)
+
+            delivery = build_delivery_from_v2(bundle, manifest, package, result, root / "out")
+            handoff = json.loads(delivery.handoff_manifest_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(handoff["story"]["story_id"], bundle.creative.story_id)
+            self.assertEqual(handoff["story"]["story_version"], bundle.creative.story_version)
+            self.assertEqual(handoff["style"]["style_id"], bundle.visual.style_id)
+            self.assertEqual(handoff["manifest"]["manifest_id"], manifest.manifest_id)
+            self.assertEqual(handoff["word_canvas"]["filename"], delivery.path.name)
+            self.assertEqual(len(handoff["assets"]), len(manifest.items))
+            self.assertEqual(
+                sorted(image["image_id"] for image in handoff["images"]),
+                sorted(record.image_id for record in result.records),
+            )
+            self.assertEqual(handoff["shots"][0]["shot_id"], package.shots[0].shot_id)
+            self.assertEqual(handoff["shots"][0]["reference_asset_ids"], list(package.shots[0].reference_asset_ids))
+            self.assertTrue(handoff["audit"]["handoff_ready"])
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from dataclasses import asdict
 from pathlib import Path
 
 from .asset_manifest import AssetManifest
@@ -75,7 +77,19 @@ def build_delivery_from_v2(
             f"Word 结构审计未通过：缺图={result.audit.missing_image_asset_ids}，"
             f"结构错误={result.audit.structural_errors}"
         )
-    return result
+    handoff_manifest_path = _write_handoff_manifest(
+        result.path,
+        bundle,
+        manifest,
+        prompt_package,
+        image_result,
+        result.audit,
+    )
+    return CanvasBuildResult(
+        path=result.path,
+        audit=result.audit,
+        handoff_manifest_path=handoff_manifest_path,
+    )
 
 
 def _validate_bindings(
@@ -93,3 +107,105 @@ def _validate_bindings(
         raise DeliveryValidationError("提示词包属于另一版视觉母版")
     if prompt_package.manifest_id != manifest.manifest_id or prompt_package.manifest_version != manifest.version:
         raise DeliveryValidationError("提示词包属于另一版资产清单")
+
+
+def _write_handoff_manifest(
+    word_path: Path,
+    bundle: ContractBundle,
+    manifest: AssetManifest,
+    prompt_package: PromptPackage,
+    image_result: ImageProductionResult,
+    audit,
+) -> Path:
+    """Write a sidecar manifest that keeps the asset/image/shot chain inspectable."""
+    prompt_by_asset_kind = {
+        (prompt.object_id, prompt.image_kind): prompt
+        for prompt in prompt_package.prompts
+    }
+    image_by_asset_kind = {
+        (record.asset_id, record.image_kind): record
+        for record in image_result.records
+    }
+    assets = []
+    for asset in manifest.items:
+        assets.append({
+            "asset_id": asset.asset_id,
+            "asset_type": asset.asset_type,
+            "name": asset.name,
+            "manifest_version": manifest.version,
+            "evidence_quote": asset.evidence.evidence_quote,
+            "scene_ids": list(asset.evidence.scene_ids),
+            "story_purpose": asset.story_purpose,
+            "planned_images": list(asset.planned_images),
+            "image_ids": [
+                image_by_asset_kind[(asset.asset_id, image_kind)].image_id
+                for image_kind in asset.planned_images
+                if (asset.asset_id, image_kind) in image_by_asset_kind
+            ],
+        })
+    images = []
+    for record in image_result.records:
+        prompt = prompt_by_asset_kind.get((record.asset_id, record.image_kind))
+        images.append({
+            "image_id": record.image_id,
+            "asset_id": record.asset_id,
+            "image_kind": record.image_kind,
+            "file": Path(record.path).name,
+            "provider": record.provider,
+            "model": record.model,
+            "status": record.status,
+            "is_identity_baseline": record.is_identity_baseline,
+            "reference_image_ids": list(record.reference_image_ids),
+            "prompt_hash": record.prompt_hash,
+            "prompt_purpose": prompt.purpose if prompt else "",
+        })
+    shots = []
+    for shot in prompt_package.shots:
+        shots.append({
+            "shot_id": shot.shot_id,
+            "scene_id": shot.scene_id,
+            "story_beat": shot.story_beat,
+            "evidence_quote": shot.evidence_quote,
+            "reference_asset_ids": list(shot.reference_asset_ids),
+            "action_chain": list(shot.action_chain),
+            "generator_prompt": shot.generator_prompt,
+            "negative_prompt": list(shot.negative_prompt),
+            "retry_strategy": shot.retry_strategy,
+        })
+    payload = {
+        "schema": "comic_production_handoff_manifest_v1",
+        "story": {
+            "story_id": bundle.creative.story_id,
+            "story_version": bundle.creative.story_version,
+            "title": bundle.creative.title,
+            "source_hash": bundle.creative.source_hash,
+        },
+        "style": {
+            "style_id": bundle.visual.style_id,
+            "style_version": bundle.visual.style_version,
+            "medium": bundle.visual.medium,
+            "era": bundle.visual.era,
+            "aspect_ratio": bundle.visual.aspect_ratio,
+        },
+        "manifest": {
+            "manifest_id": manifest.manifest_id,
+            "manifest_version": manifest.version,
+            "manifest_hash": manifest.manifest_hash,
+        },
+        "prompt_package": {
+            "package_id": prompt_package.package_id,
+            "prompt_count": len(prompt_package.prompts),
+            "shot_count": len(prompt_package.shots),
+        },
+        "word_canvas": {
+            "filename": word_path.name,
+            "relative_path": word_path.name,
+        },
+        "assets": assets,
+        "images": images,
+        "shots": shots,
+        "audit": asdict(audit),
+    }
+    path = word_path.with_name(f"{word_path.stem}_handoff_manifest.json")
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path

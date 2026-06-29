@@ -143,7 +143,8 @@ def format_readiness_markdown(audit: dict) -> str:
                 f"handoff_ready={delivery.get('handoff_ready', '')}; "
                 f"assets={delivery.get('asset_count', 0)}; "
                 f"shots={delivery.get('shot_count', 0)}; "
-                f"embedded_images={delivery.get('embedded_images', 0)} |"
+                f"embedded_images={delivery.get('embedded_images', 0)}; "
+                f"handoff_manifest={delivery.get('handoff_manifest_exists', False)} |"
             )
         user_flow = runtime.get("user_flow") or {}
         if user_flow:
