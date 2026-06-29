@@ -77,6 +77,7 @@ from src.image_generation import (
 )
 from src.model_connectivity import AGENT_IDS, probe_model_connectivity
 from src.office_preflight import build_office_preflight
+from src.product_readiness import audit_comic_production_readiness
 from src.system_preflight import build_system_preflight
 from src.browser_capture import (
     BrowserCaptureError,
@@ -311,6 +312,21 @@ async def get_office_preflight_api(office_id: str):
         config_manager.get_model_config,
         base_dir=APP_BASE_DIR,
     )
+
+
+@app.get("/api/offices/{office_id}/readiness")
+async def get_office_readiness_api(office_id: str):
+    """Return product-level readiness evidence for an office."""
+    normalized = "comic_production" if office_id == "comic" else office_id
+    if normalized != "comic_production":
+        return {
+            "office_id": normalized,
+            "mode": "real_product_without_demo",
+            "status": "not_applicable",
+            "summary": "当前只有 AI 漫剧制片办公室接入了产品级 readiness 审计。",
+            "checks": [],
+        }
+    return audit_comic_production_readiness(APP_BASE_DIR)
 
 
 @app.get("/api/system/preflight")

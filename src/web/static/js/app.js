@@ -3036,6 +3036,12 @@ async function loadOfficePreflight(officeId, targetId = '') {
             currentOfficePreflight = result;
         }
         renderOfficePreflight(result, targetId);
+        if (officeId === 'comic_production' || officeId === 'comic') {
+            try {
+                const readiness = await API.get(`/api/offices/${officeId}/readiness`);
+                renderProductReadiness(readiness, targetId);
+            } catch (e) {}
+        }
         return result;
     } catch (e) {
         if (target) {
@@ -3131,6 +3137,32 @@ function renderOfficePreflight(result, targetId = '') {
             </div>
         </div>
     `;
+}
+
+function renderProductReadiness(result, targetId = '') {
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (!target || !result || result.status === 'not_applicable') return;
+    const checks = (result.checks || []).slice(0, 6);
+    const status = result.status === 'ready_without_demo' ? 'ready' : 'partial';
+    target.insertAdjacentHTML('beforeend', `
+        <div class="preflight-card preflight-${escapeHtml(status)} product-readiness-card">
+            <div class="preflight-head">
+                <div>
+                    <strong>产品 readiness</strong>
+                    <p>${escapeHtml(result.summary || '')}</p>
+                </div>
+                <span class="badge ${preflightBadgeClass(status)}">${escapeHtml(result.status === 'ready_without_demo' ? '真实产品已具备' : '需继续补齐')}</span>
+            </div>
+            <div class="preflight-grid">
+                ${checks.map(item => `
+                    <div class="preflight-item ${item.status === 'passed' ? 'ok' : 'missing'}">
+                        <span>${escapeHtml(item.title || item.id || '')}</span>
+                        <small>${escapeHtml((item.evidence || []).join(' / ') || '缺少证据')}</small>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `);
 }
 
 function preflightBadgeClass(status) {

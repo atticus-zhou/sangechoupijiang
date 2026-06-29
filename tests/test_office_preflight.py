@@ -98,6 +98,19 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertEqual(by_id["story_planning"]["owner_label"], "中书省")
         self.assertEqual(by_id["story_planning"]["model_kind"], "文本模型")
 
+    def test_comic_production_readiness_api_reports_product_conditions(self):
+        response = self.client.get("/api/offices/comic_production/readiness")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["office_id"], "comic_production")
+        self.assertEqual(payload["mode"], "real_product_without_demo")
+        self.assertEqual(payload["status"], "ready_without_demo")
+        checks = {item["id"]: item for item in payload["checks"]}
+        self.assertIn("workflow_state", checks)
+        self.assertIn("downloadable_delivery", checks)
+        self.assertIn("failure_handling", checks)
+
 
 if __name__ == "__main__":
     unittest.main()
