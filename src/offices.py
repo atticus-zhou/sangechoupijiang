@@ -44,6 +44,7 @@ RESEARCH_OFFICE = OfficeProfile(
     artifact_types=[
         "research_plan",
         "report",
+        "standard_report",
         "briefing",
         "data_table",
         "competitor_table",

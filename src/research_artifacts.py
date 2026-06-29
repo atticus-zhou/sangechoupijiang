@@ -117,6 +117,16 @@ def build_research_artifacts(task_id: str, result: dict) -> list[dict]:
             "created_by": "zhongshu",
         })
 
+    standard_report = _make_standard_report(title, report, artifacts)
+    if standard_report:
+        artifacts.append({
+            "artifact_type": "standard_report",
+            "title": f"{title} - 标准调研报告",
+            "content": standard_report,
+            "metadata": {"source": "standard_template"},
+            "created_by": "gongbu",
+        })
+
     for index, artifact in enumerate(artifacts, start=1):
         artifact["artifact_id"] = f"art_{task_id}_{artifact['artifact_type']}_{index}"
         artifact["task_id"] = task_id
@@ -186,6 +196,66 @@ def _make_research_plan(plan: dict, results: list[dict], report: str) -> str:
         "- 若飞瓜、抖音或电商后台权限不足，仍需输出阶段性结论、缺口说明和下一步补证路径。",
         report_hint,
     ]).strip()
+
+
+def _make_standard_report(title: str, report: str, artifacts: list[dict]) -> str:
+    by_type = {item.get("artifact_type"): item.get("content", "") for item in artifacts}
+    source_list = by_type.get("source_list", "")
+    data_table = by_type.get("data_table", "")
+    competitor_table = by_type.get("competitor_table", "")
+    pain_points = by_type.get("review_pain_points", "")
+    opportunity_map = by_type.get("opportunity_map", "")
+    screenshot_plan = by_type.get("screenshot_plan", "")
+
+    industry = _pick_section(report, ("行业", "市场", "规模", "趋势"), fallback_chars=420)
+    risk_lines = _collect_lines(report, ("风险", "建议", "结论", "待核验", "权限", "来源"))
+    risk_text = "\n".join(f"- {line}" for line in risk_lines[:6]) or "- 关键结论需要继续用来源清单、截图证据和平台数据复核。"
+
+    return "\n".join([
+        f"# {title} - 标准调研报告",
+        "",
+        "## 行业概览",
+        industry or "暂无完整行业概览。请补充市场规模、增长趋势、渠道变化和行业背景。",
+        "",
+        "## 竞品对比",
+        competitor_table or "暂无结构化竞品表。请补充头部竞品、品牌、价格、卖点、用户和差评痛点。",
+        "",
+        "## 价格带与数据要点",
+        data_table or "暂无结构化数据表。请补充价格带、销量、评价量、时间范围、来源和可信度。",
+        "",
+        "## 用户痛点",
+        pain_points or "暂无评论痛点表。请补充好评关键词、差评原文、问题类型和产品机会。",
+        "",
+        "## 差异化机会",
+        opportunity_map or "暂无机会地图。请基于竞品空位、评论痛点和渠道趋势整理差异化机会。",
+        "",
+        "## 风险与建议",
+        risk_text,
+        "",
+        "## 证据与待核验",
+        "来源清单：",
+        source_list or "暂无来源清单，需要兵部补充来源 URL、发布日期、机构和可信度。",
+        "",
+        "截图清单：",
+        screenshot_plan or "暂无截图清单，需要补充平台页面、榜单页或商品详情页截图目标。",
+    ]).strip()
+
+
+def _pick_section(report: str, keywords: tuple[str, ...], fallback_chars: int = 400) -> str:
+    lines = _collect_lines(report, keywords)
+    if lines:
+        return "\n".join(f"- {line}" for line in lines[:6])
+    clean = _strip_markdown(report)
+    return clean[:fallback_chars]
+
+
+def _collect_lines(report: str, keywords: tuple[str, ...]) -> list[str]:
+    lines = []
+    for line in report.splitlines():
+        clean = _strip_markdown(line)
+        if clean and any(keyword in clean for keyword in keywords):
+            lines.append(clean)
+    return lines
 
 
 def _make_briefing(report: str) -> str:

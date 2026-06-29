@@ -260,6 +260,7 @@ let researchTimelineTimer = null;
 
 const RESEARCH_REQUIRED_ARTIFACTS = [
     ['report', '完整报告'],
+    ['standard_report', '标准报告'],
     ['briefing', '摘要简报'],
     ['source_list', '来源清单'],
     ['data_table', '数据要点表'],
@@ -590,7 +591,7 @@ function selectResearchArtifact(index) {
     document.querySelectorAll('.artifact-item').forEach((el, i) => {
         el.classList.toggle('active', i === index);
     });
-    const isMarkdown = artifact.artifact_type === 'report' || artifact.artifact_type === 'briefing';
+    const isMarkdown = ['report', 'standard_report', 'briefing'].includes(artifact.artifact_type);
     const image = artifact.artifact_type === 'screenshot_evidence' && artifact.uri
         ? `<div class="evidence-preview"><img src="${escapeHtml(artifact.uri)}" alt="${escapeHtml(artifact.title)}"></div>`
         : '';

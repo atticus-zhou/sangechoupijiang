@@ -30,6 +30,7 @@ class SampleProjectFixtureTests(unittest.TestCase):
         for artifact_type in (
             "research_plan",
             "report",
+            "standard_report",
             "briefing",
             "source_list",
             "screenshot_plan",
@@ -42,6 +43,8 @@ class SampleProjectFixtureTests(unittest.TestCase):
         self.assertIn("民用无人机", by_type["report"]["content"])
         self.assertIn("调研计划", by_type["research_plan"]["title"])
         self.assertIn("截图", by_type["research_plan"]["content"])
+        self.assertIn("## 行业概览", by_type["standard_report"]["content"])
+        self.assertIn("## 风险与建议", by_type["standard_report"]["content"])
         self.assertIn("local://pending", by_type["source_list"]["content"])
         self.assertIn("evidence_01.png", by_type["screenshot_plan"]["content"])
 

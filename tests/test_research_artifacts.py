@@ -33,6 +33,7 @@ class ResearchArtifactTests(unittest.TestCase):
         artifact_types = {a["artifact_type"] for a in artifacts}
 
         self.assertIn("report", artifact_types)
+        self.assertIn("standard_report", artifact_types)
         self.assertIn("briefing", artifact_types)
         self.assertIn("chart_plan", artifact_types)
         self.assertIn("screenshot_plan", artifact_types)
@@ -42,6 +43,20 @@ class ResearchArtifactTests(unittest.TestCase):
         self.assertIn("review_pain_points", artifact_types)
         self.assertIn("opportunity_map", artifact_types)
         self.assertTrue(all(a["artifact_id"].startswith("art_task1_") for a in artifacts))
+
+        by_type = {a["artifact_type"]: a for a in artifacts}
+        standard_report = by_type["standard_report"]["content"]
+        for heading in (
+            "## 行业概览",
+            "## 竞品对比",
+            "## 价格带与数据要点",
+            "## 用户痛点",
+            "## 差异化机会",
+            "## 风险与建议",
+            "## 证据与待核验",
+        ):
+            self.assertIn(heading, standard_report)
+        self.assertIn("来源清单", standard_report)
 
     def test_source_list_falls_back_when_sources_are_missing(self):
         result = {
@@ -106,6 +121,8 @@ class ResearchArtifactTests(unittest.TestCase):
         self.assertIn("line", by_type["chart_plan"]["content"])
         self.assertIn("evidence_01.png", by_type["screenshot_plan"]["content"])
         self.assertIn("样例竞品", by_type["competitor_table"]["content"])
+        self.assertIn("样例竞品", by_type["standard_report"]["content"])
+        self.assertIn("https://example.com/report", by_type["standard_report"]["content"])
 
 
 if __name__ == "__main__":

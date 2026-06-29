@@ -13,6 +13,7 @@ from src.offices import RESEARCH_OFFICE
 class ResearchOfficeWorkflowTests(unittest.TestCase):
     def test_research_office_declares_plan_and_human_assisted_evidence(self):
         self.assertIn("research_plan", RESEARCH_OFFICE.artifact_types)
+        self.assertIn("standard_report", RESEARCH_OFFICE.artifact_types)
         self.assertIn("辅助", RESEARCH_OFFICE.description)
         self.assertNotIn("一键全自动", RESEARCH_OFFICE.description)
         self.assertIn("账号权限", "；".join(RESEARCH_OFFICE.acceptance_criteria))

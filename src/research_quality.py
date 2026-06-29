@@ -7,6 +7,7 @@ import re
 
 REQUIRED_ARTIFACTS = {
     "report",
+    "standard_report",
     "briefing",
     "source_list",
     "data_table",
@@ -27,6 +28,11 @@ def assess_research_package(artifacts: list[dict]) -> dict:
         a.get("content", "")
         for a in artifacts
         if a.get("artifact_type") == "report"
+    )
+    standard_report_text = "\n\n".join(
+        a.get("content", "")
+        for a in artifacts
+        if a.get("artifact_type") == "standard_report"
     )
     source_text = "\n\n".join(
         a.get("content", "")
@@ -52,6 +58,23 @@ def assess_research_package(artifacts: list[dict]) -> dict:
         warnings.append("缺少差评痛点分析，产品避坑依据不足。")
     if not any(a.get("artifact_type") == "opportunity_map" for a in artifacts):
         warnings.append("缺少差异化机会表，产品规划指向不足。")
+
+    required_sections = (
+        "## 行业概览",
+        "## 竞品对比",
+        "## 价格带与数据要点",
+        "## 用户痛点",
+        "## 差异化机会",
+        "## 风险与建议",
+        "## 证据与待核验",
+    )
+    missing_sections = [section for section in required_sections if section not in standard_report_text]
+    if missing_sections:
+        warnings.append("标准报告缺少必要章节：" + "、".join(missing_sections))
+    if standard_report_text and "来源清单" not in standard_report_text:
+        warnings.append("标准报告缺少来源清单引用。")
+    if standard_report_text and "截图清单" not in standard_report_text:
+        warnings.append("标准报告缺少截图清单引用。")
 
     score = 100
     score -= len(missing) * 12
