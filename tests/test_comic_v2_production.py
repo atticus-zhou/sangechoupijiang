@@ -69,7 +69,7 @@ def full_manifest():
             "evidence_quote": "裂纹月灯",
             "scene_ids": ["scene_01"],
             "story_purpose": "推动主角发现真相的核心证物",
-            "visual_locks": ["银白裂纹"],
+            "visual_locks": ["银白裂纹", "古铜灯架"],
             "allowed_changes": ["发光强度"],
         },
         {
@@ -78,7 +78,7 @@ def full_manifest():
             "evidence_quote": "月塔",
             "scene_ids": ["scene_01"],
             "story_purpose": "高潮发生空间",
-            "visual_locks": ["木石环形塔身"],
+            "visual_locks": ["木石环形塔身", "中央灯芯"],
             "allowed_changes": ["光线"],
         },
     ])
@@ -94,25 +94,34 @@ class FakePromptProvider:
         return LLMResponse(content=self.responses.pop(0), model="fake/prompt", tokens_used=10)
 
 
-def prompt_response(asset_id):
-    return json.dumps({"prompts": [
-        {
-            "object_id": asset_id,
-            "image_kind": "three_view",
+def prompt_response(asset):
+    prompts = []
+    for kind in asset.planned_images:
+        if asset.asset_type == "scene":
+            purpose = {
+                "wide": "广角空间图：展示空间边界、入口、出口、纵深和主要陈设。",
+                "top_down": "俯视布局图：展示平面结构、走位区域和关键陈设位置。",
+                "camera_angles": "关键机位参考：同一空间的远景、中景、低角度和特写背景机位。",
+            }.get(kind, f"{kind}：展示空间结构。")
+            background = "只展示空场景，空间结构清晰，保留真实空间环境背景。"
+        else:
+            purpose = f"{kind}：作为一致性参考，不表现剧情动作。"
+            background = "纯白或近白干净背景。"
+        prompts.append({
+            "object_id": asset.asset_id,
+            "image_kind": kind,
             "purpose": "identity_reference",
-            "generator_prompt": "林昭人物三视图，靛青窄袖长袍，固定发髻，电影级国风厚涂，纯白干净背景，柔和工作室布光",
+            "generator_prompt": (
+                f"资产ID：{asset.asset_id}。资产名称：{asset.name}。{purpose}"
+                f"故事用途：作为一致性参考，不表现剧情动作。视觉锁定：{asset.visual_locks[0]}。"
+                "构图：主体居中，边缘完整，适合后续参考。"
+                "光线：柔和工作室布光，结构和材质清晰。"
+                f"电影级国风厚涂动画，架空古代，{background}"
+            ),
             "negative_prompt": ["现代车辆", "文字水印"],
             "style_id": bundle().visual.style_id,
-        },
-        {
-            "object_id": asset_id,
-            "image_kind": "expression_sheet",
-            "purpose": "identity_reference",
-            "generator_prompt": "林昭六种表情设定，靛青窄袖长袍，固定发髻，同一脸型，纯白干净背景，电影级国风厚涂",
-            "negative_prompt": ["脸型变化", "文字水印"],
-            "style_id": bundle().visual.style_id,
-        },
-    ]}, ensure_ascii=False)
+        })
+    return json.dumps({"prompts": prompts}, ensure_ascii=False)
 
 
 def review_result(status="pass", *, ready=True, revision_prompt=""):
@@ -135,7 +144,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         from src.comic_office.v2.production import direct_asset_prompts
 
         item = manifest().items[0]
-        provider = FakePromptProvider([prompt_response(item.asset_id)])
+        provider = FakePromptProvider([prompt_response(item)])
         package = await direct_asset_prompts(
             bundle(),
             manifest(),
@@ -161,6 +170,94 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
                 llm=provider,
             )
 
+    async def test_template_like_prompt_response_is_rejected_before_image_generation(self):
+        from src.comic_office.v2.production import ProductionError, direct_asset_prompts
+
+        item = manifest().items[0]
+        prompts = []
+        for kind in item.planned_images:
+            prompts.append({
+                "object_id": item.asset_id,
+                "image_kind": kind,
+                "purpose": "identity_reference",
+                "generator_prompt": f"{item.name} {kind}，{item.visual_locks[0]}，纯白干净背景",
+                "negative_prompt": ["文字水印"],
+                "style_id": bundle().visual.style_id,
+            })
+        provider = FakePromptProvider([json.dumps({"prompts": prompts}, ensure_ascii=False)] * 2)
+
+        with self.assertRaisesRegex(ProductionError, "资产ID|构图|光线|故事用途"):
+            await direct_asset_prompts(
+                bundle(),
+                manifest(),
+                ModelConfig(provider="openai", model="fake", api_key="test"),
+                llm=provider,
+            )
+
+    async def test_scene_prompt_with_white_background_is_rejected_before_image_generation(self):
+        from src.comic_office.v2.production import ProductionError, direct_asset_prompts
+
+        items = full_manifest().items
+        responses = [prompt_response(items[0]), prompt_response(items[1])]
+        scene = items[2]
+        bad_scene_prompts = []
+        for kind in scene.planned_images:
+            bad_scene_prompts.append({
+                "object_id": scene.asset_id,
+                "image_kind": kind,
+                "purpose": "identity_reference",
+                "generator_prompt": (
+                    f"资产ID：{scene.asset_id}。资产名称：{scene.name}。{kind}。"
+                    f"故事用途：作为空间参考。视觉锁定：{scene.visual_locks[0]}。"
+                    "构图：主体居中，边缘完整。"
+                    "光线：柔和工作室布光。"
+                    "电影级国风厚涂动画，架空古代，纯白干净背景。"
+                ),
+                "negative_prompt": ["人物", "文字水印"],
+                "style_id": bundle().visual.style_id,
+            })
+        bad_scene_response = json.dumps({"prompts": bad_scene_prompts}, ensure_ascii=False)
+        responses.extend([bad_scene_response, bad_scene_response])
+        provider = FakePromptProvider(responses)
+
+        with self.assertRaisesRegex(ProductionError, "场景基础资产不能使用白底"):
+            await direct_asset_prompts(
+                bundle(),
+                full_manifest(),
+                ModelConfig(provider="openai", model="fake", api_key="test"),
+                llm=provider,
+            )
+
+    async def test_asset_prompt_without_story_era_is_rejected_before_image_generation(self):
+        from src.comic_office.v2.production import ProductionError, direct_asset_prompts
+
+        item = manifest().items[0]
+        prompts = []
+        for kind in item.planned_images:
+            prompts.append({
+                "object_id": item.asset_id,
+                "image_kind": kind,
+                "purpose": "identity_reference",
+                "generator_prompt": (
+                    f"资产ID：{item.asset_id}。资产名称：{item.name}。{kind}。"
+                    f"故事用途：作为一致性参考。视觉锁定：{item.visual_locks[0]}。"
+                    "构图：角色居中，边缘完整。"
+                    "光线：柔和工作室布光。"
+                    "电影级国风厚涂动画，纯白干净背景。"
+                ),
+                "negative_prompt": ["文字水印"],
+                "style_id": bundle().visual.style_id,
+            })
+        provider = FakePromptProvider([json.dumps({"prompts": prompts}, ensure_ascii=False)] * 2)
+
+        with self.assertRaisesRegex(ProductionError, "故事时代"):
+            await direct_asset_prompts(
+                bundle(),
+                manifest(),
+                ModelConfig(provider="openai", model="fake", api_key="test"),
+                llm=provider,
+            )
+
     async def test_generation_establishes_baseline_then_reviews_next_image_against_it(self):
         from src.comic_office.v2.production import direct_asset_prompts, produce_asset_images
 
@@ -169,7 +266,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
             bundle(),
             manifest(),
             ModelConfig(provider="openai", model="fake", api_key="test"),
-            llm=FakePromptProvider([prompt_response(item.asset_id)]),
+            llm=FakePromptProvider([prompt_response(item)]),
         )
         review_requests = []
 
@@ -212,7 +309,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         item = manifest().items[0]
         package = await direct_asset_prompts(
             bundle(), manifest(), ModelConfig(provider="openai", model="fake", api_key="test"),
-            llm=FakePromptProvider([prompt_response(item.asset_id)]),
+            llm=FakePromptProvider([prompt_response(item)]),
         )
         generated_prompts = []
         review_count = 0
@@ -251,20 +348,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         from src.comic_office.v2.production import direct_asset_prompts, direct_shot_cards, prompt_package_from_dict
 
         assets = full_manifest()
-        responses = []
-        for item in assets.items:
-            prompts = []
-            for kind in item.planned_images:
-                background = "纯白干净背景" if item.asset_type in {"character", "prop"} else "完整真实空间"
-                prompts.append({
-                    "object_id": item.asset_id,
-                    "image_kind": kind,
-                    "purpose": "identity_reference",
-                    "generator_prompt": f"{item.name} {kind}，{item.visual_locks[0]}，{background}",
-                    "negative_prompt": ["文字水印"],
-                    "style_id": bundle().visual.style_id,
-                })
-            responses.append(json.dumps({"prompts": prompts}, ensure_ascii=False))
+        responses = [prompt_response(item) for item in assets.items]
         package = await direct_asset_prompts(
             bundle(), assets, ModelConfig(provider="openai", model="fake", api_key="test"),
             llm=FakePromptProvider(responses),

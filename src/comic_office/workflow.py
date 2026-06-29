@@ -742,6 +742,16 @@ def parse_comic_request(user_request: str) -> dict:
         "platform": _line_value(text, "Platform") or _line_value(text, "平台"),
         "visual_style": _line_value(text, "Visual style") or _line_value(text, "风格"),
         "extra": _line_value(text, "Extra requirements") or _line_value(text, "创作指令"),
+        "character_references": _section_after(
+            text,
+            "Character references",
+            stop_markers=("Style references:", "Input mode:", "Full script:", "Creative brief:", "User answers:", "Script preview:", "Confirmed script:", "Script notes:"),
+        ),
+        "style_references": _section_after(
+            text,
+            "Style references",
+            stop_markers=("Input mode:", "Full script:", "Creative brief:", "User answers:", "Script preview:", "Confirmed script:", "Script notes:"),
+        ),
         "input_mode": _line_value(text, "Input mode"),
         "full_script": _section_after(
             text,
@@ -763,6 +773,8 @@ def parse_comic_request(user_request: str) -> dict:
         "platform": fields["platform"] or "竖屏短视频平台",
         "visual_style": fields["visual_style"] or DEFAULT_STYLE,
         "extra": fields["extra"],
+        "character_references": fields["character_references"],
+        "style_references": fields["style_references"],
         "user_answers": fields["user_answers"],
         "script_notes": fields["script_notes"],
         "input_mode": fields["input_mode"] or ("full_script" if fields["full_script"] else "idea"),
@@ -1194,6 +1206,8 @@ def advance_comic_cabinet_session(session: dict, user_message: str = "") -> dict
             "stage": "ready_to_confirm",
             "ready_to_produce": True,
         }
+    suggested_replies = _cabinet_suggested_replies(story_state, creative_brief, script_preview, session)
+    story_state["suggested_replies"] = suggested_replies
     # 对于仅作内部逻辑计算而不调用 LLM 的 advance 流程，不再向 messages 注入任何假数据
     session["creative_brief"] = creative_brief
     session["script_preview"] = script_preview
@@ -1204,17 +1218,20 @@ def advance_comic_cabinet_session(session: dict, user_message: str = "") -> dict
     session["summary"] = _cabinet_summary_block(story_state, creative_brief)
     if session.get("input_mode") == "full_script":
         session["summary"] = "完整故事模式：已读取你的原文，默认不改写原文，只做结构校对、风险提醒和生产前确认。"
+    assistant_message = _fallback_cabinet_assistant_message(story_state, creative_brief, script_preview, session)
+    session["assistant_message"] = assistant_message
 
     return {
         "status": "script_ready" if story_state["ready_to_produce"] else "needs_more_discussion",
         "stage": story_state["stage"],
         "ready_to_produce": story_state["ready_to_produce"],
-        "assistant_message": "",
+        "assistant_message": assistant_message,
+        "suggested_replies": suggested_replies,
         "cabinet_roles": [],
         "creative_brief": creative_brief,
         "script_preview": script_preview,
         "session": session,
-        "preview": "",
+        "preview": _format_cabinet_turn(session, assistant_message, creative_brief, script_preview),
     }
 
 
@@ -1245,6 +1262,14 @@ async def advance_comic_cabinet_session_llm(
         # 显式覆盖 assistant_message 避免被旧逻辑冲掉
         if "assistant_message" in story_payload:
             result["assistant_message"] = story_payload["assistant_message"]
+        suggested_replies = _cabinet_suggested_replies(
+            result["session"].get("story_state") or {},
+            result.get("creative_brief") or {},
+            result.get("script_preview") or {},
+            result.get("session") or {},
+        )
+        result["suggested_replies"] = suggested_replies
+        result["session"].setdefault("story_state", {})["suggested_replies"] = suggested_replies
     else:
         # 当模型没有正常返回时，直接抛出异常，不再走兜底逻辑
         raise RuntimeError("AI 编剧模型未返回结果，请检查 API 配置或重试。")
@@ -1340,6 +1365,7 @@ def _apply_llm_story_payload(result: dict, payload: dict) -> dict:
         result["session"]["story_state"]["stage"] = "drafting"
         result["session"]["stage"] = "drafting"
     result["assistant_message"] = payload.get("assistant_message") or "我先按你的想法写出一版故事稿，你可以直接说哪里不对，我继续改。"
+    result["session"]["assistant_message"] = result["assistant_message"]
     result["session"]["llm_story"] = True
     result["session"]["llm_story_model"] = payload.get("model", "")
     if result["session"].get("messages") and result["session"]["messages"][-1].get("role") == "assistant":
@@ -1397,9 +1423,11 @@ def _cabinet_story_state(
     else:
         stage = "discovering"
     questions = _cabinet_follow_up_questions(missing, script_preview, creative_brief)
+    direction_options = _cabinet_direction_options(idea, creative_brief, script_preview)
     return {
         "missing": missing,
         "questions": questions,
+        "direction_options": direction_options,
         "completeness": round(completeness, 2),
         "stage": stage,
         "ready_to_produce": stage == "ready_to_confirm",
@@ -1592,7 +1620,7 @@ def _story_writer_system_prompt() -> str:
     return "\n".join([
         "你现在是 AI 漫剧办公室的“主创对话官”。你的任务是像真人编剧在聊天一样，陪用户把模糊灵感变成可生产的剧本。",
         "你的输出必须是一个 JSON 对象，包含 assistant_message 和 story 两个字段。",
-        "assistant_message：这是你说给用户听的话。必须自然、口语化、接住用户上一句话。每轮只能问 1 个最值得问的问题，问题要服务于下一版故事，禁止模板化追问，禁止像填表一样连问一堆。",
+        "assistant_message：这是你说给用户听的话。必须自然、口语化、接住用户上一句话。每轮只能问 1 个最值得问的问题，并用一句话解释你为什么问这个问题；问题要服务于下一版故事，禁止模板化追问，禁止像填表一样连问一堆。",
         "story：这是你后台生成的故事提案，包含 title, genre, logline, why_it_happens, how_it_happens, protagonist_arc, story_draft, episode_outline, key_turns, questions。",
         "story_draft 要用中文自然段写完整故事，至少包含开端、发展、高潮、结尾。",
         "如果用户提供的是完整剧本/完整故事，story_draft 必须保留用户原文，不得擅自改写、续写、换角色、换结局；你只能在 assistant_message 里提出一个最关键的确认或修改建议。",
@@ -1731,6 +1759,86 @@ def _cabinet_chair_summary(
     return questions[0]
 
 
+def _fallback_cabinet_assistant_message(
+    story_state: dict,
+    creative_brief: dict,
+    script_preview: dict,
+    session: dict,
+) -> str:
+    """Human-readable creator reply for non-LLM cabinet turns."""
+    if session.get("input_mode") == "full_script":
+        if story_state.get("ready_to_produce"):
+            return "我已按完整剧本模式读取你的原文，这一步不会替你改写故事。你可以先确认人物、冲突和结尾都按原稿来，然后进入生产拆解。"
+        question = (story_state.get("questions") or ["这版原稿里，哪一点是绝对不能被后续拆解改动的？"])[0]
+        return f"我已把它当成你的原稿来处理，不会擅自改故事。我问这个是因为后面拆人物、道具和场景时要保护原文重点：{question}"
+
+    core = (
+        (creative_brief.get("story_promise") or "").strip()
+        or (script_preview.get("logline") or "").strip()
+        or (session.get("idea") or "").strip()
+    )
+    core = core[:80] if core else "一个还在成型的故事方向"
+    if story_state.get("ready_to_produce"):
+        return f"我先理解成：{core}。这版已经能进入确认了，你可以直接确认故事，也可以只补一句最想保留或最想改掉的地方。"
+
+    question = (story_state.get("questions") or ["你现在最想先确定主角、冲突还是结尾？"])[0]
+    missing = "、".join((story_state.get("missing") or [])[:2]) or "故事的关键选择"
+    options = story_state.get("direction_options") or []
+    option_text = ""
+    if options:
+        rendered = "；".join(
+            f"{item.get('label')}：{item.get('summary')}"
+            for item in options[:3]
+            if item.get("label") and item.get("summary")
+        )
+        option_text = f" 你也可以直接选一个方向：{rendered}。"
+    return f"我先理解成：{core}。我问这个是因为后面所有人物、道具、场景都会按这里来拆，{missing}如果没锁住，后面很容易跑偏：{question}{option_text}"
+
+
+def _cabinet_suggested_replies(
+    story_state: dict,
+    creative_brief: dict,
+    script_preview: dict,
+    session: dict,
+) -> list[str]:
+    """Return short user-editable replies so the cabinet feels conversational."""
+    if session.get("input_mode") == "full_script":
+        if story_state.get("ready_to_produce"):
+            return [
+                "我想走原稿锁定路线，人物、冲突和结尾都不要改。",
+                "我想先补充一条绝对不能改动的角色关系。",
+            ]
+        return [
+            "我想走原稿优先路线，先保护故事原文再做拆解。",
+            "我想补充哪些设定不能被后续生产改动。",
+        ]
+
+    if story_state.get("ready_to_produce"):
+        return [
+            "我想走当前这版，可以进入生产拆解。",
+            "我想再改一下主角动机，然后再生产。",
+        ]
+
+    replies: list[str] = []
+    for option in (story_state.get("direction_options") or [])[:3]:
+        summary = str(option.get("summary") or "").strip()
+        if "情绪写实" in summary:
+            text = "我想走情绪写实线，重点拍人物为什么走到这一步。"
+        elif "反转悬念" in summary:
+            text = "我想走反转悬念线，先把开场危机做成第一集钩子。"
+        elif "救赎成长" in summary:
+            text = "我想走救赎成长线，结尾留一点温柔和希望。"
+        else:
+            label = str(option.get("label") or "这个方向").strip()
+            text = f"我想走{label}，请按这个方向继续完善故事。"
+        replies.append(text[:80])
+
+    if not replies:
+        question = (story_state.get("questions") or ["主角、阻碍和结尾方向"])[0]
+        replies.append(f"我想先回答这个问题：{question}"[:80])
+    return replies[:3]
+
+
 def _cabinet_summary_block(story_state: dict, creative_brief: dict) -> str:
     return "\n".join([
         f"阶段：{story_state.get('stage', '')}",
@@ -1754,6 +1862,34 @@ def _cabinet_follow_up_questions(missing: list[str], script_preview: dict, creat
     if not questions:
         questions.append("你觉得这个故事哪里还需要再调整一下吗？")
     return questions
+
+
+def _cabinet_direction_options(idea: str, creative_brief: dict, script_preview: dict) -> list[dict]:
+    """Give the user selectable creative directions instead of only asking."""
+    seed = (
+        (script_preview or {}).get("logline")
+        or (creative_brief or {}).get("core_idea")
+        or idea
+        or "当前灵感"
+    ).strip()
+    seed = seed[:48] or "当前灵感"
+    return [
+        {
+            "label": "方向一",
+            "summary": f"情绪写实线：围绕“{seed}”追问人物为什么走到这一步，重点拍亲情、愧疚和最后的选择。",
+            "reason": "适合需要观众共情、评论区讨论人物关系的短剧。",
+        },
+        {
+            "label": "方向二",
+            "summary": f"反转悬念线：把“{seed}”做成开场钩子，后面逐步揭开被隐瞒的真相。",
+            "reason": "适合第一集要强钩子、后续靠信息差追看的短剧。",
+        },
+        {
+            "label": "方向三",
+            "summary": f"救赎成长线：从危机现场切入，让人物在后续行动里补上一句没说出口的话。",
+            "reason": "适合更温柔、有余味、结尾希望落在治愈感的故事。",
+        },
+    ]
 
 
 def _has_story_anchor(text: str, anchor: str) -> bool:

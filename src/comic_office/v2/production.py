@@ -410,6 +410,7 @@ def _prompt_director_system_prompt(asset: AssetPlan) -> str:
         [
             "你是 AI 漫剧制片办公室的工部提示词导演。",
             "只为这个资产及其计划图组写专属生图提示词，禁止套用同一段模板替换名字。",
+            "每条 generator_prompt 必须写明资产ID、资产名称、故事用途边界、构图、光线、视觉锁定和图种目的。",
             "基础人物和道具图用于建立身份，不讲剧情；人物和道具使用纯白或近白干净背景。",
             "基础场景图必须是空场景并体现真实空间，禁止白底。",
             f"本次资产类型：{asset.asset_type}；计划图组：{','.join(asset.planned_images)}。",
@@ -491,10 +492,9 @@ def _prompt_director_user_prompt(bundle: ContractBundle, manifest: AssetManifest
             f"资产清单版本：{manifest.version}",
             f"资产：{json.dumps(asdict(asset), ensure_ascii=False)}",
             f"视觉母版：{json.dumps(asdict(bundle.visual), ensure_ascii=False)}",
-            "请写出每一种计划图对应的完整、可直接执行的中文提示词。",
+            "请写出每一种计划图对应的完整、可直接执行的中文提示词。每条都必须像为当前资产单独写的，而不是复制模板。",
         ]
     )
-
 
 def _validate_asset_prompt_set(
     asset: AssetPlan,
@@ -512,9 +512,65 @@ def _validate_asset_prompt_set(
             raise ProductionError("提示词没有写明资产名称")
         if not any(lock in prompt.generator_prompt for lock in asset.visual_locks):
             raise ProductionError("提示词没有落实资产视觉锁定")
-        if asset.asset_type in {"character", "prop"} and "白" not in prompt.generator_prompt:
-            raise ProductionError("人物和道具基础资产必须使用白色干净背景")
+        if asset.asset_id not in prompt.generator_prompt and "资产ID" not in prompt.generator_prompt:
+            raise ProductionError("提示词没有写明资产ID")
+        for required_term in ("构图", "光线", "故事用途"):
+            if required_term not in prompt.generator_prompt:
+                raise ProductionError(f"提示词缺少{required_term}，看起来仍像模板化输出")
+        _validate_asset_prompt_style(asset, visual, prompt)
 
+
+def _validate_asset_prompt_style(asset: AssetPlan, visual: VisualBible, prompt: PromptPlan) -> None:
+    body = prompt.generator_prompt
+    if visual.medium and visual.medium not in body:
+        raise ProductionError("提示词没有继承故事画面风格")
+    if visual.era and visual.era not in body:
+        raise ProductionError("提示词没有继承故事时代")
+    for prohibited in visual.prohibited_elements:
+        text = str(prohibited or "").strip()
+        if text and text in body:
+            raise ProductionError(f"提示词正文写入了禁用元素：{text}")
+    if asset.asset_type in {"character", "prop"}:
+        if "白" not in body or "干净" not in body:
+            raise ProductionError("人物和道具基础资产必须使用白色干净背景")
+        if "参考" not in body and "资产" not in body:
+            raise ProductionError("人物和道具基础资产必须明确用于参考")
+        forbidden_story_terms = ("剧情动作", "剧情现场", "剧情场景", "人物入镜")
+        if any(term in body and not _term_is_negated(body, term) for term in forbidden_story_terms):
+            raise ProductionError("人物和道具基础资产不能混入剧情场面")
+    elif asset.asset_type == "scene":
+        if any(term in body for term in ("纯白", "近白", "白底", "白色干净背景", "棚拍")):
+            raise ProductionError("场景基础资产不能使用白底")
+        if "空间" not in body:
+            raise ProductionError("场景基础资产必须表达空间理解")
+        _validate_scene_image_kind(prompt)
+
+
+def _validate_scene_image_kind(prompt: PromptPlan) -> None:
+    body = prompt.generator_prompt
+    requirements = {
+        "wide": ("广角", "边界", "入口", "出口", "纵深"),
+        "top_down": ("俯视", "平面", "布局", "走位"),
+        "camera_angles": ("机位", "远景", "中景", "低角度", "特写背景"),
+    }
+    terms = requirements.get(prompt.image_kind)
+    if not terms:
+        return
+    if not any(term in body for term in terms):
+        raise ProductionError(f"场景 {prompt.image_kind} 提示词没有写清空间图用途")
+
+
+def _term_is_negated(body: str, term: str) -> bool:
+    return any(
+        pattern in body
+        for pattern in (
+            f"不表现{term}",
+            f"不加入{term}",
+            f"不发生{term}",
+            f"没有{term}",
+            f"禁止{term}",
+        )
+    )
 
 def _ordered_prompts(asset: AssetPlan, prompts: tuple[PromptPlan, ...]) -> tuple[PromptPlan, ...]:
     by_kind = {prompt.image_kind: prompt for prompt in prompts}

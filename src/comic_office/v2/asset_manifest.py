@@ -24,6 +24,11 @@ _DEFAULT_IMAGES = {
     "prop": ("turnaround", "state_sheet"),
     "scene": ("wide", "top_down", "camera_angles"),
 }
+_GENERIC_ASSET_NAMES = {
+    "解释", "关系", "线索", "关键", "故事", "人物", "身份", "主角", "对手",
+    "镜头", "场景", "道具", "物件", "东西", "画面", "证据", "秘密", "真相",
+}
+
 
 
 @dataclass(frozen=True)
@@ -58,12 +63,83 @@ class AssetManifest:
     items: tuple[AssetPlan, ...]
     review_status: str = "awaiting_user_review"
     revision_note: str = ""
+    previous_manifest_hash: str = ""
+    revision_summary: dict[str, list[dict[str, str]]] = field(default_factory=dict)
     source_story: str = field(default="", repr=False)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload.pop("source_story", None)
         return payload
+
+
+def asset_manifest_review_view(manifest: AssetManifest | dict[str, Any]) -> dict[str, Any]:
+    """Return a human review projection without downstream prompt details."""
+    restored = manifest
+    if isinstance(manifest, dict):
+        source_story = str(manifest.get("source_story") or "")
+        if source_story:
+            restored = asset_manifest_from_dict(manifest, source_story=source_story)
+        else:
+            restored = _asset_manifest_unchecked_from_dict(manifest)
+    if not isinstance(restored, AssetManifest):
+        raise ManifestValidationError("manifest must be an AssetManifest or dict")
+
+    groups = {
+        "characters": [],
+        "props": [],
+        "scenes": [],
+    }
+    group_by_type = {
+        "character": "characters",
+        "prop": "props",
+        "scene": "scenes",
+    }
+    image_labels = {
+        "three_view": "三视图",
+        "expression_sheet": "表情表",
+        "turnaround": "多角度转面",
+        "state_sheet": "状态变化图",
+        "wide": "广角空间图",
+        "top_down": "俯视布局图",
+        "camera_angles": "机位参考图",
+    }
+    for item in restored.items:
+        groups[group_by_type[item.asset_type]].append({
+            "asset_id": item.asset_id,
+            "name": item.name,
+            "type": item.asset_type,
+            "type_label": {"character": "人物", "prop": "道具", "scene": "场景"}[item.asset_type],
+            "source_evidence": item.evidence.evidence_quote,
+            "appearances": list(item.evidence.scene_ids),
+            "story_use": item.story_purpose,
+            "visual_locks": list(item.visual_locks),
+            "allowed_changes": list(item.allowed_changes),
+            "planned_images": list(item.planned_images),
+            "planned_image_labels": [image_labels.get(kind, kind) for kind in item.planned_images],
+            "review_status": item.review_status,
+        })
+    return {
+        "title": "资产拆解审核",
+        "manifest_id": restored.manifest_id,
+        "manifest_version": restored.version,
+        "manifest_hash": restored.manifest_hash,
+        "review_status": restored.review_status,
+        "revision_note": restored.revision_note,
+        "previous_manifest_hash": restored.previous_manifest_hash,
+        "revision_summary": _empty_revision_summary() | dict(restored.revision_summary or {}),
+        "counts": {
+            "characters": len(groups["characters"]),
+            "props": len(groups["props"]),
+            "scenes": len(groups["scenes"]),
+        },
+        "groups": groups,
+        "human_guidance": (
+            "这次重拆已按退回意见生成新版本，请重点核对新增、删除、修改是否符合预期。"
+            if restored.previous_manifest_hash
+            else "只确认人物、道具和场景是否准确；提示词、图片和 Word 画布会在确认后继续生成。"
+        ),
+    }
 
 
 def build_asset_manifest(
@@ -131,6 +207,7 @@ def revise_asset_manifest(
     )
     if content_hash == previous.manifest_hash:
         raise NoManifestChangeError("revision produced no asset changes")
+    revision_summary = _revision_summary(previous.items, merged_items)
     return AssetManifest(
         manifest_id=previous.manifest_id,
         manifest_hash=content_hash,
@@ -144,6 +221,8 @@ def revise_asset_manifest(
         items=merged_items,
         review_status="awaiting_user_review",
         revision_note=note,
+        previous_manifest_hash=previous.manifest_hash,
+        revision_summary=revision_summary,
     )
 
 
@@ -169,6 +248,7 @@ def replace_asset_manifest(
     )
     if content_hash == previous.manifest_hash:
         raise NoManifestChangeError("revision produced no asset changes")
+    revision_summary = _revision_summary(previous.items, items)
     return AssetManifest(
         manifest_id=previous.manifest_id,
         manifest_hash=content_hash,
@@ -182,6 +262,8 @@ def replace_asset_manifest(
         items=items,
         review_status="awaiting_user_review",
         revision_note=note,
+        previous_manifest_hash=previous.manifest_hash,
+        revision_summary=revision_summary,
     )
 
 
@@ -221,6 +303,8 @@ def asset_manifest_from_dict(payload: dict[str, Any], *, source_story: str) -> A
         items=tuple(items),
         review_status=str(payload.get("review_status") or "awaiting_user_review"),
         revision_note=str(payload.get("revision_note") or ""),
+        previous_manifest_hash=str(payload.get("previous_manifest_hash") or ""),
+        revision_summary=_normalize_revision_summary(payload.get("revision_summary")),
     )
     expected_hash = _manifest_content_hash(
         restored.story_id,
@@ -232,6 +316,42 @@ def asset_manifest_from_dict(payload: dict[str, Any], *, source_story: str) -> A
     if expected_hash != restored.manifest_hash:
         raise ManifestValidationError("manifest content hash does not match")
     return restored
+
+
+def _asset_manifest_unchecked_from_dict(payload: dict[str, Any]) -> AssetManifest:
+    """Build a review-only manifest when the original story is not present in the response."""
+    items = []
+    for raw in payload.get("items") or []:
+        evidence = raw.get("evidence") or {}
+        items.append(AssetPlan(
+            asset_id=str(raw.get("asset_id") or ""),
+            asset_type=str(raw.get("asset_type") or ""),
+            name=str(raw.get("name") or ""),
+            evidence=AssetEvidence(
+                evidence_quote=str(evidence.get("evidence_quote") or ""),
+                scene_ids=tuple(evidence.get("scene_ids") or ()),
+            ),
+            story_purpose=str(raw.get("story_purpose") or ""),
+            visual_locks=tuple(raw.get("visual_locks") or ()),
+            allowed_changes=tuple(raw.get("allowed_changes") or ()),
+            planned_images=tuple(raw.get("planned_images") or _DEFAULT_IMAGES.get(str(raw.get("asset_type") or ""), ())),
+            review_status=str(raw.get("review_status") or "awaiting_user_review"),
+        ))
+    return AssetManifest(
+        manifest_id=str(payload.get("manifest_id") or ""),
+        manifest_hash=str(payload.get("manifest_hash") or ""),
+        version=_positive_version(payload.get("version") or 1),
+        story_id=str(payload.get("story_id") or ""),
+        story_version=_positive_version(payload.get("story_version") or 1),
+        style_id=str(payload.get("style_id") or ""),
+        style_version=_positive_version(payload.get("style_version") or 1),
+        source_hash=str(payload.get("source_hash") or ""),
+        items=tuple(items),
+        review_status=str(payload.get("review_status") or "awaiting_user_review"),
+        revision_note=str(payload.get("revision_note") or ""),
+        previous_manifest_hash=str(payload.get("previous_manifest_hash") or ""),
+        revision_summary=_normalize_revision_summary(payload.get("revision_summary")),
+    )
 
 
 def _asset_plan(bundle: ContractBundle, payload: dict[str, Any]) -> AssetPlan:
@@ -250,6 +370,60 @@ def _asset_plan_from_manifest(previous: AssetManifest, payload: dict[str, Any]) 
     )
 
 
+def _empty_revision_summary() -> dict[str, list[dict[str, str]]]:
+    return {"added": [], "removed": [], "changed": []}
+
+
+def _revision_summary(previous: tuple[AssetPlan, ...], current: tuple[AssetPlan, ...]) -> dict[str, list[dict[str, str]]]:
+    before = {(item.asset_type, item.name): item for item in previous}
+    after = {(item.asset_type, item.name): item for item in current}
+    summary = _empty_revision_summary()
+    for key in sorted(after.keys() - before.keys()):
+        summary["added"].append(_asset_summary_item(after[key]))
+    for key in sorted(before.keys() - after.keys()):
+        summary["removed"].append(_asset_summary_item(before[key]))
+    for key in sorted(before.keys() & after.keys()):
+        if _asset_compare_payload(before[key]) != _asset_compare_payload(after[key]):
+            summary["changed"].append(_asset_summary_item(after[key]))
+    return summary
+
+
+def _asset_summary_item(item: AssetPlan) -> dict[str, str]:
+    return {"asset_type": item.asset_type, "name": item.name}
+
+
+def _asset_compare_payload(item: AssetPlan) -> dict[str, Any]:
+    return {
+        "evidence_quote": item.evidence.evidence_quote,
+        "scene_ids": tuple(item.evidence.scene_ids),
+        "story_purpose": item.story_purpose,
+        "visual_locks": tuple(item.visual_locks),
+        "allowed_changes": tuple(item.allowed_changes),
+        "planned_images": tuple(item.planned_images),
+    }
+
+
+def _normalize_revision_summary(payload: Any) -> dict[str, list[dict[str, str]]]:
+    if not payload:
+        return {}
+    summary = _empty_revision_summary()
+    if not isinstance(payload, dict):
+        return {}
+    for key in summary:
+        items = payload.get(key) or []
+        if not isinstance(items, list):
+            continue
+        summary[key] = [
+            {
+                "asset_type": str(item.get("asset_type") or ""),
+                "name": str(item.get("name") or ""),
+            }
+            for item in items
+            if isinstance(item, dict) and (item.get("asset_type") or item.get("name"))
+        ]
+    return summary
+
+
 def _normalize_asset_plan(story_id: str, source_story: str, payload: dict[str, Any]) -> AssetPlan:
     if not isinstance(payload, dict):
         raise ManifestValidationError("asset must be an object")
@@ -261,6 +435,10 @@ def _normalize_asset_plan(story_id: str, source_story: str, payload: dict[str, A
     if asset_type not in _ASSET_TYPES:
         raise ManifestValidationError(f"unsupported asset type: {asset_type}")
     name = str(payload["name"]).strip()
+    if name in _GENERIC_ASSET_NAMES:
+        raise ManifestValidationError(f"asset name is too generic: {name}")
+    if name not in source_story:
+        raise ManifestValidationError(f"asset name is not present in story: {name}")
     evidence_quote = str(payload["evidence_quote"]).strip()
     if evidence_quote not in source_story:
         raise ManifestValidationError(f"asset evidence is not present in story: {name}")

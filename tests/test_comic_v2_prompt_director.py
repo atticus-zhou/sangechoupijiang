@@ -75,16 +75,24 @@ def package_parts():
 
 
 class ComicV2PromptDirectorTests(unittest.TestCase):
-    def test_base_character_prompt_has_no_story_action(self):
+    def test_base_character_prompt_is_readable_clean_and_identity_focused(self):
         visual, assets = package_parts()
 
         plan = build_asset_prompt_plan(assets["character"], visual, image_kind="three_view")
 
         self.assertEqual(plan.purpose, "identity_reference")
+        self.assertIn("资产ID", plan.generator_prompt)
+        self.assertIn(assets["character"].asset_id, plan.generator_prompt)
         self.assertIn("纯白或近白色干净背景", plan.generator_prompt)
+        self.assertIn("构图", plan.generator_prompt)
+        self.assertIn("光线", plan.generator_prompt)
+        self.assertIn("靛青窄袖长袍", plan.generator_prompt)
+        self.assertIn("故事用途", plan.generator_prompt)
         self.assertNotIn("冲向", plan.generator_prompt)
         self.assertNotIn("熄灭月塔", plan.generator_prompt)
+        self.assertNotIn("涓", plan.generator_prompt)
         self.assertTrue(all("不要" not in item for item in plan.negative_prompt))
+        self.assertTrue(all(item.startswith("禁止") for item in plan.negative_prompt))
 
     def test_base_prop_prompt_is_clean_and_not_a_story_scene(self):
         visual, assets = package_parts()
@@ -93,6 +101,7 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
 
         self.assertIn("纯白或近白色干净背景", plan.generator_prompt)
         self.assertIn("右上方固定弧形裂纹", plan.generator_prompt)
+        self.assertIn("材质", plan.generator_prompt)
         self.assertNotIn("亡者记忆", plan.generator_prompt)
 
     def test_scene_prompt_preserves_space_without_white_background(self):
@@ -101,8 +110,22 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
         plan = build_asset_prompt_plan(assets["scene"], visual, image_kind="top_down")
 
         self.assertIn("俯视布局", plan.generator_prompt)
+        self.assertIn("空间结构", plan.generator_prompt)
         self.assertIn("圆形外环", plan.generator_prompt)
+        self.assertIn("中央控制环", plan.generator_prompt)
         self.assertNotIn("纯白或近白色干净背景", plan.generator_prompt)
+
+    def test_two_asset_prompts_are_not_same_template_with_name_swap(self):
+        visual, assets = package_parts()
+
+        character = build_asset_prompt_plan(assets["character"], visual, image_kind="expression_sheet")
+        prop = build_asset_prompt_plan(assets["prop"], visual, image_kind="state_sheet")
+
+        self.assertIn("表情", character.generator_prompt)
+        self.assertIn("状态变化", prop.generator_prompt)
+        self.assertIn("脸型", character.generator_prompt)
+        self.assertIn("形状", prop.generator_prompt)
+        self.assertNotEqual(character.generator_prompt.replace("林昭", "裂纹月灯"), prop.generator_prompt)
 
     def test_shot_card_references_assets_and_contains_execution_fields(self):
         visual, assets = package_parts()
@@ -112,9 +135,9 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
             "story_beat": "林昭抵达塔心并决定熄灭月塔",
             "action_chain": ["林昭走向控制环", "双手握住控制环", "逆向转动", "灯火逐层熄灭"],
             "performance_intent": "克制、坚定，不喊叫",
-            "framing": "35mm 中广角",
+            "framing": "35mm 中广角，人物在画面下三分之一",
             "camera_movement": "从侧后方缓慢跟随并绕到正面",
-            "lighting": "冷银顶光逐步熄灭，暗红绳保留暖色",
+            "lighting": "冷银顶光逐步熄灭，暗红余晖保留暖色",
             "dialogue": "林昭：够了。",
             "sound": "控制环摩擦声，随后全城寂静",
             "retry_strategy": "三人调度不稳定时只保留林昭与控制环，其余改为画外声音。",
@@ -134,6 +157,11 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
         )
         self.assertEqual(card.action_chain[-1], "灯火逐层熄灭")
         self.assertIn("首帧参考", card.generator_prompt)
+        self.assertIn("故事目的", card.generator_prompt)
+        self.assertIn("动作链", card.generator_prompt)
+        self.assertIn("表演意图", card.generator_prompt)
+        self.assertIn("摄影", card.generator_prompt)
+        self.assertIn("声音", card.generator_prompt)
         self.assertIn("失败重试", card.retry_strategy_label)
         self.assertTrue(card.production_ready)
 
@@ -157,6 +185,26 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
         self.assertEqual(result.status, "ready_for_prompt_review")
         self.assertTrue(result.production_ready)
         self.assertEqual(result.prompts[0].negative_prompt, ("禁止文字", "禁止剧情动作"))
+
+    def test_model_inline_negative_prompt_is_moved_out_of_generator_prompt(self):
+        result = parse_prompt_director_response(json.dumps({
+            "prompts": [{
+                "object_id": "character_1",
+                "purpose": "identity_reference",
+                "generator_prompt": "人物三视图，纯白背景，不要夸张表情。负面提示词：不要现代车辆，不要文字水印",
+                "negative_prompt": ["不要脸型变化"],
+            }]
+        }, ensure_ascii=False))
+
+        self.assertEqual(result.status, "ready_for_prompt_review")
+        prompt = result.prompts[0]
+        self.assertNotIn("负面提示词", prompt.generator_prompt)
+        self.assertNotIn("不要", prompt.generator_prompt)
+        self.assertIn("禁止夸张表情", prompt.generator_prompt)
+        self.assertEqual(
+            prompt.negative_prompt,
+            ("禁止脸型变化", "禁止现代车辆", "禁止文字水印"),
+        )
 
 
 if __name__ == "__main__":

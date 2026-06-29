@@ -1,4 +1,4 @@
-"""Two-agent, evidence-bound asset planning for comic production V2."""
+﻿"""Two-agent, evidence-bound asset planning for comic production V2."""
 
 from __future__ import annotations
 
@@ -74,6 +74,7 @@ async def plan_asset_manifest(
                 candidate = build_asset_manifest(bundle, assets)
             else:
                 candidate = replace_asset_manifest(previous_manifest, note, assets)
+                _ensure_revision_request_was_applied(previous_manifest, candidate, note)
         except NoManifestChangeError:
             last_error = "退回重拆没有产生变化"
             review_feedback = [last_error, "必须逐条落实用户退回意见并输出完整新清单"]
@@ -91,6 +92,16 @@ async def plan_asset_manifest(
 
     raise AssetPlanningError(last_error or "资产拆解未通过门下省审核")
 
+
+def _ensure_revision_request_was_applied(previous: AssetManifest, candidate: AssetManifest, note: str) -> None:
+    normalized = str(note or "")
+    asks_for_prop = any(word in normalized for word in ("缺少道具", "补道具", "补充道具", "增加道具", "新增道具"))
+    if not asks_for_prop:
+        return
+    previous_props = {item.name for item in previous.items if item.asset_type == "prop"}
+    candidate_props = {item.name for item in candidate.items if item.asset_type == "prop"}
+    if len(candidate_props - previous_props) < 1:
+        raise AssetPlanningError("用户退回意见要求补充道具，但新版资产清单没有新增道具；请补充故事中明确出现的道具，或在资产审核问题中解释为什么不能补。")
 
 async def _review_manifest(bundle: ContractBundle, manifest: AssetManifest, reviewer) -> dict:
     response = await reviewer.chat(

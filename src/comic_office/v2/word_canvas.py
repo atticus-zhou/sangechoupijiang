@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 from docx import Document
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
@@ -28,6 +31,13 @@ CONTENT_WIDTH_DXA = 9360
 
 
 @dataclass(frozen=True)
+class VisualQASummary:
+    status: str
+    preview_page_images: tuple[str, ...]
+    reason: str
+
+
+@dataclass(frozen=True)
 class DocumentAudit:
     embedded_images: int
     asset_count: int
@@ -36,6 +46,11 @@ class DocumentAudit:
     structural_errors: tuple[str, ...]
     max_table_columns: int
     handoff_ready: bool
+    visual_qa_status: str = "skipped"
+    preview_page_images: tuple[str, ...] = ()
+    visual_qa_reason: str = "未执行页面渲染 QA"
+    portfolio_ready: bool = False
+    portfolio_notes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -53,6 +68,8 @@ def build_word_canvas_v2(
     *,
     asset_prompts: dict[tuple[str, str], PromptPlan] | None = None,
     require_all_planned_images: bool = False,
+    render_visual_qa: bool = True,
+    visual_qa_renderer: Callable[[Path, Path], VisualQASummary] | None = None,
 ) -> CanvasBuildResult:
     """Build and structurally audit a portrait, page-based production canvas."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -61,6 +78,7 @@ def build_word_canvas_v2(
     _configure_document(doc)
     _add_running_furniture(doc, bundle.creative.title)
     _add_cover(doc, bundle)
+    _add_project_overview(doc, bundle, manifest, tuple(shots))
     _add_story(doc, bundle)
     _add_visual_bible(doc, bundle)
 
@@ -89,6 +107,11 @@ def build_word_canvas_v2(
         _add_shot_page(doc, shot)
     _add_handoff_page(doc, manifest, shots)
     doc.save(path)
+    visual_qa = (
+        (visual_qa_renderer or _render_docx_visual_qa)(path, output_dir / "preview")
+        if render_visual_qa
+        else VisualQASummary(status="skipped", preview_page_images=(), reason="未启用 Word 页面渲染 QA")
+    )
 
     audit = _audit_document(
         path,
@@ -96,6 +119,7 @@ def build_word_canvas_v2(
         tuple(shots),
         tuple(missing_images),
         expected_image_count=expected_image_count,
+        visual_qa=visual_qa,
     )
     return CanvasBuildResult(path=path, audit=audit)
 
@@ -184,8 +208,45 @@ def _add_cover(doc: Document, bundle: ContractBundle) -> None:
     _font(run, 9, MUTED)
 
 
+def _add_project_overview(
+    doc: Document,
+    bundle: ContractBundle,
+    manifest: AssetManifest,
+    shots: tuple[ShotCard, ...],
+) -> None:
+    _new_page_heading(doc, "1. 项目概览")
+    _add_callout(
+        doc,
+        "交付摘要",
+        (
+            "这份画布用于把已确认故事、视觉母版、资产身份证、镜头执行卡和下游生产清单放在同一份文档中。"
+            "下游可以按资产 ID 找参考图，按镜头卡执行视频生成。"
+        ),
+        fill=PALE,
+        accent=INDIGO,
+    )
+    _add_label_detail(doc, [
+        ("项目名称", bundle.creative.title),
+        ("题材类型", bundle.creative.genre),
+        ("核心命题", bundle.creative.theme),
+        ("版本", f"Story v{bundle.creative.story_version} / Style v{bundle.visual.style_version}"),
+        ("资产数量", str(len(manifest.items))),
+        ("镜头数量", str(len(shots))),
+        ("资产清单", f"Manifest v{manifest.version} / {manifest.manifest_hash[:12]}"),
+        ("交付状态", "等待结构审计通过后交付" if manifest.items and shots else "缺少资产或镜头，不能交付"),
+    ])
+    _add_callout(
+        doc,
+        "下游读取顺序",
+        "先看视觉母版，再查人物/道具/场景资产页，最后按镜头执行卡逐条生成视频片段。",
+        fill=SILVER,
+        accent=INDIGO,
+        compact=True,
+    )
+
+
 def _add_story(doc: Document, bundle: ContractBundle) -> None:
-    _new_page_heading(doc, "1. 完整故事")
+    _new_page_heading(doc, "2. 完整故事")
     _add_label_detail(doc, [
         ("核心命题", bundle.creative.theme),
         ("人物目标", bundle.creative.protagonist_goal),
@@ -206,7 +267,7 @@ def _add_story(doc: Document, bundle: ContractBundle) -> None:
 
 def _add_visual_bible(doc: Document, bundle: ContractBundle) -> None:
     visual = bundle.visual
-    _new_page_heading(doc, "2. 视觉母版")
+    _new_page_heading(doc, "3. 视觉母版")
     _add_callout(
         doc,
         "视觉承诺",
@@ -280,7 +341,7 @@ def _add_asset_page(
 
 
 def _add_continuity_page(doc: Document, manifest: AssetManifest) -> None:
-    _new_page_heading(doc, "3. 连续性状态")
+    _new_page_heading(doc, "4. 连续性状态")
     _add_callout(
         doc,
         "执行原则",
@@ -322,7 +383,7 @@ def _add_shot_page(doc: Document, shot: ShotCard) -> None:
 
 
 def _add_handoff_page(doc: Document, manifest: AssetManifest, shots: tuple[ShotCard, ...] | list[ShotCard]) -> None:
-    _new_page_heading(doc, "4. 下游生产清单")
+    _new_page_heading(doc, "5. 下游生产清单")
     _add_label_detail(doc, [
         ("资产版本", f"Manifest v{manifest.version} / {manifest.manifest_hash[:12]}"),
         ("资产数量", str(len(manifest.items))),
@@ -396,6 +457,7 @@ def _audit_document(
     missing_images: tuple[str, ...],
     *,
     expected_image_count: int,
+    visual_qa: VisualQASummary,
 ) -> DocumentAudit:
     doc = Document(path)
     asset_ids = {item.asset_id for item in manifest.items}
@@ -412,6 +474,16 @@ def _audit_document(
     if max_columns > 2:
         errors.append("table_has_more_than_two_columns")
     embedded = len(doc.inline_shapes)
+    text = "\n".join(
+        [paragraph.text for paragraph in doc.paragraphs]
+        + [cell.text for table in doc.tables for row in table.rows for cell in row.cells]
+    )
+    for shot in shots:
+        printed_refs = [ref for ref in shot.reference_asset_ids if ref in text]
+        if not printed_refs:
+            errors.append(f"{shot.shot_id}:missing_printed_asset_refs")
+    handoff_ready = not missing_images and not errors and embedded >= expected_image_count
+    portfolio_notes = _portfolio_notes(doc, manifest, shots, handoff_ready, visual_qa)
     return DocumentAudit(
         embedded_images=embedded,
         asset_count=len(manifest.items),
@@ -419,8 +491,108 @@ def _audit_document(
         missing_image_asset_ids=missing_images,
         structural_errors=tuple(errors),
         max_table_columns=max_columns,
-        handoff_ready=not missing_images and not errors and embedded >= expected_image_count,
+        handoff_ready=handoff_ready,
+        visual_qa_status=visual_qa.status,
+        preview_page_images=visual_qa.preview_page_images,
+        visual_qa_reason=visual_qa.reason,
+        portfolio_ready=handoff_ready and not any(note.startswith("缺少") for note in portfolio_notes),
+        portfolio_notes=portfolio_notes,
     )
+
+
+def _portfolio_notes(
+    doc: Document,
+    manifest: AssetManifest,
+    shots: tuple[ShotCard, ...],
+    handoff_ready: bool,
+    visual_qa: VisualQASummary,
+) -> tuple[str, ...]:
+    text = "\n".join(
+        [paragraph.text for paragraph in doc.paragraphs]
+        + [cell.text for table in doc.tables for row in table.rows for cell in row.cells]
+    )
+    notes = []
+    required_sections = (
+        ("封面", "AI COMIC PRODUCTION CANVAS"),
+        ("项目概览", "1. 项目概览"),
+        ("完整故事", "2. 完整故事"),
+        ("视觉母版", "3. 视觉母版"),
+        ("资产页", next((item.asset_id for item in manifest.items), "")),
+        ("镜头执行卡", next((shot.shot_id for shot in shots), "")),
+        ("下游生产清单", "5. 下游生产清单"),
+    )
+    for label, marker in required_sections:
+        if marker and marker in text:
+            notes.append(f"{label}已就绪")
+        else:
+            notes.append(f"缺少{label}")
+    if visual_qa.status == "ready":
+        notes.append(f"页面预览已生成{len(visual_qa.preview_page_images)}张")
+    elif visual_qa.status == "skipped":
+        notes.append(f"页面预览待补：{visual_qa.reason}")
+    else:
+        notes.append(f"页面预览失败：{visual_qa.reason}")
+    if handoff_ready:
+        notes.append("交付结构审计已通过")
+    return tuple(notes)
+
+
+def _render_docx_visual_qa(path: Path, preview_dir: Path) -> VisualQASummary:
+    office = shutil.which("soffice") or shutil.which("libreoffice")
+    if not office:
+        return VisualQASummary(
+            status="skipped",
+            preview_page_images=(),
+            reason="未找到 soffice/libreoffice，当前环境无法把 Word 渲染成页面图片",
+        )
+    try:
+        import fitz  # type: ignore
+    except Exception:
+        return VisualQASummary(
+            status="skipped",
+            preview_page_images=(),
+            reason="未安装 PyMuPDF，当前环境无法把 PDF 页面渲染成 PNG",
+        )
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    pdf_dir = preview_dir / "pdf"
+    pdf_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run(
+            [
+                office,
+                "--headless",
+                "--convert-to",
+                "pdf",
+                "--outdir",
+                str(pdf_dir),
+                str(path),
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        pdf_path = pdf_dir / f"{path.stem}.pdf"
+        if not pdf_path.exists():
+            return VisualQASummary("failed", (), "LibreOffice 未生成 PDF 预览文件")
+        doc = fitz.open(str(pdf_path))
+        rendered = []
+        for index, page_index in enumerate(range(min(3, doc.page_count)), start=1):
+            page = doc.load_page(page_index)
+            pix = page.get_pixmap(matrix=fitz.Matrix(1.2, 1.2), alpha=False)
+            out = preview_dir / f"{path.stem}_page_{index:03d}.png"
+            pix.save(str(out))
+            rendered.append(str(out))
+        doc.close()
+        status = "ready" if rendered else "failed"
+        reason = "页面渲染 QA 已完成" if rendered else "PDF 没有可渲染页面"
+        return VisualQASummary(status=status, preview_page_images=tuple(rendered), reason=reason)
+    except Exception as exc:
+        return VisualQASummary(
+            status="failed",
+            preview_page_images=(),
+            reason=f"Word 页面渲染失败：{exc}",
+        )
 
 
 def _resolve_asset_images(

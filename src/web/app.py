@@ -1,4 +1,4 @@
-"""三个臭皮匠 Web 应用 — FastAPI 后端"""
+﻿"""三个臭皮匠 Web 应用 — FastAPI 后端"""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ from src.comic_office import (
     validate_confirmed_script_session,
 )
 from src.comic_word_canvas import build_comic_word_canvas
-from src.comic_office.v2.asset_manifest import asset_manifest_from_dict
+from src.comic_office.v2.asset_manifest import asset_manifest_from_dict, asset_manifest_review_view
 from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
 from src.comic_office.v2.contracts import ContractValidationError, contract_bundle_from_dict
 from src.comic_office.v2.delivery import DeliveryValidationError, build_delivery_from_v2
@@ -76,6 +76,8 @@ from src.image_generation import (
     is_image_generation_config,
 )
 from src.model_connectivity import AGENT_IDS, probe_model_connectivity
+from src.office_preflight import build_office_preflight
+from src.system_preflight import build_system_preflight
 from src.browser_capture import (
     BrowserCaptureError,
     capture_feigua_plan,
@@ -111,6 +113,7 @@ app = FastAPI(
 active_ws: dict[str, list[WebSocket]] = {}  # task_id → [ws, ...]
 court_ws: list[WebSocket] = []  # 朝堂报告的 WebSocket 订阅者
 AGENT_WORKFLOW_TIMEOUT_SECONDS = 420
+APP_BASE_DIR = Path(__file__).parent.parent.parent
 
 
 @app.on_event("startup")
@@ -258,7 +261,14 @@ COMIC_OFFICE_IDS = {"comic", "comic_production"}
 def _normalize_comic_office_id(office_id: str | None) -> str:
     office = get_office(office_id or "comic_production")
     if office.id not in COMIC_OFFICE_IDS:
-        raise HTTPException(status_code=400, detail=f"Unsupported comic office: {office_id}")
+        raise _comic_legacy_http_error(
+            400,
+            department="尚书省",
+            reason=f"不支持的漫剧办公室：{office_id}。",
+            impact="系统无法确定要使用哪个办公室的模型配置、工作区和历史记录。",
+            next_action="请选择 comic 或 comic_production；当前默认建议使用 AI 漫剧制片办公室。",
+            stage="office_routing",
+        )
     return office.id
 
 
@@ -293,6 +303,22 @@ async def get_office_profile(office_id: str):
     return get_office(office_id).to_dict()
 
 
+@app.get("/api/offices/{office_id}/preflight")
+async def get_office_preflight_api(office_id: str):
+    """Return static readiness checks for an office without calling providers."""
+    return build_office_preflight(
+        office_id,
+        config_manager.get_model_config,
+        base_dir=APP_BASE_DIR,
+    )
+
+
+@app.get("/api/system/preflight")
+async def get_system_preflight_api():
+    """Return local startup checks without calling external providers."""
+    return build_system_preflight(config_manager, base_dir=APP_BASE_DIR)
+
+
 @app.get("/api/workspaces")
 async def list_workspace_api(limit: int = 50, office_id: str = ""):
     """List project workspaces."""
@@ -322,7 +348,7 @@ async def get_workspace_api(workspace_id: str):
     """Get one project workspace."""
     workspace = config_manager.get_workspace(workspace_id)
     if not workspace:
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     workspace["artifacts"] = config_manager.list_artifacts(workspace_id=workspace_id)
     return workspace
 
@@ -331,7 +357,7 @@ async def get_workspace_api(workspace_id: str):
 async def list_workspace_artifacts_api(workspace_id: str):
     """List artifacts in a workspace."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     return {"artifacts": config_manager.list_artifacts(workspace_id=workspace_id)}
 
 
@@ -339,7 +365,7 @@ async def list_workspace_artifacts_api(workspace_id: str):
 async def list_workspace_tasks_api(workspace_id: str):
     """List task runs and timeline events for a workspace."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     return {"tasks": config_manager.list_workspace_task_runs(workspace_id=workspace_id)}
 
 
@@ -350,7 +376,14 @@ def _comic_v2_key(workspace_id: str) -> str:
 def _comic_v2_workspace(workspace_id: str) -> dict:
     workspace = config_manager.get_workspace(workspace_id)
     if not workspace or workspace.get("office_id") != "comic_production":
-        raise HTTPException(status_code=404, detail=f"AI漫剧制片工作空间 {workspace_id} 不存在")
+        raise _comic_v2_http_error(
+            404,
+            department="尚书省",
+            reason=f"AI漫剧制片工作空间 {workspace_id} 不存在或不属于制片办公室。",
+            impact="无法读取该项目的 V2 生产状态，资产拆解、提示词、图片和 Word 画布都会停止。",
+            next_action="回到 AI 漫剧制片办公室重新选择项目；如果项目不存在，请重新创建并确认故事。",
+            stage="workspace_lookup",
+        )
     return workspace
 
 
@@ -361,7 +394,14 @@ def _load_comic_v2_state(workspace_id: str) -> dict:
     try:
         return ComicProductionV2.from_dict(json.loads(raw)).to_dict()
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise HTTPException(status_code=500, detail=f"V2制片状态损坏：{exc}") from exc
+        raise _comic_v2_http_error(
+            500,
+            department="尚书省",
+            reason=f"V2 制片状态损坏，无法读取：{exc}",
+            impact="系统无法判断当前阶段，继续操作可能导致资产、提示词或交付文档串版。",
+            next_action="先刷新项目；如果仍失败，请重新创建项目或清理该项目的损坏状态后重新确认故事。",
+            stage="state_load",
+        ) from exc
 
 
 def _save_comic_v2_state(workspace_id: str, state: dict) -> None:
@@ -420,12 +460,303 @@ def _persist_comic_v2_manifest(workspace: dict, state, review_status: str) -> No
     )
 
 
+def _comic_v2_state_response(state) -> dict:
+    payload = state.to_dict() if hasattr(state, "to_dict") else dict(state or {})
+    manifest = payload.get("asset_manifest") or {}
+    if manifest:
+        try:
+            payload["asset_review"] = asset_manifest_review_view(manifest)
+        except Exception as exc:
+            payload["asset_review"] = {
+                "title": "资产拆解审核",
+                "review_status": manifest.get("review_status", "awaiting_user_review"),
+                "counts": {"characters": 0, "props": 0, "scenes": 0},
+                "groups": {"characters": [], "props": [], "scenes": []},
+                "human_guidance": f"资产审核视图暂时无法生成：{exc}",
+            }
+    payload["department_flow"] = _comic_v2_department_flow(payload)
+    return payload
+
+
+def _comic_v2_department_flow(state: dict) -> list[dict]:
+    stage = str(state.get("stage") or "")
+    current_agent = str(state.get("current_agent") or "")
+    current_department_id = _comic_v2_stage_department(stage, current_agent)
+    completed_by_stage = {
+        "visual_bible_review": {"neige"},
+        "asset_planning": {"neige", "zhongshu"},
+        "asset_review": {"neige", "zhongshu"},
+        "prompt_planning": {"neige", "zhongshu", "menxia", "shangshu", "ribu", "hubu"},
+        "image_generation": {"neige", "zhongshu", "menxia", "shangshu", "ribu", "hubu", "bingbu"},
+        "visual_review": {"neige", "zhongshu", "menxia", "shangshu", "ribu", "hubu", "bingbu", "gongbu"},
+        "document_generation": {"neige", "zhongshu", "menxia", "shangshu", "ribu", "hubu", "bingbu", "gongbu", "xingbu"},
+        "ready_for_handoff": {"neige", "zhongshu", "menxia", "shangshu", "ribu", "hubu", "bingbu", "gongbu", "xingbu", "libu"},
+    }
+    completed = completed_by_stage.get(stage, set())
+    departments = [
+        ("neige", "内阁", "和用户对齐故事、方向和创作取舍"),
+        ("zhongshu", "中书省", "把确认故事变成生产合同、视觉母版和资产拆解草案"),
+        ("menxia", "门下省", "审核故事、资产、镜头和交付是否遗漏或跑偏"),
+        ("shangshu", "尚书省", "调度阶段、记录状态、决定下一步"),
+        ("ribu", "吏部", "维护连续性、版本记录和人物道具场景身份稳定"),
+        ("hubu", "户部", "维护结构化资产台账和资源引用链路"),
+        ("bingbu", "兵部", "生成镜头、动作链、视频提示词和执行计划"),
+        ("gongbu", "工部", "生成基础资产图并参与 Word 制片画布组装"),
+        ("xingbu", "刑部", "执行文本/视觉质检、风险说明和人工放行判断"),
+        ("libu", "礼部", "整理交付说明、下游提示和对人可读的 Word 画布"),
+    ]
+    return [
+        {
+            "department_id": department_id,
+            "name": name,
+            "responsibility": responsibility,
+            "status": (
+                "current"
+                if department_id == current_department_id
+                else "completed"
+                if department_id in completed
+                else "waiting"
+            ),
+            "human_checkpoint": _comic_v2_department_checkpoint(department_id, stage),
+        }
+        for department_id, name, responsibility in departments
+    ]
+
+
+def _comic_v2_stage_department(stage: str, current_agent: str) -> str:
+    if "门下" in current_agent:
+        return "menxia"
+    if "工部" in current_agent:
+        return "gongbu"
+    if "刑部" in current_agent:
+        return "xingbu"
+    if "礼部" in current_agent:
+        return "libu"
+    if "尚书" in current_agent:
+        return "shangshu"
+    return {
+        "story_confirmed": "neige",
+        "visual_bible_review": "zhongshu",
+        "asset_planning": "shangshu",
+        "asset_review": "menxia",
+        "prompt_planning": "gongbu",
+        "image_generation": "gongbu",
+        "visual_review": "xingbu",
+        "document_generation": "libu",
+        "ready_for_handoff": "libu",
+    }.get(stage, "shangshu")
+
+
+def _comic_v2_department_checkpoint(department_id: str, stage: str) -> str:
+    if department_id == "zhongshu" and stage == "visual_bible_review":
+        return "等待用户确认视觉母版"
+    if department_id == "menxia" and stage == "asset_review":
+        return "等待用户确认资产拆解"
+    if department_id == "xingbu" and stage == "visual_review":
+        return "等待用户处理视觉质检风险"
+    if department_id == "libu" and stage == "ready_for_handoff":
+        return "Word 制片画布可下载"
+    return ""
+
+
+def _comic_v2_http_error(
+    status_code: int,
+    *,
+    department: str,
+    reason: str,
+    impact: str,
+    next_action: str,
+    stage: str = "",
+    agent: str = "",
+) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={
+            "office_id": "comic_production",
+            "office_name": "AI漫剧制片办公室",
+            "department": department,
+            "agent": agent or department,
+            "stage": stage,
+            "reason": reason,
+            "impact": impact,
+            "next_action": next_action,
+        },
+    )
+
+
+def _research_http_error(
+    status_code: int,
+    *,
+    department: str,
+    reason: str,
+    impact: str,
+    next_action: str,
+    stage: str = "",
+    agent: str = "",
+) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={
+            "office_id": "research",
+            "office_name": "研究办公室",
+            "department": department,
+            "agent": agent or department,
+            "stage": stage,
+            "reason": reason,
+            "impact": impact,
+            "next_action": next_action,
+        },
+    )
+
+
+def _system_http_error(
+    status_code: int,
+    *,
+    reason: str,
+    impact: str,
+    next_action: str,
+    stage: str = "",
+    department: str = "系统",
+) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={
+            "office_id": "system",
+            "office_name": "系统配置",
+            "department": department,
+            "agent": department,
+            "stage": stage,
+            "reason": reason,
+            "impact": impact,
+            "next_action": next_action,
+        },
+    )
+
+def _comic_legacy_http_error(
+    status_code: int,
+    *,
+    department: str,
+    reason: str,
+    impact: str,
+    next_action: str,
+    stage: str = "",
+    agent: str = "",
+) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={
+            "office_id": "comic_production",
+            "office_name": "AI漫剧制片办公室",
+            "department": department,
+            "agent": agent or department,
+            "stage": stage,
+            "reason": reason,
+            "impact": impact,
+            "next_action": next_action,
+        },
+    )
+
+
+def _workspace_actionable_http_error(
+    workspace_id: str,
+    status_code: int,
+    *,
+    department: str,
+    reason: str,
+    impact: str,
+    next_action: str,
+    stage: str = "",
+    agent: str = "",
+) -> HTTPException:
+    workspace = config_manager.get_workspace(workspace_id)
+    office_id = (workspace or {}).get("office_id", "research")
+    if office_id == "comic_production":
+        return _comic_v2_http_error(
+            status_code,
+            department=department,
+            reason=reason,
+            impact=impact,
+            next_action=next_action,
+            stage=stage,
+            agent=agent,
+        )
+    if _is_comic_office_id(office_id):
+        return _comic_legacy_http_error(
+            status_code,
+            department=department,
+            reason=reason,
+            impact=impact,
+            next_action=next_action,
+            stage=stage,
+            agent=agent,
+        )
+    return _research_http_error(
+        status_code,
+        department=department,
+        reason=reason,
+        impact=impact,
+        next_action=next_action,
+        stage=stage,
+        agent=agent,
+    )
+
+
+def _missing_workspace_http_error(workspace_id: str, *, stage: str = "workspace_lookup") -> HTTPException:
+    return _research_http_error(
+        404,
+        department="尚书省",
+        reason=f"工作空间 {workspace_id} 不存在或已被清理。",
+        impact="系统无法读取这个项目的任务、产物或历史状态，页面也无法继续展示该项目内容。",
+        next_action="回到办公室大厅或项目列表重新选择一个有效项目；如果这是刚创建的项目，请刷新后重试。",
+        stage=stage,
+    )
+
+
+def _comic_v2_task_id(workspace_id: str) -> str:
+    return f"comic_v2_{workspace_id}"
+
+
+def _ensure_comic_v2_task_run(workspace: dict, action: str) -> str:
+    workspace_id = workspace["workspace_id"]
+    task_id = _comic_v2_task_id(workspace_id)
+    existing = config_manager.get_task_run(task_id)
+    if not existing:
+        title = workspace.get("title") or workspace_id
+        config_manager.create_task_run(task_id, f"AI漫剧制片办公室：{title} - {action}", "")
+    return task_id
+
+
+def _append_comic_v2_event(
+    workspace_id: str,
+    event_type: str,
+    status: str,
+    summary: str,
+    payload: dict | None = None,
+) -> None:
+    data = {"workspace_id": workspace_id}
+    data.update(payload or {})
+    config_manager.append_task_event(
+        task_id=_comic_v2_task_id(workspace_id),
+        event_type=event_type,
+        status=status,
+        summary=summary,
+        payload=data,
+    )
+
+
 def _confirmed_story_for_v2(workspace_id: str) -> tuple[str, dict]:
     session = _load_comic_cabinet_session(workspace_id)
     confirmed = (session or {}).get("confirmed_script") or {}
     story = str(confirmed.get("story_draft") or "")
     if not session.get("confirmed") or not story.strip():
-        raise HTTPException(status_code=400, detail="请先确认完整故事，再生成视觉母版")
+        raise _comic_v2_http_error(
+            400,
+            department="内阁 / 中书省",
+            reason="请先确认完整故事，再生成视觉母版。",
+            impact="没有锁定故事时，中书省无法建立视觉母版，后续资产拆解、提示词、图片和 Word 画布都会偏离。",
+            next_action="回到主创对话，补全并确认故事后再开始生产。",
+            stage="story_confirming",
+        )
     return story, confirmed
 
 
@@ -454,7 +785,10 @@ def _comic_v2_capability_model(
 @app.get("/api/workspaces/{workspace_id}/comic/v2/status")
 async def get_comic_v2_status_api(workspace_id: str):
     _comic_v2_workspace(workspace_id)
-    return _load_comic_v2_state(workspace_id) or not_started_state(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if raw:
+        return _comic_v2_state_response(ComicProductionV2.from_dict(raw))
+    return _comic_v2_state_response(not_started_state(workspace_id))
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/start")
@@ -467,7 +801,14 @@ async def start_comic_v2_api(workspace_id: str, req: ComicV2StartRequest):
             workspace_id=workspace_id,
         )
     except ContractValidationError as exc:
-        raise HTTPException(status_code=400, detail=f"无法建立正式制片合同：{exc}") from exc
+        raise _comic_v2_http_error(
+            400,
+            department="中书省",
+            reason=f"无法建立正式制片合同：{exc}",
+            impact="正式制片合同无法建立时，生产链不会进入视觉母版、资产拆解和提示词阶段。",
+            next_action="补充完整故事、主角目标、冲突、结局和视觉方向后重新开始。",
+            stage="contract_planning",
+        ) from exc
     payload = state.to_dict()
     _save_comic_v2_state(workspace_id, payload)
     _persist_comic_v2_contract(workspace, state, "awaiting_user_review")
@@ -506,7 +847,14 @@ async def plan_confirmed_comic_v2_api(workspace_id: str):
                 story_version=int(confirmed.get("script_version") or 1),
             )
     except PlannerError as exc:
-        raise HTTPException(status_code=502, detail=f"视觉母版规划失败：{exc}") from exc
+        raise _comic_v2_http_error(
+            502,
+            department="中书省",
+            reason=f"视觉母版规划失败：{exc}",
+            impact="视觉母版没有生成时，人物、道具、场景和镜头提示词没有统一风格依据。",
+            next_action="检查中书省模型配置、API Key、额度和返回质量；必要时补充更明确的故事确认信息。",
+            stage="visual_bible_planning",
+        ) from exc
     state = ComicProductionV2.from_bundle(bundle, workspace_id=workspace_id)
     _save_comic_v2_state(workspace_id, state.to_dict())
     _persist_comic_v2_contract(workspace, state, "awaiting_user_review")
@@ -517,7 +865,7 @@ async def plan_confirmed_comic_v2_api(workspace_id: str):
         summary="故事合同与视觉母版等待用户确认",
         payload={"workspace_id": workspace_id, "style_version": state.style_version},
     )
-    return state.to_dict()
+    return _comic_v2_state_response(state)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/visual-bible/approve")
@@ -525,11 +873,27 @@ async def approve_comic_v2_visual_bible_api(workspace_id: str):
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="请先生成视觉母版")
+        raise _comic_v2_http_error(
+            409,
+            department="中书省",
+            reason="请先生成视觉母版。",
+            impact="视觉母版无法确认，资产拆解和后续生产不会开始。",
+            next_action="先确认故事，再由中书省生成故事合同与视觉母版。",
+            stage="not_started",
+        )
     try:
         state = ComicProductionV2.approve_visual_bible(ComicProductionV2.from_dict(raw))
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        current = ComicProductionV2.from_dict(raw)
+        raise _comic_v2_http_error(
+            409,
+            department="中书省",
+            reason=f"当前阶段不能确认视觉母版：{exc}",
+            impact="系统不会覆盖当前阶段已经生成或等待审核的内容，避免串阶段。",
+            next_action=f"先处理当前阶段：{current.next_action or '回到当前阶段继续处理'}；不要重复确认视觉母版。",
+            stage=current.stage,
+            agent=current.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, state.to_dict())
     _persist_comic_v2_contract(workspace, state, "approved")
     config_manager.append_task_event(
@@ -539,7 +903,7 @@ async def approve_comic_v2_visual_bible_api(workspace_id: str):
         summary="视觉母版已确认，可以进入资产拆解",
         payload={"workspace_id": workspace_id, "style_version": state.style_version},
     )
-    return state.to_dict()
+    return _comic_v2_state_response(state)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/visual-bible/revise")
@@ -547,7 +911,14 @@ async def revise_comic_v2_visual_bible_api(workspace_id: str, req: ComicV2Revisi
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="请先生成视觉母版")
+        raise _comic_v2_http_error(
+            409,
+            department="中书省",
+            reason="请先生成视觉母版。",
+            impact="视觉母版还不存在，无法修改；资产拆解和后续生产也没有风格依据。",
+            next_action="先确认故事并生成视觉母版，再填写退回意见修改。",
+            stage="not_started",
+        )
     state = ComicProductionV2.from_dict(raw)
     try:
         if fixture_mode_enabled():
@@ -566,7 +937,15 @@ async def revise_comic_v2_visual_bible_api(workspace_id: str, req: ComicV2Revisi
             )
         revised = ComicProductionV2.replace_visual_bible(state, bundle)
     except (PlannerError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=f"视觉母版修改失败：{exc}") from exc
+        raise _comic_v2_http_error(
+            502,
+            department="中书省",
+            reason=f"视觉母版修改失败：{exc}",
+            impact="新视觉母版未生成，下游资产拆解仍会沿用旧版本或暂停。",
+            next_action="检查中书省模型配置和退回意见是否清晰；修复后重新提交视觉母版修改。",
+            stage=state.stage,
+            agent=state.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, revised.to_dict())
     _persist_comic_v2_contract(workspace, revised, "awaiting_user_review")
     config_manager.append_task_event(
@@ -580,7 +959,7 @@ async def revise_comic_v2_visual_bible_api(workspace_id: str, req: ComicV2Revisi
             "revision_request": req.revision_request,
         },
     )
-    return revised.to_dict()
+    return _comic_v2_state_response(revised)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/assets/plan")
@@ -588,10 +967,25 @@ async def plan_comic_v2_assets_api(workspace_id: str):
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="请先生成并确认视觉母版")
+        raise _comic_v2_http_error(
+            409,
+            department="尚书省",
+            reason="还没有可调度的 V2 制片状态。",
+            impact="资产拆解无法开始，人物、道具和场景清单不会生成。",
+            next_action="先完成故事确认，并生成、确认视觉母版。",
+            stage="not_started",
+        )
     state = ComicProductionV2.from_dict(raw)
     if state.stage != "asset_planning":
-        raise HTTPException(status_code=409, detail="当前阶段不能生成资产拆解包")
+        raise _comic_v2_http_error(
+            409,
+            department="尚书省",
+            reason=f"当前阶段不能生成资产拆解包：系统处在“{state.stage}”。",
+            impact="资产拆解不会重新开始，避免覆盖当前阶段已经生成或等待审核的内容。",
+            next_action=state.next_action or "请先确认视觉母版，或回到当前阶段继续处理。",
+            stage=state.stage,
+            agent=state.current_agent,
+        )
     try:
         bundle = contract_bundle_from_dict(state.contract)
         if fixture_mode_enabled():
@@ -604,7 +998,15 @@ async def plan_comic_v2_assets_api(workspace_id: str):
             )
         waiting = ComicProductionV2.attach_asset_manifest(state, manifest)
     except (ContractValidationError, AssetPlanningError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=f"资产拆解失败：{exc}") from exc
+        raise _comic_v2_http_error(
+            502,
+            department="中书省 / 门下省",
+            reason=f"资产拆解失败：{exc}",
+            impact="人物、道具、场景清单没有通过生成或校验，后续提示词、图片和 Word 画布都会暂停。",
+            next_action="检查故事合同是否完整；如果是模型返回质量问题，请重试或补充明确的退回意见。",
+            stage=state.stage,
+            agent=state.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, waiting.to_dict())
     _persist_comic_v2_manifest(workspace, waiting, "awaiting_user_review")
     config_manager.append_task_event(
@@ -618,7 +1020,7 @@ async def plan_comic_v2_assets_api(workspace_id: str):
             "asset_count": len(manifest.items),
         },
     )
-    return waiting.to_dict()
+    return _comic_v2_state_response(waiting)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/assets/approve")
@@ -626,11 +1028,27 @@ async def approve_comic_v2_assets_api(workspace_id: str):
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="请先生成资产拆解包")
+        raise _comic_v2_http_error(
+            409,
+            department="门下省",
+            reason="请先生成资产拆解包。",
+            impact="资产拆解无法确认，提示词、图片和 Word 制片画布都会暂停。",
+            next_action="先确认视觉母版，再生成资产拆解审核包。",
+            stage="not_started",
+        )
     try:
-        approved = ComicProductionV2.approve_asset_manifest(ComicProductionV2.from_dict(raw))
+        current = ComicProductionV2.from_dict(raw)
+        approved = ComicProductionV2.approve_asset_manifest(current)
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise _comic_v2_http_error(
+            409,
+            department="门下省",
+            reason=f"当前阶段不能确认资产拆解包：{exc}",
+            impact="资产拆解没有被确认时，提示词、图片和 Word 画布不会继续生产。",
+            next_action=f"请先进入资产审核阶段并检查人物、道具、场景清单；当前阶段建议：{current.next_action or '继续处理当前阶段'}。",
+            stage=current.stage,
+            agent=current.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, approved.to_dict())
     _persist_comic_v2_manifest(workspace, approved, "approved")
     config_manager.append_task_event(
@@ -643,7 +1061,7 @@ async def approve_comic_v2_assets_api(workspace_id: str):
             "manifest_version": approved.asset_manifest.get("version", 0),
         },
     )
-    return approved.to_dict()
+    return _comic_v2_state_response(approved)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/assets/revise")
@@ -651,10 +1069,25 @@ async def revise_comic_v2_assets_api(workspace_id: str, req: ComicV2RevisionRequ
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="请先生成资产拆解包")
+        raise _comic_v2_http_error(
+            409,
+            department="门下省",
+            reason="请先生成资产拆解包。",
+            impact="没有资产拆解包时无法退回修改，人物、道具和场景清单也无法进入人工审核。",
+            next_action="先确认视觉母版，并生成资产拆解审核包。",
+            stage="not_started",
+        )
     state = ComicProductionV2.from_dict(raw)
     if state.stage != "asset_review" or not state.asset_manifest:
-        raise HTTPException(status_code=409, detail="当前没有可退回修改的资产拆解包")
+        raise _comic_v2_http_error(
+            409,
+            department="门下省",
+            reason="当前没有可退回修改的资产拆解包。",
+            impact="系统不会在非资产审核阶段重拆资产，避免覆盖当前阶段状态。",
+            next_action=f"当前没有进入资产审核阶段。请先进入资产审核并查看资产拆解包；当前阶段建议：{state.next_action or '继续处理当前阶段'}。",
+            stage=state.stage,
+            agent=state.current_agent,
+        )
     try:
         bundle = contract_bundle_from_dict(state.contract)
         previous = asset_manifest_from_dict(
@@ -673,7 +1106,15 @@ async def revise_comic_v2_assets_api(workspace_id: str, req: ComicV2RevisionRequ
             )
         waiting = ComicProductionV2.attach_asset_manifest(state, manifest)
     except (ContractValidationError, AssetPlanningError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=f"资产重拆失败：{exc}") from exc
+        raise _comic_v2_http_error(
+            502,
+            department="中书省 / 门下省",
+            reason=f"资产重拆失败：{exc}",
+            impact="新版人物、道具、场景清单没有通过生成或校验，提示词、图片和 Word 画布会暂停。",
+            next_action="检查退回意见是否明确指出要增加、删除或修改哪些资产；修复模型配置后重新提交。",
+            stage=state.stage,
+            agent=state.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, waiting.to_dict())
     _persist_comic_v2_manifest(workspace, waiting, "awaiting_user_review")
     config_manager.append_task_event(
@@ -687,7 +1128,7 @@ async def revise_comic_v2_assets_api(workspace_id: str, req: ComicV2RevisionRequ
             "revision_request": req.revision_request,
         },
     )
-    return waiting.to_dict()
+    return _comic_v2_state_response(waiting)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/prompts/plan")
@@ -695,10 +1136,25 @@ async def plan_comic_v2_prompts_api(workspace_id: str):
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="请先确认资产拆解包")
+        raise _comic_v2_http_error(
+            409,
+            department="工部",
+            reason="还没有可用于生成提示词的 V2 制片状态。",
+            impact="资产提示词和镜头提示词不会生成，后续图片与 Word 画布都会暂停。",
+            next_action="先确认故事、视觉母版和资产拆解包。",
+            stage="not_started",
+        )
     state = ComicProductionV2.from_dict(raw)
     if state.stage != "prompt_planning" or state.assets_status != "approved":
-        raise HTTPException(status_code=409, detail="资产拆解包尚未确认，不能生成提示词")
+        raise _comic_v2_http_error(
+            409,
+            department="工部",
+            reason=f"资产拆解包尚未确认，不能生成提示词：系统处在“{state.stage}”。",
+            impact="提示词不会生成，避免基于未确认的人物、道具或场景继续生产。",
+            next_action=state.next_action or "请先完成人物、道具、场景资产拆解审核。",
+            stage=state.stage,
+            agent=state.current_agent,
+        )
     try:
         bundle = contract_bundle_from_dict(state.contract)
         manifest = asset_manifest_from_dict(
@@ -718,10 +1174,18 @@ async def plan_comic_v2_prompts_api(workspace_id: str):
                 manifest,
                 package,
                 _comic_v2_capability_model("bingbu_text", ("bingbu", "zhongshu"), kind="text"),
-            )
+        )
         generating = ComicProductionV2.attach_prompt_package(state, package)
     except (ContractValidationError, ProductionError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=f"提示词规划失败：{exc}") from exc
+        raise _comic_v2_http_error(
+            502,
+            department="工部 / 兵部",
+            reason=f"提示词规划失败：{exc}",
+            impact="资产提示词或镜头执行卡没有生成，图片生产和 Word 制片画布都会暂停。",
+            next_action="检查工部/兵部文本模型配置、API Key 和模型返回；必要时补充更明确的资产退回意见后重试。",
+            stage=state.stage,
+            agent=state.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, generating.to_dict())
     config_manager.create_artifact(
         artifact_id=f"art_{workspace_id}_comic_v2_prompt_package_m{package.manifest_version}",
@@ -753,7 +1217,7 @@ async def plan_comic_v2_prompts_api(workspace_id: str):
             "shot_prompt_count": len(package.shots),
         },
     )
-    return generating.to_dict()
+    return _comic_v2_state_response(generating)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/images/generate")
@@ -761,10 +1225,34 @@ async def generate_comic_v2_images_api(workspace_id: str):
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="请先生成提示词包")
+        raise _comic_v2_http_error(
+            409,
+            department="工部",
+            reason="还没有可用于生图的提示词包。",
+            impact="基础资产图不会生成，视觉质检和 Word 画布也无法继续。",
+            next_action="先完成资产拆解审核，并生成专属提示词。",
+            stage="not_started",
+        )
     state = ComicProductionV2.from_dict(raw)
     if state.stage not in {"image_generation", "visual_review"}:
-        raise HTTPException(status_code=409, detail="当前阶段不能生成资产图片")
+        raise _comic_v2_http_error(
+            409,
+            department="工部",
+            reason=f"当前阶段不能生成资产图片：系统处在“{state.stage}”。",
+            impact="基础资产图不会生成，避免跳过提示词或重复覆盖当前视觉质检结果。",
+            next_action=state.next_action or "请先生成专属提示词，再生成并质检基础资产图。",
+            stage=state.stage,
+            agent=state.current_agent,
+        )
+    task_id = _ensure_comic_v2_task_run(workspace, "生成并质检基础资产图")
+    config_manager.update_task_run(task_id, "running", current_phase="image_generation")
+    _append_comic_v2_event(
+        workspace_id,
+        event_type="comic_v2_images_started",
+        status="running",
+        summary="工部开始生成基础资产图，刑部随后执行视觉质检",
+        payload={"stage": state.stage, "current_agent": state.current_agent},
+    )
     try:
         bundle = contract_bundle_from_dict(state.contract)
         manifest = asset_manifest_from_dict(
@@ -788,10 +1276,32 @@ async def generate_comic_v2_images_api(workspace_id: str):
                 _comic_v2_capability_model("xingbu_vision", ("xingbu",), kind="vision"),
                 output_dir,
                 max_attempts=max(1, int(os.getenv("COMIC_IMAGE_MAX_ATTEMPTS", "2"))),
-            )
+        )
         next_state = ComicProductionV2.attach_image_production(state, result)
     except (ContractValidationError, ProductionError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=f"资产图片生产失败：{exc}") from exc
+        config_manager.update_task_run(
+            task_id,
+            "failed",
+            current_phase="image_generation",
+            error=f"资产图片生产失败：{exc}",
+            completed=True,
+        )
+        _append_comic_v2_event(
+            workspace_id,
+            event_type="comic_v2_images_failed",
+            status="failed",
+            summary=f"基础资产图生产或质检失败：{exc}",
+            payload={"stage": state.stage, "current_agent": state.current_agent},
+        )
+        raise _comic_v2_http_error(
+            502,
+            department="工部 / 刑部",
+            reason=f"资产图片生产失败：{exc}",
+            impact="基础资产图没有完成生产或质检，Word 制片画布不会继续组装。",
+            next_action="检查工部生图模型、刑部视觉模型、API Key、额度和图片输出目录；修复后重新生成并质检基础资产图。",
+            stage=state.stage,
+            agent=state.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, next_state.to_dict())
     for record in result.records:
         filename = Path(record.path).name
@@ -826,8 +1336,15 @@ async def generate_comic_v2_images_api(workspace_id: str):
         },
         created_by="xingbu",
     )
+    config_manager.update_task_run(
+        task_id,
+        "completed" if result.production_ready else "running",
+        current_phase=next_state.stage,
+        result={"stage": next_state.stage, "generated": len(result.records), "failures": list(result.failures)},
+        completed=bool(result.production_ready),
+    )
     config_manager.append_task_event(
-        task_id=f"comic_v2_{workspace_id}",
+        task_id=task_id,
         event_type="comic_v2_images_reviewed",
         status="completed" if result.production_ready else "waiting_for_human",
         summary="基础资产图已完成跨图质检" if result.production_ready else "部分基础资产图需要人工处理",
@@ -838,7 +1355,7 @@ async def generate_comic_v2_images_api(workspace_id: str):
             "next_stage": next_state.stage,
         },
     )
-    return next_state.to_dict()
+    return _comic_v2_state_response(next_state)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/images/override")
@@ -846,14 +1363,30 @@ async def override_comic_v2_visual_review_api(workspace_id: str, req: ComicV2Vis
     _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="当前没有待人工处理的视觉质检")
+        raise _comic_v2_http_error(
+            409,
+            department="刑部",
+            reason="当前没有待人工处理的视觉质检。",
+            impact="无法执行人工放行，因为还没有图片质检结果需要处理。",
+            next_action="先生成提示词，再生成并质检基础资产图。",
+            stage="not_started",
+        )
     try:
         state = ComicProductionV2.override_visual_review(
             ComicProductionV2.from_dict(raw),
             req.reason,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        current = ComicProductionV2.from_dict(raw)
+        raise _comic_v2_http_error(
+            400,
+            department="刑部",
+            reason=f"人工放行失败：{exc}",
+            impact="视觉质检风险没有被记录，系统不会继续把图片交给 Word 画布组装。",
+            next_action="填写明确的人工放行理由，说明为什么可以接受这些风险；或者返回重新生成图片。",
+            stage=current.stage,
+            agent=current.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, state.to_dict())
     config_manager.append_task_event(
         task_id=f"comic_v2_{workspace_id}",
@@ -862,7 +1395,7 @@ async def override_comic_v2_visual_review_api(workspace_id: str, req: ComicV2Vis
         summary="用户已人工放行未完全通过的资产图片",
         payload={"workspace_id": workspace_id, "reason": req.reason.strip()},
     )
-    return state.to_dict()
+    return _comic_v2_state_response(state)
 
 
 @app.post("/api/workspaces/{workspace_id}/comic/v2/delivery/build")
@@ -870,10 +1403,34 @@ async def build_comic_v2_delivery_api(workspace_id: str):
     workspace = _comic_v2_workspace(workspace_id)
     raw = _load_comic_v2_state(workspace_id)
     if not raw:
-        raise HTTPException(status_code=409, detail="当前没有可组装的 V2 制片包")
+        raise _comic_v2_http_error(
+            409,
+            department="礼部",
+            reason="当前没有可组装的 V2 制片包。",
+            impact="Word 制片画布不会生成，因为故事、资产、图片和提示词还没有形成完整包。",
+            next_action="先完成故事确认、资产拆解、提示词、图片生产和质检。",
+            stage="not_started",
+        )
     state = ComicProductionV2.from_dict(raw)
     if state.stage != "document_generation":
-        raise HTTPException(status_code=409, detail="图片生产与质检尚未完成")
+        raise _comic_v2_http_error(
+            409,
+            department="礼部",
+            reason=f"图片生产与质检尚未完成：系统处在“{state.stage}”。",
+            impact="Word 制片画布不会生成，避免交付缺图、缺资产引用或缺质检说明。",
+            next_action=state.next_action or "请先生成并质检基础资产图。",
+            stage=state.stage,
+            agent=state.current_agent,
+        )
+    task_id = _ensure_comic_v2_task_run(workspace, "生成 Word 制片画布")
+    config_manager.update_task_run(task_id, "running", current_phase="document_generation")
+    _append_comic_v2_event(
+        workspace_id,
+        event_type="comic_v2_delivery_started",
+        status="running",
+        summary="礼部开始组装 Word 制片画布，并交由刑部结构审计",
+        payload={"stage": state.stage, "current_agent": state.current_agent},
+    )
     try:
         bundle = contract_bundle_from_dict(state.contract)
         manifest = asset_manifest_from_dict(
@@ -899,7 +1456,29 @@ async def build_comic_v2_delivery_api(workspace_id: str):
             uri=uri,
         )
     except (ContractValidationError, DeliveryValidationError, ProductionError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=f"Word 制片画布生成失败：{exc}") from exc
+        config_manager.update_task_run(
+            task_id,
+            "failed",
+            current_phase="document_generation",
+            error=f"Word 制片画布生成失败：{exc}",
+            completed=True,
+        )
+        _append_comic_v2_event(
+            workspace_id,
+            event_type="comic_v2_delivery_failed",
+            status="failed",
+            summary=f"Word 制片画布生成失败：{exc}",
+            payload={"stage": state.stage, "current_agent": state.current_agent},
+        )
+        raise _comic_v2_http_error(
+            502,
+            department="礼部 / 刑部",
+            reason=f"Word 制片画布生成失败：{exc}",
+            impact="最终交付文件没有生成，历史记录也不会出现可下载的完整制片画布。",
+            next_action="检查礼部组装输入、资产引用链路和结构审计结果；修复缺失项后重新生成 Word 制片画布。",
+            stage=state.stage,
+            agent=state.current_agent,
+        ) from exc
     _save_comic_v2_state(workspace_id, ready.to_dict())
     config_manager.create_artifact(
         artifact_id=f"art_{workspace_id}_comic_v2_word_canvas",
@@ -922,21 +1501,35 @@ async def build_comic_v2_delivery_api(workspace_id: str):
         },
         created_by="libu",
     )
+    config_manager.update_task_run(
+        task_id,
+        "completed",
+        current_phase="ready_for_handoff",
+        result={"stage": ready.stage, "download_uri": uri},
+        completed=True,
+    )
     config_manager.append_task_event(
-        task_id=f"comic_v2_{workspace_id}",
+        task_id=task_id,
         event_type="comic_v2_delivery_ready",
         status="completed",
         summary="页面式 Word 制片画布已通过审计",
         payload={"workspace_id": workspace_id, "download_uri": uri},
     )
-    return ready.to_dict()
+    return _comic_v2_state_response(ready)
 
 
 @app.post("/api/comic/brief")
 async def create_comic_brief_api(req: ComicBriefRequest):
     """Create the comic office's first-turn creative brief and questions."""
     if not req.idea.strip():
-        raise HTTPException(status_code=400, detail="Idea is required")
+        raise _comic_legacy_http_error(
+            400,
+            department="内阁",
+            reason="还没有输入故事灵感，无法生成创作简报。",
+            impact="主创无法判断题材、冲突和视觉方向，后续剧本预览会跑偏。",
+            next_action="先输入一句故事灵感，或者切换到完整剧本模式粘贴已有剧本。",
+            stage="story_brief",
+        )
     return build_comic_brief(
         idea=req.idea,
         genre=req.genre,
@@ -951,9 +1544,23 @@ async def create_comic_brief_api(req: ComicBriefRequest):
 async def create_comic_script_preview_api(req: ComicScriptPreviewRequest):
     """Create the cabinet's script preview before asset production."""
     if not req.idea.strip():
-        raise HTTPException(status_code=400, detail="Idea is required")
+        raise _comic_legacy_http_error(
+            400,
+            department="内阁",
+            reason="还没有输入故事灵感，无法生成剧本预览。",
+            impact="主创没有可承接的故事基础，剧本预览无法判断主角、冲突和结尾。",
+            next_action="先输入故事灵感并生成创作简报，再继续生成剧本预览。",
+            stage="script_preview",
+        )
     if not req.creative_brief:
-        raise HTTPException(status_code=400, detail="Creative brief is required before script preview")
+        raise _comic_legacy_http_error(
+            400,
+            department="内阁",
+            reason="缺少创作简报，不能直接生成剧本预览。",
+            impact="剧本预览没有经过主创对齐，后续资产拆解和提示词可能偏离用户想法。",
+            next_action="先点击开始聊故事/生成创作简报，确认方向后再生成剧本预览。",
+            stage="script_preview",
+        )
     return build_comic_script_preview(
         idea=req.idea,
         genre=req.genre,
@@ -964,7 +1571,6 @@ async def create_comic_script_preview_api(req: ComicScriptPreviewRequest):
         creative_brief=req.creative_brief,
         user_answers=req.user_answers,
     )
-
 
 def _comic_cabinet_key(workspace_id: str) -> str:
     return f"comic_cabinet_session:{workspace_id}"
@@ -1005,6 +1611,16 @@ def _load_comic_cabinet_session(workspace_id: str) -> dict:
 
 def _save_comic_cabinet_session(workspace_id: str, session: dict) -> None:
     config_manager.set_kv(_comic_cabinet_key(workspace_id), json.dumps(session, ensure_ascii=False))
+
+
+def _comic_cabinet_assistant_message(session: dict) -> str:
+    message = str((session or {}).get("assistant_message") or "").strip()
+    if message:
+        return message
+    for item in reversed((session or {}).get("messages") or []):
+        if item.get("role") == "assistant":
+            return str(item.get("content") or "").strip()
+    return ""
 
 
 def _workspace_comic_session(workspace_id: str, client_session: dict | None = None) -> dict:
@@ -1131,7 +1747,14 @@ def _ensure_comic_workspace(workspace_id: str, idea: str, office_id: str = "comi
     workspace = config_manager.get_workspace(workspace_id) if workspace_id else {}
     if workspace:
         if not _is_comic_office_id(workspace.get("office_id")):
-            raise HTTPException(status_code=404, detail=f"Comic workspace {workspace_id} does not exist")
+            raise _comic_legacy_http_error(
+                404,
+                department="尚书省",
+                reason=f"漫剧工作空间 {workspace_id} 不存在或不属于漫剧办公室。",
+                impact="内阁会话无法归档到正确项目，继续操作可能串到其他办公室。",
+                next_action="回到 AI 漫剧制片办公室重新选择项目，或新建一个漫剧项目。",
+                stage="workspace_lookup",
+            )
         return workspace["workspace_id"]
     new_workspace_id = f"ws_{str(uuid.uuid4())[:8]}"
     title = (idea or "AI漫剧项目").strip()[:40] or "AI漫剧项目"
@@ -1149,7 +1772,14 @@ def _ensure_comic_workspace(workspace_id: str, idea: str, office_id: str = "comi
 async def comic_cabinet_turn_api(req: ComicCabinetTurnRequest):
     """Run one cabinet discussion turn and keep refining the script draft."""
     if not req.idea.strip():
-        raise HTTPException(status_code=400, detail="Idea is required")
+        raise _comic_legacy_http_error(
+            400,
+            department="内阁",
+            reason="缺少创作灵感，无法开始主创对话。",
+            impact="没有灵感时，内阁无法判断故事方向、人物关系和第一轮追问，后续确认故事也无法开始。",
+            next_action="先输入一句最粗糙的想法，例如“学生要跳楼，母亲苦苦哀求”。",
+            stage="story_discussion",
+        )
     office_id = _normalize_comic_office_id(req.office_id)
     workspace_id = _ensure_comic_workspace(req.workspace_id, req.idea, office_id=office_id)
     workspace = config_manager.get_workspace(workspace_id)
@@ -1164,7 +1794,7 @@ async def comic_cabinet_turn_api(req: ComicCabinetTurnRequest):
                 "status": "script_ready" if session.get("ready_to_produce") else "needs_more_discussion",
                 "stage": session.get("stage", "drafting"),
                 "ready_to_produce": bool(session.get("ready_to_produce")),
-                "assistant_message": (session.get("messages") or [{}])[-1].get("content", ""),
+                "assistant_message": _comic_cabinet_assistant_message(session),
                 "cabinet_roles": session.get("cabinet_roles", []),
                 "creative_brief": session.get("creative_brief", {}),
                 "script_preview": session.get("script_preview", {}),
@@ -1231,17 +1861,45 @@ async def confirm_comic_script_api(req: ComicConfirmScriptRequest):
     """Freeze the current cabinet draft as the confirmed script before production."""
     workspace = config_manager.get_workspace(req.workspace_id)
     if not workspace or not _is_comic_office_id(workspace.get("office_id")):
-        raise HTTPException(status_code=404, detail=f"漫剧工作空间 {req.workspace_id} 不存在")
+        raise _comic_legacy_http_error(
+            404,
+            department="尚书省",
+            reason=f"漫剧工作空间 {req.workspace_id} 不存在。",
+            impact="系统无法找到要确认的项目，确认剧本和后续生产都不会执行。",
+            next_action="先选择一个已有漫剧项目，或重新创建一个新项目。",
+            stage="script_confirmation",
+        )
     office_id = _normalize_comic_office_id(workspace.get("office_id"))
     session = _workspace_comic_session(req.workspace_id, req.session)
     if not session:
-        raise HTTPException(status_code=400, detail="请先完成内阁讨论，再确认剧本")
+        raise _comic_legacy_http_error(
+            400,
+            department="内阁",
+            reason="请先完成内阁讨论，再确认剧本。",
+            impact="没有内阁讨论记录时，系统无法知道用户认可的故事版本，确认剧本会变成盲盒。",
+            next_action="回到工作台点击“开始聊故事”，让主创先和你对齐故事。",
+            stage="script_confirmation",
+        )
     issues = validate_confirmed_script_session(session)
     if issues:
-        raise HTTPException(status_code=400, detail="；".join(issues))
+        raise _comic_legacy_http_error(
+            400,
+            department="门下省",
+            reason="确认剧本前仍有问题：" + "；".join(issues),
+            impact="剧本信息不完整会导致人物、道具、场景拆解和后续提示词跑偏。",
+            next_action="继续补充主角、冲突、结尾或关键场面后再确认剧本。",
+            stage="script_confirmation",
+        )
     confirmed_script = build_confirmed_script(session, req.confirmation_notes)
     if not confirmed_script:
-        raise HTTPException(status_code=400, detail="当前剧本草案还不完整，无法确认")
+        raise _comic_legacy_http_error(
+            400,
+            department="门下省",
+            reason="当前剧本草案还不完整，无法确认。",
+            impact="不完整的剧本无法进入生产链，资产拆解和制片画布会缺少依据。",
+            next_action="继续和内阁补全故事起因、发展、结尾和关键转折。",
+            stage="script_confirmation",
+        )
     content = format_confirmed_script(confirmed_script)
     artifact_id = f"art_{req.workspace_id}_confirmed_script"
     config_manager.create_artifact(
@@ -1336,21 +1994,49 @@ def _record_comic_asset_review_decision(
 ) -> dict:
     workspace = config_manager.get_workspace(workspace_id)
     if not workspace or not _is_comic_office_id(workspace.get("office_id")):
-        raise HTTPException(status_code=404, detail=f"Comic workspace {workspace_id} does not exist")
+        raise _comic_legacy_http_error(
+            404,
+            department="尚书省",
+            reason=f"漫剧工作空间 {workspace_id} 不存在。",
+            impact="无法记录资产审核结果，后续图片和 Word 画布不会继续生产。",
+            next_action="先选择一个有效的 AI 漫剧项目。",
+            stage="asset_review",
+        )
     normalized_status = (status or "approved").strip().lower()
     allowed_statuses = {"approved", "revision_requested", "pending"}
     if normalized_status not in allowed_statuses:
-        raise HTTPException(status_code=400, detail="Unsupported asset review status")
+        raise _comic_legacy_http_error(
+            400,
+            department="门下省",
+            reason=f"资产审核状态不支持：{status}",
+            impact="系统无法判断你是要通过、退回还是暂存资产拆解包。",
+            next_action="请使用 approved、revision_requested 或 pending。",
+            stage="asset_review",
+        )
     artifact = _latest_workspace_artifact_by_type(workspace_id, "asset_review_package")
     if not artifact:
-        raise HTTPException(status_code=404, detail="Asset review package is not ready yet")
+        raise _comic_legacy_http_error(
+            404,
+            department="门下省",
+            reason="资产审核包还没有生成。",
+            impact="没有资产审核包时，用户无法确认人物、道具和场景，后续图片生产会暂停。",
+            next_action="先完成剧本确认，并生成资产拆解包后再进行资产审核。",
+            stage="asset_review",
+        )
     confirmed_metadata = _current_confirmed_script_metadata(workspace_id)
     current_hash = confirmed_metadata.get("script_hash", "")
     current_version = confirmed_metadata.get("script_version", 0)
     metadata = dict(artifact.get("metadata") or {})
     artifact_hash = metadata.get("script_hash", "")
     if current_hash and artifact_hash and artifact_hash != current_hash:
-        raise HTTPException(status_code=409, detail="资产审核包属于旧剧本版本，请先重新生成当前剧本的资产拆解包")
+        raise _comic_legacy_http_error(
+            409,
+            department="门下省",
+            reason="资产审核包属于旧剧本版本。",
+            impact="继续审核旧资产会污染当前剧本，导致图片和 Word 画布引用错误。",
+            next_action="请先重新生成当前剧本的资产拆解包，再审核资产。",
+            stage="asset_review",
+        )
     metadata.update({
         "requires_human_review": True,
         "review_status": normalized_status,
@@ -1403,7 +2089,14 @@ async def get_comic_cabinet_session_api(workspace_id: str):
     """Load the saved comic cabinet discussion for one workspace."""
     workspace = config_manager.get_workspace(workspace_id)
     if not workspace or not _is_comic_office_id(workspace.get("office_id")):
-        raise HTTPException(status_code=404, detail=f"漫剧工作空间 {workspace_id} 不存在")
+        raise _comic_legacy_http_error(
+            404,
+            department="尚书省",
+            reason=f"漫剧工作空间 {workspace_id} 不存在或不属于漫剧办公室。",
+            impact="无法读取该项目的内阁讨论、剧本确认和生产状态。",
+            next_action="回到 AI 漫剧制片办公室重新选择项目；如果项目不存在，请重新开始聊故事。",
+            stage="workspace_lookup",
+        )
     session = _load_comic_cabinet_session(workspace_id)
     if not session:
         return {"workspace_id": workspace_id, "office_id": workspace.get("office_id", "comic"), "status": "empty"}
@@ -1418,6 +2111,7 @@ async def get_comic_cabinet_session_api(workspace_id: str):
         "confirmed": bool(session.get("confirmed")),
         "ready_to_produce": bool(session.get("ready_to_produce")),
         "stage": session.get("stage") or "",
+        "assistant_message": _comic_cabinet_assistant_message(session),
     }
 
 
@@ -1426,7 +2120,7 @@ async def export_workspace_api(workspace_id: str):
     """Export all workspace artifacts as a zip package."""
     workspace = config_manager.get_workspace(workspace_id)
     if not workspace:
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id, stage="workspace_export")
     artifacts = config_manager.list_artifacts(workspace_id=workspace_id)
     export_dir = Path(__file__).parent.parent.parent / "output" / "workspaces"
     export_dir.mkdir(parents=True, exist_ok=True)
@@ -1474,7 +2168,7 @@ async def export_workspace_api(workspace_id: str):
 async def create_workspace_artifact_api(workspace_id: str, req: ArtifactCreate):
     """Create an artifact in a workspace."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     artifact_id = f"art_{str(uuid.uuid4())[:8]}"
     config_manager.create_artifact(
         artifact_id=artifact_id,
@@ -1499,16 +2193,37 @@ async def upload_workspace_evidence_api(
     """Upload screenshot evidence into a research workspace."""
     workspace = config_manager.get_workspace(workspace_id)
     if not workspace:
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _research_http_error(
+            404,
+            department="尚书省",
+            reason=f"工作空间 {workspace_id} 不存在。",
+            impact="截图证据无法归档到项目，后续报告和证据表不会包含这份材料。",
+            next_action="先新建或选择一个研究办公室项目，再上传截图证据。",
+            stage="evidence_upload",
+        )
 
     content_type = (file.content_type or "").lower()
     if content_type not in ALLOWED_EVIDENCE_TYPES:
-        raise HTTPException(status_code=400, detail="目前只支持 png、jpg、webp、gif 截图")
+        raise _research_http_error(
+            400,
+            department="户部 / 刑部",
+            reason="截图格式不支持，目前只支持 png、jpg、webp、gif。",
+            impact="证据无法入库，户部无法整理截图数据，刑部也无法做视觉识别。",
+            next_action="请重新上传 png、jpg、webp 或 gif 格式的截图。",
+            stage="evidence_upload",
+        )
 
     raw = await file.read()
     max_size = 12 * 1024 * 1024
     if len(raw) > max_size:
-        raise HTTPException(status_code=400, detail="截图不能超过 12MB")
+        raise _research_http_error(
+            400,
+            department="户部",
+            reason="截图文件过大，不能超过 12MB。",
+            impact="证据无法入库，后续数据识别和报告引用都会缺少这张截图。",
+            next_action="请压缩截图，或裁剪为更小的页面区域后重新上传。",
+            stage="evidence_upload",
+        )
 
     original_name = Path(file.filename or "screenshot").name
     safe_stem = re.sub(r"[^A-Za-z0-9_\-\u4e00-\u9fff]+", "_", Path(original_name).stem).strip("_")
@@ -1567,11 +2282,25 @@ async def upload_workspace_evidence_api(
 async def get_workspace_evidence_file_api(workspace_id: str, filename: str):
     """Return a stored workspace evidence image."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _research_http_error(
+            404,
+            department="尚书省",
+            reason=f"工作空间 {workspace_id} 不存在。",
+            impact="无法读取截图证据，报告里的截图引用也无法打开。",
+            next_action="先回到研究办公室选择有效项目，或重新上传截图证据。",
+            stage="evidence_file_download",
+        )
     safe_name = Path(filename).name
     file_path = Path(__file__).parent.parent.parent / "output" / "workspaces" / workspace_id / "evidence" / safe_name
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="截图文件不存在")
+        raise _research_http_error(
+            404,
+            department="户部",
+            reason=f"截图文件 {safe_name} 不存在或已被移动。",
+            impact="这张截图不能预览、识别或写入最终报告。",
+            next_action="重新上传截图，或重新执行自动截图后再做图片识别。",
+            stage="evidence_file_download",
+        )
     return FileResponse(str(file_path))
 
 
@@ -1579,11 +2308,27 @@ async def get_workspace_evidence_file_api(workspace_id: str, filename: str):
 async def get_workspace_generated_file_api(workspace_id: str, filename: str):
     """Return a generated workspace image."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _workspace_actionable_http_error(
+            workspace_id,
+            404,
+            department="尚书省",
+            reason=f"工作空间 {workspace_id} 不存在。",
+            impact="无法读取这个项目的生成图片，历史记录里的图片链接也会失效。",
+            next_action="回到对应办公室选择有效项目，或重新生成制片/调研产物。",
+            stage="generated_file_download",
+        )
     safe_name = Path(filename).name
     file_path = Path(__file__).parent.parent.parent / "output" / "workspaces" / workspace_id / "generated" / safe_name
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="生成图片不存在")
+        raise _workspace_actionable_http_error(
+            workspace_id,
+            404,
+            department="工部",
+            reason=f"生成图片 {safe_name} 不存在或已被清理。",
+            impact="Word 画布、历史详情或资产审核里的这张图片无法展示。",
+            next_action="重新生成基础资产图片；如果只是历史项目，请重新下载最新的 Word 画布。",
+            stage="generated_file_download",
+        )
     return FileResponse(str(file_path))
 
 
@@ -1591,7 +2336,15 @@ async def get_workspace_generated_file_api(workspace_id: str, filename: str):
 async def get_workspace_task_generated_file_api(workspace_id: str, task_id: str, filename: str):
     """Return an image from one isolated comic production task."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _workspace_actionable_http_error(
+            workspace_id,
+            404,
+            department="尚书省",
+            reason=f"工作空间 {workspace_id} 不存在。",
+            impact="无法读取该任务隔离目录下的图片，制片画布引用会失效。",
+            next_action="回到对应办公室选择有效项目，或重新执行当前生产任务。",
+            stage="generated_file_download",
+        )
     safe_task_id = Path(task_id).name
     safe_name = Path(filename).name
     file_path = (
@@ -1599,7 +2352,15 @@ async def get_workspace_task_generated_file_api(workspace_id: str, task_id: str,
         / "output" / "workspaces" / workspace_id / "generated" / safe_task_id / safe_name
     )
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="生成图片不存在")
+        raise _workspace_actionable_http_error(
+            workspace_id,
+            404,
+            department="工部",
+            reason=f"任务 {safe_task_id} 的生成图片 {safe_name} 不存在或已被清理。",
+            impact="这个任务的资产图片无法展示，Word 画布中对应图片也可能缺失。",
+            next_action="重新生成该任务的基础资产图片，或从历史里下载已存在的 Word 画布。",
+            stage="generated_file_download",
+        )
     return FileResponse(str(file_path))
 
 
@@ -1607,11 +2368,27 @@ async def get_workspace_task_generated_file_api(workspace_id: str, task_id: str,
 async def get_workspace_delivery_file_api(workspace_id: str, filename: str):
     """Return a generated delivery document."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"Workspace {workspace_id} not found")
+        raise _workspace_actionable_http_error(
+            workspace_id,
+            404,
+            department="尚书省",
+            reason=f"工作空间 {workspace_id} 不存在。",
+            impact="无法下载这个项目的交付文档，历史记录里的下载入口也会失效。",
+            next_action="回到对应办公室选择有效项目，或重新生成交付文档。",
+            stage="delivery_download",
+        )
     safe_name = Path(filename).name
     file_path = Path(__file__).parent.parent.parent / "output" / "workspaces" / workspace_id / "delivery" / safe_name
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Delivery file not found")
+        raise _workspace_actionable_http_error(
+            workspace_id,
+            404,
+            department="礼部",
+            reason=f"交付文档 {safe_name} 不存在或已被移动。",
+            impact="用户无法下载 Word 画布，也无法把这份结果交给下游平台继续生产。",
+            next_action="重新点击“生成 Word 制片画布/交付文档”；如果任务已过期，请从当前项目重新生产。",
+            stage="delivery_download",
+        )
     return FileResponse(str(file_path), filename=safe_name)
 
 
@@ -1620,15 +2397,43 @@ async def regenerate_comic_image_api(artifact_id: str, req: ComicImageRegenerate
     """Regenerate one generated comic image with optional user instructions."""
     source = config_manager.get_artifact(artifact_id)
     if not source:
-        raise HTTPException(status_code=404, detail=f"产物 {artifact_id} 不存在")
+        raise _comic_v2_http_error(
+            404,
+            department="工部",
+            reason=f"图片产物 {artifact_id} 不存在，无法重生成。",
+            impact="用户无法针对这张图进行修正，资产一致性问题也无法通过重生成解决。",
+            next_action="回到资产图片列表选择真实存在的图片；如果图片已被清理，请重新生成基础资产图。",
+            stage="image_regeneration",
+        )
     if source.get("artifact_type") != "generated_image":
-        raise HTTPException(status_code=400, detail="只有 generated_image 产物可以重生成")
+        raise _comic_v2_http_error(
+            400,
+            department="工部",
+            reason="当前产物不是 generated_image，不能执行图片重生成。",
+            impact="系统没有可复用的生图上下文，重生成后无法保证资产一致性。",
+            next_action="请选择人物、道具或场景的生成图片产物，再提交重生成意见。",
+            stage="image_regeneration",
+        )
     workspace = config_manager.get_workspace(source.get("workspace_id", ""))
     if not workspace or not _is_comic_office_id(workspace.get("office_id")):
-        raise HTTPException(status_code=400, detail="只有 AI 漫剧办公室的图片资产可以重生成")
+        raise _comic_v2_http_error(
+            400,
+            department="尚书省",
+            reason="这张图片不属于 AI 漫剧办公室项目，不能在这里重生成。",
+            impact="跨办公室重生成会破坏项目隔离，也可能把模型配置用错。",
+            next_action="回到图片所属办公室处理；如果这是漫剧资产，请重新在漫剧项目里生成。",
+            stage="image_regeneration",
+        )
     spec = _build_comic_regeneration_spec(source, req.instruction)
     if not spec.get("prompt"):
-        raise HTTPException(status_code=400, detail="没有找到原始生图提示词")
+        raise _comic_v2_http_error(
+            400,
+            department="工部",
+            reason="没有找到原始生图提示词，无法安全重生成。",
+            impact="没有资产身份证和原始提示词时，重生成图片很容易跑偏，人物、道具、场景一致性无法保证。",
+            next_action="重新生成提示词包和基础资产图，或选择包含原始提示词的图片产物再重试。",
+            stage="image_regeneration",
+        )
     max_attempts = max(1, min(4, int(os.getenv("COMIC_IMAGE_MAX_ATTEMPTS", "2") or "2")))
     source_task_id = source.get("task_id") or str(uuid.uuid4())[:8]
     output_dir = (
@@ -1701,7 +2506,14 @@ async def start_browser_login_api(req: BrowserStartRequest):
     try:
         result = await open_login_page(req.url or "https://dy3.feigua.cn/")
     except BrowserCaptureError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise _research_http_error(
+            400,
+            department="兵部",
+            reason=f"登录窗口打开失败：{exc}",
+            impact="飞瓜登录无法完成，后续自动截图、榜单取证和证据入库都会暂停。",
+            next_action="确认本机已安装 Chrome/Edge，关闭残留调试浏览器后重新点击“打开登录窗口”。",
+            stage="browser_login",
+        ) from exc
     return {
         **result,
         "note": "请在弹出的浏览器里登录平台。登录态会保存在本地浏览器资料目录。",
@@ -1714,14 +2526,21 @@ async def get_feigua_login_state_api():
     try:
         return await feigua_login_state()
     except BrowserCaptureError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise _research_http_error(
+            400,
+            department="兵部",
+            reason=f"飞瓜登录状态检查失败：{exc}",
+            impact="系统无法确认是否已经登录，截图取证不会继续执行。",
+            next_action="先点击“打开登录窗口”，在弹出的浏览器里完成登录，再重新检查登录状态。",
+            stage="browser_login",
+        ) from exc
 
 
 @app.post("/api/workspaces/{workspace_id}/capture-url")
 async def capture_workspace_url_api(workspace_id: str, req: UrlCaptureRequest):
     """Capture a URL with local Chrome and save it as screenshot evidence."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     safe_stem = re.sub(r"[^A-Za-z0-9_\-\u4e00-\u9fff]+", "_", (req.title or "browser_capture")).strip("_")
     safe_stem = safe_stem[:60] or "browser_capture"
     evidence_id = str(uuid.uuid4())[:8]
@@ -1736,7 +2555,14 @@ async def capture_workspace_url_api(workspace_id: str, req: UrlCaptureRequest):
             full_page=req.full_page,
         )
     except BrowserCaptureError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise _research_http_error(
+            400,
+            department="兵部",
+            reason=f"自动截图失败：{exc}",
+            impact="页面证据不会被保存，后续证据表、截图识别和报告引用都会缺少该页面。",
+            next_action="先点击“打开登录窗口”或确认浏览器调试端口可用；登录完成后重新自动截图。",
+            stage="browser_capture",
+        ) from exc
 
     artifact_id = f"art_ev_{evidence_id}"
     uri = f"/api/workspaces/{workspace_id}/files/evidence/{saved_name}"
@@ -1785,10 +2611,17 @@ async def capture_workspace_url_api(workspace_id: str, req: UrlCaptureRequest):
 async def capture_workspace_feigua_api(workspace_id: str, req: FeiguaCaptureRequest):
     """Run the Feigua research capture skill for a keyword and save screenshots as evidence."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     keyword = (req.keyword or "").strip()
     if not keyword:
-        raise HTTPException(status_code=400, detail="请先填写研究对象/关键词")
+        raise _research_http_error(
+            400,
+            department="兵部",
+            reason="缺少研究对象或关键词，无法开始飞瓜取证。",
+            impact="兵部无法判断要搜索哪个商品、品牌或达人，飞瓜截图计划不会执行。",
+            next_action="在研究对象里填写明确关键词，例如“民用无人机”“吹风机”或目标品牌名。",
+            stage="feigua_capture",
+        )
 
     result = await _capture_feigua_evidence(
         workspace_id=workspace_id,
@@ -1905,7 +2738,7 @@ async def _capture_feigua_evidence(
 async def sync_workspace_evidence_api(workspace_id: str, req: EvidenceSyncRequest | None = None):
     """Merge screenshot evidence and extraction results into standard research artifacts."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     synced = _sync_workspace_evidence_artifacts(workspace_id)
     return {"workspace_id": workspace_id, "status": "synced", "artifact_count": len(synced), "artifacts": synced}
 
@@ -1914,7 +2747,7 @@ async def sync_workspace_evidence_api(workspace_id: str, req: EvidenceSyncReques
 async def extract_all_workspace_evidence_api(workspace_id: str):
     """Run vision extraction for every pending screenshot in a workspace."""
     if not config_manager.get_workspace(workspace_id):
-        raise HTTPException(status_code=404, detail=f"工作空间 {workspace_id} 不存在")
+        raise _missing_workspace_http_error(workspace_id)
     result = await _auto_extract_workspace_screenshots(workspace_id)
     return result
 
@@ -1937,18 +2770,46 @@ async def _extract_evidence_artifact(
     """Internal screenshot extraction helper used by manual and automatic flows."""
     artifact = config_manager.get_artifact(artifact_id)
     if not artifact:
-        raise HTTPException(status_code=404, detail=f"产物 {artifact_id} 不存在")
+        raise _research_http_error(
+            404,
+            department="刑部",
+            reason=f"产物 {artifact_id} 不存在，无法执行截图识别。",
+            impact="这张截图不会被转成结构化数据，后续报告也无法引用它。",
+            next_action="回到截图证据区，重新上传截图或选择一个真实存在的截图证据。",
+            stage="evidence_extraction",
+        )
     if artifact.get("artifact_type") != "screenshot_evidence":
-        raise HTTPException(status_code=400, detail="只有截图证据产物可以执行图片识别")
+        raise _research_http_error(
+            400,
+            department="刑部",
+            reason="当前产物不是截图证据，不能执行图片识别。",
+            impact="模型无法从普通报告或其他产物里提取页面截图数据。",
+            next_action="请选择 artifact_type 为 screenshot_evidence 的产物，或先上传截图证据。",
+            stage="evidence_extraction",
+        )
 
     workspace_id = artifact.get("workspace_id") or ""
     metadata = artifact.get("metadata") or {}
     stored_filename = Path(metadata.get("stored_filename") or "").name
     if not workspace_id or not stored_filename:
-        raise HTTPException(status_code=400, detail="截图证据缺少文件信息")
+        raise _research_http_error(
+            400,
+            department="户部",
+            reason="截图证据缺少工作空间或文件名信息。",
+            impact="系统找不到原始截图文件，刑部无法进行视觉识别。",
+            next_action="重新上传这张截图，让系统重新生成完整的证据记录。",
+            stage="evidence_extraction",
+        )
     file_path = Path(__file__).parent.parent.parent / "output" / "workspaces" / workspace_id / "evidence" / stored_filename
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="截图文件不存在")
+        raise _research_http_error(
+            404,
+            department="户部",
+            reason=f"截图文件 {stored_filename} 不存在或已被移动。",
+            impact="截图无法预览和识别，报告中的证据链会缺少这一页。",
+            next_action="重新上传截图，或重新执行自动截图后再识别。",
+            stage="evidence_extraction",
+        )
 
     agent_id = agent_id if agent_id in {"hubu", "bingbu", "xingbu", "gongbu"} else "hubu"
     model_config = config_manager.get_model_config(agent_id, office_id="research")
@@ -2554,7 +3415,14 @@ async def recover_task_artifacts_api(task_id: str):
     """Recover research artifacts from a task result or generated markdown file."""
     record = config_manager.get_task_run(task_id) or config_manager.get_task_result(task_id)
     if not record:
-        raise HTTPException(status_code=404, detail=f"任务 {task_id} 不存在")
+        raise _research_http_error(
+            404,
+            department="尚书省",
+            reason=f"任务 {task_id} 不存在，无法恢复产物。",
+            impact="系统找不到这次调研的执行记录，也无法从记录里重建报告、数据表或来源清单。",
+            next_action="从历史记录选择真实存在的任务；如果任务是旧进程中断的，请重新提交调研工单。",
+            stage="artifact_recovery",
+        )
 
     workspace_id = ""
     for event in reversed(record.get("events", [])):
@@ -2563,7 +3431,14 @@ async def recover_task_artifacts_api(task_id: str):
             workspace_id = payload["workspace_id"]
             break
     if not workspace_id:
-        raise HTTPException(status_code=400, detail="没有找到这个任务所属的工作空间")
+        raise _research_http_error(
+            400,
+            department="尚书省",
+            reason="没有找到这个任务所属的工作空间。",
+            impact="恢复出的产物没有项目可归档，前端也无法在对应办公室展示。",
+            next_action="重新提交一次调研任务，或先确认历史任务记录里是否包含 workspace_id。",
+            stage="artifact_recovery",
+        )
 
     result = record.get("result") or {}
     final_report = result.get("final_report", "")
@@ -2575,7 +3450,14 @@ async def recover_task_artifacts_api(task_id: str):
             report_path = candidates[0]
             final_report = report_path.read_text(encoding="utf-8")
     if not final_report:
-        raise HTTPException(status_code=404, detail="没有找到可恢复的报告正文")
+        raise _research_http_error(
+            404,
+            department="礼部",
+            reason="没有找到可恢复的报告正文。",
+            impact="无法重建报告、图表建议、截图计划和老板简报等交付物。",
+            next_action="检查任务是否真正完成；如果任务中断或模型没有产出正文，请重新运行调研任务。",
+            stage="artifact_recovery",
+        )
 
     title = result.get("plan", {}).get("title") if isinstance(result.get("plan"), dict) else ""
     title = title or _extract_markdown_title(final_report) or f"Recovered report {task_id}"
@@ -2644,12 +3526,33 @@ async def create_task(req: TaskRequest):
         office = get_office(workspace.get("office_id"))
     if _is_comic_office_id(office.id):
         if not req.workspace_id:
-            raise HTTPException(status_code=400, detail="请先在漫剧项目中确认剧本，再开始生产")
+            raise _comic_v2_http_error(
+                400,
+                department="内阁",
+                reason="还没有选择已确认故事的漫剧项目。",
+                impact="尚书省无法接收生产任务，后续资产拆解、图片生成和 Word 画布都不会启动。",
+                next_action="先在 AI 漫剧制片室选择项目，完成故事确认后再点击开始生产。",
+                stage="production_start",
+            )
         if not workspace or workspace.get("office_id") != office.id:
-            raise HTTPException(status_code=404, detail=f"漫剧工作空间 {req.workspace_id} 不存在")
+            raise _comic_v2_http_error(
+                404,
+                department="尚书省",
+                reason=f"漫剧工作空间 {req.workspace_id} 不存在，或不属于当前办公室。",
+                impact="生产任务无法归档到正确项目，可能导致串项目或历史记录丢失。",
+                next_action="回到 AI 漫剧制片室重新选择项目；如果项目不存在，请重新创建并确认故事。",
+                stage="production_start",
+            )
         confirmed_artifact = _latest_workspace_artifact_by_type(req.workspace_id, "confirmed_script")
         if not confirmed_artifact:
-            raise HTTPException(status_code=400, detail="请先确认当前剧本，再开始生成制片包")
+            raise _comic_v2_http_error(
+                400,
+                department="内阁",
+                reason="当前项目还没有确认故事。",
+                impact="中书省和门下省没有稳定的故事依据，无法继续拆解人物、道具、场景和提示词。",
+                next_action="先完成主创对话，确认故事后再生成资产拆解和制片包。",
+                stage="production_start",
+            )
         req.user_request = _request_with_server_confirmed_script(req.user_request, confirmed_artifact)
         image_config_issues = (
             _comic_production_image_config_issues(office.id)
@@ -2657,7 +3560,14 @@ async def create_task(req: TaskRequest):
             else []
         )
         if image_config_issues:
-            raise HTTPException(status_code=400, detail="；".join(image_config_issues))
+            raise _comic_v2_http_error(
+                400,
+                department="工部 / 兵部 / 刑部",
+                reason="图片生产或质检所需模型配置不完整：" + "；".join(image_config_issues),
+                impact="即使启动任务，也会在生成图片或视觉质检阶段失败。",
+                next_action="到模型页面测试并补齐工部生图模型、兵部/刑部视觉模型的 API Key 和模型名称。",
+                stage="production_start",
+            )
     workspace_id = req.workspace_id or f"ws_{task_id}"
     if not config_manager.get_workspace(workspace_id):
         config_manager.create_workspace(
@@ -3276,6 +4186,39 @@ def _summarize_history_artifact(artifact: dict) -> dict:
     }
 
 
+def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> dict:
+    if not word_canvas or word_canvas.get("artifact_type") != "comic_v2_word_canvas":
+        return {}
+    word_meta = word_canvas.get("metadata") or {}
+    prompt_package = next(
+        (a for a in reversed(artifacts) if a.get("artifact_type") == "comic_v2_prompt_package"),
+        {},
+    )
+    visual_review = next(
+        (a for a in reversed(artifacts) if a.get("artifact_type") == "comic_v2_visual_review"),
+        {},
+    )
+    prompt_meta = prompt_package.get("metadata") or {}
+    review_meta = visual_review.get("metadata") or {}
+    return {
+        "story_id": word_meta.get("story_id", ""),
+        "story_version": word_meta.get("story_version", 0),
+        "style_id": word_meta.get("style_id", ""),
+        "style_version": word_meta.get("style_version", 0),
+        "manifest_version": word_meta.get("manifest_version") or prompt_meta.get("manifest_version", 0),
+        "prompt_package_title": prompt_package.get("title", ""),
+        "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
+        "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),
+        "visual_review": {
+            "title": visual_review.get("title", ""),
+            "production_ready": bool(review_meta.get("production_ready")),
+            "record_count": review_meta.get("record_count", 0),
+            "failure_count": review_meta.get("failure_count", 0),
+        },
+        "delivery_audit": word_meta.get("audit") or {},
+    }
+
+
 def _enrich_history_item(item: dict) -> dict:
     task_id = item.get("task_id", "")
     artifacts = config_manager.list_artifacts(task_id=task_id) if task_id else []
@@ -3307,6 +4250,7 @@ def _enrich_history_item(item: dict) -> dict:
         "updated_at": run_record.get("updated_at", ""),
         "completed_at": run_record.get("completed_at", ""),
         "final_report_preview": final_report[:1200],
+        "comic_v2_trace": _comic_v2_history_trace(artifacts, word_canvas),
     })
     return enriched
 
@@ -3316,7 +4260,14 @@ async def get_task(task_id: str):
     """查询任务详情（含完整结果和最终报告）"""
     record = config_manager.get_task_run(task_id) or config_manager.get_task_result(task_id)
     if not record:
-        raise HTTPException(status_code=404, detail=f"任务 {task_id} 不存在")
+        raise _research_http_error(
+            404,
+            department="尚书省",
+            reason=f"任务 {task_id} 不存在或已被清理。",
+            impact="无法读取任务进度、事件日志或最终报告，历史详情页也无法恢复这次执行。",
+            next_action="从历史列表选择真实存在的任务；如果任务被中断或清理，请重新提交工单。",
+            stage="task_lookup",
+        )
     return record
 
 
@@ -3325,7 +4276,14 @@ async def get_task_report(task_id: str):
     """获取任务的最终报告"""
     record = config_manager.get_task_result(task_id)
     if not record:
-        raise HTTPException(status_code=404, detail=f"任务 {task_id} 不存在")
+        raise _research_http_error(
+            404,
+            department="尚书省",
+            reason=f"任务 {task_id} 不存在或已被清理。",
+            impact="无法读取任务进度、事件日志或最终报告，历史详情页也无法恢复这次执行。",
+            next_action="从历史列表选择真实存在的任务；如果任务被中断或清理，请重新提交工单。",
+            stage="task_lookup",
+        )
     result = record.get("result", {})
     final_report = result.get("final_report", "")
     return {
@@ -3438,7 +4396,14 @@ async def update_model(agent_id: str, update: ModelConfigUpdate, office_id: str 
 async def test_model(agent_id: str, office_id: str = ""):
     """Run a lightweight connectivity probe for one office-scoped department."""
     if agent_id not in AGENT_IDS:
-        raise HTTPException(status_code=404, detail=f"Unknown agent: {agent_id}")
+        raise _system_http_error(
+            404,
+            department="模型配置",
+            reason=f"未知部门或 Agent：{agent_id}。",
+            impact="系统无法测试这个模型配置，也无法判断该部门是否可用。",
+            next_action="请选择页面上已有的部门，例如中书省、门下省、工部、刑部等，再点击测试。",
+            stage="model_test",
+        )
     config = config_manager.get_model_config(agent_id, office_id=office_id)
     return await probe_model_connectivity(agent_id, office_id, config)
 
@@ -3642,7 +4607,14 @@ async def download_task_file(task_id: str, filename: str):
     from pathlib import Path
     filepath = Path(__file__).parent.parent.parent / "output" / task_id / filename
     if not filepath.exists():
-        raise HTTPException(status_code=404, detail=f"文件不存在: {filename}")
+        raise _research_http_error(
+            404,
+            department="礼部",
+            reason=f"任务文件 {filename} 不存在或已被清理。",
+            impact="用户无法下载这份历史交付物，报告或画布引用也会失效。",
+            next_action="回到历史记录下载仍存在的交付文件；如果文件已清理，请重新生成该任务产物。",
+            stage="task_file_download",
+        )
     return FileResponse(str(filepath), filename=filename)
 
 

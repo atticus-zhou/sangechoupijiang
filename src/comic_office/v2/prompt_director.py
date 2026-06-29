@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -60,20 +61,27 @@ def build_asset_prompt_plan(
     *,
     image_kind: str,
 ) -> PromptPlan:
-    """Build a clean identity prompt without copying the asset's story purpose."""
+    """Build a clean identity prompt for one planned asset image."""
     if image_kind not in asset.planned_images:
         raise ValueError(f"{image_kind} is not planned for {asset.asset_id}")
+
     style = _style_clause(visual)
-    locks = "、".join(asset.visual_locks)
+    locks = "；".join(asset.visual_locks)
+    allowed = "、".join(asset.allowed_changes)
+    identity = f"资产ID：{asset.asset_id}；资产名称：{asset.name}"
+    boundary = "故事用途：作为后续镜头的一致性参考，只建立身份、形体、材质和空间规则，不表现剧情动作。"
+
     if asset.asset_type == "character":
         kind = {
-            "three_view": "人物正面、侧面、背面三视图，完整站姿",
-            "expression_sheet": "人物表情表，中性、震惊、愤怒、悲伤、克制、决绝",
+            "three_view": "人物三视图：正面、侧面、背面，完整站姿，同一脸型、发型、体型和服装主色",
+            "expression_sheet": "人物表情表：中性、震惊、愤怒、悲伤、克制、决绝，脸型和发型完全一致",
         }.get(image_kind, image_kind)
         prompt = (
-            f"{style}。基础人物资产设定，角色：{asset.name}。{kind}。"
-            f"视觉锁定：{locks}。同一脸型、发型、年龄感、体型和服装，"
-            "纯白或近白色干净背景，柔和工作室布光，只展示人物身份设定。"
+            f"{style}。基础人物资产身份证，{identity}。{kind}。"
+            f"视觉锁定：{locks}。允许变化：{allowed}。{boundary}"
+            "构图：角色居中，比例完整，留出干净边距，适合后续抠图和一致性参考。"
+            "光线：柔和工作室布光，面部结构清晰，服装纹理可辨。"
+            "纯白或近白色干净背景，只展示人物基础设定。"
         )
         negative = (
             "禁止剧情动作",
@@ -84,39 +92,46 @@ def build_asset_prompt_plan(
         )
     elif asset.asset_type == "prop":
         kind = {
-            "turnaround": "正面、侧面、三分之四视角和材质特写",
-            "state_sheet": "静置、打开或关闭、完整或轻微磨损等基础状态",
+            "turnaround": "道具多角度转面：正面、侧面、三分之四视角和材质特写",
+            "state_sheet": "道具状态变化图：静置、打开或关闭、完整或轻微磨损等基础状态",
         }.get(image_kind, image_kind)
         prompt = (
-            f"{style}。基础道具资产设定，道具：{asset.name}。{kind}。"
-            f"视觉锁定：{locks}。保持同一形状、比例、颜色、材质和磨损位置，"
-            "纯白或近白色干净背景，柔和工作室布光，只展示道具本体。"
+            f"{style}。基础道具资产身份证，{identity}。{kind}。"
+            f"视觉锁定：{locks}。允许变化：{allowed}。{boundary}"
+            "构图：单个道具居中展示，边缘完整，形状比例稳定。"
+            "光线：柔和工作室布光，材质、磨损位置和结构细节清楚。"
+            "纯白或近白色干净背景，只展示道具本体。"
         )
         negative = (
             "禁止人物手持或人物入镜",
             "禁止剧情现场",
             "禁止现代材料和现代包装",
             "禁止文字、标签、编号和水印",
+            "禁止形状、比例、颜色和材质漂移",
         )
     elif asset.asset_type == "scene":
         kind = {
-            "wide": "广角建立图，展示空间边界、入口、出口和纵深",
-            "top_down": "俯视布局，展示平面结构、走位区域和关键陈设位置",
-            "camera_angles": "同一空间的远景、中景、低角度和特写背景机位",
+            "wide": "广角空间图：展示空间边界、入口、出口、纵深和主要陈设",
+            "top_down": "俯视布局图：展示平面结构、走位区域和关键陈设位置",
+            "camera_angles": "关键机位参考：同一空间的远景、中景、低角度和特写背景机位",
         }.get(image_kind, image_kind)
         prompt = (
-            f"{style}。基础空场景资产，场景：{asset.name}。{kind}。"
-            f"空间锁定：{locks}。光线方向、建筑结构、入口出口和关键陈设保持一致，"
-            "只展示空间，不发生剧情事件。"
+            f"{style}。基础空场景资产身份证，{identity}。{kind}。"
+            f"空间结构锁定：{locks}。允许变化：{allowed}。{boundary}"
+            "构图：优先表达空间结构、入口出口、纵深关系和可拍摄机位。"
+            "光线：沿用视觉母版光线，清楚标出明暗方向和关键陈设层次。"
+            "只展示空场景，不发生剧情事件。"
         )
         negative = (
             "禁止人物和人物互动",
             "禁止剧情事件",
             "禁止改变空间结构",
+            "禁止白底棚拍感",
             "禁止文字、标签、编号和水印",
         )
     else:
         raise ValueError(f"unsupported asset type: {asset.asset_type}")
+
     negative += tuple(_prohibition(item) for item in visual.prohibited_elements)
     return PromptPlan(
         object_id=asset.asset_id,
@@ -227,15 +242,17 @@ def parse_prompt_director_response(text: str) -> PromptDirectorResult:
         for item in payload["prompts"]:
             if not isinstance(item, dict):
                 raise ValueError("prompt item must be an object")
-            generator_prompt = str(item.get("generator_prompt") or "").strip()
+            generator_prompt, inline_negative = _split_generator_prompt(
+                str(item.get("generator_prompt") or "")
+            )
             if not generator_prompt:
                 raise ValueError("generator prompt is empty")
-            negative = _string_tuple(item.get("negative_prompt") or (), "negative_prompt")
+            negative = _string_tuple(item.get("negative_prompt") or (), "negative_prompt") + inline_negative
             prompts.append(PromptPlan(
                 object_id=str(item.get("object_id") or "").strip(),
                 image_kind=str(item.get("image_kind") or "model_generated").strip(),
                 purpose=str(item.get("purpose") or "").strip(),
-                generator_prompt=generator_prompt,
+                generator_prompt=_normalize_generator_language(generator_prompt),
                 negative_prompt=_unique(tuple(_prohibition(value) for value in negative)),
                 style_id=str(item.get("style_id") or "").strip(),
             ))
@@ -255,15 +272,36 @@ def parse_prompt_director_response(text: str) -> PromptDirectorResult:
 
 def _style_clause(visual: VisualBible) -> str:
     return (
-        f"风格身份证 {visual.style_id}，{visual.medium}，{visual.era}，"
+        f"风格身份：{visual.style_id}，{visual.medium}，{visual.era}，"
         f"画面比例 {visual.aspect_ratio}，主色 {','.join(visual.palette)}，"
         f"光线 {visual.lighting}，镜头语言 {visual.camera_language}"
     )
 
 
 def _prohibition(value: str) -> str:
-    text = str(value).strip().replace("不要", "禁止")
-    return text if text.startswith("禁止") else f"禁止{text}"
+    text = str(value or "").strip()
+    text = re.sub(r"^(不要|不得|避免|禁止)", "", text).strip(" ：:，,。；;")
+    return f"禁止{text}" if text else ""
+
+
+def _split_generator_prompt(value: str) -> tuple[str, tuple[str, ...]]:
+    text = str(value or "").strip()
+    markers = ("负面提示词：", "负面提示词:", "negative prompt:", "Negative prompt:")
+    for marker in markers:
+        if marker in text:
+            body, negative = text.split(marker, 1)
+            return body.strip(), _inline_negative_terms(negative)
+    return text, ()
+
+
+def _inline_negative_terms(value: str) -> tuple[str, ...]:
+    normalized = re.sub(r"[，,；;、\n]+", "|", str(value or ""))
+    return tuple(part.strip() for part in normalized.split("|") if part.strip())
+
+
+def _normalize_generator_language(value: str) -> str:
+    text = str(value or "").strip()
+    return text.replace("不要", "禁止").replace("不得", "禁止")
 
 
 def _string_tuple(value: Any, label: str) -> tuple[str, ...]:

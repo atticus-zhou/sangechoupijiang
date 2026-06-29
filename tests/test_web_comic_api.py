@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 import shutil
 import unittest
 import uuid
@@ -68,6 +68,8 @@ class WebComicApiTests(unittest.TestCase):
         self.assertEqual(saved.status_code, 200)
         self.assertEqual(saved.json()["status"], "ok")
         self.assertIn("女大学生", saved.json()["session"]["script_preview"]["user_answers"])
+        self.assertIn("assistant_message", saved.json())
+        self.assertTrue(saved.json()["assistant_message"])
 
     def test_comic_production_cabinet_creates_isolated_workspace(self):
         response = self.client.post("/api/comic/cabinet/turn", json={
@@ -109,6 +111,140 @@ class WebComicApiTests(unittest.TestCase):
 
         self.assertEqual(body["office_id"], "comic_production")
         self.assertEqual(config_manager.get_workspace(workspace_id)["office_id"], "comic_production")
+
+    def test_comic_cabinet_requires_idea_with_actionable_error(self):
+        response = self.client.post("/api/comic/cabinet/turn", json={
+            "idea": "",
+            "genre": "fantasy",
+            "length": "3 episodes",
+            "platform": "vertical short drama",
+            "visual_style": "cinematic comic",
+            "extra": "",
+        })
+
+        self.assertEqual(response.status_code, 400)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["office_id"], "comic_production")
+        self.assertEqual(detail["department"], "内阁")
+        self.assertIn("灵感", detail["reason"])
+        self.assertIn("故事", detail["impact"])
+        self.assertIn("一句", detail["next_action"])
+
+    def test_legacy_comic_brief_errors_are_actionable(self):
+        brief = self.client.post("/api/comic/brief", json={
+            "idea": "",
+            "genre": "fantasy",
+            "length": "3 episodes",
+            "platform": "vertical short drama",
+            "visual_style": "cinematic comic",
+            "extra": "",
+        })
+        self.assertEqual(brief.status_code, 400)
+        brief_detail = brief.json()["detail"]
+        self.assertEqual(brief_detail["office_id"], "comic_production")
+        self.assertEqual(brief_detail["stage"], "story_brief")
+        self.assertTrue(brief_detail["reason"])
+        self.assertTrue(brief_detail["impact"])
+        self.assertTrue(brief_detail["next_action"])
+
+        preview = self.client.post("/api/comic/script-preview", json={
+            "idea": "A healer dies during a mission.",
+            "genre": "fantasy",
+            "length": "3 episodes",
+            "platform": "vertical short drama",
+            "visual_style": "cinematic comic",
+            "extra": "",
+            "creative_brief": {},
+            "user_answers": "",
+        })
+        self.assertEqual(preview.status_code, 400)
+        preview_detail = preview.json()["detail"]
+        self.assertEqual(preview_detail["office_id"], "comic_production")
+        self.assertEqual(preview_detail["stage"], "script_preview")
+        self.assertTrue(preview_detail["reason"])
+        self.assertTrue(preview_detail["impact"])
+        self.assertTrue(preview_detail["next_action"])
+
+    def test_comic_workspace_lookup_errors_are_actionable(self):
+        unsupported = self.client.post("/api/comic/cabinet/turn", json={
+            "office_id": "research",
+            "idea": "A wrong office should be rejected clearly.",
+            "genre": "fantasy",
+            "length": "3 episodes",
+            "platform": "vertical short drama",
+            "visual_style": "cinematic comic",
+            "extra": "",
+        })
+        self.assertEqual(unsupported.status_code, 400)
+        unsupported_detail = unsupported.json()["detail"]
+        self.assertEqual(unsupported_detail["office_id"], "comic_production")
+        self.assertEqual(unsupported_detail["stage"], "office_routing")
+        self.assertTrue(unsupported_detail["reason"])
+        self.assertTrue(unsupported_detail["impact"])
+        self.assertTrue(unsupported_detail["next_action"])
+
+        missing = self.client.get("/api/comic/cabinet/ws_missing_comic_session")
+        self.assertEqual(missing.status_code, 404)
+        missing_detail = missing.json()["detail"]
+        self.assertEqual(missing_detail["office_id"], "comic_production")
+        self.assertEqual(missing_detail["stage"], "workspace_lookup")
+        self.assertTrue(missing_detail["reason"])
+        self.assertTrue(missing_detail["impact"])
+        self.assertTrue(missing_detail["next_action"])
+
+    def test_confirm_script_requires_cabinet_session_with_actionable_error(self):
+        workspace_id = f"ws_comic_err_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="No session",
+            brief="",
+        )
+
+        response = self.client.post("/api/comic/confirm-script", json={
+            "workspace_id": workspace_id,
+            "office_id": "comic_production",
+            "session": {},
+            "confirmation_notes": "",
+        })
+
+        self.assertEqual(response.status_code, 400)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "内阁")
+        self.assertIn("内阁讨论", detail["reason"])
+        self.assertIn("确认剧本", detail["impact"])
+        self.assertIn("开始聊故事", detail["next_action"])
+
+    def test_asset_review_decision_errors_are_actionable(self):
+        workspace_id = f"ws_asset_err_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="No asset package",
+            brief="",
+        )
+
+        invalid = self.client.post(
+            f"/api/workspaces/{workspace_id}/comic/asset-review/decision",
+            json={"status": "bad_status"},
+        )
+        self.assertEqual(invalid.status_code, 400)
+        invalid_detail = invalid.json()["detail"]
+        self.assertEqual(invalid_detail["department"], "门下省")
+        self.assertIn("审核状态", invalid_detail["reason"])
+        self.assertIn("approved", invalid_detail["next_action"])
+
+        missing = self.client.post(
+            f"/api/workspaces/{workspace_id}/comic/asset-review/decision",
+            json={"status": "approved"},
+        )
+        self.assertEqual(missing.status_code, 404)
+        missing_detail = missing.json()["detail"]
+        self.assertEqual(missing_detail["department"], "门下省")
+        self.assertIn("资产审核包", missing_detail["reason"])
+        self.assertIn("资产拆解", missing_detail["next_action"])
 
     def test_comic_production_task_uses_its_own_office_scope(self):
         workspace_id = f"ws_prod_{str(uuid.uuid4())[:8]}"
@@ -201,8 +337,14 @@ class WebComicApiTests(unittest.TestCase):
             config_manager.save_yaml(original_config)
 
         self.assertEqual(started.status_code, 400)
-        self.assertIn("工部需要生图模型", started.json()["detail"])
-        self.assertIn("兵部需要生图模型", started.json()["detail"])
+        detail = started.json()["detail"]
+        self.assertEqual(detail["office_id"], "comic_production")
+        self.assertEqual(detail["stage"], "production_start")
+        self.assertIn("doubao-seedream-5", detail["reason"])
+        self.assertIn("qwen-vl-max", detail["reason"])
+        self.assertIn("deepseek-chat", detail["reason"])
+        self.assertTrue(detail["impact"])
+        self.assertTrue(detail["next_action"])
 
     def test_asset_review_decision_is_bound_to_current_confirmed_script(self):
         workspace_id = f"ws_review_{str(uuid.uuid4())[:8]}"
@@ -396,8 +538,47 @@ class WebComicApiTests(unittest.TestCase):
             title="V2 Word Canvas",
             uri=f"/api/workspaces/{workspace_id}/files/delivery/v2.docx",
             content="ready",
-            metadata={"office_id": "comic_production"},
+            metadata={
+                "office_id": "comic_production",
+                "story_id": "story_123",
+                "story_version": 3,
+                "style_id": "style_456",
+                "style_version": 2,
+                "manifest_version": 5,
+                "download_uri": f"/api/workspaces/{workspace_id}/files/delivery/v2.docx",
+                "audit": {"asset_count": 7, "shot_count": 9, "handoff_ready": True},
+            },
             created_by="libu",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_prompt_pkg",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_prompt_package",
+            title="V2 Prompt Package",
+            content="{}",
+            metadata={
+                "office_id": "comic_production",
+                "manifest_version": 5,
+                "asset_prompt_count": 7,
+                "shot_prompt_count": 9,
+            },
+            created_by="gongbu",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_visual_review",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_visual_review",
+            title="V2 Visual Review",
+            content="{}",
+            metadata={
+                "office_id": "comic_production",
+                "production_ready": True,
+                "record_count": 7,
+                "failure_count": 0,
+            },
+            created_by="xingbu",
         )
         try:
             response = self.client.get("/api/tasks/history?limit=20")
@@ -405,6 +586,15 @@ class WebComicApiTests(unittest.TestCase):
             row = next(item for item in response.json()["history"] if item["task_id"] == task_id)
             self.assertTrue(row["word_canvas_uri"].endswith("/v2.docx"))
             self.assertEqual(row["word_canvas_title"], "V2 Word Canvas")
+            trace = row["comic_v2_trace"]
+            self.assertEqual(trace["story_id"], "story_123")
+            self.assertEqual(trace["story_version"], 3)
+            self.assertEqual(trace["style_version"], 2)
+            self.assertEqual(trace["manifest_version"], 5)
+            self.assertEqual(trace["asset_prompt_count"], 7)
+            self.assertEqual(trace["shot_prompt_count"], 9)
+            self.assertEqual(trace["visual_review"]["record_count"], 7)
+            self.assertTrue(trace["delivery_audit"]["handoff_ready"])
         finally:
             conn = sqlite3.connect("user_data/config.db")
             conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
@@ -412,6 +602,139 @@ class WebComicApiTests(unittest.TestCase):
             conn.execute("DELETE FROM task_events WHERE task_id=?", (task_id,))
             conn.commit()
             conn.close()
+
+    def test_delivery_download_errors_are_actionable(self):
+        workspace_id = f"ws_delivery_err_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="Missing delivery",
+            brief="Delivery should explain missing files.",
+        )
+
+        response = self.client.get(f"/api/workspaces/{workspace_id}/files/delivery/missing.docx")
+
+        self.assertEqual(response.status_code, 404)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["office_id"], "comic_production")
+        self.assertEqual(detail["stage"], "delivery_download")
+        self.assertTrue(detail["reason"])
+        self.assertTrue(detail["impact"])
+        self.assertTrue(detail["next_action"])
+
+    def test_generated_image_download_errors_are_actionable(self):
+        workspace_id = f"ws_generated_err_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="Missing generated image",
+            brief="Generated image should explain missing files.",
+        )
+
+        response = self.client.get(f"/api/workspaces/{workspace_id}/files/generated/missing.png")
+
+        self.assertEqual(response.status_code, 404)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["office_id"], "comic_production")
+        self.assertEqual(detail["stage"], "generated_file_download")
+        self.assertTrue(detail["reason"])
+        self.assertTrue(detail["impact"])
+        self.assertTrue(detail["next_action"])
+
+    def test_comic_production_start_errors_are_actionable(self):
+        missing_workspace_id = f"ws_missing_{str(uuid.uuid4())[:8]}"
+
+        no_workspace_selected = self.client.post("/api/tasks", json={
+            "user_request": "start production",
+            "office_id": "comic_production",
+        })
+        self.assertEqual(no_workspace_selected.status_code, 400)
+        no_workspace_detail = no_workspace_selected.json()["detail"]
+        self.assertEqual(no_workspace_detail["office_id"], "comic_production")
+        self.assertEqual(no_workspace_detail["stage"], "production_start")
+        self.assertTrue(no_workspace_detail["reason"])
+        self.assertTrue(no_workspace_detail["impact"])
+        self.assertTrue(no_workspace_detail["next_action"])
+
+        missing_workspace = self.client.post("/api/tasks", json={
+            "user_request": "start production",
+            "office_id": "comic_production",
+            "workspace_id": missing_workspace_id,
+        })
+        self.assertEqual(missing_workspace.status_code, 404)
+        missing_workspace_detail = missing_workspace.json()["detail"]
+        self.assertEqual(missing_workspace_detail["office_id"], "comic_production")
+        self.assertEqual(missing_workspace_detail["stage"], "production_start")
+        self.assertTrue(missing_workspace_detail["reason"])
+        self.assertTrue(missing_workspace_detail["impact"])
+        self.assertTrue(missing_workspace_detail["next_action"])
+
+        workspace_id = f"ws_start_err_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="No confirmed story",
+            brief="Production should require a confirmed story.",
+        )
+        no_script = self.client.post("/api/tasks", json={
+            "user_request": "start production",
+            "office_id": "comic_production",
+            "workspace_id": workspace_id,
+        })
+        self.assertEqual(no_script.status_code, 400)
+        no_script_detail = no_script.json()["detail"]
+        self.assertEqual(no_script_detail["office_id"], "comic_production")
+        self.assertEqual(no_script_detail["stage"], "production_start")
+        self.assertTrue(no_script_detail["reason"])
+        self.assertTrue(no_script_detail["impact"])
+        self.assertTrue(no_script_detail["next_action"])
+
+    def test_comic_image_regeneration_errors_are_actionable(self):
+        missing = self.client.post(
+            "/api/artifacts/art_missing_regenerate/regenerate-comic-image",
+            json={"instruction": "make it cleaner"},
+        )
+        self.assertEqual(missing.status_code, 404)
+        missing_detail = missing.json()["detail"]
+        self.assertEqual(missing_detail["office_id"], "comic_production")
+        self.assertEqual(missing_detail["stage"], "image_regeneration")
+        self.assertTrue(missing_detail["reason"])
+        self.assertTrue(missing_detail["impact"])
+        self.assertTrue(missing_detail["next_action"])
+
+        workspace_id = f"ws_regen_err_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="Regeneration errors",
+            brief="Regeneration should explain invalid artifacts.",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{workspace_id}_report",
+            workspace_id=workspace_id,
+            task_id="",
+            artifact_type="report",
+            title="Not an image",
+            content="plain report",
+            metadata={"office_id": "comic_production"},
+            created_by="libu",
+        )
+        wrong_type = self.client.post(
+            f"/api/artifacts/art_{workspace_id}_report/regenerate-comic-image",
+            json={"instruction": "make it cleaner"},
+        )
+        self.assertEqual(wrong_type.status_code, 400)
+        wrong_detail = wrong_type.json()["detail"]
+        self.assertEqual(wrong_detail["office_id"], "comic_production")
+        self.assertEqual(wrong_detail["stage"], "image_regeneration")
+        self.assertTrue(wrong_detail["reason"])
+        self.assertTrue(wrong_detail["impact"])
+        self.assertTrue(wrong_detail["next_action"])
+
 
     def test_comic_image_specs_skip_shots_and_only_generate_base_assets(self):
         result = {

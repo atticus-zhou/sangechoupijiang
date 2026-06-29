@@ -1,4 +1,4 @@
-import json
+﻿import json
 import sqlite3
 import unittest
 import uuid
@@ -10,7 +10,8 @@ from fastapi.testclient import TestClient
 from src.comic_office.v2.pipeline import ComicProductionV2
 from src.comic_office.v2.contracts import build_contract_bundle
 from src.comic_office.v2.asset_manifest import build_asset_manifest
-from src.comic_office.v2.production import ImageProductionResult, PromptPackage
+from src.comic_office.v2.delivery import DeliveryValidationError
+from src.comic_office.v2.production import ImageProductionResult, ProductionError, PromptPackage
 from src.comic_office.v2.prompt_director import PromptPlan, ShotCard
 from src.comic_office.v2.word_canvas import CanvasBuildResult, DocumentAudit
 from src.llm.providers import ModelConfig
@@ -252,6 +253,26 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         conn.commit()
         conn.close()
 
+    def test_v2_workspace_and_state_errors_are_actionable(self):
+        missing = self.client.get("/api/workspaces/ws_missing_v2_error/comic/v2/status")
+        self.assertEqual(missing.status_code, 404)
+        missing_detail = missing.json()["detail"]
+        self.assertEqual(missing_detail["office_id"], "comic_production")
+        self.assertEqual(missing_detail["stage"], "workspace_lookup")
+        self.assertTrue(missing_detail["reason"])
+        self.assertTrue(missing_detail["impact"])
+        self.assertTrue(missing_detail["next_action"])
+
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", "{broken-json")
+        damaged = self.client.get(f"/api/workspaces/{self.workspace_id}/comic/v2/status")
+        self.assertEqual(damaged.status_code, 500)
+        damaged_detail = damaged.json()["detail"]
+        self.assertEqual(damaged_detail["office_id"], "comic_production")
+        self.assertEqual(damaged_detail["stage"], "state_load")
+        self.assertTrue(damaged_detail["reason"])
+        self.assertTrue(damaged_detail["impact"])
+        self.assertTrue(damaged_detail["next_action"])
+
     def test_api_starts_and_exposes_current_object_and_next_action(self):
         started = self.client.post(
             f"/api/workspaces/{self.workspace_id}/comic/v2/start",
@@ -294,6 +315,36 @@ class ComicV2PipelineApiTests(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_visual_bible_approval_wrong_stage_error_is_structured(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        state = ComicProductionV2.approve_visual_bible(state)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/visual-bible/approve",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "中书省")
+        self.assertIn("当前阶段", detail["reason"])
+        self.assertIn("覆盖", detail["impact"])
+        self.assertIn("当前阶段", detail["next_action"])
+
+    def test_visual_bible_revision_without_state_error_is_structured(self):
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/visual-bible/revise",
+            json={"revision_request": "画风更冷"},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "中书省")
+        self.assertIn("视觉母版", detail["reason"])
+        self.assertIn("无法修改", detail["impact"])
+        self.assertIn("确认故事", detail["next_action"])
+
     @patch("src.web.app.config_manager.get_model_config")
     @patch("src.web.app.plan_contract", new_callable=AsyncMock)
     def test_plan_confirmed_uses_server_owned_story_and_office_model(self, mock_plan, mock_get_model):
@@ -327,7 +378,36 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("确认", response.json()["detail"])
+        detail = response.json()["detail"]
+        self.assertEqual(detail["office_id"], "comic_production")
+        self.assertIn("完整故事", detail["reason"])
+        self.assertIn("确认故事", detail["next_action"])
+
+    def test_plan_confirmed_missing_story_error_is_structured(self):
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/plan-confirmed",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "内阁 / 中书省")
+        self.assertIn("完整故事", detail["reason"])
+        self.assertIn("视觉母版", detail["impact"])
+        self.assertIn("确认故事", detail["next_action"])
+
+    def test_v2_start_contract_validation_error_is_structured(self):
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/start",
+            json={"source_story": "", "planner_payload": {}},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "中书省")
+        self.assertIn("正式制片合同", detail["reason"])
+        self.assertIn("生产链", detail["impact"])
+        self.assertIn("故事", detail["next_action"])
 
     def test_visual_bible_approval_persists_next_stage(self):
         started = self.client.post(
@@ -408,6 +488,20 @@ class ComicV2PipelineApiTests(unittest.TestCase):
             ],
         )
 
+        status = self.client.get(f"/api/workspaces/{self.workspace_id}/comic/v2/status")
+        review = status.json()["asset_review"]
+        self.assertEqual(review["counts"], {"characters": 1, "props": 0, "scenes": 0})
+        self.assertEqual(review["groups"]["characters"][0]["name"], "林昭")
+        self.assertEqual(review["groups"]["characters"][0]["source_evidence"], "林昭发现月灯燃烧记忆")
+        self.assertNotIn("prompt", json.dumps(review, ensure_ascii=False).lower())
+        flow = status.json()["department_flow"]
+        by_id = {item["department_id"]: item for item in flow}
+        self.assertEqual(by_id["menxia"]["status"], "current")
+        self.assertEqual(by_id["menxia"]["human_checkpoint"], "等待用户确认资产拆解")
+        self.assertIn("版本", by_id["ribu"]["responsibility"])
+        self.assertEqual(by_id["gongbu"]["status"], "waiting")
+        self.assertIn("基础资产图", by_id["gongbu"]["responsibility"])
+
     def test_asset_approval_opens_prompt_planning(self):
         state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
         state = ComicProductionV2.approve_visual_bible(state)
@@ -432,6 +526,227 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(response.json()["stage"], "prompt_planning")
         self.assertEqual(response.json()["assets_status"], "approved")
 
+    def test_v2_wrong_stage_error_names_department_impact_and_next_action(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/plan",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["office_id"], "comic_production")
+        self.assertEqual(detail["department"], "尚书省")
+        self.assertIn("当前阶段不能生成资产拆解包", detail["reason"])
+        self.assertIn("资产拆解", detail["impact"])
+        self.assertIn("确认视觉母版", detail["next_action"])
+
+    def test_v2_prompt_image_and_delivery_stage_errors_are_actionable(self):
+        state, manifest = self._state_with_approved_assets()
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        image_blocked = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/generate",
+            json={},
+        )
+        self.assertEqual(image_blocked.status_code, 409)
+        image_detail = image_blocked.json()["detail"]
+        self.assertEqual(image_detail["department"], "工部")
+        self.assertIn("当前阶段不能生成资产图片", image_detail["reason"])
+        self.assertIn("提示词", image_detail["next_action"])
+
+        delivery_blocked = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/delivery/build",
+            json={},
+        )
+        self.assertEqual(delivery_blocked.status_code, 409)
+        delivery_detail = delivery_blocked.json()["detail"]
+        self.assertEqual(delivery_detail["department"], "礼部")
+        self.assertIn("图片生产与质检尚未完成", delivery_detail["reason"])
+        self.assertIn("提示词", delivery_detail["next_action"])
+
+        unapproved = ComicProductionV2.approve_visual_bible(
+            ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        )
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(unapproved.to_dict(), ensure_ascii=False))
+        prompt_blocked = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/prompts/plan",
+            json={},
+        )
+        self.assertEqual(prompt_blocked.status_code, 409)
+        prompt_detail = prompt_blocked.json()["detail"]
+        self.assertEqual(prompt_detail["department"], "工部")
+        self.assertIn("资产拆解包尚未确认", prompt_detail["reason"])
+        self.assertIn("人物、道具和场景", prompt_detail["next_action"])
+
+    def test_v2_human_review_action_errors_are_actionable(self):
+        visual = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/visual-bible/approve",
+            json={},
+        )
+        self.assertEqual(visual.status_code, 409)
+        visual_detail = visual.json()["detail"]
+        self.assertEqual(visual_detail["department"], "中书省")
+        self.assertIn("请先生成视觉母版", visual_detail["reason"])
+        self.assertIn("故事", visual_detail["next_action"])
+
+        assets = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/approve",
+            json={},
+        )
+        self.assertEqual(assets.status_code, 409)
+        assets_detail = assets.json()["detail"]
+        self.assertEqual(assets_detail["department"], "门下省")
+        self.assertIn("请先生成资产拆解包", assets_detail["reason"])
+        self.assertIn("资产拆解", assets_detail["next_action"])
+
+        visual_review = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/override",
+            json={"reason": "人工确认可接受"},
+        )
+        self.assertEqual(visual_review.status_code, 409)
+        review_detail = visual_review.json()["detail"]
+        self.assertEqual(review_detail["department"], "刑部")
+        self.assertIn("当前没有待人工处理的视觉质检", review_detail["reason"])
+        self.assertIn("生成并质检基础资产图", review_detail["next_action"])
+
+    def test_asset_revision_wrong_state_errors_are_structured(self):
+        empty = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/revise",
+            json={"revision_request": "补道具"},
+        )
+        self.assertEqual(empty.status_code, 409)
+        empty_detail = empty.json()["detail"]
+        self.assertEqual(empty_detail["department"], "门下省")
+        self.assertIn("资产拆解包", empty_detail["reason"])
+        self.assertIn("无法退回", empty_detail["impact"])
+
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+        wrong_stage = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/revise",
+            json={"revision_request": "补道具"},
+        )
+        self.assertEqual(wrong_stage.status_code, 409)
+        wrong_detail = wrong_stage.json()["detail"]
+        self.assertEqual(wrong_detail["department"], "门下省")
+        self.assertIn("当前没有可退回", wrong_detail["reason"])
+        self.assertIn("资产审核", wrong_detail["next_action"])
+
+    def test_asset_approval_wrong_stage_error_is_structured(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/approve",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "门下省")
+        self.assertIn("当前阶段", detail["reason"])
+        self.assertIn("资产拆解", detail["impact"])
+        self.assertIn("资产审核", detail["next_action"])
+
+    def test_visual_review_override_error_is_structured(self):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        state = state.with_status(
+            stage="visual_review",
+            image_production=ImageProductionResult(
+                status="ready_for_delivery",
+                production_ready=True,
+                records=(),
+                failures=(),
+            ).to_dict(),
+        )
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/override",
+            json={"reason": ""},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "刑部")
+        self.assertIn("人工放行", detail["reason"])
+        self.assertIn("风险", detail["impact"])
+        self.assertIn("理由", detail["next_action"])
+
+    @patch("src.web.app.direct_asset_prompts", new_callable=AsyncMock)
+    @patch("src.web.app.config_manager.get_model_config")
+    def test_v2_prompt_planning_runtime_error_names_gongbu(self, mock_get_model, mock_assets):
+        state, manifest = self._state_with_approved_assets()
+        mock_assets.side_effect = ProductionError("模型返回空提示词")
+        mock_get_model.return_value = ModelConfig(provider="openai", model="fake", api_key="test")
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/prompts/plan",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 502)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "工部 / 兵部")
+        self.assertIn("提示词规划失败", detail["reason"])
+        self.assertIn("图片", detail["impact"])
+        self.assertIn("模型配置", detail["next_action"])
+
+    @patch("src.web.app.produce_asset_images", new_callable=AsyncMock)
+    @patch("src.web.app.config_manager.get_model_config")
+    def test_v2_image_runtime_error_names_gongbu_and_xingbu(self, mock_get_model, mock_produce):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        mock_produce.side_effect = ProductionError("生图 API 超时")
+        mock_get_model.return_value = ModelConfig(provider="doubao", model="doubao-seedream-5", api_key="test")
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/generate",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 502)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "工部 / 刑部")
+        self.assertIn("资产图片生产失败", detail["reason"])
+        self.assertIn("Word", detail["impact"])
+        self.assertIn("生图模型", detail["next_action"])
+
+    @patch("src.web.app.build_delivery_from_v2")
+    def test_v2_delivery_runtime_error_names_libu(self, mock_build):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        state = state.with_status(
+            stage="document_generation",
+            can_generate_images=False,
+            image_production=ImageProductionResult(
+                status="ready_for_delivery",
+                production_ready=True,
+                records=(),
+                failures=(),
+            ).to_dict(),
+        )
+        mock_build.side_effect = DeliveryValidationError("缺少镜头资产引用")
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/delivery/build",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 502)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "礼部 / 刑部")
+        self.assertIn("Word 制片画布生成失败", detail["reason"])
+        self.assertIn("交付", detail["impact"])
+        self.assertIn("结构审计", detail["next_action"])
+
     @patch("src.web.app.config_manager.get_model_config")
     @patch("src.web.app.plan_asset_manifest", new_callable=AsyncMock)
     def test_asset_revision_replaces_manifest_and_returns_to_review(self, mock_plan, mock_get_model):
@@ -448,8 +763,11 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         }])
         state = ComicProductionV2.attach_asset_manifest(state, first)
         config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
-        second = build_asset_manifest(
-            build_contract_bundle(STORY, planner_payload()),
+        from src.comic_office.v2.asset_manifest import replace_asset_manifest
+
+        second = replace_asset_manifest(
+            first,
+            "补充月塔",
             [
                 {
                     "asset_type": "character",
@@ -470,8 +788,6 @@ class ComicV2PipelineApiTests(unittest.TestCase):
                     "allowed_changes": ["光线"],
                 },
             ],
-            version=2,
-            revision_note="补充月塔",
         )
         mock_plan.return_value = second
 
@@ -483,6 +799,42 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["stage"], "asset_review")
         self.assertEqual(response.json()["asset_manifest"]["version"], 2)
+        self.assertEqual(response.json()["asset_review"]["revision_note"], "补充月塔")
+        self.assertEqual(response.json()["asset_review"]["counts"]["scenes"], 1)
+        self.assertEqual(response.json()["asset_review"]["previous_manifest_hash"], first.manifest_hash)
+        self.assertEqual(response.json()["asset_review"]["revision_summary"]["added"], [{"asset_type": "scene", "name": "月塔"}])
+
+    @patch("src.web.app.config_manager.get_model_config")
+    @patch("src.web.app.plan_asset_manifest", new_callable=AsyncMock)
+    def test_asset_revision_missing_prop_request_requires_new_prop(self, mock_plan, mock_get_model):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id=self.workspace_id)
+        state = ComicProductionV2.approve_visual_bible(state)
+        first = build_asset_manifest(build_contract_bundle(STORY, planner_payload()), [{
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭发现月灯燃烧记忆",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "主角",
+            "visual_locks": ["靛青长袍"],
+            "allowed_changes": ["表情"],
+        }])
+        state = ComicProductionV2.attach_asset_manifest(state, first)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+        mock_get_model.return_value = ModelConfig(provider="openai", model="fake", api_key="test")
+        from src.comic_office.v2.asset_planner import AssetPlanningError
+        mock_plan.side_effect = AssetPlanningError("用户退回意见要求补充道具，但新版资产清单没有新增道具")
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/assets/revise",
+            json={"revision_request": "缺少道具，请补充道具"},
+        )
+
+        self.assertEqual(response.status_code, 502)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["department"], "中书省 / 门下省")
+        self.assertIn("补充道具", detail["reason"])
+        self.assertIn("人物、道具、场景", detail["impact"])
+        self.assertIn("退回意见", detail["next_action"])
 
     @patch("src.web.app.direct_shot_cards", new_callable=AsyncMock)
     @patch("src.web.app.direct_asset_prompts", new_callable=AsyncMock)
@@ -527,6 +879,34 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["stage"], "document_generation")
         self.assertFalse(response.json()["can_generate_images"])
+
+    @patch("src.web.app.produce_asset_images", new_callable=AsyncMock)
+    @patch("src.web.app.config_manager.get_model_config")
+    def test_image_generation_writes_visible_start_and_result_events(self, mock_get_model, mock_produce):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+        mock_get_model.return_value = ModelConfig(provider="doubao", model="doubao-seedream-5", api_key="test")
+        mock_produce.return_value = ImageProductionResult(
+            status="ready_for_delivery",
+            production_ready=True,
+            records=(),
+            failures=(),
+        )
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/images/generate",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        timeline = self.client.get(f"/api/workspaces/{self.workspace_id}/tasks").json()["tasks"]
+        v2_task = next(item for item in timeline if item["task_id"] == f"comic_v2_{self.workspace_id}")
+        event_types = [item["event_type"] for item in v2_task["events"]]
+        self.assertIn("comic_v2_images_started", event_types)
+        self.assertIn("comic_v2_images_reviewed", event_types)
+        self.assertEqual(v2_task["status"], "completed")
+        self.assertEqual(v2_task["current_phase"], "document_generation")
 
     def test_visual_review_override_endpoint_requires_explicit_reason(self):
         state, manifest = self._state_with_approved_assets()
@@ -589,6 +969,53 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         artifacts = config_manager.list_artifacts(workspace_id=self.workspace_id)
         delivery = next(item for item in artifacts if item["artifact_type"] == "comic_v2_word_canvas")
         self.assertIn("/files/delivery/test_v2_canvas.docx", delivery["uri"])
+        output_path.unlink(missing_ok=True)
+
+    @patch("src.web.app.build_delivery_from_v2")
+    def test_delivery_build_writes_visible_start_and_result_events(self, mock_build):
+        state, manifest = self._state_with_approved_assets()
+        state = ComicProductionV2.attach_prompt_package(state, self._prompt_package(state, manifest))
+        state = state.with_status(
+            stage="document_generation",
+            can_generate_images=False,
+            image_production=ImageProductionResult(
+                status="ready_for_delivery",
+                production_ready=True,
+                records=(),
+                failures=(),
+            ).to_dict(),
+        )
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+        output_dir = Path("output") / "workspaces" / self.workspace_id / "delivery"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "test_v2_canvas_events.docx"
+        output_path.write_bytes(b"fake-docx")
+        mock_build.return_value = CanvasBuildResult(
+            path=output_path,
+            audit=DocumentAudit(
+                embedded_images=0,
+                asset_count=1,
+                shot_count=1,
+                missing_image_asset_ids=(),
+                structural_errors=(),
+                max_table_columns=2,
+                handoff_ready=True,
+            ),
+        )
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/delivery/build",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        timeline = self.client.get(f"/api/workspaces/{self.workspace_id}/tasks").json()["tasks"]
+        v2_task = next(item for item in timeline if item["task_id"] == f"comic_v2_{self.workspace_id}")
+        event_types = [item["event_type"] for item in v2_task["events"]]
+        self.assertIn("comic_v2_delivery_started", event_types)
+        self.assertIn("comic_v2_delivery_ready", event_types)
+        self.assertEqual(v2_task["status"], "completed")
+        self.assertEqual(v2_task["current_phase"], "ready_for_handoff")
         output_path.unlink(missing_ok=True)
 
     def _state_with_approved_assets(self):

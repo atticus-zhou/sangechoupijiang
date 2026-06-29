@@ -13,9 +13,26 @@ async function apiJson(url, options = {}) {
         const message = Array.isArray(detail)
             ? detail.join('；')
             : (typeof detail === 'object' ? JSON.stringify(detail) : String(detail));
-        throw new Error(message);
+        const error = new Error(message);
+        error.detail = detail;
+        error.status = response.status;
+        throw error;
     }
     return payload;
+}
+
+function formatApiError(error) {
+    const detail = error?.detail;
+    if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        const parts = [];
+        if (detail.department) parts.push(`${detail.department}`);
+        if (detail.reason) parts.push(`原因：${detail.reason}`);
+        if (detail.impact) parts.push(`影响：${detail.impact}`);
+        if (detail.next_action) parts.push(`下一步：${detail.next_action}`);
+        return parts.length ? parts.join('；') : (error.message || '请求失败');
+    }
+    if (Array.isArray(detail)) return detail.join('；');
+    return error?.message || String(error || '请求失败');
 }
 
 const API = {
@@ -38,6 +55,7 @@ const WORKBENCH_PAGES = new Set(['research', 'comic', 'comic_production']);
 
 let ACTIVE_OFFICE_ID = readStoredOfficeId();
 let MODEL_OFFICE_ID = ACTIVE_OFFICE_ID;
+let currentOfficePreflight = null;
 
 function navigate(page) {
     page = normalizeNavigationTarget(page);
@@ -65,6 +83,7 @@ function navigate(page) {
     else if (page === 'comic' || page === 'comic_production') loadComicOffice();
     else if (page === 'prompts') loadPrompts();
     else if (page === 'history') loadHistory();
+    if (page === 'offices') loadSystemPreflight();
 }
 
 function navigateActiveWorkbench() {
@@ -806,7 +825,10 @@ let currentComicScriptPreview = null;
 let currentComicConfirmedScript = null;
 let currentComicCabinetSession = null;
 let currentComicCabinetReady = false;
+let currentComicAssistantMessage = '';
 let currentComicV2Status = null;
+let currentComicV2ActionError = null;
+let currentComicV2PendingAction = null;
 let comicTaskPoller = null;
 
 const COMIC_REQUIRED_ARTIFACTS = [
@@ -847,7 +869,11 @@ function refreshComicOfficeCopy() {
 async function loadComicOffice() {
     refreshComicOfficeCopy();
     toggleComicInputMode();
-    await Promise.all([loadComicProfile(), loadComicWorkspaces()]);
+    await Promise.all([
+        loadComicProfile(),
+        loadComicWorkspaces(),
+        loadOfficePreflight(activeComicOfficeId(), 'comic-preflight-panel'),
+    ]);
 }
 
 async function loadComicProfile() {
@@ -911,6 +937,10 @@ async function selectComicWorkspace(workspaceId) {
         document.getElementById('comic-idea').value = '';
         const scriptSource = document.getElementById('comic-script-source');
         if (scriptSource) scriptSource.value = '';
+        const characterSource = document.getElementById('comic-character-source');
+        if (characterSource) characterSource.value = '';
+        const styleReference = document.getElementById('comic-style-reference');
+        if (styleReference) styleReference.value = '';
         const inputMode = document.getElementById('comic-input-mode');
         if (inputMode) inputMode.value = 'idea';
         toggleComicInputMode();
@@ -950,12 +980,19 @@ function resetComicWorkspaceState(options = {}) {
     currentComicConfirmedScript = null;
     currentComicCabinetSession = null;
     currentComicCabinetReady = false;
+    currentComicAssistantMessage = '';
     currentComicV2Status = null;
+    currentComicV2ActionError = null;
+    currentComicV2PendingAction = null;
     if (options.clearInputs) {
         const idea = document.getElementById('comic-idea');
         if (idea) idea.value = '';
         const scriptSource = document.getElementById('comic-script-source');
         if (scriptSource) scriptSource.value = '';
+        const characterSource = document.getElementById('comic-character-source');
+        if (characterSource) characterSource.value = '';
+        const styleReference = document.getElementById('comic-style-reference');
+        if (styleReference) styleReference.value = '';
         const inputMode = document.getElementById('comic-input-mode');
         if (inputMode) inputMode.value = 'idea';
         toggleComicInputMode();
@@ -1005,6 +1042,7 @@ async function loadComicV2Status(workspaceId) {
 async function refreshComicV2Panel(message = '') {
     if (!currentComicWorkspace) return null;
     const status = await loadComicV2Status(currentComicWorkspace);
+    currentComicV2ActionError = null;
     await Promise.all([
         loadComicArtifacts(currentComicWorkspace),
         loadComicTimeline(currentComicWorkspace),
@@ -1021,6 +1059,7 @@ async function loadComicCabinetSession(workspaceId) {
         currentComicBrief = null;
         currentComicScriptPreview = null;
         currentComicConfirmedScript = null;
+        currentComicAssistantMessage = '';
         renderComicCabinet();
         return;
     }
@@ -1032,12 +1071,14 @@ async function loadComicCabinetSession(workspaceId) {
             currentComicBrief = null;
             currentComicScriptPreview = null;
             currentComicConfirmedScript = null;
+            currentComicAssistantMessage = '';
         } else {
             currentComicCabinetSession = result.session || null;
             currentComicCabinetReady = Boolean(result.ready_to_produce);
             currentComicBrief = result.creative_brief || null;
             currentComicScriptPreview = result.script_preview || null;
             currentComicConfirmedScript = result.confirmed_script || null;
+            currentComicAssistantMessage = result.assistant_message || '';
         }
         renderComicCabinet();
     } catch (e) {
@@ -1046,6 +1087,7 @@ async function loadComicCabinetSession(workspaceId) {
         currentComicBrief = null;
         currentComicScriptPreview = null;
         currentComicConfirmedScript = null;
+        currentComicAssistantMessage = '';
         renderComicCabinet();
     }
 }
@@ -1328,7 +1370,8 @@ function renderComicPackageBoard(artifacts) {
     const board = document.getElementById('comic-package-board');
     const score = document.getElementById('comic-package-score');
     const items = artifacts || [];
-    const hasV2Status = currentComicV2Status && currentComicV2Status.pipeline_version === 2 && currentComicV2Status.status !== 'not_started';
+    const hasV2Status = Boolean(currentComicV2PendingAction)
+        || (currentComicV2Status && currentComicV2Status.pipeline_version === 2 && currentComicV2Status.status !== 'not_started');
     if (hasV2Status) {
         score.textContent = `${Number(currentComicV2Status.completed || 0)}/${Number(currentComicV2Status.total || 0)}`;
         score.className = currentComicV2Status.stage === 'ready_for_handoff' ? 'badge badge-ok' : 'badge badge-info';
@@ -1440,10 +1483,81 @@ function renderComicV2ProductionFlow() {
                 <span>${escapeHtml(blocked || '当前没有阻塞项')}</span>
                 <small>下一步：${escapeHtml(currentComicV2Status.next_action || '等待状态更新')}</small>
             </div>
+            ${renderComicV2ActionError()}
+            ${renderComicV2PendingAction()}
+            ${renderComicV2DepartmentFlow(currentComicV2Status.department_flow)}
             ${reviewSummary}
             ${actions ? `<div class="v2-action-row">${actions}</div>` : ''}
         </div>
     `;
+}
+
+function buildComicV2PendingAction(label, status) {
+    const stage = status?.stage || 'running';
+    const map = {
+        visual_bible_review: ['中书省 / 门下省', '正在确认视觉母版，完成后进入资产拆解。'],
+        asset_planning: ['中书省 / 门下省', '正在生成资产拆解审核包，完成后需要你确认人物、道具和场景。'],
+        asset_review: ['门下省 / 尚书省', '正在处理资产审核意见，完成后会进入提示词规划。'],
+        prompt_planning: ['工部 / 兵部', '正在生成资产提示词和镜头提示词，完成后进入图片生产。'],
+        image_generation: ['工部 / 刑部', '正在生成基础资产图并做视觉质检，完成后进入交付组装。'],
+        visual_review: ['刑部 / 工部', '正在处理未通过图片或人工放行，完成后进入文档生成。'],
+        document_generation: ['礼部 / 刑部', '正在组装 Word 制片画布并做结构审计。'],
+    };
+    const [department, next] = map[stage] || [status?.current_agent || '尚书省', status?.next_action || '等待当前动作返回结果。'];
+    return {
+        label,
+        department,
+        stage,
+        object: status?.current_object || '当前生产对象',
+        next_action: next,
+    };
+}
+
+function renderComicV2PendingAction() {
+    if (!currentComicV2PendingAction) return '';
+    return `
+        <div class="package-summary v2-action-pending">
+            <strong>正在处理：${escapeHtml(currentComicV2PendingAction.label || 'V2 操作')}</strong>
+            <span>负责部门：${escapeHtml(currentComicV2PendingAction.department || '尚书省')}；对象：${escapeHtml(currentComicV2PendingAction.object || '当前生产对象')}</span>
+            <small>下一步：${escapeHtml(currentComicV2PendingAction.next_action || '等待系统返回结果')}</small>
+        </div>
+    `;
+}
+
+function renderComicV2ActionError() {
+    if (!currentComicV2ActionError) return '';
+    return `
+        <div class="package-summary v2-action-error">
+            <strong>最近一次操作失败：${escapeHtml(currentComicV2ActionError.label || 'V2 操作')}</strong>
+            <span>${escapeHtml(currentComicV2ActionError.message || '系统没有返回详细原因')}</span>
+            <small>这个提示会在下一次成功刷新后自动清除。</small>
+        </div>
+    `;
+}
+
+function renderComicV2DepartmentFlow(departments) {
+    const items = Array.isArray(departments) ? departments : [];
+    if (!items.length) return '';
+    return `
+        <div class="department-flow v2-department-flow">
+            ${items.map(dept => `
+                <div class="department-step ${escapeHtml(dept.status || 'waiting')}">
+                    <div class="department-step-top">
+                        <strong>${escapeHtml(dept.name || dept.department_id || '')}</strong>
+                        <span>${escapeHtml(comicV2DepartmentStatusText(dept.status))}</span>
+                    </div>
+                    <p>${escapeHtml(dept.responsibility || '等待分配职责')}</p>
+                    ${dept.human_checkpoint ? `<small>${escapeHtml(dept.human_checkpoint)}</small>` : ''}
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function comicV2DepartmentStatusText(status) {
+    if (status === 'current') return '当前';
+    if (status === 'completed') return '已完成';
+    return '等待';
 }
 
 function renderComicV2ReviewSummary(status) {
@@ -1472,8 +1586,10 @@ function renderComicV2ReviewSummary(status) {
             <div class="package-summary v2-review-summary">
                 <strong>待确认：资产拆解</strong>
                 <span>人物 ${groups.character.length} 个，道具 ${groups.prop.length} 个，场景 ${groups.scene.length} 个。</span>
-                <small>${escapeHtml(names || '暂无可展示资产名称')}</small>
+                <small>${escapeHtml(status.asset_review?.human_guidance || names || '只确认人物、道具和场景；提示词会在确认后继续生成。')}</small>
             </div>
+            ${renderComicV2AssetRevisionSummary(status.asset_review)}
+            ${renderComicV2AssetReviewGroups(status.asset_review?.groups)}
         `;
     }
     if (stage === 'ready_for_handoff' || stage === 'document_generation') {
@@ -1487,6 +1603,98 @@ function renderComicV2ReviewSummary(status) {
         `;
     }
     return '';
+}
+
+function renderComicV2AssetRevisionSummary(review) {
+    if (!review?.previous_manifest_hash && !review?.revision_note) return '';
+    const summary = review.revision_summary || {};
+    const sections = [
+        ['added', '新增'],
+        ['removed', '删除'],
+        ['changed', '修改'],
+    ];
+    return `
+        <div class="v2-asset-revision-summary">
+            <div>
+                <strong>本次退回已生成新版本</strong>
+                <span>${escapeHtml(review.revision_note || '未填写退回意见')}</span>
+            </div>
+            ${review.previous_manifest_hash ? `<small>上一版：${escapeHtml(String(review.previous_manifest_hash).slice(0, 12))}</small>` : ''}
+            <div class="v2-asset-revision-diff">
+                ${sections.map(([key, label]) => {
+                    const items = Array.isArray(summary[key]) ? summary[key] : [];
+                    return `<span>${label}：${items.length ? items.map(item => escapeHtml(item.name || item.asset_type || '未命名')).join('、') : '无'}</span>`;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderComicV2AssetReviewGroups(groups) {
+    if (!groups) return '';
+    const sections = [
+        ['characters', '人物', '确认是不是故事里真实行动的人。'],
+        ['props', '道具', '确认是不是故事里会被使用、发现或影响情节的物件。'],
+        ['scenes', '场景', '确认是不是故事明确发生动作的可复用空间。'],
+    ];
+    return `
+        <div class="v2-asset-review-grid">
+            ${sections.map(([key, label, hint]) => {
+                const items = Array.isArray(groups[key]) ? groups[key] : [];
+                return `
+                    <section class="v2-asset-review-section">
+                        <div class="v2-asset-review-section-head">
+                            <strong>${label}</strong>
+                            <span>${items.length}</span>
+                        </div>
+                        <small>${hint}</small>
+                        ${items.length ? items.map(renderComicV2AssetReviewItem).join('') : '<p class="muted">这一类暂时没有资产。</p>'}
+                    </section>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderComicV2AssetReviewItem(item) {
+    const evidence = item.source_evidence || '';
+    const storyUse = item.story_use || '';
+    const imageLabels = Array.isArray(item.planned_image_labels) ? item.planned_image_labels.join('、') : '';
+    const locks = Array.isArray(item.visual_locks) ? item.visual_locks.join('、') : '';
+    const appearances = Array.isArray(item.appearances) ? item.appearances.join('、') : '';
+    const nameArg = encodeURIComponent(item.name || '未命名资产');
+    const typeArg = encodeURIComponent(item.type_label || item.type || '资产');
+    return `
+        <article class="v2-asset-review-item">
+            <strong>${escapeHtml(item.name || '未命名资产')}</strong>
+            <span>原文证据：${escapeHtml(evidence || '缺少证据')}</span>
+            <span>故事用途：${escapeHtml(storyUse || '待补充')}</span>
+            <span>默认图片：${escapeHtml(imageLabels || '按类型生成')}</span>
+            ${locks ? `<span>锁定点：${escapeHtml(locks)}</span>` : ''}
+            ${appearances ? `<span>出现位置：${escapeHtml(appearances)}</span>` : ''}
+            <div class="v2-asset-review-actions">
+                <button class="ghost btn-sm" onclick="appendComicV2AssetReviewNote('modify', '${typeArg}', '${nameArg}')">修改这个资产</button>
+                <button class="ghost btn-sm danger" onclick="appendComicV2AssetReviewNote('delete', '${typeArg}', '${nameArg}')">删除这个资产</button>
+            </div>
+        </article>
+    `;
+}
+
+function appendComicV2AssetReviewNote(action, encodedTypeLabel, encodedName) {
+    const notes = document.getElementById('comic-asset-review-notes');
+    if (!notes) {
+        toast('没有找到资产退回意见框，请刷新页面后重试。', 'error');
+        return;
+    }
+    const typeLabel = decodeURIComponent(encodedTypeLabel || '资产');
+    const name = decodeURIComponent(encodedName || '未命名资产');
+    const line = action === 'delete'
+        ? `删除【${typeLabel}】资产「${name}」，原因：这个资产不属于当前故事或不应作为独立资产。`
+        : `修改【${typeLabel}】资产「${name}」，要求：请按我的补充重新判断名称、证据、用途、视觉锁定和默认图片规格。`;
+    const current = notes.value.trim();
+    notes.value = current ? `${current}\n${line}` : line;
+    notes.focus();
+    toast('已写入退回意见。确认无误后点击“按意见重新拆解”。', 'success');
 }
 
 function renderComicV2StageActions(status) {
@@ -1612,6 +1820,7 @@ async function startComicCabinet() {
     currentComicCabinetSession = null;
     currentComicCabinetReady = false;
     currentComicScriptPreview = null;
+    currentComicAssistantMessage = '';
     try {
         const result = await API.post('/api/comic/cabinet/turn', {
             ...comicPayloadForCabinet(payload),
@@ -1663,6 +1872,7 @@ function applyComicCabinetResult(result) {
     currentComicBrief = result.creative_brief || null;
     currentComicScriptPreview = result.script_preview || null;
     currentComicConfirmedScript = result.confirmed_script || null;
+    currentComicAssistantMessage = result.assistant_message || '';
     renderComicCabinet();
     if (currentComicCabinetSession?.llm_fallback_error) {
         toast(`主创大模型没有正常返回，当前是规则兜底：${currentComicCabinetSession.llm_fallback_error}`, 'error');
@@ -1690,14 +1900,19 @@ function renderComicCabinet() {
     }
     
     if (chatHistory && currentComicCabinetSession && currentComicCabinetSession.messages) {
-        chatHistory.innerHTML = currentComicCabinetSession.messages.map(msg => {
+        const messages = [...(currentComicCabinetSession.messages || [])];
+        const assistantFallback = currentComicAssistantMessage && !messages.some(msg => msg.role === 'assistant')
+            ? [{ role: 'assistant', content: currentComicAssistantMessage }]
+            : [];
+        const modelWarning = renderComicCabinetModelWarning(currentComicCabinetSession);
+        chatHistory.innerHTML = modelWarning + [...messages, ...assistantFallback].map(msg => {
             const roleClass = msg.role === 'user' ? 'chat-user' : 'chat-assistant';
             const roleName = msg.role === 'user' ? '你' : '主创对话官';
             return `<div class="chat-message ${roleClass}">
                 <div class="chat-role">${roleName}</div>
                 <div class="chat-content">${escapeHtml(msg.content)}</div>
             </div>`;
-        }).join('');
+        }).join('') + renderComicSuggestedReplies();
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
@@ -1710,15 +1925,47 @@ function renderComicCabinet() {
     }
 
     if (scriptPreview) {
+        const modelWarning = renderComicCabinetModelWarning(currentComicCabinetSession);
         scriptPreview.innerHTML = currentComicScriptPreview
-            ? simpleMarkdown(formatComicStoryForDisplay(currentComicScriptPreview))
-            : '';
+            ? modelWarning + simpleMarkdown(formatComicStoryForDisplay(currentComicScriptPreview))
+            : modelWarning;
     }
     if (confirmedPreview) {
         confirmedPreview.innerHTML = currentComicConfirmedScript
             ? simpleMarkdown(formatComicStoryForDisplay(currentComicConfirmedScript, { confirmed: true }))
             : '';
     }
+}
+
+function renderComicSuggestedReplies() {
+    const replies = currentComicCabinetSession?.story_state?.suggested_replies || [];
+    if (!replies.length) return '';
+    return `<div class="comic-suggested-replies">
+        ${replies.map((reply, index) => `
+            <button type="button" class="comic-suggested-reply" onclick="selectComicSuggestedReply(${index})">
+                ${escapeHtml(reply)}
+            </button>
+        `).join('')}
+    </div>`;
+}
+
+function selectComicSuggestedReply(index) {
+    const replies = currentComicCabinetSession?.story_state?.suggested_replies || [];
+    const reply = replies[index] || '';
+    const input = document.getElementById('comic-chat-input');
+    if (!reply || !input) return;
+    input.value = reply;
+    input.focus();
+}
+
+function renderComicCabinetModelWarning(session) {
+    const error = session?.llm_fallback_error || '';
+    if (!error) return '';
+    return `<div class="comic-model-warning">
+        <strong>主创模型没有正常返回</strong>
+        <span>这不是正式模型输出，当前内容来自规则兜底。请检查内阁或中书省模型配置后重试。</span>
+        <small>${escapeHtml(error)}</small>
+    </div>`;
 }
 
 async function confirmComicScript() {
@@ -1730,13 +1977,40 @@ async function confirmComicScript() {
         toast('请先形成当前故事稿，再进行确认', 'error');
         return;
     }
+    if (!(await ensureComicCapabilities(['story_planning']))) return;
     const confirmationNotes = document.getElementById('comic-chat-input')?.value.trim() || '';
     const button = document.getElementById('comic-confirm-start-btn');
     const originalText = button?.textContent || '确认故事并开始生成';
+    const actionLabel = '确认故事并创建资产拆解';
     if (button) {
         button.disabled = true;
         button.textContent = '确认中...';
     }
+    currentComicV2Status = currentComicV2Status || {
+        pipeline_version: 2,
+        status: 'running',
+        stage: 'asset_planning',
+        current_agent: '中书省 / 门下省',
+        current_object: '确认故事与资产拆解入口',
+        blocking_reason: '',
+        next_action: '正在锁定确认故事，随后生成视觉母版和资产拆解入口。',
+        completed: 1,
+        total: 7,
+    };
+    if (currentComicV2Status.status === 'not_started') {
+        currentComicV2Status = {
+            ...currentComicV2Status,
+            status: 'running',
+            stage: 'asset_planning',
+            current_agent: '中书省 / 门下省',
+            current_object: '确认故事与资产拆解入口',
+            blocking_reason: '',
+            next_action: '正在锁定确认故事，随后生成视觉母版和资产拆解入口。',
+        };
+    }
+    currentComicV2ActionError = null;
+    currentComicV2PendingAction = buildComicV2PendingAction(actionLabel, currentComicV2Status);
+    renderComicPackageBoard(currentComicArtifacts);
     try {
         toast('正在确认故事，并创建资产拆解任务...', 'success');
         const result = await API.post('/api/comic/confirm-script', {
@@ -1746,6 +2020,7 @@ async function confirmComicScript() {
             confirmation_notes: confirmationNotes,
         });
         await API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/plan-confirmed`, {});
+        currentComicV2PendingAction = null;
         if (!result.confirmed_script) {
             throw new Error('后端没有返回确认版故事，请查看日志确认故事是否锁定成功。');
         }
@@ -1759,7 +2034,16 @@ async function confirmComicScript() {
         await refreshComicV2Panel('确认版故事已锁定，请先审核视觉母版。');
         await loadComicWorkspaces();
     } catch (e) {
-        toast('确认并开始生成失败: ' + e.message, 'error');
+        currentComicV2PendingAction = null;
+        const message = formatApiError(e);
+        currentComicV2ActionError = {
+            label: actionLabel,
+            message,
+            detail: e?.detail || null,
+            status: e?.status || null,
+        };
+        renderComicPackageBoard(currentComicArtifacts);
+        toast('确认并开始生成失败: ' + message, 'error');
     } finally {
         if (button) {
             button.disabled = false;
@@ -1788,12 +2072,24 @@ async function runComicV2Action(button, label, action) {
         button.disabled = true;
         button.textContent = `${label}...`;
     }
+    currentComicV2PendingAction = buildComicV2PendingAction(label, currentComicV2Status);
+    renderComicPackageBoard(currentComicArtifacts);
     try {
         const result = await action();
+        currentComicV2PendingAction = null;
         await refreshComicV2Panel(`${label}完成`);
         return result;
     } catch (e) {
-        toast(`${label}失败: ${e.message || e}`, 'error');
+        currentComicV2PendingAction = null;
+        const message = formatApiError(e);
+        currentComicV2ActionError = {
+            label,
+            message,
+            detail: e?.detail || null,
+            status: e?.status || null,
+        };
+        renderComicPackageBoard(currentComicArtifacts);
+        toast(`${label}失败: ${message}`, 'error');
         return null;
     } finally {
         if (button) {
@@ -1801,6 +2097,28 @@ async function runComicV2Action(button, label, action) {
             button.textContent = original;
         }
     }
+}
+
+async function ensureComicCapabilities(capabilityIds, options = {}) {
+    const officeId = activeComicOfficeId();
+    if (!currentOfficePreflight || currentOfficePreflight.office_id !== officeId) {
+        currentOfficePreflight = await loadOfficePreflight(officeId, 'comic-preflight-panel');
+    }
+    if (!currentOfficePreflight) {
+        toast('启动检查暂时不可用，请刷新工作台后重试。', 'error');
+        return false;
+    }
+    const blockedStatuses = options.blockedStatuses || ['blocked', 'missing'];
+    const capabilities = currentOfficePreflight.capabilities || [];
+    const blocked = capabilities.find(item =>
+        capabilityIds.includes(item.id) && blockedStatuses.includes(item.status)
+    );
+    if (!blocked) return true;
+
+    const action = blocked.next_action || blocked.impact || '请先到模型页补齐对应配置。';
+    toast(`${blocked.title || '当前能力'}暂时不能继续：${action}`, 'error');
+    document.getElementById('comic-preflight-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
 }
 
 async function approveComicV2VisualBible(button) {
@@ -1818,6 +2136,7 @@ async function reviseComicV2VisualBible() {
 }
 
 async function planComicV2Assets(button) {
+    if (!(await ensureComicCapabilities(['story_planning', 'asset_planning']))) return null;
     return runComicV2Action(button, '生成资产拆解审核包', () =>
         API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/assets/plan`, {})
     );
@@ -1830,6 +2149,7 @@ async function approveComicV2Assets(button) {
 }
 
 async function reviseComicV2Assets() {
+    if (!(await ensureComicCapabilities(['story_planning', 'asset_planning']))) return;
     const notes = document.getElementById('comic-asset-review-notes')?.value.trim()
         || window.prompt('你希望这次拆解怎么改？例如：缺少玉佩道具；删除故事里没有出现的角色。', '');
     if (!notes) {
@@ -1839,15 +2159,18 @@ async function reviseComicV2Assets() {
     await runComicV2Action(null, '重新拆解资产', () =>
         API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/assets/revise`, { revision_request: notes })
     );
+    toast('资产重拆已提交，请核对新版清单的新增、删除和修改。', 'success');
 }
 
 async function planComicV2Prompts(button) {
+    if (!(await ensureComicCapabilities(['prompt_planning']))) return null;
     return runComicV2Action(button, '生成专属提示词', () =>
         API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/prompts/plan`, {})
     );
 }
 
 async function generateComicV2Images(button) {
+    if (!(await ensureComicCapabilities(['image_generation', 'visual_review']))) return null;
     return runComicV2Action(button, '生成并质检基础资产图', () =>
         API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/images/generate`, {})
     );
@@ -1862,6 +2185,7 @@ async function overrideComicV2VisualReview() {
 }
 
 async function buildComicV2Delivery(button) {
+    if (!(await ensureComicCapabilities(['local_output']))) return null;
     return runComicV2Action(button, '生成 Word 制片画布', () =>
         API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/delivery/build`, {})
     );
@@ -2069,6 +2393,8 @@ function readComicFormFields() {
     const idea = document.getElementById('comic-idea')?.value.trim() || '';
     const inputMode = document.getElementById('comic-input-mode')?.value || 'idea';
     const scriptText = document.getElementById('comic-script-source')?.value.trim() || '';
+    const characterSource = document.getElementById('comic-character-source')?.value.trim() || '';
+    const styleReference = document.getElementById('comic-style-reference')?.value.trim() || '';
     const genre = document.getElementById('comic-genre-custom')?.value.trim()
         || document.getElementById('comic-genre')?.value
         || '';
@@ -2083,7 +2409,18 @@ function readComicFormFields() {
         || '';
     const extra = document.getElementById('comic-extra')?.value.trim() || '';
     const derivedIdea = idea || (inputMode === 'script' ? scriptText.split(/\n+/).find(Boolean)?.slice(0, 40) || '已有完整剧本项目' : '');
-    return { idea: derivedIdea, genre, length, platform, visual_style: style, extra, input_mode: inputMode, script_text: scriptText };
+    return {
+        idea: derivedIdea,
+        genre,
+        length,
+        platform,
+        visual_style: style,
+        extra,
+        input_mode: inputMode,
+        script_text: scriptText,
+        character_source: characterSource,
+        style_reference: styleReference,
+    };
 }
 
 function toggleComicInputMode() {
@@ -2103,9 +2440,13 @@ function comicScriptSourceForRequest(fields) {
 
 function comicPayloadForCabinet(fields) {
     const scriptSource = comicScriptSourceForRequest(fields);
+    const referenceSource = [
+        fields.character_source ? `Character references:\n${fields.character_source}` : '',
+        fields.style_reference ? `Style references:\n${fields.style_reference}` : '',
+    ].filter(Boolean).join('\n\n');
     return {
         ...fields,
-        extra: [fields.extra || '', scriptSource].filter(Boolean).join('\n\n'),
+        extra: [fields.extra || '', referenceSource, scriptSource].filter(Boolean).join('\n\n'),
     };
 }
 
@@ -2616,6 +2957,7 @@ function agentName(id) {
 async function loadModels() {
     const officeLabel = document.getElementById('model-office-label');
     if (officeLabel) officeLabel.textContent = `当前：${OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research}`;
+    await loadOfficePreflight(MODEL_OFFICE_ID, 'model-preflight-panel');
     const data = await API.get('/api/config/models?office_id=' + encodeURIComponent(MODEL_OFFICE_ID));
     const models = data.models || {};
     const el = document.getElementById('model-list');
@@ -2680,6 +3022,127 @@ async function loadModels() {
             </div>
         </div>`;
     }).join('');
+}
+
+async function loadOfficePreflight(officeId, targetId = '') {
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (target) {
+        target.innerHTML = '<div class="empty-state">正在检查当前办公室能力...</div>';
+    }
+    try {
+        const result = await API.get(`/api/offices/${officeId}/preflight`);
+        if (officeId === activeComicOfficeId()) {
+            currentOfficePreflight = result;
+        }
+        renderOfficePreflight(result, targetId);
+        return result;
+    } catch (e) {
+        if (target) {
+            target.innerHTML = `<div class="preflight-card preflight-blocked">
+                <strong>启动检查失败</strong>
+                <p>${escapeHtml(e.message || String(e))}</p>
+            </div>`;
+        }
+        return null;
+    }
+}
+
+async function loadSystemPreflight() {
+    const target = document.getElementById('system-preflight-panel');
+    if (!target) return null;
+    target.innerHTML = '<div class="empty-state">正在检查本机运行环境...</div>';
+    try {
+        const result = await API.get('/api/system/preflight');
+        renderSystemPreflight(result);
+        return result;
+    } catch (e) {
+        target.innerHTML = `<div class="preflight-card preflight-blocked">
+            <div class="preflight-head">
+                <div>
+                    <strong>系统启动检查失败</strong>
+                    <p>${escapeHtml(e.message || String(e))}</p>
+                </div>
+                <span class="badge badge-err">需检查</span>
+            </div>
+        </div>`;
+        return null;
+    }
+}
+
+function renderSystemPreflight(result) {
+    const target = document.getElementById('system-preflight-panel');
+    if (!target || !result) return;
+    const status = result.status || 'unknown';
+    const checks = (result.checks || []).slice(0, 5);
+    target.innerHTML = `
+        <div class="preflight-card preflight-${escapeHtml(status)}">
+            <div class="preflight-head">
+                <div>
+                    <strong>系统启动检查</strong>
+                    <p>${escapeHtml(result.summary || '')}</p>
+                </div>
+                <span class="badge ${preflightBadgeClass(status)}">${escapeHtml(preflightStatusText(status))}</span>
+            </div>
+            <div class="preflight-next">下一步：${escapeHtml(result.next_action || '')}</div>
+            <div class="preflight-grid">
+                ${checks.map(item => `
+                    <div class="preflight-item ${escapeHtml(item.status || '')}">
+                        <span>${escapeHtml(item.title || item.id || '')}</span>
+                        <small>${escapeHtml(item.status === 'ok' ? '已具备' : item.next_action || item.impact || '')}</small>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderOfficePreflight(result, targetId = '') {
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (!target || !result) return;
+    const status = result.status || 'unknown';
+    const capabilities = result.capabilities || [];
+    const visible = capabilities.slice(0, 6);
+    target.innerHTML = `
+        <div class="preflight-card preflight-${escapeHtml(status)}">
+            <div class="preflight-head">
+                <div>
+                    <strong>启动检查</strong>
+                    <p>${escapeHtml(result.summary || '')}</p>
+                </div>
+                <span class="badge ${preflightBadgeClass(status)}">${escapeHtml(preflightStatusText(status))}</span>
+            </div>
+            <div class="preflight-next">下一步：${escapeHtml(result.next_action || '')}</div>
+            <div class="preflight-grid">
+                ${visible.map(item => {
+                    const owner = [
+                        item.office_id ? `办公室：${OFFICE_LABELS[item.office_id] || item.office_id}` : '',
+                        item.owner_label ? `责任：${item.owner_label}` : '',
+                        item.model_kind ? `类型：${item.model_kind}` : '',
+                    ].filter(Boolean).join(' / ');
+                    return `
+                        <div class="preflight-item ${escapeHtml(item.status || '')}">
+                            <span>${escapeHtml(item.title || item.id || '')}</span>
+                            ${owner ? `<em class="preflight-owner">${escapeHtml(owner)}</em>` : ''}
+                            <small>${escapeHtml(item.status === 'ok' ? '已具备' : item.next_action || item.impact || '')}</small>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function preflightBadgeClass(status) {
+    if (status === 'ready') return 'badge-ok';
+    if (status === 'blocked') return 'badge-err';
+    return 'badge-info';
+}
+
+function preflightStatusText(status) {
+    if (status === 'ready') return '可开工';
+    if (status === 'blocked') return '需先配置';
+    if (status === 'partial') return '可分阶段推进';
+    return '待检查';
 }
 
 function toggleAdvanced(agentId) {
@@ -2897,6 +3360,7 @@ async function viewHistoryDetail(taskId) {
             </div>
             <div class="artifact-detail-body">
                 ${report ? simpleMarkdown(report) : '<em>暂无最终报告预览</em>'}
+                ${renderComicV2HistoryTrace(item.comic_v2_trace)}
                 <h4>产物清单</h4>
                 <ul>
                     ${artifacts.map(a => `<li><strong>${escapeHtml(a.artifact_type)}</strong> · ${escapeHtml(a.title || '')} ${a.uri ? `<a href="${escapeHtml(a.uri)}" target="_blank">打开</a>` : ''}</li>`).join('')}
@@ -2906,6 +3370,23 @@ async function viewHistoryDetail(taskId) {
     } catch (e) {
         box.innerHTML = '<div class="empty-state">读取失败：' + escapeHtml(e.message) + '</div>';
     }
+}
+
+function renderComicV2HistoryTrace(trace) {
+    if (!trace || !trace.story_id) return '';
+    const visual = trace.visual_review || {};
+    const audit = trace.delivery_audit || {};
+    return `
+        <h4>制片追溯</h4>
+        <ul>
+            <li><strong>故事版本</strong> · ${escapeHtml(trace.story_id)} / v${escapeHtml(trace.story_version || '')}</li>
+            <li><strong>风格版本</strong> · ${escapeHtml(trace.style_id || '')} / v${escapeHtml(trace.style_version || '')}</li>
+            <li><strong>资产版本</strong> · manifest v${escapeHtml(trace.manifest_version || '')}</li>
+            <li><strong>提示词</strong> · 资产 ${escapeHtml(trace.asset_prompt_count || 0)} 条，镜头 ${escapeHtml(trace.shot_prompt_count || 0)} 条</li>
+            <li><strong>视觉质检</strong> · 图片 ${escapeHtml(visual.record_count || 0)} 张，失败 ${escapeHtml(visual.failure_count || 0)} 项</li>
+            <li><strong>交付审计</strong> · 资产 ${escapeHtml(audit.asset_count || 0)} 个，镜头 ${escapeHtml(audit.shot_count || 0)} 个，${audit.handoff_ready ? '可交付' : '需复查'}</li>
+        </ul>
+    `;
 }
 
 async function viewReport(taskId) {
@@ -2936,6 +3417,7 @@ function exposeInlineHandlers() {
     window.selectComicWorkspace = selectComicWorkspace;
     window.startComicCabinet = startComicCabinet;
     window.continueComicCabinet = continueComicCabinet;
+    window.selectComicSuggestedReply = selectComicSuggestedReply;
     window.confirmComicScript = confirmComicScript;
     window.unconfirmComicScript = unconfirmComicScript;
     window.submitComicTask = submitComicTask;
@@ -2944,6 +3426,7 @@ function exposeInlineHandlers() {
     window.approveComicV2VisualBible = approveComicV2VisualBible;
     window.reviseComicV2VisualBible = reviseComicV2VisualBible;
     window.planComicV2Assets = planComicV2Assets;
+    window.appendComicV2AssetReviewNote = appendComicV2AssetReviewNote;
     window.approveComicV2Assets = approveComicV2Assets;
     window.reviseComicV2Assets = reviseComicV2Assets;
     window.planComicV2Prompts = planComicV2Prompts;

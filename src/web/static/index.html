@@ -53,6 +53,8 @@
                 <h1>三个臭皮匠</h1>
             </div>
 
+            <div id="system-preflight-panel" class="preflight-panel"></div>
+
             <div class="office-card-grid">
                 <button class="office-card available" onclick="navigate('research')">
                     <strong>研究办公室</strong>
@@ -308,6 +310,7 @@
                 </div>
 
                 <div class="card office-submit comic-studio-card">
+                    <div id="comic-preflight-panel" class="preflight-panel"></div>
                     <div class="panel-title">
                         <div>
                             <h3>主创对话</h3>
@@ -398,6 +401,16 @@
                     <div id="comic-script-source-wrap" style="display:none;">
                         <label>完整剧本</label>
                         <textarea id="comic-script-source" rows="7" placeholder="如果你已经有完整剧本，粘贴在这里。系统会按这版剧本拆人物、道具、场景、分镜、运镜和提示词，不再另起故事。"></textarea>
+                    </div>
+                    <div class="research-brief-grid">
+                        <div>
+                            <label>已有角色设定</label>
+                            <textarea id="comic-character-source" rows="3" placeholder="可选：粘贴已有角色设定、人物关系、服装或不可改动的身份信息。"></textarea>
+                        </div>
+                        <div>
+                            <label>已有参考风格</label>
+                            <textarea id="comic-style-reference" rows="3" placeholder="可选：写参考画风、镜头质感、色彩、平台提示词或参考作品方向。"></textarea>
+                        </div>
                     </div>
                     <label>创作指令</label>
                     <textarea id="comic-extra" rows="2" placeholder="例如：女主更冷静克制；反派禁止脸谱化；第1集要有强反转。"></textarea>
@@ -577,6 +590,7 @@
                 </div>
                 <button class="btn-ghost" id="btn-test-all-models" onclick="testAllModels()">测试当前办公室全部部门</button>
             </div>
+            <div id="model-preflight-panel" class="preflight-panel"></div>
             <div id="model-list"></div>
         </div>
     </section>

@@ -23,6 +23,63 @@ from src.llm.providers import LLMResponse, LiteLLMProvider, ModelConfig
 
 
 class ComicOfficeWorkflowTests(unittest.TestCase):
+    def test_parse_comic_request_keeps_character_and_style_references(self):
+        from src.comic_office.workflow import parse_comic_request
+
+        spec = parse_comic_request(
+            "\n".join([
+                "Idea: 修仙小队失去辅助后追凶",
+                "Character references:",
+                "大师兄：沉稳，青黑长袍，左眉有旧伤。",
+                "二师姐：冷静，银簪，不轻易笑。",
+                "Style references:",
+                "古风仙侠，雨夜，冷蓝月光，水墨厚涂。",
+                "Input mode: full_script",
+                "Full script:",
+                "辅助在雨夜死亡。大师兄带队追查真凶。",
+            ])
+        )
+
+        self.assertIn("大师兄", spec["character_references"])
+        self.assertIn("二师姐", spec["character_references"])
+        self.assertIn("冷蓝月光", spec["style_references"])
+        self.assertEqual(spec["input_mode"], "full_script")
+        self.assertIn("辅助在雨夜死亡", spec["full_script"])
+
+    def test_cabinet_suggests_selectable_story_directions_for_vague_idea(self):
+        result = start_comic_cabinet_session(
+            idea="一个学生站在楼顶，母亲在下面苦苦哀求",
+            genre="现实情感",
+            length="3集，每集60秒",
+            platform="竖屏短视频",
+            visual_style="现实主义",
+            extra="",
+        )
+
+        options = result["session"]["story_state"].get("direction_options") or []
+        self.assertGreaterEqual(len(options), 2)
+        self.assertLessEqual(len(options), 3)
+        self.assertTrue(all(option.get("label") and option.get("reason") for option in options))
+        self.assertIn("方向一", result["assistant_message"])
+        self.assertIn("方向二", result["assistant_message"])
+
+    def test_cabinet_returns_short_suggested_replies_for_next_turn(self):
+        result = start_comic_cabinet_session(
+            idea="一个学生站在楼顶，母亲在下面苦苦哀求",
+            genre="现实情感",
+            length="3集，每集60秒",
+            platform="竖屏短视频",
+            visual_style="现实主义",
+            extra="",
+        )
+
+        replies = result["suggested_replies"]
+        self.assertGreaterEqual(len(replies), 2)
+        self.assertLessEqual(len(replies), 3)
+        self.assertEqual(replies, result["session"]["story_state"]["suggested_replies"])
+        self.assertTrue(all(reply.startswith("我想走") for reply in replies))
+        self.assertTrue(all(len(reply) <= 80 for reply in replies))
+
     def test_complete_full_script_is_ready_to_confirm_without_extra_answer(self):
         full_script = (
             "主角阿衡独自护送宗门密信下山。追兵在山路截杀他，逼他交出密信。"
@@ -452,6 +509,24 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
         self.assertNotIn("秘密", rendered)
         self.assertNotIn("更狠", rendered)
 
+    def test_rule_fallback_cabinet_message_reads_like_a_creator_not_a_form(self):
+        result = start_comic_cabinet_session(
+            idea="学生站在天台边缘，母亲赶来劝他下来",
+            genre="现实情感",
+            length="3集",
+            platform="竖屏短剧",
+            visual_style="现实主义漫画",
+            extra="想拍得克制一点，不要猎奇。",
+        )
+
+        message = result["assistant_message"]
+        self.assertIn("我先理解成", message)
+        self.assertIn("我问这个是因为", message)
+        self.assertLessEqual(message.count("？") + message.count("?"), 1)
+        self.assertNotIn("还需要一点信息", message)
+        self.assertNotIn("1.", message)
+        self.assertNotIn("2.", message)
+
     def test_story_writer_prompt_behaves_like_conversation_not_questionnaire(self):
         from src.comic_office.workflow import _story_writer_system_prompt
 
@@ -459,6 +534,7 @@ class ComicOfficeWorkflowTests(unittest.TestCase):
 
         self.assertIn("像真人编剧在聊天", prompt)
         self.assertIn("只能问 1 个最值得问的问题", prompt)
+        self.assertIn("解释你为什么问这个问题", prompt)
         self.assertIn("禁止模板化追问", prompt)
         self.assertNotIn("最多 2 个", prompt)
 

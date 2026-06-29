@@ -1,8 +1,10 @@
+﻿import json
 import unittest
 
 from src.comic_office.v2.asset_manifest import (
     ManifestValidationError,
     NoManifestChangeError,
+    asset_manifest_review_view,
     build_asset_manifest,
     asset_manifest_from_dict,
     replace_asset_manifest,
@@ -85,6 +87,64 @@ class ComicV2AssetManifestTests(unittest.TestCase):
         with self.assertRaises(ManifestValidationError):
             build_asset_manifest(contract_bundle(), invalid)
 
+    def test_asset_name_must_be_traceable_to_story(self):
+        invalid = [
+            {
+                "asset_type": "scene",
+                "name": "新月桥",
+                "evidence_quote": "月税司",
+                "scene_ids": ["scene_01"],
+                "story_purpose": "不存在的地点",
+                "visual_locks": ["石桥"],
+                "allowed_changes": ["角度"],
+            }
+        ]
+
+        with self.assertRaises(ManifestValidationError):
+            build_asset_manifest(contract_bundle(), invalid)
+
+    def test_generic_noun_fragment_is_not_a_valid_asset_name(self):
+        bundle = build_contract_bundle(
+            "主角发现线索，线索发光后引出真相。",
+            {
+                "title": "线索测试",
+                "genre": "悬疑",
+                "theme": "真相",
+                "protagonist_goal": "发现真相",
+                "main_conflict": "线索不断误导主角",
+                "causal_chain": ["发现线索", "追查真相"],
+                "ending": "真相公开",
+                "episodes": [{"episode": 1, "summary": "发现线索", "evidence_quote": "主角发现线索"}],
+                "visual": {
+                    "medium": "漫画",
+                    "era": "现代",
+                    "aspect_ratio": "9:16",
+                    "palette": ["蓝"],
+                    "lighting": "冷光",
+                    "camera_language": "稳定",
+                    "character_rules": ["脸型固定"],
+                    "costume_rules": ["服装固定"],
+                    "prop_rules": ["道具固定"],
+                    "architecture_rules": ["空间固定"],
+                    "visual_motifs": ["光"],
+                    "prohibited_elements": ["文字"],
+                },
+            },
+        )
+        invalid = [
+            {
+                "asset_type": "character",
+                "name": "线索",
+                "evidence_quote": "线索",
+                "scene_ids": ["scene_01"],
+                "story_purpose": "错误地把抽象名词当人物",
+                "visual_locks": ["发光"],
+                "allowed_changes": ["角度"],
+            }
+        ]
+
+        with self.assertRaises(ManifestValidationError):
+            build_asset_manifest(bundle, invalid)
     def test_asset_types_receive_production_default_images(self):
         assets = VALID_ASSETS + [{
             "asset_type": "prop",
@@ -173,6 +233,55 @@ class ComicV2AssetManifestTests(unittest.TestCase):
         self.assertEqual(second.version, 2)
         self.assertEqual({item.name for item in second.items}, {"林昭", "裂纹月灯"})
         self.assertNotEqual(second.manifest_hash, first.manifest_hash)
+        self.assertEqual(second.previous_manifest_hash, first.manifest_hash)
+        self.assertEqual(second.revision_summary["added"], [{"asset_type": "prop", "name": "裂纹月灯"}])
+        self.assertEqual(second.revision_summary["removed"], [{"asset_type": "scene", "name": "月税司"}])
+        self.assertEqual(second.revision_summary["changed"], [])
+
+    def test_review_view_explains_revision_diff_to_user(self):
+        first = build_asset_manifest(contract_bundle(), VALID_ASSETS)
+        corrected = [VALID_ASSETS[0], {
+            "asset_type": "prop",
+            "name": "裂纹月灯",
+            "evidence_quote": "裂纹月灯",
+            "scene_ids": ["scene_01", "scene_02"],
+            "story_purpose": "推动真相被发现的核心证物",
+            "visual_locks": ["裂纹位置固定"],
+            "allowed_changes": ["发光强度"],
+        }]
+        second = replace_asset_manifest(first, "删除错误场景并补充核心道具", corrected)
+
+        view = asset_manifest_review_view(second)
+
+        self.assertEqual(view["revision_note"], "删除错误场景并补充核心道具")
+        self.assertEqual(view["previous_manifest_hash"], first.manifest_hash)
+        self.assertEqual(view["revision_summary"]["added"][0]["name"], "裂纹月灯")
+        self.assertEqual(view["revision_summary"]["removed"][0]["name"], "月税司")
+        self.assertIn("这次重拆", view["human_guidance"])
+
+    def test_review_view_is_grouped_for_humans_without_prompt_fields(self):
+        assets = VALID_ASSETS + [{
+            "asset_type": "prop",
+            "name": "裂纹月灯",
+            "evidence_quote": "裂纹月灯",
+            "scene_ids": ["scene_01", "scene_02", "scene_03"],
+            "story_purpose": "贯穿真相与结局的核心道具",
+            "visual_locks": ["裂纹位置固定"],
+            "allowed_changes": ["发光强度"],
+        }]
+        manifest = build_asset_manifest(contract_bundle(), assets)
+
+        view = asset_manifest_review_view(manifest)
+
+        self.assertEqual(view["title"], "资产拆解审核")
+        self.assertEqual(view["counts"], {"characters": 1, "props": 1, "scenes": 1})
+        self.assertEqual([item["name"] for item in view["groups"]["characters"]], ["林昭"])
+        self.assertEqual(view["groups"]["characters"][0]["source_evidence"], "林昭在月税司登记月灯")
+        self.assertEqual(view["groups"]["props"][0]["story_use"], "贯穿真相与结局的核心道具")
+        self.assertIn("three_view", view["groups"]["characters"][0]["planned_images"])
+        serialized = json.dumps(view, ensure_ascii=False)
+        self.assertNotIn("prompt", serialized.lower())
+        self.assertNotIn("image_prompt", serialized.lower())
 
 
 if __name__ == "__main__":

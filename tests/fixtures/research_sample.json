@@ -1,0 +1,98 @@
+{
+  "final_report": "# 民用无人机阶段性调研报告\n\n## 行业概览\n民用无人机在航拍、巡检、农业、应急和低空经济场景中持续扩张，但不同场景对载重、续航、图传、合规和售后能力的要求差异很大。\n\n## 初步结论\n现阶段更适合把产品定位收窄到轻量航拍或行业巡检其中一个方向，先用可复核数据确认价格带、核心竞品和用户痛点，再决定是否进入样机规划。\n\n## 风险\n第三方平台权限不足时，销量、达人和直播间截图只能作为待补证据，不应在最终报告中写成已验证事实。",
+  "plan": {
+    "title": "民用无人机阶段性调研报告",
+    "objective": "形成可继续补证据的开品判断材料",
+    "deliverable": "报告、截图清单、来源清单、数据表、竞品表、机会判断"
+  },
+  "results": [
+    {
+      "step_id": 1,
+      "department": "中书省",
+      "status": "completed",
+      "summary": "拆解调研目标：行业概览、竞品价格带、用户痛点、平台截图证据和老板可读结论。",
+      "chart_suggestions": [
+        {
+          "title": "民用无人机价格带分布",
+          "chart_type": "bar",
+          "purpose": "判断主流成交区间和高低端机会",
+          "data_needed": "平台商品价格、销量或榜单排名"
+        },
+        {
+          "title": "应用场景机会矩阵",
+          "chart_type": "matrix",
+          "purpose": "比较航拍、农业、巡检、应急等场景的门槛与机会",
+          "data_needed": "场景需求、客单价、合规门槛、售后难度"
+        }
+      ]
+    },
+    {
+      "step_id": 2,
+      "department": "兵部",
+      "status": "verified",
+      "summary": "整理公开来源和待补平台证据，标记哪些结论可引用，哪些需要用户登录第三方平台补截图。",
+      "sources": [
+        {
+          "title": "低空经济与民用无人机公开政策资料",
+          "url": "https://example.com/low-altitude-economy",
+          "publisher": "公开资料占位",
+          "published_at": "2026-06",
+          "note": "用于样例验证，不代表真实引用"
+        },
+        {
+          "title": "电商平台无人机商品榜单截图",
+          "url": "local://pending/feigua-drone-ranking",
+          "publisher": "待用户登录后补证",
+          "published_at": "待补",
+          "note": "需要截图归档后才能进入正式报告"
+        }
+      ],
+      "data_points": [
+        {
+          "metric": "主流消费级价格带",
+          "value": "待核验",
+          "period": "2026",
+          "source_url": "local://pending/ecommerce-price-band",
+          "confidence": "low",
+          "note": "需要平台榜单或商品页截图"
+        },
+        {
+          "metric": "高频痛点",
+          "value": "续航、炸机、售后、图传稳定性",
+          "period": "近期评论",
+          "source_url": "local://pending/review-screenshots",
+          "confidence": "medium",
+          "note": "样例中先作为待补截图清单"
+        }
+      ],
+      "competitors": [
+        {
+          "product_name": "消费级折叠航拍无人机",
+          "brand": "样例品牌A",
+          "sales": "待核验",
+          "price": "入门到中端价格带",
+          "selling_points": "便携、高清航拍、智能返航",
+          "target_user": "旅行、短视频、入门航拍用户",
+          "positive_keywords": "画质清楚、上手快",
+          "negative_pain_points": "续航焦虑、抗风一般"
+        },
+        {
+          "product_name": "行业巡检无人机",
+          "brand": "样例品牌B",
+          "sales": "待核验",
+          "price": "中高端价格带",
+          "selling_points": "稳定图传、长续航、可挂载模块",
+          "target_user": "巡检、安防、农林用户",
+          "positive_keywords": "稳定、可扩展",
+          "negative_pain_points": "门槛高、售后依赖强"
+        }
+      ]
+    },
+    {
+      "step_id": 3,
+      "department": "礼部",
+      "status": "completed",
+      "summary": "形成阶段性报告结构：先交付可读判断，再列出必须补齐的截图和数据证据。"
+    }
+  ]
+}

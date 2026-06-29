@@ -42,15 +42,177 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("xingbu: '视觉质检'", js)
         self.assertIn("gongbu: '资产组装'", js)
 
+    def test_model_page_and_comic_workbench_render_office_preflight(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn('id="model-preflight-panel"', html)
+        self.assertIn('id="comic-preflight-panel"', html)
+        self.assertIn("async function loadOfficePreflight", js)
+        self.assertIn("/api/offices/${officeId}/preflight", js)
+        self.assertIn("function renderOfficePreflight", js)
+        self.assertIn("loadOfficePreflight(MODEL_OFFICE_ID", js)
+        self.assertIn("loadOfficePreflight(activeComicOfficeId()", js)
+
+    def test_office_hall_renders_system_preflight(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn('id="system-preflight-panel"', html)
+        self.assertIn("async function loadSystemPreflight", js)
+        self.assertIn("/api/system/preflight", js)
+        self.assertIn("if (page === 'offices') loadSystemPreflight()", js)
+
+    def test_comic_v2_actions_check_preflight_before_costly_steps(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("let currentOfficePreflight = null;", js)
+        self.assertIn("function ensureComicCapabilities", js)
+        self.assertIn("capabilityIds.includes(item.id)", js)
+        self.assertIn("blockedStatuses.includes(item.status)", js)
+
+        gated_actions = [
+            ("planComicV2Assets", "['story_planning', 'asset_planning']"),
+            ("planComicV2Prompts", "['prompt_planning']"),
+            ("generateComicV2Images", "['image_generation', 'visual_review']"),
+            ("buildComicV2Delivery", "['local_output']"),
+        ]
+        for function_name, gate in gated_actions:
+            fn = js[js.index(f"async function {function_name}"):js.index("async function", js.index(f"async function {function_name}") + 1)]
+            self.assertIn(f"ensureComicCapabilities({gate}", fn)
+
+    def test_office_preflight_panel_has_soft_product_styles(self):
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn(".preflight-card", css)
+        self.assertIn(".preflight-grid", css)
+        self.assertIn(".preflight-item", css)
+
     def test_confirm_story_button_has_visible_loading_and_error_handling(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
         js = APP_JS.read_text(encoding="utf-8")
+        confirm_fn = js[js.index("async function confirmComicScript"):js.index("function unconfirmComicScript")]
+        board_fn = js[js.index("function renderComicPackageBoard"):js.index("function latestComicProductionChain")]
 
         self.assertIn('id="comic-confirm-start-btn"', html)
         self.assertIn("async function apiJson", js)
         self.assertIn("button.textContent = '确认中...'", js)
         self.assertIn("确认版故事已锁定", js)
         self.assertIn("deriveComicStoryDraft", js)
+        self.assertIn("currentComicV2PendingAction = buildComicV2PendingAction", confirm_fn)
+        self.assertIn("currentComicV2Status = currentComicV2Status ||", confirm_fn)
+        self.assertIn("renderComicPackageBoard(currentComicArtifacts)", confirm_fn)
+        self.assertIn("currentComicV2ActionError = {", confirm_fn)
+        self.assertIn("currentComicV2PendingAction", board_fn)
+
+    def test_api_json_preserves_structured_error_detail_for_action_feedback(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        api_fn = js[js.index("async function apiJson"):js.index("const API =")]
+        v2_action = js[js.index("async function runComicV2Action"):js.index("async function ensureComicCapabilities")]
+
+        self.assertIn("error.detail = detail", api_fn)
+        self.assertIn("error.status = response.status", api_fn)
+        self.assertIn("function formatApiError", js)
+        self.assertIn("detail.department", js)
+        self.assertIn("detail.impact", js)
+        self.assertIn("detail.next_action", js)
+        self.assertIn("formatApiError(e)", v2_action)
+
+    def test_v2_action_pending_state_is_visible_in_stage_board(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        v2_action = js[js.index("async function runComicV2Action"):js.index("async function ensureComicCapabilities")]
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function renderComicV2ActionError")]
+
+        self.assertIn("let currentComicV2PendingAction = null;", js)
+        self.assertIn("currentComicV2PendingAction = buildComicV2PendingAction", v2_action)
+        self.assertIn("renderComicPackageBoard(currentComicArtifacts);", v2_action)
+        self.assertIn("currentComicV2PendingAction = null;", v2_action)
+        self.assertIn("renderComicV2PendingAction()", v2_flow)
+        self.assertIn("function buildComicV2PendingAction", js)
+        self.assertIn("function renderComicV2PendingAction", js)
+        self.assertIn("正在处理", js)
+        self.assertIn("负责部门", js)
+        self.assertIn("下一步", js)
+    def test_v2_action_error_stays_visible_in_stage_board(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        v2_action = js[js.index("async function runComicV2Action"):js.index("async function ensureComicCapabilities")]
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function renderComicV2StageActions")]
+
+        self.assertIn("let currentComicV2ActionError = null;", js)
+        self.assertIn("currentComicV2ActionError = null;", js)
+        self.assertIn("currentComicV2ActionError = {", v2_action)
+        self.assertIn("formatApiError(e)", v2_action)
+        self.assertIn("renderComicV2ActionError()", v2_flow)
+        self.assertIn("function renderComicV2ActionError", js)
+        self.assertIn("最近一次操作失败", js)
+        self.assertIn(".v2-action-error", css)
+
+    def test_history_detail_renders_comic_v2_trace(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        detail_fn = js[js.index("async function viewHistoryDetail"):js.index("async function viewReport")]
+
+        self.assertIn("function renderComicV2HistoryTrace", js)
+        self.assertIn("renderComicV2HistoryTrace(item.comic_v2_trace)", detail_fn)
+        self.assertIn("故事版本", js)
+        self.assertIn("资产版本", js)
+        self.assertIn("提示词", js)
+        self.assertIn("视觉质检", js)
+
+    def test_cabinet_llm_fallback_error_renders_persistent_warning(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        cabinet_fn = js[js.index("function renderComicCabinet"):js.index("async function confirmComicScript")]
+
+        self.assertIn("function renderComicCabinetModelWarning", js)
+        self.assertIn("llm_fallback_error", cabinet_fn)
+        self.assertIn("renderComicCabinetModelWarning", cabinet_fn)
+        self.assertIn("主创模型没有正常返回", js)
+        self.assertIn("这不是正式模型输出", js)
+        self.assertIn("comic-model-warning", css)
+
+    def test_office_preflight_renders_blocking_owner_and_model_kind(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        preflight_fn = js[js.index("function renderOfficePreflight"):js.index("function preflightBadgeClass")]
+
+        self.assertIn("owner_label", preflight_fn)
+        self.assertIn("model_kind", preflight_fn)
+        self.assertIn("preflight-owner", preflight_fn)
+        self.assertIn("办公室", preflight_fn)
+        self.assertIn("下一步", preflight_fn)
+
+    def test_comic_input_accepts_character_and_style_references(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        read_fields = js[js.index("function readComicFormFields"):js.index("function toggleComicInputMode")]
+        payload_fn = js[js.index("function comicPayloadForCabinet"):js.index("function formatComicBriefForRequest")]
+
+        self.assertIn('id="comic-character-source"', html)
+        self.assertIn('id="comic-style-reference"', html)
+        self.assertIn("character_source", read_fields)
+        self.assertIn("style_reference", read_fields)
+        self.assertIn("Character references:", payload_fn)
+        self.assertIn("Style references:", payload_fn)
+    def test_cabinet_assistant_message_renders_even_without_chat_history(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("let currentComicAssistantMessage = '';", js)
+        self.assertIn("currentComicAssistantMessage = result.assistant_message || '';", js)
+        self.assertIn("const assistantFallback", js)
+        self.assertIn("currentComicAssistantMessage && !messages.some", js)
+        self.assertIn("role: 'assistant'", js)
+
+    def test_cabinet_renders_clickable_suggested_replies(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        cabinet_fn = js[js.index("function renderComicCabinet"):js.index("function renderComicCabinetModelWarning")]
+
+        self.assertIn("function renderComicSuggestedReplies", js)
+        self.assertIn("currentComicCabinetSession?.story_state?.suggested_replies", js)
+        self.assertIn("renderComicSuggestedReplies", cabinet_fn)
+        self.assertIn("function selectComicSuggestedReply", js)
+        self.assertIn("window.selectComicSuggestedReply = selectComicSuggestedReply;", js)
+        self.assertIn(".comic-suggested-replies", css)
 
 
     def test_comic_stage_board_renders_department_flow_and_review_action(self):
@@ -116,6 +278,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".v2-action-row", css)
         self.assertIn("flex-wrap: wrap", css)
         self.assertIn(".v2-action-row .btn-sm", css)
+        self.assertIn(".v2-action-pending", css)
+        self.assertIn("box-shadow: 0 0 0 4px", css)
 
     def test_selecting_new_comic_project_clears_visible_v2_state_immediately(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -151,7 +315,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         js = APP_JS.read_text(encoding="utf-8")
         board_fn = js[js.index("function renderComicPackageBoard"):js.index("function latestComicProductionChain")]
 
-        v2_check = board_fn.index("const hasV2Status = currentComicV2Status && currentComicV2Status.pipeline_version === 2")
+        v2_check = board_fn.index("const hasV2Status = Boolean(currentComicV2PendingAction)")
         legacy_grid = board_fn.index("COMIC_REQUIRED_ARTIFACTS.map")
         self.assertLess(v2_check, legacy_grid)
 
@@ -164,6 +328,49 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("status.contract?.visual", js)
         self.assertIn("status.asset_manifest?.items", js)
         self.assertIn("status.delivery?.audit", js)
+
+    def test_v2_stage_board_renders_department_flow(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function renderComicV2DepartmentFlow", js)
+        self.assertIn("currentComicV2Status.department_flow", js)
+        self.assertIn("department-flow v2-department-flow", js)
+        self.assertIn("dept.responsibility", js)
+        self.assertIn("dept.human_checkpoint", js)
+
+    def test_v2_asset_review_summary_uses_human_review_projection(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function renderComicV2AssetReviewGroups", js)
+        self.assertIn("status.asset_review?.groups", js)
+        self.assertIn("source_evidence", js)
+        self.assertIn("planned_image_labels", js)
+        self.assertIn("只确认人物、道具和场景", js)
+        self.assertNotIn("提示词会在这里提前展示", js)
+
+    def test_v2_asset_review_items_can_write_structured_revision_notes(self):
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function appendComicV2AssetReviewNote", js)
+        self.assertIn("删除这个资产", js)
+        self.assertIn("修改这个资产", js)
+        self.assertIn("comic-asset-review-notes", js)
+        self.assertIn("删除【${typeLabel}】资产「${name}」", js)
+        self.assertIn("修改【${typeLabel}】资产「${name}」", js)
+        self.assertIn("window.appendComicV2AssetReviewNote = appendComicV2AssetReviewNote;", js)
+
+    def test_v2_asset_review_renders_revision_diff_and_retry_feedback(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn("function renderComicV2AssetRevisionSummary", js)
+        self.assertIn("revision_summary", js)
+        self.assertIn("previous_manifest_hash", js)
+        self.assertIn("新增", js)
+        self.assertIn("删除", js)
+        self.assertIn("修改", js)
+        self.assertIn("资产重拆已提交", js)
+        self.assertIn(".v2-asset-revision-summary", css)
 
 
 if __name__ == "__main__":

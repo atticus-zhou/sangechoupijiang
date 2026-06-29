@@ -9,7 +9,7 @@ from docx.shared import Inches
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
 from src.comic_office.v2.prompt_director import build_shot_card
-from src.comic_office.v2.word_canvas import build_word_canvas_v2
+from src.comic_office.v2.word_canvas import VisualQASummary, build_word_canvas_v2
 
 
 PNG_1X1 = base64.b64decode(
@@ -100,6 +100,24 @@ class ComicV2WordCanvasTests(unittest.TestCase):
             self.assertIn("SHOT-01", all_text(doc))
             self.assertEqual(result.audit.max_table_columns, 2)
 
+    def test_canvas_includes_project_overview_before_story(self):
+        bundle, manifest, shots = delivery_parts()
+        with tempfile.TemporaryDirectory() as tmp:
+            image = Path(tmp) / "asset.png"
+            image.write_bytes(PNG_1X1)
+            images = {item.asset_id: str(image) for item in manifest.items}
+
+            result = build_word_canvas_v2(bundle, manifest, shots, images, Path(tmp))
+            doc = Document(result.path)
+            text = all_text(doc)
+
+            self.assertIn("1. 项目概览", text)
+            self.assertIn("Story v1", text)
+            self.assertIn("Style v1", text)
+            self.assertIn("资产数量", text)
+            self.assertIn("镜头数量", text)
+            self.assertLess(text.index("1. 项目概览"), text.index("2. 完整故事"))
+
     def test_each_asset_and_shot_has_a_dedicated_heading(self):
         bundle, manifest, shots = delivery_parts()
         with tempfile.TemporaryDirectory() as tmp:
@@ -147,6 +165,64 @@ class ComicV2WordCanvasTests(unittest.TestCase):
             self.assertEqual(result.audit.missing_image_asset_ids, ())
             self.assertEqual(result.audit.structural_errors, ())
             self.assertTrue(result.audit.handoff_ready)
+            self.assertTrue(result.audit.portfolio_ready)
+            notes = "\n".join(result.audit.portfolio_notes)
+            self.assertIn("封面", notes)
+            self.assertIn("资产页", notes)
+            self.assertIn("镜头执行卡", notes)
+
+    def test_visual_qa_renderer_can_attach_preview_pages(self):
+        bundle, manifest, shots = delivery_parts()
+        with tempfile.TemporaryDirectory() as tmp:
+            image = Path(tmp) / "asset.png"
+            image.write_bytes(PNG_1X1)
+            images = {item.asset_id: str(image) for item in manifest.items}
+
+            def renderer(docx_path, preview_dir):
+                preview_dir.mkdir(parents=True, exist_ok=True)
+                first = preview_dir / "page_001.png"
+                second = preview_dir / "page_002.png"
+                first.write_bytes(PNG_1X1)
+                second.write_bytes(PNG_1X1)
+                return VisualQASummary(
+                    status="ready",
+                    preview_page_images=(str(first), str(second)),
+                    reason="rendered in test",
+                )
+
+            result = build_word_canvas_v2(bundle, manifest, shots, images, Path(tmp), visual_qa_renderer=renderer)
+
+            self.assertEqual(result.audit.visual_qa_status, "ready")
+            self.assertEqual(len(result.audit.preview_page_images), 2)
+            self.assertTrue(all(Path(path).exists() for path in result.audit.preview_page_images))
+
+    def test_visual_qa_is_explicitly_skipped_when_renderer_is_unavailable(self):
+        bundle, manifest, shots = delivery_parts()
+        with tempfile.TemporaryDirectory() as tmp:
+            image = Path(tmp) / "asset.png"
+            image.write_bytes(PNG_1X1)
+            images = {item.asset_id: str(image) for item in manifest.items}
+
+            result = build_word_canvas_v2(bundle, manifest, shots, images, Path(tmp), render_visual_qa=False)
+
+            self.assertEqual(result.audit.visual_qa_status, "skipped")
+            self.assertEqual(result.audit.preview_page_images, ())
+            self.assertIn("未启用", result.audit.visual_qa_reason)
+
+    def test_handoff_audit_fails_when_shot_reference_is_not_printed(self):
+        from dataclasses import replace
+
+        bundle, manifest, shots = delivery_parts()
+        broken_shot = replace(shots[0], reference_asset_ids=())
+        with tempfile.TemporaryDirectory() as tmp:
+            image = Path(tmp) / "asset.png"
+            image.write_bytes(PNG_1X1)
+            images = {item.asset_id: str(image) for item in manifest.items}
+
+            result = build_word_canvas_v2(bundle, manifest, (broken_shot,), images, Path(tmp))
+
+            self.assertIn("SHOT-01:missing_printed_asset_refs", result.audit.structural_errors)
+            self.assertFalse(result.audit.handoff_ready)
 
     def test_canvas_uses_compact_print_margins_for_asset_cards(self):
         bundle, manifest, shots = delivery_parts()

@@ -1,4 +1,4 @@
-import json
+﻿import json
 import unittest
 
 from src.comic_office.v2.contracts import build_contract_bundle
@@ -127,6 +127,33 @@ class ComicV2AssetPlannerTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("月税司", [item.name for item in manifest.items])
         self.assertIn("缺少故事明确出现的月税司场景", planner.calls[1][-1].content)
+
+    async def test_revision_request_for_missing_prop_must_add_prop_or_fail(self):
+        from src.comic_office.v2.asset_manifest import build_asset_manifest
+        from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
+
+        current = build_asset_manifest(contract_bundle(), [valid_assets()[0]])
+        proposed_without_prop = [valid_assets()[0], valid_assets()[2]]
+        planner = FakeProvider([
+            json.dumps({"assets": proposed_without_prop}, ensure_ascii=False),
+            json.dumps({"assets": proposed_without_prop}, ensure_ascii=False),
+        ])
+        reviewer = FakeProvider([
+            json.dumps({"status": "approved", "issues": []}, ensure_ascii=False),
+            json.dumps({"status": "approved", "issues": []}, ensure_ascii=False),
+        ])
+        config = ModelConfig(provider="openai", model="fake", api_key="test")
+
+        with self.assertRaisesRegex(AssetPlanningError, "道具"):
+            await plan_asset_manifest(
+                contract_bundle(),
+                config,
+                config,
+                revision_request="缺少关键道具，请补充道具",
+                previous_manifest=current,
+                planner_llm=planner,
+                reviewer_llm=reviewer,
+            )
 
     async def test_revision_replaces_full_manifest_and_rejects_noop(self):
         from src.comic_office.v2.asset_manifest import build_asset_manifest
