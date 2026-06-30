@@ -298,6 +298,8 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(lineage[-1]["stage"], "delivery")
         self.assertEqual(lineage[-1]["status"], "waiting")
         self.assertTrue(lineage[1]["human_checkpoint"])
+        self.assertEqual(lineage[1]["handoff_to"], "资产拆解")
+        self.assertIn("视觉母版", lineage[1]["acceptance_criteria"])
 
     def test_api_returns_honest_not_started_state(self):
         response = self.client.get(f"/api/workspaces/{self.workspace_id}/comic/v2/status")

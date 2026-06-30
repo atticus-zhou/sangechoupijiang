@@ -389,6 +389,10 @@ class FrontendComicRoutingTests(unittest.TestCase):
 
         self.assertIn("renderComicV2LineageTimeline(currentComicV2Status.production_lineage)", v2_flow)
         self.assertIn("production_lineage", js)
+        self.assertIn("item.handoff_to", js)
+        self.assertIn("item.acceptance_criteria", js)
+        self.assertIn("交给：", js)
+        self.assertIn("验收：", js)
 
     def test_v2_asset_review_summary_uses_human_review_projection(self):
         js = APP_JS.read_text(encoding="utf-8")

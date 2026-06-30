@@ -245,6 +245,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
                 self.assertTrue(stage["agent"])
                 self.assertTrue(stage["status"])
                 self.assertTrue(stage["human_checkpoint"])
+                self.assertTrue(stage["handoff_to"])
+                self.assertTrue(stage["acceptance_criteria"])
             self.assertTrue(handoff["audit"]["handoff_ready"])
 
 

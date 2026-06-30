@@ -251,6 +251,8 @@ def _production_lineage(
             "agent": "主创对话官 / 中书省",
             "status": "confirmed",
             "human_checkpoint": "用户确认故事后，后续部门只能按这版故事拆解，不得擅自改写。",
+            "handoff_to": "视觉母版",
+            "acceptance_criteria": "故事原文、故事版本和禁止改写规则齐全。",
             "output": f"{bundle.creative.title} v{bundle.creative.story_version}",
         },
         {
@@ -260,6 +262,8 @@ def _production_lineage(
             "agent": "美术设定官 / 连续性审核官",
             "status": "locked",
             "human_checkpoint": "用户确认画风方向后，人物、道具、场景和镜头提示词都必须引用同一套视觉规则。",
+            "handoff_to": "资产拆解",
+            "acceptance_criteria": "视觉母版包含画风、时代、比例、色彩、服装和禁用元素。",
             "output": f"{bundle.visual.medium} · {bundle.visual.aspect_ratio}",
         },
         {
@@ -269,6 +273,8 @@ def _production_lineage(
             "agent": "资产拆解官 / 设定审校官",
             "status": manifest.review_status,
             "human_checkpoint": "人物、道具、场景拆解需要用户审核；退回意见必须进入下一版拆解。",
+            "handoff_to": "提示词与镜头执行包",
+            "acceptance_criteria": "每个资产都有原文证据、故事用途、计划图片和审核状态。",
             "output": f"{len(manifest.items)} assets · manifest v{manifest.version}",
         },
         {
@@ -278,6 +284,8 @@ def _production_lineage(
             "agent": "镜头调度官 / 提示词质检官",
             "status": "ready",
             "human_checkpoint": "用户确认资产拆解后，兵部才能生成镜头、动作链和可执行提示词。",
+            "handoff_to": "基础图片生产",
+            "acceptance_criteria": "资产提示词和镜头卡引用已审核资产，并把负面提示词单独列出。",
             "output": f"{len(prompt_package.prompts)} asset prompts · {len(prompt_package.shots)} shot cards",
         },
         {
@@ -287,6 +295,8 @@ def _production_lineage(
             "agent": "图片生成官",
             "status": image_result.status,
             "human_checkpoint": "失败、低分或风格不一致的图片需要重新生成或人工放行。",
+            "handoff_to": "一致性质检",
+            "acceptance_criteria": "人物和道具基础图保持干净白底，场景图保留空间信息。",
             "output": f"{len(image_result.records)} image records",
         },
         {
@@ -296,6 +306,8 @@ def _production_lineage(
             "agent": "一致性审核官",
             "status": "passed" if image_result.production_ready else "needs_review",
             "human_checkpoint": "交付前必须检查人物脸型、服装、道具、场景风格和引用关系。",
+            "handoff_to": "Word 画布交付",
+            "acceptance_criteria": "图片通过身份、风格、时代、空间和用途检查，风险项有处理结论。",
             "output": f"{len(image_result.failures)} failures",
         },
         {
@@ -305,6 +317,8 @@ def _production_lineage(
             "agent": "交付排版官 / 结构审计官",
             "status": "handoff_ready" if audit.handoff_ready else "needs_review",
             "human_checkpoint": "最终 Word 画布和引用清单必须一起交付，方便外部视频平台按图引用。",
+            "handoff_to": "下游视频平台",
+            "acceptance_criteria": "Word 画布、图片、镜头卡和 handoff manifest 可下载且引用一致。",
             "output": f"{audit.embedded_images} embedded images",
         },
     ]

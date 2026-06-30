@@ -3520,6 +3520,8 @@ function renderComicV2LineageTimeline(lineage) {
                             <span>${escapeHtml(item.department || '')} · ${escapeHtml(item.agent || '')}</span>
                             <small>状态：${escapeHtml(item.status || '')}</small>
                             ${item.output ? `<small>产出：${escapeHtml(item.output)}</small>` : ''}
+                            ${item.handoff_to ? `<small>交给：${escapeHtml(item.handoff_to)}</small>` : ''}
+                            ${item.acceptance_criteria ? `<small>验收：${escapeHtml(item.acceptance_criteria)}</small>` : ''}
                             ${item.human_checkpoint ? `<p>人工确认点：${escapeHtml(item.human_checkpoint)}</p>` : ''}
                         </div>
                     </div>

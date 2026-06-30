@@ -509,16 +509,16 @@ def _comic_v2_status_lineage(state: dict) -> list[dict]:
         "ready_for_handoff": 6,
     }.get(stage, -1)
     stages = [
-        ("story_contract", "故事合同", "内阁 / 中书省", "主创对话官 / 中书省", "用户确认完整故事，后续部门不得擅自改写。", _comic_v2_lineage_output(state, "story_contract")),
-        ("visual_bible", "风格圣经", "中书省 / 门下省", "美术设定官 / 连续性审核官", "用户确认画风、时代、禁用元素和连续性规则。", _comic_v2_lineage_output(state, "visual_bible")),
-        ("asset_manifest", "资产拆解", "中书省 / 门下省", "资产拆解官 / 设定审校官", "用户确认人物、道具、场景是否属于当前故事。", _comic_v2_lineage_output(state, "asset_manifest")),
-        ("prompt_package", "提示词与镜头执行包", "兵部 / 刑部", "镜头调度官 / 提示词质检官", "资产确认后生成镜头、动作链和可执行提示词。", _comic_v2_lineage_output(state, "prompt_package")),
-        ("image_production", "基础图片生产", "工部", "图片生成官", "失败、低分或风格不一致的图片需要重试或人工放行。", _comic_v2_lineage_output(state, "image_production")),
-        ("visual_review", "一致性质检", "刑部", "一致性审核官", "交付前检查人物脸型、服装、道具、场景风格和引用关系。", _comic_v2_lineage_output(state, "visual_review")),
-        ("delivery", "Word 画布交付", "礼部 / 刑部", "交付排版官 / 结构审计官", "最终 Word 画布和引用清单必须一起交付。", _comic_v2_lineage_output(state, "delivery")),
+        ("story_contract", "故事合同", "内阁 / 中书省", "主创对话官 / 中书省", "用户确认完整故事，后续部门不得擅自改写。", "视觉母版", "故事原文、故事版本和禁止改写规则齐全。", _comic_v2_lineage_output(state, "story_contract")),
+        ("visual_bible", "风格圣经", "中书省 / 门下省", "美术设定官 / 连续性审核官", "用户确认画风、时代、禁用元素和连续性规则。", "资产拆解", "视觉母版包含画风、时代、比例、色彩、服装和禁用元素。", _comic_v2_lineage_output(state, "visual_bible")),
+        ("asset_manifest", "资产拆解", "中书省 / 门下省", "资产拆解官 / 设定审校官", "用户确认人物、道具、场景是否属于当前故事。", "提示词与镜头执行包", "每个资产都有原文证据、故事用途、计划图片和审核状态。", _comic_v2_lineage_output(state, "asset_manifest")),
+        ("prompt_package", "提示词与镜头执行包", "兵部 / 刑部", "镜头调度官 / 提示词质检官", "资产确认后生成镜头、动作链和可执行提示词。", "基础图片生产", "资产提示词和镜头卡引用已审核资产，并把负面提示词单独列出。", _comic_v2_lineage_output(state, "prompt_package")),
+        ("image_production", "基础图片生产", "工部", "图片生成官", "失败、低分或风格不一致的图片需要重试或人工放行。", "一致性质检", "人物和道具基础图保持干净白底，场景图保留空间信息。", _comic_v2_lineage_output(state, "image_production")),
+        ("visual_review", "一致性质检", "刑部", "一致性审核官", "交付前检查人物脸型、服装、道具、场景风格和引用关系。", "Word 画布交付", "图片通过身份、风格、时代、空间和用途检查，风险项有处理结论。", _comic_v2_lineage_output(state, "visual_review")),
+        ("delivery", "Word 画布交付", "礼部 / 刑部", "交付排版官 / 结构审计官", "最终 Word 画布和引用清单必须一起交付。", "下游视频平台", "Word 画布、图片、镜头卡和 handoff manifest 可下载且引用一致。", _comic_v2_lineage_output(state, "delivery")),
     ]
     lineage = []
-    for index, (stage_id, label, department, agent, checkpoint, output) in enumerate(stages):
+    for index, (stage_id, label, department, agent, checkpoint, handoff_to, acceptance, output) in enumerate(stages):
         if current_index < 0:
             status = "waiting"
         elif stage == "ready_for_handoff" and index == current_index:
@@ -536,6 +536,8 @@ def _comic_v2_status_lineage(state: dict) -> list[dict]:
             "agent": agent,
             "status": status,
             "human_checkpoint": checkpoint,
+            "handoff_to": handoff_to,
+            "acceptance_criteria": acceptance,
             "output": output,
         })
     return lineage
