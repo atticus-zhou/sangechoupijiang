@@ -64,6 +64,8 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             "本地自检命令",
             [
                 _contains(root / "scripts/doctor.py", "三个臭皮匠本地自检"),
+                _contains(root / "scripts/doctor.py", "办公室可用性"),
+                _contains(root / "scripts/doctor.py", '"offices"'),
                 _contains(root / "scripts/doctor.py", "build_system_preflight"),
                 _contains(root / "scripts/doctor.py", "build_office_preflight"),
                 _contains(root / "README.md", "python scripts/doctor.py"),
@@ -71,6 +73,8 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
             [
                 "scripts/doctor.py",
+                "scripts/doctor.py:办公室可用性",
+                'scripts/doctor.py:"offices"',
                 "README.md",
                 "tests/test_doctor_script.py",
             ],

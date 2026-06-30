@@ -25,6 +25,8 @@ class ComicProductionReadinessTests(unittest.TestCase):
             self.assertIn(check_id, checks)
             self.assertEqual(checks[check_id]["status"], "passed")
             self.assertTrue(checks[check_id]["evidence"])
+        self.assertTrue(any("办公室可用性" in item for item in checks["local_doctor"]["evidence"]))
+        self.assertTrue(any('"offices"' in item for item in checks["local_doctor"]["evidence"]))
 
     def test_real_product_readiness_can_be_rendered_for_tasklist(self):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown

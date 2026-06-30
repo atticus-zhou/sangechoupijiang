@@ -13,6 +13,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.config_manager import ConfigManager
+from src.offices import get_office
 from src.office_preflight import build_office_preflight
 from src.system_preflight import build_system_preflight
 
@@ -27,6 +28,7 @@ def build_doctor_report(base_dir: Path | str = REPO_ROOT) -> dict:
         manager.get_model_config,
         base_dir=root,
     )
+    offices = _build_office_availability(manager, root)
     status = _overall_status(system.get("status", "blocked"), office.get("status", "blocked"))
     return {
         "product": "三个臭皮匠",
@@ -36,6 +38,7 @@ def build_doctor_report(base_dir: Path | str = REPO_ROOT) -> dict:
         "next_action": _next_action(system, office),
         "system": system,
         "office": office,
+        "offices": offices,
     }
 
 
@@ -57,6 +60,15 @@ def format_doctor_markdown(report: dict) -> str:
         lines.append(_row(item.get("title"), item.get("status"), item.get("impact"), item.get("next_action")))
     lines.extend([
         "",
+        "## 办公室可用性",
+        "",
+        "| 办公室 | 状态 | 摘要 | 下一步 |",
+        "| --- | --- | --- | --- |",
+    ])
+    for item in report.get("offices", []):
+        lines.append(_row(item.get("name"), item.get("status"), item.get("summary"), item.get("next_action")))
+    lines.extend([
+        "",
         "## AI 漫剧制片办公室能力",
         "",
         "| 能力 | 状态 | 负责 | 影响 | 下一步 |",
@@ -67,6 +79,27 @@ def format_doctor_markdown(report: dict) -> str:
         model_kind = item.get("model_kind", "")
         lines.append(_row(item.get("title"), item.get("status"), f"{owner}{model_kind}：{item.get('impact', '')}", item.get("next_action")))
     return "\n".join(lines)
+
+
+def _build_office_availability(manager: ConfigManager, root: Path) -> list[dict]:
+    offices = []
+    for office_id in ("research", "comic_production"):
+        profile = get_office(office_id)
+        preflight = build_office_preflight(
+            office_id,
+            manager.get_model_config,
+            base_dir=root,
+        )
+        offices.append({
+            "office_id": preflight.get("office_id", office_id),
+            "name": profile.name,
+            "status": preflight.get("status", "blocked"),
+            "summary": preflight.get("summary", ""),
+            "next_action": preflight.get("next_action", ""),
+            "blocking_reasons": preflight.get("blocking_reasons", []),
+            "capability_count": len(preflight.get("capabilities", [])),
+        })
+    return offices
 
 
 def _overall_status(system_status: str, office_status: str) -> str:
