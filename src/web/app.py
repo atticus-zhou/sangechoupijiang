@@ -1805,6 +1805,8 @@ def _comic_v2_handoff_production_lineage(path: Path | None) -> list[dict]:
         "agent",
         "status",
         "human_checkpoint",
+        "handoff_to",
+        "acceptance_criteria",
         "output",
     }
     summary = []

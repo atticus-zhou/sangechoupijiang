@@ -1,5 +1,7 @@
 ﻿import sqlite3
+import json
 import shutil
+import tempfile
 import unittest
 import uuid
 from pathlib import Path
@@ -8,7 +10,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from src.llm.providers import LLMResponse, LiteLLMProvider, ModelConfig
-from src.web.app import _comic_image_specs, app, config_manager
+from src.web.app import _comic_image_specs, _comic_v2_handoff_production_lineage, app, config_manager
 
 
 class WebComicApiTests(unittest.TestCase):
@@ -28,6 +30,32 @@ class WebComicApiTests(unittest.TestCase):
         conn.close()
         for workspace_id in self.created_workspaces:
             shutil.rmtree(Path("output") / "workspaces" / workspace_id, ignore_errors=True)
+
+    def test_handoff_lineage_summary_preserves_handoff_and_acceptance_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = Path(tmp) / "handoff.json"
+            manifest_path.write_text(json.dumps({
+                "production_lineage": [
+                    {
+                        "stage": "visual_bible",
+                        "stage_label": "风格圣经",
+                        "department": "中书省 / 门下省",
+                        "agent": "美术设定官 / 连续性审核官",
+                        "status": "locked",
+                        "human_checkpoint": "用户确认视觉母版",
+                        "handoff_to": "资产拆解",
+                        "acceptance_criteria": "视觉母版包含画风、时代、比例、色彩、服装和禁用元素。",
+                        "output": "电影级国风厚涂动画 · 9:16",
+                        "internal_notes": "仅内部使用的调试字段",
+                    }
+                ]
+            }, ensure_ascii=False), encoding="utf-8")
+
+            summary = _comic_v2_handoff_production_lineage(manifest_path)
+
+        self.assertEqual(summary[0]["handoff_to"], "资产拆解")
+        self.assertIn("视觉母版", summary[0]["acceptance_criteria"])
+        self.assertNotIn("internal_notes", summary[0])
 
     def test_comic_cabinet_turn_creates_and_persists_session(self):
         response = self.client.post("/api/comic/cabinet/turn", json={
