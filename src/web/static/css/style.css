@@ -1508,6 +1508,23 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .model-requirement p {
     margin-top: 3px;
 }
+.model-requirement-meta {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+}
+.model-requirement-meta span {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+.model-requirement-meta b {
+    flex: 0 0 auto;
+    color: var(--text);
+    font-weight: 600;
+}
 .advanced-toggle { font-size: 13px; color: var(--text2); cursor: pointer; margin-top: 12px; display: inline-flex; align-items: center; gap: 4px; user-select: none; font-weight: 500; }
 .advanced-toggle:hover { color: var(--accent); }
 .advanced-row { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line); }

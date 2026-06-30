@@ -72,7 +72,7 @@ AI 漫剧制片办公室推荐模型类型：
 | 部门 | 推荐能力 | 示例方向 |
 | --- | --- | --- |
 | 内阁 / 中书省 / 门下省 / 尚书省 / 吏部 / 户部 / 礼部 | 文本规划与结构化输出 | DeepSeek、Qwen、GPT |
-| 兵部 | 生图模型 | Seedream、MiniMax Image、Qwen Image |
+| 兵部 | 文本镜头 / 视频提示词 | DeepSeek、Qwen、GPT |
 | 刑部 | 图片理解 / 视觉质检 | Qwen VL、GPT 多模态、Gemini 多模态 |
 | 工部 | 生图 + 文本组装 | 生图模型加文本模型 |
 
@@ -86,6 +86,10 @@ office_models:
       model: deepseek-chat
       api_key: ${DEEPSEEK_API_KEY}
     bingbu:
+      provider: deepseek
+      model: deepseek-chat
+      api_key: ${DEEPSEEK_API_KEY}
+    gongbu:
       provider: doubao
       model: doubao-seedream-5
       api_key: ${ARK_API_KEY}

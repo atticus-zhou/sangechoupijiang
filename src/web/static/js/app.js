@@ -2907,7 +2907,7 @@ const OFFICE_AGENT_DESC = {
         libu: '连续性',
         hubu: '资产台账',
         libu_comm: '交付说明',
-        bingbu: '分镜生图',
+        bingbu: '镜头提示词',
         xingbu: '视觉质检',
         gongbu: '资产组装',
     },
@@ -2950,10 +2950,37 @@ const MODEL_REQUIREMENTS = {
 };
 
 function modelRequirement(agentId) {
-    return {
+    const requirement = {
         ...(MODEL_REQUIREMENTS.default[agentId] || {}),
         ...((MODEL_REQUIREMENTS[MODEL_OFFICE_ID] || {})[agentId] || {}),
     };
+    return {
+        ...requirement,
+        test: requirement.test || modelRequirementTest(requirement),
+        impact: requirement.impact || modelRequirementImpact(agentId, requirement),
+    };
+}
+
+function modelRequirementTest(requirement) {
+    const type = requirement.type || '';
+    if (type.includes('生图')) return '点击测试会调用一次生图接口，确认 API Key、模型名和图片生成能力可用。';
+    if (type.includes('视觉') || type.includes('图片理解')) return '点击测试会调用一次视觉理解接口，确认图片识别和质检能力可用。';
+    return '点击测试会调用一次文本接口，确认 API Key、模型名和基础对话能力可用。';
+}
+
+function modelRequirementImpact(agentId, requirement) {
+    if (MODEL_OFFICE_ID === 'comic_production') {
+        const impact = {
+            neige: '无法自然聊故事和锁定创作方向。',
+            zhongshu: '无法生成故事合同、视觉母版和生产任务书。',
+            menxia: '无法审查故事、人物、道具、场景是否缺漏。',
+            bingbu: '无法生成镜头画面提示词和视频生成提示词。',
+            xingbu: '可以继续生图，但无法自动检查图片一致性和画风问题。',
+            gongbu: '可以先完成故事和提示词，但无法生成基础资产图片。',
+        };
+        if (impact[agentId]) return impact[agentId];
+    }
+    return requirement.use || '该部门会被阻塞，相关步骤需要补齐模型后才能继续。';
 }
 
 function agentName(id) {
@@ -2984,6 +3011,10 @@ async function loadModels() {
                 <strong>需要：${escapeHtml(requirement.type || '文本模型')}</strong>
                 <span>${escapeHtml(requirement.key || '填写对应模型供应商的 API Key')}</span>
                 <p>${escapeHtml(requirement.use || '')}</p>
+                <div class="model-requirement-meta">
+                    <span><b>测试方式</b>${escapeHtml(requirement.test || '')}</span>
+                    <span><b>缺失影响</b>${escapeHtml(requirement.impact || '')}</span>
+                </div>
             </div>
             <div class="form-row">
                 <div>

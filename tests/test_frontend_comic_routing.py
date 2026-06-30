@@ -4,6 +4,7 @@ import unittest
 
 APP_JS = Path("src/web/static/js/app.js")
 INDEX_HTML = Path("src/web/static/index.html")
+README = Path("README.md")
 
 
 class FrontendComicRoutingTests(unittest.TestCase):
@@ -38,9 +39,22 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("需要：${escapeHtml(requirement.type || '文本模型')}", js)
         self.assertIn("豆包 Seedream / 火山方舟等生图 API Key", js)
         self.assertIn("千问 VL / GPT 多模态等图片理解 API Key", js)
-        self.assertIn("bingbu: '分镜生图'", js)
+        self.assertIn("requirement.test", js)
+        self.assertIn("requirement.impact", js)
+        self.assertIn("测试方式", js)
+        self.assertIn("缺失影响", js)
+        self.assertIn("bingbu: '镜头提示词'", js)
         self.assertIn("xingbu: '视觉质检'", js)
         self.assertIn("gongbu: '资产组装'", js)
+
+    def test_readme_model_table_matches_comic_production_roles(self):
+        readme = README.read_text(encoding="utf-8")
+
+        self.assertIn("| 兵部 | 文本镜头 / 视频提示词 |", readme)
+        self.assertIn("| 工部 | 生图 + 文本组装 |", readme)
+        self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", readme)
+        self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", readme)
+        self.assertNotIn("| 兵部 | 生图模型 |", readme)
 
     def test_model_page_and_comic_workbench_render_office_preflight(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
