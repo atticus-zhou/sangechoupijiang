@@ -133,6 +133,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("detail.impact", js)
         self.assertIn("detail.next_action", js)
         self.assertIn("formatApiError(e)", v2_action)
+        self.assertIn("setComicV2BlockingActionError", js)
+        self.assertIn("currentOfficePreflight", js)
 
     def test_v2_action_pending_state_is_visible_in_stage_board(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -161,6 +163,13 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("formatApiError(e)", v2_action)
         self.assertIn("renderComicV2ActionError()", v2_flow)
         self.assertIn("function renderComicV2ActionError", js)
+        self.assertIn("function renderComicV2ActionRecovery", js)
+        self.assertIn("currentComicV2ActionError.detail", js)
+        self.assertIn("detail.department", js)
+        self.assertIn("detail.next_action", js)
+        self.assertIn("navigate('models')", js)
+        self.assertIn("refreshComicV2Panel", js)
+        self.assertIn(".v2-action-recovery", css)
         self.assertIn("最近一次操作失败", js)
         self.assertIn(".v2-action-error", css)
 

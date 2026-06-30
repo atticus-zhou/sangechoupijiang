@@ -1090,6 +1090,20 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     color: var(--text3);
     font-size: 12px;
 }
+.v2-action-error-body {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+.v2-action-error-body span {
+    text-align: left;
+}
+.v2-action-recovery {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
 .package-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(120px, 1fr));

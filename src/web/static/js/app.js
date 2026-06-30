@@ -1528,11 +1528,36 @@ function renderComicV2PendingAction() {
 
 function renderComicV2ActionError() {
     if (!currentComicV2ActionError) return '';
+    const detail = currentComicV2ActionError.detail && typeof currentComicV2ActionError.detail === 'object'
+        ? currentComicV2ActionError.detail
+        : {};
+    const department = detail.department || '当前生产步骤';
+    const impact = detail.impact || currentComicV2ActionError.message || '系统没有返回详细影响';
+    const nextAction = detail.next_action || '按当前阶段提示修复后重试。';
     return `
         <div class="package-summary v2-action-error">
-            <strong>最近一次操作失败：${escapeHtml(currentComicV2ActionError.label || 'V2 操作')}</strong>
-            <span>${escapeHtml(currentComicV2ActionError.message || '系统没有返回详细原因')}</span>
-            <small>这个提示会在下一次成功刷新后自动清除。</small>
+            <div class="v2-action-error-body">
+                <strong>最近一次操作失败：${escapeHtml(currentComicV2ActionError.label || 'V2 操作')}</strong>
+                <span>负责部门：${escapeHtml(department)}</span>
+                <span>影响：${escapeHtml(impact)}</span>
+                <small>下一步：${escapeHtml(nextAction)}</small>
+            </div>
+            ${renderComicV2ActionRecovery(currentComicV2ActionError)}
+        </div>
+    `;
+}
+
+function renderComicV2ActionRecovery(error) {
+    const detail = error?.detail && typeof error.detail === 'object' ? error.detail : {};
+    const actionText = `${detail.reason || ''} ${detail.impact || ''} ${detail.next_action || ''}`;
+    const shouldOpenModels = /模型|API Key|Key|配置|额度|生图|视觉/.test(actionText);
+    const modelButton = shouldOpenModels
+        ? `<button class="ghost btn-sm" onclick="navigate('models')">去模型页检查</button>`
+        : '';
+    return `
+        <div class="v2-action-recovery">
+            ${modelButton}
+            <button class="ghost btn-sm" onclick="refreshComicV2Panel('已刷新当前阶段状态')">刷新当前阶段</button>
         </div>
     `;
 }
@@ -2105,6 +2130,22 @@ async function runComicV2Action(button, label, action) {
     }
 }
 
+function setComicV2BlockingActionError(label, blocked) {
+    const detail = blocked && typeof blocked === 'object' ? blocked : {};
+    currentComicV2ActionError = {
+        label,
+        message: detail.next_action || detail.impact || '请先补齐当前能力后重试。',
+        detail: {
+            department: detail.owner_label || detail.department || detail.title || '当前能力',
+            reason: detail.title || detail.reason || detail.id || '能力未就绪',
+            impact: detail.impact || '当前步骤继续执行可能无法生成可用结果。',
+            next_action: detail.next_action || detail.impact || '请先到模型页或预检面板补齐对应配置。',
+        },
+        status: detail.status || 'preflight_blocked',
+    };
+    renderComicPackageBoard(currentComicArtifacts);
+}
+
 async function ensureComicCapabilities(capabilityIds, options = {}) {
     const officeId = activeComicOfficeId();
     if (!currentOfficePreflight || currentOfficePreflight.office_id !== officeId) {
@@ -2122,6 +2163,7 @@ async function ensureComicCapabilities(capabilityIds, options = {}) {
     if (!blocked) return true;
 
     const action = blocked.next_action || blocked.impact || '请先到模型页补齐对应配置。';
+    setComicV2BlockingActionError(blocked.title || '能力预检未通过', blocked);
     toast(`${blocked.title || '当前能力'}暂时不能继续：${action}`, 'error');
     document.getElementById('comic-preflight-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return false;
