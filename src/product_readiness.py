@@ -147,7 +147,8 @@ def format_readiness_markdown(audit: dict) -> str:
                 f"handoff_manifest={delivery.get('handoff_manifest_exists', False)}; "
                 f"image_prompts={delivery.get('handoff_manifest_image_prompts', False)}; "
                 f"asset_identity={delivery.get('handoff_manifest_asset_identity_fields', False)}; "
-                f"shot_refs={delivery.get('handoff_manifest_shot_reference_images', False)} |"
+                f"shot_refs={delivery.get('handoff_manifest_shot_reference_images', False)}; "
+                f"lineage={delivery.get('handoff_manifest_production_lineage', False)} |"
             )
         user_flow = runtime.get("user_flow") or {}
         if user_flow:

@@ -212,6 +212,24 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(reference_image["image_id"], result.records[0].image_id)
             self.assertEqual(reference_image["image_kind"], result.records[0].image_kind)
             self.assertTrue(reference_image["file"].endswith(".png"))
+            lineage = handoff["production_lineage"]
+            self.assertEqual(
+                [stage["stage"] for stage in lineage],
+                [
+                    "story_contract",
+                    "visual_bible",
+                    "asset_manifest",
+                    "prompt_package",
+                    "image_production",
+                    "visual_review",
+                    "delivery",
+                ],
+            )
+            for stage in lineage:
+                self.assertTrue(stage["department"])
+                self.assertTrue(stage["agent"])
+                self.assertTrue(stage["status"])
+                self.assertTrue(stage["human_checkpoint"])
             self.assertTrue(handoff["audit"]["handoff_ready"])
 
 

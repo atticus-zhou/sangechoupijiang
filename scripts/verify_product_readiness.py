@@ -46,6 +46,7 @@ def run_runtime_verification(root: Path) -> dict:
             "handoff_manifest_image_prompts": bool(delivery.get("handoff_manifest_image_prompts")),
             "handoff_manifest_asset_identity_fields": bool(delivery.get("handoff_manifest_asset_identity_fields")),
             "handoff_manifest_shot_reference_images": bool(delivery.get("handoff_manifest_shot_reference_images")),
+            "handoff_manifest_production_lineage": bool(delivery.get("handoff_manifest_production_lineage")),
             "missing_image_asset_ids": delivery.get("missing_image_asset_ids", []),
             "structural_errors": delivery.get("structural_errors", []),
         },

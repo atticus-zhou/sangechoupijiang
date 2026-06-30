@@ -212,6 +212,13 @@ def _write_handoff_manifest(
             "filename": word_path.name,
             "relative_path": word_path.name,
         },
+        "production_lineage": _production_lineage(
+            bundle,
+            manifest,
+            prompt_package,
+            image_result,
+            audit,
+        ),
         "assets": assets,
         "images": images,
         "shots": shots,
@@ -220,6 +227,81 @@ def _write_handoff_manifest(
     path = word_path.with_name(f"{word_path.stem}_handoff_manifest.json")
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
+
+
+def _production_lineage(
+    bundle: ContractBundle,
+    manifest: AssetManifest,
+    prompt_package: PromptPackage,
+    image_result: ImageProductionResult,
+    audit,
+) -> list[dict[str, str]]:
+    """Describe which office agents owned each handoff-critical production step."""
+    return [
+        {
+            "stage": "story_contract",
+            "stage_label": "故事合同",
+            "department": "内阁 / 中书省",
+            "agent": "主创对话官 / 中书省",
+            "status": "confirmed",
+            "human_checkpoint": "用户确认故事后，后续部门只能按这版故事拆解，不得擅自改写。",
+            "output": f"{bundle.creative.title} v{bundle.creative.story_version}",
+        },
+        {
+            "stage": "visual_bible",
+            "stage_label": "风格圣经",
+            "department": "中书省 / 门下省",
+            "agent": "美术设定官 / 连续性审核官",
+            "status": "locked",
+            "human_checkpoint": "用户确认画风方向后，人物、道具、场景和镜头提示词都必须引用同一套视觉规则。",
+            "output": f"{bundle.visual.medium} · {bundle.visual.aspect_ratio}",
+        },
+        {
+            "stage": "asset_manifest",
+            "stage_label": "资产拆解",
+            "department": "中书省 / 门下省",
+            "agent": "资产拆解官 / 设定审校官",
+            "status": manifest.review_status,
+            "human_checkpoint": "人物、道具、场景拆解需要用户审核；退回意见必须进入下一版拆解。",
+            "output": f"{len(manifest.items)} assets · manifest v{manifest.version}",
+        },
+        {
+            "stage": "prompt_package",
+            "stage_label": "提示词与镜头执行包",
+            "department": "兵部 / 刑部",
+            "agent": "镜头调度官 / 提示词质检官",
+            "status": "ready",
+            "human_checkpoint": "用户确认资产拆解后，兵部才能生成镜头、动作链和可执行提示词。",
+            "output": f"{len(prompt_package.prompts)} asset prompts · {len(prompt_package.shots)} shot cards",
+        },
+        {
+            "stage": "image_production",
+            "stage_label": "基础图片生产",
+            "department": "工部",
+            "agent": "图片生成官",
+            "status": image_result.status,
+            "human_checkpoint": "失败、低分或风格不一致的图片需要重新生成或人工放行。",
+            "output": f"{len(image_result.records)} image records",
+        },
+        {
+            "stage": "visual_review",
+            "stage_label": "一致性质检",
+            "department": "刑部",
+            "agent": "一致性审核官",
+            "status": "passed" if image_result.production_ready else "needs_review",
+            "human_checkpoint": "交付前必须检查人物脸型、服装、道具、场景风格和引用关系。",
+            "output": f"{len(image_result.failures)} failures",
+        },
+        {
+            "stage": "delivery",
+            "stage_label": "Word 画布交付",
+            "department": "礼部 / 刑部",
+            "agent": "交付排版官 / 结构审计官",
+            "status": "handoff_ready" if audit.handoff_ready else "needs_review",
+            "human_checkpoint": "最终 Word 画布和引用清单必须一起交付，方便外部视频平台按图引用。",
+            "output": f"{audit.embedded_images} embedded images",
+        },
+    ]
 
 
 def _shot_reference_images(asset_ids: tuple[str, ...], records: tuple) -> list[dict[str, str]]:
