@@ -158,6 +158,8 @@ def _write_handoff_manifest(
             "reference_image_ids": list(record.reference_image_ids),
             "prompt_hash": record.prompt_hash,
             "prompt_purpose": prompt.purpose if prompt else "",
+            "generator_prompt": prompt.generator_prompt if prompt else "",
+            "negative_prompt": list(prompt.negative_prompt) if prompt else [],
         })
     shots = []
     for shot in prompt_package.shots:

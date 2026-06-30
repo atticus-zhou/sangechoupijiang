@@ -144,7 +144,8 @@ def format_readiness_markdown(audit: dict) -> str:
                 f"assets={delivery.get('asset_count', 0)}; "
                 f"shots={delivery.get('shot_count', 0)}; "
                 f"embedded_images={delivery.get('embedded_images', 0)}; "
-                f"handoff_manifest={delivery.get('handoff_manifest_exists', False)} |"
+                f"handoff_manifest={delivery.get('handoff_manifest_exists', False)}; "
+                f"image_prompts={delivery.get('handoff_manifest_image_prompts', False)} |"
             )
         user_flow = runtime.get("user_flow") or {}
         if user_flow:

@@ -102,6 +102,12 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     handoff_manifest = json.loads(handoff_manifest_path.read_text(encoding="utf-8"))
     if handoff_manifest.get("word_canvas", {}).get("filename") != build.path.name:
         raise AssertionError("handoff manifest does not point at the generated Word canvas")
+    image_prompt_ready = all(
+        bool(image.get("generator_prompt")) and isinstance(image.get("negative_prompt"), list)
+        for image in (handoff_manifest.get("images") or [])
+    )
+    if not image_prompt_ready:
+        raise AssertionError("handoff manifest image records are missing executable prompts")
     audit = build.audit
     result = {
         "path": str(build.path),
@@ -110,6 +116,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_assets": len(handoff_manifest.get("assets") or []),
         "handoff_manifest_images": len(handoff_manifest.get("images") or []),
         "handoff_manifest_shots": len(handoff_manifest.get("shots") or []),
+        "handoff_manifest_image_prompts": image_prompt_ready,
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,
         "shot_count": audit.shot_count,

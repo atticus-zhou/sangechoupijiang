@@ -196,6 +196,10 @@ class ComicV2DeliveryTests(unittest.TestCase):
                 sorted(image["image_id"] for image in handoff["images"]),
                 sorted(record.image_id for record in result.records),
             )
+            first_image = next(image for image in handoff["images"] if image["image_kind"] == "three_view")
+            self.assertIn("林昭 three_view", first_image["generator_prompt"])
+            self.assertIn("禁止文字水印", first_image["negative_prompt"])
+            self.assertIn("禁止现代服装", first_image["negative_prompt"])
             self.assertEqual(handoff["shots"][0]["shot_id"], package.shots[0].shot_id)
             self.assertEqual(handoff["shots"][0]["reference_asset_ids"], list(package.shots[0].reference_asset_ids))
             self.assertTrue(handoff["audit"]["handoff_ready"])
