@@ -147,6 +147,15 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     if not shot_execution_notes_ready:
         raise AssertionError("handoff manifest shot records are missing execution notes")
     lineage = handoff_manifest.get("production_lineage") or []
+    lineage_handoff_ready = (
+        isinstance(lineage, list)
+        and bool(lineage)
+        and all(
+            bool(item.get("handoff_to"))
+            and bool(item.get("acceptance_criteria"))
+            for item in lineage
+        )
+    )
     lineage_ready = (
         isinstance(lineage, list)
         and len(lineage) >= 6
@@ -158,6 +167,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
             and item.get("human_checkpoint")
             for item in lineage
         )
+        and lineage_handoff_ready
     )
     if not lineage_ready:
         raise AssertionError("handoff manifest is missing production lineage")
@@ -174,6 +184,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
         "handoff_manifest_shot_execution_notes": shot_execution_notes_ready,
         "handoff_manifest_production_lineage": lineage_ready,
+        "handoff_manifest_lineage_handoff_fields": lineage_handoff_ready,
         "word_canvas_agent_handoff": word_canvas_agent_handoff,
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,

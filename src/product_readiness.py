@@ -166,6 +166,7 @@ def format_readiness_markdown(audit: dict) -> str:
                 f"shot_refs={delivery.get('handoff_manifest_shot_reference_images', False)}; "
                 f"shot_notes={delivery.get('handoff_manifest_shot_execution_notes', False)}; "
                 f"lineage={delivery.get('handoff_manifest_production_lineage', False)}; "
+                f"lineage_handoff={delivery.get('handoff_manifest_lineage_handoff_fields', False)}; "
                 f"word_handoff={delivery.get('word_canvas_agent_handoff', False)} |"
             )
         user_flow = runtime.get("user_flow") or {}
@@ -174,6 +175,7 @@ def format_readiness_markdown(audit: dict) -> str:
                 "| 用户操作链路 | "
                 f"{user_flow.get('status', '')} | "
                 f"final_stage={user_flow.get('final_stage', '')}; "
+                f"lineage_handoff={user_flow.get('production_lineage_handoff_fields', False)}; "
                 f"generated_images={user_flow.get('generated_images', 0)}; "
                 f"download_bytes={user_flow.get('download_bytes', 0)} |"
             )

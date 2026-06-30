@@ -226,6 +226,16 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
             {},
         )
         handoff_lineage = (handoff_manifest.get("metadata") or {}).get("production_lineage") or []
+        lineage_handoff_ready = (
+            isinstance(handoff_lineage, list)
+            and bool(handoff_lineage)
+            and all(
+                isinstance(item, dict)
+                and bool(item.get("handoff_to"))
+                and bool(item.get("acceptance_criteria"))
+                for item in handoff_lineage
+            )
+        )
         config_manager.update_task_run(
             task_id,
             "completed",
@@ -245,6 +255,7 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
             "handoff_manifest_uri": handoff_manifest_uri,
             "handoff_manifest_artifact": bool(handoff_manifest),
             "handoff_manifest_production_lineage": bool(handoff_lineage),
+            "production_lineage_handoff_fields": lineage_handoff_ready,
             "production_lineage_stages": [
                 item.get("stage", "")
                 for item in handoff_lineage
@@ -259,6 +270,8 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
         if summary["final_stage"] != "ready_for_handoff":
             raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
         if not summary["delivery_audit"].get("handoff_ready"):
+            raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
+        if not summary["production_lineage_handoff_fields"]:
             raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
         return summary
     finally:
