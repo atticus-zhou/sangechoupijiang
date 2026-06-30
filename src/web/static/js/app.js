@@ -3427,6 +3427,31 @@ function renderComicV2HistoryTrace(trace) {
             <li><strong>交付审计</strong> · 资产 ${escapeHtml(audit.asset_count || 0)} 个，镜头 ${escapeHtml(audit.shot_count || 0)} 个，${audit.handoff_ready ? '可交付' : '需复查'}</li>
             <li><strong>引用清单</strong> · ${trace.handoff_manifest_uri ? `<a href="${escapeHtml(trace.handoff_manifest_uri)}" target="_blank">打开 JSON</a>` : '未生成'}</li>
         </ul>
+        ${renderComicV2LineageTimeline(trace.production_lineage)}
+    `;
+}
+
+function renderComicV2LineageTimeline(lineage) {
+    const items = Array.isArray(lineage) ? lineage.filter(item => item && item.stage) : [];
+    if (!items.length) return '';
+    return `
+        <div class="lineage-timeline">
+            <h4>多 Agent 生产链路</h4>
+            <div class="lineage-stage-grid">
+                ${items.map((item, index) => `
+                    <div class="lineage-stage-card">
+                        <div class="lineage-stage-index">${index + 1}</div>
+                        <div class="lineage-stage-body">
+                            <strong>${escapeHtml(item.stage_label || item.stage)}</strong>
+                            <span>${escapeHtml(item.department || '')} · ${escapeHtml(item.agent || '')}</span>
+                            <small>状态：${escapeHtml(item.status || '')}</small>
+                            ${item.output ? `<small>产出：${escapeHtml(item.output)}</small>` : ''}
+                            ${item.human_checkpoint ? `<p>人工确认点：${escapeHtml(item.human_checkpoint)}</p>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
     `;
 }
 

@@ -1679,6 +1679,51 @@ tr:hover td { background: var(--bg); }
 
 code { font-family: var(--mono); font-size: 13px; }
 
+.lineage-timeline {
+    margin: 18px 0;
+}
+.lineage-stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+.lineage-stage-card {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: rgba(255, 255, 255, 0.03);
+}
+.lineage-stage-index {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--blue-bg);
+    color: var(--blue);
+    font-weight: 700;
+    font-size: 12px;
+}
+.lineage-stage-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.lineage-stage-body span,
+.lineage-stage-body small,
+.lineage-stage-body p {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.45;
+}
+.lineage-stage-body p {
+    margin: 4px 0 0;
+}
+
 @media (max-width: 1100px) {
     .office-layout {
         grid-template-columns: 1fr;

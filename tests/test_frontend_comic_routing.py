@@ -152,6 +152,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
 
     def test_history_detail_renders_comic_v2_trace(self):
         js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
         detail_fn = js[js.index("async function viewHistoryDetail"):js.index("async function viewReport")]
 
         self.assertIn("function renderComicV2HistoryTrace", js)
@@ -163,6 +164,13 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("提示词", js)
         self.assertIn("视觉质检", js)
         self.assertIn("引用清单", js)
+
+        self.assertIn("function renderComicV2LineageTimeline", js)
+        self.assertIn("renderComicV2LineageTimeline(trace.production_lineage)", js)
+        self.assertIn("lineage-stage-card", js)
+        self.assertIn("human_checkpoint", js)
+        self.assertIn(".lineage-stage-grid", css)
+        self.assertIn(".lineage-stage-card", css)
 
     def test_handoff_manifest_is_treated_as_delivery_artifact(self):
         js = APP_JS.read_text(encoding="utf-8")
