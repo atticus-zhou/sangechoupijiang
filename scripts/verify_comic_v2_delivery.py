@@ -96,6 +96,19 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     ]
     if missing_ids:
         raise AssertionError(f"delivery is missing IDs: {', '.join(missing_ids)}")
+    word_canvas_agent_handoff = all(
+        marker in text
+        for marker in (
+            "多 Agent 交接与验收",
+            "交给",
+            "验收",
+            "资产拆解",
+            "基础图片生产",
+            "handoff manifest",
+        )
+    )
+    if not word_canvas_agent_handoff:
+        raise AssertionError("Word canvas is missing the multi-agent handoff checklist")
     handoff_manifest_path = build.handoff_manifest_path
     if handoff_manifest_path is None or not handoff_manifest_path.exists():
         raise AssertionError("delivery handoff manifest was not created")
@@ -161,6 +174,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
         "handoff_manifest_shot_execution_notes": shot_execution_notes_ready,
         "handoff_manifest_production_lineage": lineage_ready,
+        "word_canvas_agent_handoff": word_canvas_agent_handoff,
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,
         "shot_count": audit.shot_count,

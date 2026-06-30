@@ -403,10 +403,32 @@ def _add_handoff_page(doc: Document, manifest: AssetManifest, shots: tuple[ShotC
     _add_callout(
         doc,
         "完成标准",
-        "所有人物、道具和场景均有批准图片；每张镜头卡引用真实资产；跨图质检通过；失败镜头按照卡片中的重试策略降级。",
+        "所有人物、道具和场景均有批准图片；每张镜头卡引用真实资产；跨图质检通过；失败镜头按照卡片中的重试策略降级；handoff manifest 与 Word 画布引用一致。",
         fill=PALE,
         accent=INDIGO,
     )
+    _add_agent_handoff_summary(doc)
+
+
+def _add_agent_handoff_summary(doc: Document) -> None:
+    doc.add_heading("多 Agent 交接与验收", level=2)
+    _add_callout(
+        doc,
+        "阅读方式",
+        "每一行代表一个办公室交接点。上游产物满足验收后，才交给下一步继续生产。",
+        fill=SILVER,
+        accent=INDIGO,
+        compact=True,
+    )
+    _add_label_detail(doc, [
+        ("故事合同", "交给：视觉母版；验收：故事原文、故事版本和禁止改写规则齐全。"),
+        ("风格圣经", "交给：资产拆解；验收：视觉母版包含画风、时代、比例、色彩、服装和禁用元素。"),
+        ("资产拆解", "交给：提示词与镜头执行包；验收：每个资产都有原文证据、故事用途、计划图片和审核状态。"),
+        ("提示词与镜头执行包", "交给：基础图片生产；验收：资产提示词和镜头卡引用已审核资产，并把负面提示词单独列出。"),
+        ("基础图片生产", "交给：一致性质检；验收：人物和道具基础图保持干净白底，场景图保留空间信息。"),
+        ("一致性质检", "交给：Word 画布交付；验收：图片通过身份、风格、时代、空间和用途检查，风险项有处理结论。"),
+        ("Word 画布交付", "交给：下游视频平台；验收：Word 画布、图片、镜头卡和 handoff manifest 可下载且引用一致。"),
+    ], compact=True)
 
 
 def _new_page_heading(doc: Document, text: str) -> None:

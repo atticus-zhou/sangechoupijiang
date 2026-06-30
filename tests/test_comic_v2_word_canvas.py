@@ -136,6 +136,23 @@ class ComicV2WordCanvasTests(unittest.TestCase):
                 self.assertIn(item.asset_id, headings)
             self.assertIn("SHOT-01", headings)
 
+    def test_canvas_includes_multi_agent_handoff_acceptance_page(self):
+        bundle, manifest, shots = delivery_parts()
+        with tempfile.TemporaryDirectory() as tmp:
+            image = Path(tmp) / "asset.png"
+            image.write_bytes(PNG_1X1)
+            images = {item.asset_id: str(image) for item in manifest.items}
+
+            result = build_word_canvas_v2(bundle, manifest, shots, images, Path(tmp))
+            text = all_text(Document(result.path))
+
+            self.assertIn("多 Agent 交接与验收", text)
+            self.assertIn("交给", text)
+            self.assertIn("验收", text)
+            self.assertIn("资产拆解", text)
+            self.assertIn("基础图片生产", text)
+            self.assertIn("handoff manifest", text)
+
     def test_audit_counts_images_and_reports_missing_references(self):
         bundle, manifest, shots = delivery_parts()
         with tempfile.TemporaryDirectory() as tmp:
