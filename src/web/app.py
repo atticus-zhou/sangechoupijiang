@@ -4235,6 +4235,10 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
     if not word_canvas or word_canvas.get("artifact_type") != "comic_v2_word_canvas":
         return {}
     word_meta = word_canvas.get("metadata") or {}
+    handoff_manifest = next(
+        (a for a in reversed(artifacts) if a.get("artifact_type") == "comic_v2_handoff_manifest"),
+        {},
+    )
     prompt_package = next(
         (a for a in reversed(artifacts) if a.get("artifact_type") == "comic_v2_prompt_package"),
         {},
@@ -4251,6 +4255,8 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "style_id": word_meta.get("style_id", ""),
         "style_version": word_meta.get("style_version", 0),
         "manifest_version": word_meta.get("manifest_version") or prompt_meta.get("manifest_version", 0),
+        "handoff_manifest_uri": handoff_manifest.get("uri", "") or word_meta.get("handoff_manifest_uri", ""),
+        "handoff_manifest_title": handoff_manifest.get("title", ""),
         "prompt_package_title": prompt_package.get("title", ""),
         "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),
@@ -4278,6 +4284,10 @@ def _enrich_history_item(item: dict) -> dict:
         a for a in reversed(artifacts)
         if a.get("artifact_type") in {"word_canvas", "comic_v2_word_canvas"} and a.get("uri")
     ), None)
+    handoff_manifest = next((
+        a for a in reversed(artifacts)
+        if a.get("artifact_type") == "comic_v2_handoff_manifest" and a.get("uri")
+    ), None)
     report_record = config_manager.get_task_result(task_id) if task_id else {}
     result = report_record.get("result") or run_record.get("result") or {}
     final_report = result.get("final_report") or ""
@@ -4290,6 +4300,8 @@ def _enrich_history_item(item: dict) -> dict:
         "artifacts": [_summarize_history_artifact(a) for a in artifacts],
         "word_canvas_uri": word_canvas.get("uri", "") if word_canvas else "",
         "word_canvas_title": word_canvas.get("title", "") if word_canvas else "",
+        "handoff_manifest_uri": handoff_manifest.get("uri", "") if handoff_manifest else "",
+        "handoff_manifest_title": handoff_manifest.get("title", "") if handoff_manifest else "",
         "workspace_export_uri": f"/api/workspaces/{workspace_id}/export" if workspace_id else "",
         "current_phase": run_record.get("current_phase", ""),
         "updated_at": run_record.get("updated_at", ""),

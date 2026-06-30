@@ -551,6 +551,26 @@ class WebComicApiTests(unittest.TestCase):
             created_by="libu",
         )
         config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_v2_handoff",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_handoff_manifest",
+            title="V2 Handoff Manifest",
+            uri=f"/api/workspaces/{workspace_id}/files/delivery/v2_handoff_manifest.json",
+            content="ready",
+            metadata={
+                "office_id": "comic_production",
+                "story_id": "story_123",
+                "story_version": 3,
+                "style_id": "style_456",
+                "style_version": 2,
+                "manifest_version": 5,
+                "download_uri": f"/api/workspaces/{workspace_id}/files/delivery/v2_handoff_manifest.json",
+                "word_canvas_uri": f"/api/workspaces/{workspace_id}/files/delivery/v2.docx",
+            },
+            created_by="libu",
+        )
+        config_manager.create_artifact(
             artifact_id=f"art_{task_id}_prompt_pkg",
             workspace_id=workspace_id,
             task_id=task_id,
@@ -586,11 +606,14 @@ class WebComicApiTests(unittest.TestCase):
             row = next(item for item in response.json()["history"] if item["task_id"] == task_id)
             self.assertTrue(row["word_canvas_uri"].endswith("/v2.docx"))
             self.assertEqual(row["word_canvas_title"], "V2 Word Canvas")
+            self.assertTrue(row["handoff_manifest_uri"].endswith("/v2_handoff_manifest.json"))
+            self.assertEqual(row["handoff_manifest_title"], "V2 Handoff Manifest")
             trace = row["comic_v2_trace"]
             self.assertEqual(trace["story_id"], "story_123")
             self.assertEqual(trace["story_version"], 3)
             self.assertEqual(trace["style_version"], 2)
             self.assertEqual(trace["manifest_version"], 5)
+            self.assertTrue(trace["handoff_manifest_uri"].endswith("/v2_handoff_manifest.json"))
             self.assertEqual(trace["asset_prompt_count"], 7)
             self.assertEqual(trace["shot_prompt_count"], 9)
             self.assertEqual(trace["visual_review"]["record_count"], 7)

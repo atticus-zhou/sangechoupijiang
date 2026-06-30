@@ -1179,7 +1179,7 @@ function comicArtifactGroups(artifacts) {
         { key: 'asset_docs', title: '资产拆解', hint: '人物、道具、场景和审核包', types: ['comic_v2_contract', 'asset_review_package', 'style_bible', 'character_sheet', 'prop_sheet', 'scene_sheet', 'asset_registry'] },
         { key: 'images', title: '图片资产库', hint: '人物、道具、场景基础资产图', types: ['generated_image'] },
         { key: 'shot_docs', title: '镜头提示词', hint: '镜头画面提示词、视频生成提示词、交接台', types: ['shot_prompt_table', 'shot_prompt_handoff'] },
-        { key: 'delivery', title: '交付文件', hint: 'Word 画布、提示词包、执行材料', types: ['word_canvas', 'prompt_package', 'production_canvas', 'production_brief', 'dispatch_plan'] },
+        { key: 'delivery', title: '交付文件', hint: 'Word 画布、引用清单、提示词包、执行材料', types: ['word_canvas', 'comic_v2_word_canvas', 'comic_v2_handoff_manifest', 'prompt_package', 'comic_v2_prompt_package', 'production_canvas', 'production_brief', 'dispatch_plan'] },
         { key: 'quality', title: '质检与问题', hint: '质量报告、错误记录、链路状态', types: ['image_quality_report', 'image_generation_error', 'consistency_checklist', 'production_chain_state'] },
     ];
     const used = new Set();
@@ -1701,6 +1701,7 @@ function appendComicV2AssetReviewNote(action, encodedTypeLabel, encodedName) {
 function renderComicV2StageActions(status) {
     const stage = status?.stage || '';
     const deliveryUri = status?.delivery?.uri || '';
+    const handoffManifestUri = status?.delivery?.handoff_manifest_uri || '';
     if (stage === 'visual_bible_review') {
         return [
             '<button class="btn-sm" onclick="approveComicV2VisualBible(this)">确认视觉母版</button>',
@@ -1732,7 +1733,10 @@ function renderComicV2StageActions(status) {
         return '<button class="btn-sm" onclick="buildComicV2Delivery(this)">生成 Word 制片画布</button>';
     }
     if (stage === 'ready_for_handoff' && deliveryUri) {
-        return `<a class="btn-sm" href="${escapeHtml(deliveryUri)}" target="_blank">下载 Word 制片画布</a>`;
+        return [
+            `<a class="btn-sm" href="${escapeHtml(deliveryUri)}" target="_blank">下载 Word 制片画布</a>`,
+            handoffManifestUri ? `<a class="ghost btn-sm" href="${escapeHtml(handoffManifestUri)}" target="_blank">下载引用清单</a>` : '',
+        ].join('');
     }
     return '';
 }
@@ -3352,6 +3356,7 @@ async function loadHistory() {
             <td>
                 <button class="btn-sm" onclick="viewHistoryDetail('${h.task_id}')">查看完整</button>
                 ${h.word_canvas_uri ? `<a class="btn-sm ghost" href="${escapeHtml(h.word_canvas_uri)}" target="_blank">下载Word画布</a>` : ''}
+                ${h.handoff_manifest_uri ? `<a class="btn-sm ghost" href="${escapeHtml(h.handoff_manifest_uri)}" target="_blank">下载引用清单</a>` : ''}
                 ${h.workspace_export_uri ? `<a class="btn-sm ghost" href="${escapeHtml(h.workspace_export_uri)}" target="_blank">导出全部</a>` : ''}
             </td>
         </tr>
@@ -3364,8 +3369,9 @@ async function loadHistory() {
 function historyArtifactSummary(h) {
     const count = h.artifact_count || 0;
     const word = h.word_canvas_uri ? '，含 Word 画布' : '';
+    const handoff = h.handoff_manifest_uri ? '，含引用清单' : '';
     const office = h.office_id ? `${h.office_id}办公室` : '工作区';
-    return `${office} · ${count} 个产物${word}`;
+    return `${office} · ${count} 个产物${word}${handoff}`;
 }
 
 async function viewHistoryDetail(taskId) {
@@ -3389,6 +3395,7 @@ async function viewHistoryDetail(taskId) {
                 <span class="artifact-type">${escapeHtml(item.office_id || '')}</span>
                 <strong>${escapeHtml(item.workspace_title || item.user_request || taskId)}</strong>
                 ${item.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.word_canvas_uri)}" target="_blank">下载Word画布</a>` : ''}
+                ${item.handoff_manifest_uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.handoff_manifest_uri)}" target="_blank">下载引用清单</a>` : ''}
                 ${item.workspace_export_uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.workspace_export_uri)}" target="_blank">导出全部</a>` : ''}
             </div>
             <div class="artifact-detail-body">
@@ -3418,6 +3425,7 @@ function renderComicV2HistoryTrace(trace) {
             <li><strong>提示词</strong> · 资产 ${escapeHtml(trace.asset_prompt_count || 0)} 条，镜头 ${escapeHtml(trace.shot_prompt_count || 0)} 条</li>
             <li><strong>视觉质检</strong> · 图片 ${escapeHtml(visual.record_count || 0)} 张，失败 ${escapeHtml(visual.failure_count || 0)} 项</li>
             <li><strong>交付审计</strong> · 资产 ${escapeHtml(audit.asset_count || 0)} 个，镜头 ${escapeHtml(audit.shot_count || 0)} 个，${audit.handoff_ready ? '可交付' : '需复查'}</li>
+            <li><strong>引用清单</strong> · ${trace.handoff_manifest_uri ? `<a href="${escapeHtml(trace.handoff_manifest_uri)}" target="_blank">打开 JSON</a>` : '未生成'}</li>
         </ul>
     `;
 }

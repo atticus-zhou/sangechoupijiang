@@ -156,10 +156,22 @@ class FrontendComicRoutingTests(unittest.TestCase):
 
         self.assertIn("function renderComicV2HistoryTrace", js)
         self.assertIn("renderComicV2HistoryTrace(item.comic_v2_trace)", detail_fn)
+        self.assertIn("item.handoff_manifest_uri", detail_fn)
+        self.assertIn("下载引用清单", detail_fn)
         self.assertIn("故事版本", js)
         self.assertIn("资产版本", js)
         self.assertIn("提示词", js)
         self.assertIn("视觉质检", js)
+        self.assertIn("引用清单", js)
+
+    def test_handoff_manifest_is_treated_as_delivery_artifact(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        groups_fn = js[js.index("function comicArtifactGroups"):js.index("function renderComicArtifactGroup")]
+        history_summary_fn = js[js.index("function historyArtifactSummary"):js.index("async function viewHistoryDetail")]
+
+        self.assertIn("comic_v2_handoff_manifest", groups_fn)
+        self.assertIn("handoff_manifest_uri", history_summary_fn)
+        self.assertIn("含引用清单", history_summary_fn)
 
     def test_cabinet_llm_fallback_error_renders_persistent_warning(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -303,7 +315,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_index_uses_fresh_comic_v2_script_cache_key(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=comic-v2-review-summary-20260626", html)
+        self.assertIn("/static/js/app.js?v=comic-v2-handoff-manifest-20260630", html)
         self.assertNotIn("comic-confirm-feedback-20260610", html)
 
     def test_empty_artifact_board_still_renders_v2_stage_actions(self):
