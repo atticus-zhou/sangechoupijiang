@@ -136,6 +136,22 @@ class ComicV2WordCanvasTests(unittest.TestCase):
                 self.assertIn(item.asset_id, headings)
             self.assertIn("SHOT-01", headings)
 
+    def test_asset_pages_print_approved_image_file_references(self):
+        bundle, manifest, shots = delivery_parts()
+        with tempfile.TemporaryDirectory() as tmp:
+            images = {}
+            for item in manifest.items:
+                image = Path(tmp) / f"{item.asset_id}_baseline.png"
+                image.write_bytes(PNG_1X1)
+                images[item.asset_id] = str(image)
+
+            result = build_word_canvas_v2(bundle, manifest, shots, images, Path(tmp))
+            text = all_text(Document(result.path))
+
+            self.assertIn("批准图片文件", text)
+            for item in manifest.items:
+                self.assertIn(f"{item.asset_id}_baseline.png", text)
+
     def test_canvas_includes_multi_agent_handoff_acceptance_page(self):
         bundle, manifest, shots = delivery_parts()
         with tempfile.TemporaryDirectory() as tmp:

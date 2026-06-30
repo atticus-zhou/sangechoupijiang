@@ -63,6 +63,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertTrue(runtime["delivery"]["handoff_manifest_production_lineage"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_lineage_handoff_fields"])
         self.assertTrue(runtime["delivery"]["word_canvas_agent_handoff"])
+        self.assertTrue(runtime["delivery"]["word_canvas_asset_file_references"])
         self.assertEqual(runtime["user_flow"]["status"], "passed")
         self.assertEqual(runtime["user_flow"]["final_stage"], "ready_for_handoff")
         self.assertTrue(runtime["user_flow"]["handoff_manifest_asset_baseline_chain"])

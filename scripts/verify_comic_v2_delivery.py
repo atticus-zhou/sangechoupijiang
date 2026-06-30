@@ -115,6 +115,18 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     handoff_manifest = json.loads(handoff_manifest_path.read_text(encoding="utf-8"))
     if handoff_manifest.get("word_canvas", {}).get("filename") != build.path.name:
         raise AssertionError("handoff manifest does not point at the generated Word canvas")
+    expected_image_files = [
+        image.get("file")
+        for image in (handoff_manifest.get("images") or [])
+        if image.get("file")
+    ]
+    word_canvas_asset_file_references = (
+        "批准图片文件" in text
+        and bool(expected_image_files)
+        and all(filename in text for filename in expected_image_files)
+    )
+    if not word_canvas_asset_file_references:
+        raise AssertionError("Word canvas is missing approved asset image file references")
     image_prompt_ready = all(
         bool(image.get("generator_prompt")) and isinstance(image.get("negative_prompt"), list)
         for image in (handoff_manifest.get("images") or [])
@@ -210,6 +222,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_production_lineage": lineage_ready,
         "handoff_manifest_lineage_handoff_fields": lineage_handoff_ready,
         "word_canvas_agent_handoff": word_canvas_agent_handoff,
+        "word_canvas_asset_file_references": word_canvas_asset_file_references,
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,
         "shot_count": audit.shot_count,

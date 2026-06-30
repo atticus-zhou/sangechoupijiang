@@ -33,6 +33,7 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertTrue(result["handoff_manifest_production_lineage"])
         self.assertTrue(result["handoff_manifest_lineage_handoff_fields"])
         self.assertTrue(result["word_canvas_agent_handoff"])
+        self.assertTrue(result["word_canvas_asset_file_references"])
         self.assertLessEqual(result["max_table_columns"], 2)
         self.assertEqual(result["missing_image_asset_ids"], [])
         self.assertEqual(result["structural_errors"], [])
