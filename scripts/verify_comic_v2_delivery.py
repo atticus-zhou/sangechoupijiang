@@ -117,6 +117,14 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not asset_identity_ready:
         raise AssertionError("handoff manifest asset records are missing identity fields")
+    shot_reference_images_ready = all(
+        isinstance(shot.get("reference_images"), list)
+        and shot.get("reference_images")
+        and all(item.get("asset_id") and item.get("image_id") and item.get("file") for item in shot.get("reference_images"))
+        for shot in (handoff_manifest.get("shots") or [])
+    )
+    if not shot_reference_images_ready:
+        raise AssertionError("handoff manifest shot records are missing reference images")
     audit = build.audit
     result = {
         "path": str(build.path),
@@ -127,6 +135,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_shots": len(handoff_manifest.get("shots") or []),
         "handoff_manifest_image_prompts": image_prompt_ready,
         "handoff_manifest_asset_identity_fields": asset_identity_ready,
+        "handoff_manifest_shot_reference_images": shot_reference_images_ready,
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,
         "shot_count": audit.shot_count,

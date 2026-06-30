@@ -207,6 +207,11 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("禁止现代服装", first_image["negative_prompt"])
             self.assertEqual(handoff["shots"][0]["shot_id"], package.shots[0].shot_id)
             self.assertEqual(handoff["shots"][0]["reference_asset_ids"], list(package.shots[0].reference_asset_ids))
+            reference_image = handoff["shots"][0]["reference_images"][0]
+            self.assertEqual(reference_image["asset_id"], manifest.items[0].asset_id)
+            self.assertEqual(reference_image["image_id"], result.records[0].image_id)
+            self.assertEqual(reference_image["image_kind"], result.records[0].image_kind)
+            self.assertTrue(reference_image["file"].endswith(".png"))
             self.assertTrue(handoff["audit"]["handoff_ready"])
 
 

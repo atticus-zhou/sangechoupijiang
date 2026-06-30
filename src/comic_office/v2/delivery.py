@@ -177,6 +177,7 @@ def _write_handoff_manifest(
             "story_beat": shot.story_beat,
             "evidence_quote": shot.evidence_quote,
             "reference_asset_ids": list(shot.reference_asset_ids),
+            "reference_images": _shot_reference_images(shot.reference_asset_ids, image_result.records),
             "action_chain": list(shot.action_chain),
             "generator_prompt": shot.generator_prompt,
             "negative_prompt": list(shot.negative_prompt),
@@ -219,3 +220,19 @@ def _write_handoff_manifest(
     path = word_path.with_name(f"{word_path.stem}_handoff_manifest.json")
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
+
+
+def _shot_reference_images(asset_ids: tuple[str, ...], records: tuple) -> list[dict[str, str]]:
+    references = []
+    for asset_id in asset_ids:
+        candidates = [record for record in records if record.asset_id == asset_id]
+        if not candidates:
+            continue
+        record = next((item for item in candidates if item.is_identity_baseline), candidates[0])
+        references.append({
+            "asset_id": record.asset_id,
+            "image_id": record.image_id,
+            "image_kind": record.image_kind,
+            "file": Path(record.path).name,
+        })
+    return references

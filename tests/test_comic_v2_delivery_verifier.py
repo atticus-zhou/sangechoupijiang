@@ -27,6 +27,7 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertEqual(result["handoff_manifest_shots"], 2)
         self.assertTrue(result["handoff_manifest_image_prompts"])
         self.assertTrue(result["handoff_manifest_asset_identity_fields"])
+        self.assertTrue(result["handoff_manifest_shot_reference_images"])
         self.assertLessEqual(result["max_table_columns"], 2)
         self.assertEqual(result["missing_image_asset_ids"], [])
         self.assertEqual(result["structural_errors"], [])
