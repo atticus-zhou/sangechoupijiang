@@ -947,7 +947,28 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         output_path = output_dir / "test_v2_canvas.docx"
         output_path.write_bytes(b"fake-docx")
         handoff_manifest_path = output_dir / "test_v2_canvas_handoff_manifest.json"
-        handoff_manifest_path.write_text("{}", encoding="utf-8")
+        handoff_manifest_path.write_text(json.dumps({
+            "production_lineage": [
+                {
+                    "stage": "story_contract",
+                    "stage_label": "故事合同",
+                    "department": "内阁 / 中书省",
+                    "agent": "主创对话官 / 中书省",
+                    "status": "confirmed",
+                    "human_checkpoint": "用户确认故事",
+                    "output": "测试故事 v1",
+                },
+                {
+                    "stage": "delivery",
+                    "stage_label": "Word 画布交付",
+                    "department": "礼部 / 刑部",
+                    "agent": "交付排版官 / 结构审计官",
+                    "status": "handoff_ready",
+                    "human_checkpoint": "交付前结构审计",
+                    "output": "0 embedded images",
+                },
+            ],
+        }, ensure_ascii=False), encoding="utf-8")
         mock_build.return_value = CanvasBuildResult(
             path=output_path,
             audit=DocumentAudit(
@@ -976,6 +997,9 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertIn("/files/delivery/test_v2_canvas.docx", delivery["uri"])
         handoff = next(item for item in artifacts if item["artifact_type"] == "comic_v2_handoff_manifest")
         self.assertIn("/files/delivery/test_v2_canvas_handoff_manifest.json", handoff["uri"])
+        lineage = handoff["metadata"]["production_lineage"]
+        self.assertEqual([item["stage"] for item in lineage], ["story_contract", "delivery"])
+        self.assertEqual(lineage[0]["department"], "内阁 / 中书省")
         output_path.unlink(missing_ok=True)
         handoff_manifest_path.unlink(missing_ok=True)
 

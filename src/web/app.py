@@ -1470,6 +1470,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
             if delivery.handoff_manifest_path
             else ""
         )
+        production_lineage = _comic_v2_handoff_production_lineage(delivery.handoff_manifest_path)
         ready = ComicProductionV2.attach_delivery(
             state,
             str(delivery.path),
@@ -1543,6 +1544,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
                 "manifest_version": state.asset_manifest.get("version", 0),
                 "download_uri": handoff_manifest_uri,
                 "word_canvas_uri": uri,
+                "production_lineage": production_lineage,
             },
             created_by="libu",
         )
@@ -1697,6 +1699,36 @@ def _latest_workspace_artifact_by_type(workspace_id: str, artifact_type: str) ->
         if artifact.get("artifact_type") == artifact_type:
             return artifact
     return {}
+
+
+def _comic_v2_handoff_production_lineage(path: Path | None) -> list[dict]:
+    """Read the generated V2 handoff manifest and expose a compact production trace."""
+    if not path or not Path(path).exists():
+        return []
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    lineage = payload.get("production_lineage")
+    if not isinstance(lineage, list):
+        return []
+    allowed = {
+        "stage",
+        "stage_label",
+        "department",
+        "agent",
+        "status",
+        "human_checkpoint",
+        "output",
+    }
+    summary = []
+    for item in lineage:
+        if not isinstance(item, dict):
+            continue
+        stage = {key: str(item.get(key, "")) for key in allowed if item.get(key) is not None}
+        if stage.get("stage") and stage.get("department") and stage.get("status"):
+            summary.append(stage)
+    return summary
 
 
 def _current_confirmed_script_metadata(workspace_id: str) -> dict:
@@ -4257,6 +4289,7 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "manifest_version": word_meta.get("manifest_version") or prompt_meta.get("manifest_version", 0),
         "handoff_manifest_uri": handoff_manifest.get("uri", "") or word_meta.get("handoff_manifest_uri", ""),
         "handoff_manifest_title": handoff_manifest.get("title", ""),
+        "production_lineage": (handoff_manifest.get("metadata") or {}).get("production_lineage") or [],
         "prompt_package_title": prompt_package.get("title", ""),
         "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),

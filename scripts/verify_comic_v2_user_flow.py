@@ -217,10 +217,15 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
         artifacts = config_manager.list_artifacts(workspace_id=workspace_id)
         image_count = len([item for item in artifacts if item["artifact_type"] == "comic_v2_generated_image"])
         handoff_manifest_uri = delivery.get("handoff_manifest_uri") or ""
-        handoff_manifest_artifact = any(
-            item.get("artifact_type") == "comic_v2_handoff_manifest" and item.get("uri") == handoff_manifest_uri
-            for item in artifacts
+        handoff_manifest = next(
+            (
+                item for item in artifacts
+                if item.get("artifact_type") == "comic_v2_handoff_manifest"
+                and item.get("uri") == handoff_manifest_uri
+            ),
+            {},
         )
+        handoff_lineage = (handoff_manifest.get("metadata") or {}).get("production_lineage") or []
         config_manager.update_task_run(
             task_id,
             "completed",
@@ -238,7 +243,13 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
             "generated_images": image_count,
             "download_uri": uri,
             "handoff_manifest_uri": handoff_manifest_uri,
-            "handoff_manifest_artifact": handoff_manifest_artifact,
+            "handoff_manifest_artifact": bool(handoff_manifest),
+            "handoff_manifest_production_lineage": bool(handoff_lineage),
+            "production_lineage_stages": [
+                item.get("stage", "")
+                for item in handoff_lineage
+                if isinstance(item, dict) and item.get("stage")
+            ],
             "download_bytes": len(download.content),
             "delivery_audit": delivery.get("audit") or {},
             "artifact_count": len(artifacts),

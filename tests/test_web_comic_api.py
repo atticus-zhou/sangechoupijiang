@@ -567,6 +567,24 @@ class WebComicApiTests(unittest.TestCase):
                 "manifest_version": 5,
                 "download_uri": f"/api/workspaces/{workspace_id}/files/delivery/v2_handoff_manifest.json",
                 "word_canvas_uri": f"/api/workspaces/{workspace_id}/files/delivery/v2.docx",
+                "production_lineage": [
+                    {
+                        "stage": "story_contract",
+                        "stage_label": "故事合同",
+                        "department": "内阁 / 中书省",
+                        "agent": "主创对话官 / 中书省",
+                        "status": "confirmed",
+                        "human_checkpoint": "用户确认故事",
+                    },
+                    {
+                        "stage": "delivery",
+                        "stage_label": "Word 画布交付",
+                        "department": "礼部 / 刑部",
+                        "agent": "交付排版官 / 结构审计官",
+                        "status": "handoff_ready",
+                        "human_checkpoint": "交付前结构审计",
+                    },
+                ],
             },
             created_by="libu",
         )
@@ -617,6 +635,11 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["asset_prompt_count"], 7)
             self.assertEqual(trace["shot_prompt_count"], 9)
             self.assertEqual(trace["visual_review"]["record_count"], 7)
+            self.assertEqual(
+                [item["stage"] for item in trace["production_lineage"]],
+                ["story_contract", "delivery"],
+            )
+            self.assertEqual(trace["production_lineage"][0]["department"], "内阁 / 中书省")
             self.assertTrue(trace["delivery_audit"]["handoff_ready"])
         finally:
             conn = sqlite3.connect("user_data/config.db")
