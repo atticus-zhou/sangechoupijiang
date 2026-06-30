@@ -125,6 +125,14 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not shot_reference_images_ready:
         raise AssertionError("handoff manifest shot records are missing reference images")
+    shot_execution_notes_ready = all(
+        isinstance(shot.get("acceptance_criteria"), list)
+        and bool(shot.get("acceptance_criteria"))
+        and bool(shot.get("platform_note"))
+        for shot in (handoff_manifest.get("shots") or [])
+    )
+    if not shot_execution_notes_ready:
+        raise AssertionError("handoff manifest shot records are missing execution notes")
     lineage = handoff_manifest.get("production_lineage") or []
     lineage_ready = (
         isinstance(lineage, list)
@@ -151,6 +159,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_image_prompts": image_prompt_ready,
         "handoff_manifest_asset_identity_fields": asset_identity_ready,
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
+        "handoff_manifest_shot_execution_notes": shot_execution_notes_ready,
         "handoff_manifest_production_lineage": lineage_ready,
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,

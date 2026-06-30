@@ -82,6 +82,11 @@ def parts(image_dir: Path):
         retry_strategy_label="失败重试",
         style_id=bundle.visual.style_id,
         evidence_quote="林昭走进月塔",
+        acceptance_criteria=(
+            "首帧必须引用已批准人物资产",
+            "动作顺序必须保持推门、抬头",
+        ),
+        platform_note="适合图生视频首帧参考，先绑定参考图片再粘贴视频提示词。",
     )
     package = PromptPackage(
         package_id="prompts_delivery",
@@ -169,11 +174,16 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertTrue(delivery.audit.handoff_ready)
             self.assertEqual(delivery.audit.embedded_images, len(result.records))
             doc = Document(delivery.path)
-            text = "\n".join(p.text for p in doc.paragraphs)
+            text = "\n".join(
+                [p.text for p in doc.paragraphs]
+                + [cell.text for table in doc.tables for row in table.rows for cell in row.cells]
+            )
             self.assertIn("three_view", text)
             self.assertIn("expression_sheet", text)
             self.assertIn("视频生成提示词", text)
             self.assertIn("负面提示词", text)
+            self.assertIn("镜头验收标准", text)
+            self.assertIn("平台执行备注", text)
             self.assertEqual(image_production_result_from_dict(result.to_dict()), result)
 
     def test_delivery_writes_machine_readable_handoff_manifest(self):
@@ -207,6 +217,11 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("禁止现代服装", first_image["negative_prompt"])
             self.assertEqual(handoff["shots"][0]["shot_id"], package.shots[0].shot_id)
             self.assertEqual(handoff["shots"][0]["reference_asset_ids"], list(package.shots[0].reference_asset_ids))
+            self.assertEqual(
+                handoff["shots"][0]["acceptance_criteria"],
+                list(package.shots[0].acceptance_criteria),
+            )
+            self.assertEqual(handoff["shots"][0]["platform_note"], package.shots[0].platform_note)
             reference_image = handoff["shots"][0]["reference_images"][0]
             self.assertEqual(reference_image["asset_id"], manifest.items[0].asset_id)
             self.assertEqual(reference_image["image_id"], result.records[0].image_id)

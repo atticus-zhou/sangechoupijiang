@@ -141,6 +141,11 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
             "dialogue": "林昭：够了。",
             "sound": "控制环摩擦声，随后全城寂静",
             "retry_strategy": "三人调度不稳定时只保留林昭与控制环，其余改为画外声音。",
+            "acceptance_criteria": [
+                "首帧必须引用林昭、裂纹月灯和中央月塔三项资产",
+                "动作顺序必须保持走向控制环、握住、逆转、熄灭",
+            ],
+            "platform_note": "适合图生视频，先上传参考资产，再粘贴镜头提示词。",
         }
 
         card = build_shot_card(
@@ -163,6 +168,8 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
         self.assertIn("摄影", card.generator_prompt)
         self.assertIn("声音", card.generator_prompt)
         self.assertIn("失败重试", card.retry_strategy_label)
+        self.assertIn("首帧必须引用林昭", card.acceptance_criteria[0])
+        self.assertIn("图生视频", card.platform_note)
         self.assertTrue(card.production_ready)
 
     def test_prompt_failure_has_no_silent_rule_fallback(self):

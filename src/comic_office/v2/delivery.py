@@ -63,6 +63,10 @@ def build_delivery_from_v2(
             raise DeliveryValidationError(f"{shot.shot_id} 缺少确认故事证据")
         if not shot.generator_prompt.strip():
             raise DeliveryValidationError(f"{shot.shot_id} 缺少视频生成提示词")
+        if not shot.acceptance_criteria:
+            raise DeliveryValidationError(f"{shot.shot_id} 缺少镜头验收标准")
+        if not shot.platform_note.strip():
+            raise DeliveryValidationError(f"{shot.shot_id} 缺少平台执行备注")
     result = build_word_canvas_v2(
         bundle,
         manifest,
@@ -182,6 +186,8 @@ def _write_handoff_manifest(
             "generator_prompt": shot.generator_prompt,
             "negative_prompt": list(shot.negative_prompt),
             "retry_strategy": shot.retry_strategy,
+            "acceptance_criteria": list(shot.acceptance_criteria),
+            "platform_note": shot.platform_note,
         })
     payload = {
         "schema": "comic_production_handoff_manifest_v1",

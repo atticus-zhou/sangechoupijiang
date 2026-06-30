@@ -52,6 +52,8 @@ class ShotCard:
     retry_strategy_label: str
     style_id: str
     evidence_quote: str = ""
+    acceptance_criteria: tuple[str, ...] = ()
+    platform_note: str = ""
     production_ready: bool = True
 
 
@@ -198,6 +200,11 @@ def build_shot_card(
         "禁止文字、标签、编号和水印",
     ) + tuple(_prohibition(item) for item in visual.prohibited_elements)
     retry = str(payload["retry_strategy"]).strip()
+    acceptance_criteria = _shot_acceptance_criteria(payload, reference_assets)
+    platform_note = str(
+        payload.get("platform_note")
+        or "适合图生视频首帧参考；先上传或绑定参考资产，再粘贴视频生成提示词；失败时优先按重试策略锁定资产身份和动作顺序。"
+    ).strip()
     return ShotCard(
         shot_id=str(payload["shot_id"]).strip(),
         scene_id=str(payload["scene_id"]).strip(),
@@ -216,6 +223,8 @@ def build_shot_card(
         retry_strategy_label=f"失败重试：{retry}",
         style_id=visual.style_id,
         evidence_quote=str(payload.get("evidence_quote") or "").strip(),
+        acceptance_criteria=acceptance_criteria,
+        platform_note=platform_note,
     )
 
 
@@ -311,6 +320,17 @@ def _string_tuple(value: Any, label: str) -> tuple[str, ...]:
     if not result:
         raise ValueError(f"{label} must contain at least one item")
     return result
+
+
+def _shot_acceptance_criteria(payload: dict[str, Any], reference_asset_ids: tuple[str, ...]) -> tuple[str, ...]:
+    raw = payload.get("acceptance_criteria") or payload.get("acceptance") or ()
+    supplied = _string_tuple(raw, "acceptance_criteria") if raw else ()
+    defaults = (
+        f"首帧和后续画面必须引用已批准资产：{'、'.join(reference_asset_ids)}。",
+        "人物脸型、服装主色、道具形状和场景空间结构必须与资产身份证一致。",
+        "动作链必须按顺序执行，故事目的和情绪方向不能改变。",
+    )
+    return _unique(supplied + defaults)
 
 
 def _unique(values: tuple[str, ...]) -> tuple[str, ...]:

@@ -367,6 +367,7 @@ def _add_shot_page(doc: Document, shot: ShotCard) -> None:
         ("灯光", shot.lighting),
         ("台词", shot.dialogue),
         ("声音", shot.sound),
+        ("平台执行备注", shot.platform_note),
     ], compact=True)
     doc.add_heading("视频生成提示词", level=2)
     prompt = doc.add_paragraph(shot.generator_prompt)
@@ -380,6 +381,14 @@ def _add_shot_page(doc: Document, shot: ShotCard) -> None:
     negative.paragraph_format.space_after = Pt(3)
     for run in negative.runs:
         _font(run, 8.8, INK)
+    _add_callout(
+        doc,
+        "镜头验收标准",
+        "；".join(shot.acceptance_criteria),
+        fill=PALE,
+        accent=INDIGO,
+        compact=True,
+    )
     _add_callout(doc, "失败重试", shot.retry_strategy, fill="FAF4F4", accent=VERMILION, compact=True)
 
 

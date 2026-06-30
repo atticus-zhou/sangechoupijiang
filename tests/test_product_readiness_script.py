@@ -58,6 +58,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertTrue(runtime["delivery"]["handoff_manifest_image_prompts"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_asset_identity_fields"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_shot_reference_images"])
+        self.assertTrue(runtime["delivery"]["handoff_manifest_shot_execution_notes"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_production_lineage"])
         self.assertEqual(runtime["user_flow"]["status"], "passed")
         self.assertEqual(runtime["user_flow"]["final_stage"], "ready_for_handoff")
