@@ -131,12 +131,20 @@ def _write_handoff_manifest(
         assets.append({
             "asset_id": asset.asset_id,
             "asset_type": asset.asset_type,
+            "type_label": {
+                "character": "人物",
+                "prop": "道具",
+                "scene": "场景",
+            }.get(asset.asset_type, asset.asset_type),
             "name": asset.name,
             "manifest_version": manifest.version,
             "evidence_quote": asset.evidence.evidence_quote,
             "scene_ids": list(asset.evidence.scene_ids),
             "story_purpose": asset.story_purpose,
+            "visual_locks": list(asset.visual_locks),
+            "allowed_changes": list(asset.allowed_changes),
             "planned_images": list(asset.planned_images),
+            "review_status": asset.review_status,
             "image_ids": [
                 image_by_asset_kind[(asset.asset_id, image_kind)].image_id
                 for image_kind in asset.planned_images

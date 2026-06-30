@@ -108,6 +108,15 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not image_prompt_ready:
         raise AssertionError("handoff manifest image records are missing executable prompts")
+    asset_identity_ready = all(
+        asset.get("type_label")
+        and isinstance(asset.get("visual_locks"), list)
+        and isinstance(asset.get("allowed_changes"), list)
+        and bool(asset.get("review_status"))
+        for asset in (handoff_manifest.get("assets") or [])
+    )
+    if not asset_identity_ready:
+        raise AssertionError("handoff manifest asset records are missing identity fields")
     audit = build.audit
     result = {
         "path": str(build.path),
@@ -117,6 +126,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_images": len(handoff_manifest.get("images") or []),
         "handoff_manifest_shots": len(handoff_manifest.get("shots") or []),
         "handoff_manifest_image_prompts": image_prompt_ready,
+        "handoff_manifest_asset_identity_fields": asset_identity_ready,
         "handoff_ready": audit.handoff_ready,
         "asset_count": audit.asset_count,
         "shot_count": audit.shot_count,

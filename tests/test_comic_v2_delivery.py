@@ -192,6 +192,11 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(handoff["manifest"]["manifest_id"], manifest.manifest_id)
             self.assertEqual(handoff["word_canvas"]["filename"], delivery.path.name)
             self.assertEqual(len(handoff["assets"]), len(manifest.items))
+            first_asset = handoff["assets"][0]
+            self.assertEqual(first_asset["type_label"], "人物")
+            self.assertEqual(first_asset["visual_locks"], ["靛青长袍"])
+            self.assertEqual(first_asset["allowed_changes"], ["表情", "姿势"])
+            self.assertEqual(first_asset["review_status"], "awaiting_user_review")
             self.assertEqual(
                 sorted(image["image_id"] for image in handoff["images"]),
                 sorted(record.image_id for record in result.records),
