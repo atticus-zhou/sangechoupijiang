@@ -17,6 +17,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
             "workflow_state",
             "downloadable_delivery",
             "model_preflight",
+            "local_doctor",
             "end_to_end_verifier",
             "readme",
             "failure_handling",
@@ -33,6 +34,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
         self.assertIn("AI 漫剧制片办公室真实产品 readiness", markdown)
         self.assertIn("完整工作流状态", markdown)
         self.assertIn("可下载交付物", markdown)
+        self.assertIn("本地自检命令", markdown)
         self.assertIn("失败处理策略", markdown)
 
 
