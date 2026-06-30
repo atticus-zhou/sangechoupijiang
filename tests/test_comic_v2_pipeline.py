@@ -290,6 +290,14 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(body["current_object"], "故事合同与视觉母版")
         self.assertIn("next_action", body)
         self.assertIn("blocking_reason", body)
+        lineage = body["production_lineage"]
+        self.assertEqual(lineage[0]["stage"], "story_contract")
+        self.assertEqual(lineage[0]["status"], "completed")
+        self.assertEqual(lineage[1]["stage"], "visual_bible")
+        self.assertEqual(lineage[1]["status"], "current")
+        self.assertEqual(lineage[-1]["stage"], "delivery")
+        self.assertEqual(lineage[-1]["status"], "waiting")
+        self.assertTrue(lineage[1]["human_checkpoint"])
 
     def test_api_returns_honest_not_started_state(self):
         response = self.client.get(f"/api/workspaces/{self.workspace_id}/comic/v2/status")

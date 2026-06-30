@@ -360,6 +360,13 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("dept.responsibility", js)
         self.assertIn("dept.human_checkpoint", js)
 
+    def test_v2_stage_board_renders_current_production_lineage(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function renderComicV2StageActions")]
+
+        self.assertIn("renderComicV2LineageTimeline(currentComicV2Status.production_lineage)", v2_flow)
+        self.assertIn("production_lineage", js)
+
     def test_v2_asset_review_summary_uses_human_review_projection(self):
         js = APP_JS.read_text(encoding="utf-8")
 

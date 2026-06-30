@@ -1486,6 +1486,7 @@ function renderComicV2ProductionFlow() {
             </div>
             ${renderComicV2ActionError()}
             ${renderComicV2PendingAction()}
+            ${renderComicV2LineageTimeline(currentComicV2Status.production_lineage)}
             ${renderComicV2DepartmentFlow(currentComicV2Status.department_flow)}
             ${reviewSummary}
             ${actions ? `<div class="v2-action-row">${actions}</div>` : ''}

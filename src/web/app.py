@@ -491,7 +491,91 @@ def _comic_v2_state_response(state) -> dict:
                 "human_guidance": f"资产审核视图暂时无法生成：{exc}",
             }
     payload["department_flow"] = _comic_v2_department_flow(payload)
+    payload["production_lineage"] = _comic_v2_status_lineage(payload)
     return payload
+
+
+def _comic_v2_status_lineage(state: dict) -> list[dict]:
+    stage = str(state.get("stage") or "")
+    current_index = {
+        "story_confirmed": 0,
+        "visual_bible_review": 1,
+        "asset_planning": 2,
+        "asset_review": 2,
+        "prompt_planning": 3,
+        "image_generation": 4,
+        "visual_review": 5,
+        "document_generation": 6,
+        "ready_for_handoff": 6,
+    }.get(stage, -1)
+    stages = [
+        ("story_contract", "故事合同", "内阁 / 中书省", "主创对话官 / 中书省", "用户确认完整故事，后续部门不得擅自改写。", _comic_v2_lineage_output(state, "story_contract")),
+        ("visual_bible", "风格圣经", "中书省 / 门下省", "美术设定官 / 连续性审核官", "用户确认画风、时代、禁用元素和连续性规则。", _comic_v2_lineage_output(state, "visual_bible")),
+        ("asset_manifest", "资产拆解", "中书省 / 门下省", "资产拆解官 / 设定审校官", "用户确认人物、道具、场景是否属于当前故事。", _comic_v2_lineage_output(state, "asset_manifest")),
+        ("prompt_package", "提示词与镜头执行包", "兵部 / 刑部", "镜头调度官 / 提示词质检官", "资产确认后生成镜头、动作链和可执行提示词。", _comic_v2_lineage_output(state, "prompt_package")),
+        ("image_production", "基础图片生产", "工部", "图片生成官", "失败、低分或风格不一致的图片需要重试或人工放行。", _comic_v2_lineage_output(state, "image_production")),
+        ("visual_review", "一致性质检", "刑部", "一致性审核官", "交付前检查人物脸型、服装、道具、场景风格和引用关系。", _comic_v2_lineage_output(state, "visual_review")),
+        ("delivery", "Word 画布交付", "礼部 / 刑部", "交付排版官 / 结构审计官", "最终 Word 画布和引用清单必须一起交付。", _comic_v2_lineage_output(state, "delivery")),
+    ]
+    lineage = []
+    for index, (stage_id, label, department, agent, checkpoint, output) in enumerate(stages):
+        if current_index < 0:
+            status = "waiting"
+        elif stage == "ready_for_handoff" and index == current_index:
+            status = "completed"
+        elif index < current_index:
+            status = "completed"
+        elif index == current_index:
+            status = "current"
+        else:
+            status = "waiting"
+        lineage.append({
+            "stage": stage_id,
+            "stage_label": label,
+            "department": department,
+            "agent": agent,
+            "status": status,
+            "human_checkpoint": checkpoint,
+            "output": output,
+        })
+    return lineage
+
+
+def _comic_v2_lineage_output(state: dict, stage_id: str) -> str:
+    if stage_id == "story_contract":
+        story_id = state.get("story_id") or ""
+        version = state.get("story_version") or 0
+        return f"{story_id} v{version}" if story_id else "等待故事确认"
+    if stage_id == "visual_bible":
+        contract = state.get("contract") or {}
+        visual = contract.get("visual") or {}
+        medium = visual.get("medium") or ""
+        ratio = visual.get("aspect_ratio") or ""
+        return " · ".join([item for item in [medium, ratio] if item]) or "等待视觉母版"
+    if stage_id == "asset_manifest":
+        items = (state.get("asset_manifest") or {}).get("items") or []
+        return f"{len(items)} 个资产" if items else "等待资产拆解"
+    if stage_id == "prompt_package":
+        package = state.get("prompt_package") or {}
+        prompts = package.get("prompts") or []
+        shots = package.get("shots") or []
+        return f"{len(prompts)} 条资产提示词 · {len(shots)} 张镜头卡" if package else "等待提示词生成"
+    if stage_id == "image_production":
+        images = state.get("image_production") or {}
+        records = images.get("records") or []
+        return f"{len(records)} 张基础资产图" if images else "等待图片生成"
+    if stage_id == "visual_review":
+        images = state.get("image_production") or {}
+        failures = images.get("failures") or []
+        if not images:
+            return "等待视觉质检"
+        return f"{len(failures)} 个风险项"
+    if stage_id == "delivery":
+        audit = (state.get("delivery") or {}).get("audit") or {}
+        if not audit:
+            return "等待 Word 画布"
+        return f"{audit.get('embedded_images', 0)} 张嵌入图片"
+    return ""
 
 
 def _comic_v2_department_flow(state: dict) -> list[dict]:
