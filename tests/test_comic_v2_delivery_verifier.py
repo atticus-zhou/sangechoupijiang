@@ -27,6 +27,7 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertEqual(result["handoff_manifest_shots"], 2)
         self.assertTrue(result["handoff_manifest_image_prompts"])
         self.assertTrue(result["handoff_manifest_asset_identity_fields"])
+        self.assertTrue(result["handoff_manifest_asset_baseline_chain"])
         self.assertTrue(result["handoff_manifest_shot_reference_images"])
         self.assertTrue(result["handoff_manifest_shot_execution_notes"])
         self.assertTrue(result["handoff_manifest_production_lineage"])

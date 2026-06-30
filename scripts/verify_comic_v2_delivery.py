@@ -130,12 +130,35 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not asset_identity_ready:
         raise AssertionError("handoff manifest asset records are missing identity fields")
+    assets_by_id = {
+        asset.get("asset_id"): asset
+        for asset in (handoff_manifest.get("assets") or [])
+        if asset.get("asset_id")
+    }
+    asset_baseline_chain_ready = all(
+        bool(asset.get("identity_baseline_image_id"))
+        and bool(asset.get("identity_baseline_image_kind"))
+        and isinstance(asset.get("image_ids_by_kind"), dict)
+        and asset.get("identity_baseline_image_id") in set(asset.get("image_ids") or [])
+        and asset.get("identity_baseline_image_id") in set((asset.get("image_ids_by_kind") or {}).values())
+        for asset in assets_by_id.values()
+    )
+    if not asset_baseline_chain_ready:
+        raise AssertionError("handoff manifest asset records are missing baseline image chains")
     shot_reference_images_ready = all(
         isinstance(shot.get("reference_images"), list)
         and shot.get("reference_images")
         and all(item.get("asset_id") and item.get("image_id") and item.get("file") for item in shot.get("reference_images"))
         for shot in (handoff_manifest.get("shots") or [])
     )
+    shot_reference_chain_ready = all(
+        all(
+            ref.get("image_id") in set((assets_by_id.get(ref.get("asset_id")) or {}).get("image_ids") or [])
+            for ref in (shot.get("reference_images") or [])
+        )
+        for shot in (handoff_manifest.get("shots") or [])
+    )
+    shot_reference_images_ready = shot_reference_images_ready and shot_reference_chain_ready
     if not shot_reference_images_ready:
         raise AssertionError("handoff manifest shot records are missing reference images")
     shot_execution_notes_ready = all(
@@ -181,6 +204,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_shots": len(handoff_manifest.get("shots") or []),
         "handoff_manifest_image_prompts": image_prompt_ready,
         "handoff_manifest_asset_identity_fields": asset_identity_ready,
+        "handoff_manifest_asset_baseline_chain": asset_baseline_chain_ready,
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
         "handoff_manifest_shot_execution_notes": shot_execution_notes_ready,
         "handoff_manifest_production_lineage": lineage_ready,

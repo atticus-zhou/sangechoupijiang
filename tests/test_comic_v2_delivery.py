@@ -207,6 +207,16 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(first_asset["visual_locks"], ["靛青长袍"])
             self.assertEqual(first_asset["allowed_changes"], ["表情", "姿势"])
             self.assertEqual(first_asset["review_status"], "awaiting_user_review")
+            self.assertEqual(first_asset["identity_baseline_image_id"], result.records[0].image_id)
+            self.assertEqual(first_asset["identity_baseline_image_kind"], result.records[0].image_kind)
+            self.assertEqual(
+                first_asset["image_ids_by_kind"],
+                {
+                    record.image_kind: record.image_id
+                    for record in result.records
+                    if record.asset_id == first_asset["asset_id"]
+                },
+            )
             self.assertEqual(
                 sorted(image["image_id"] for image in handoff["images"]),
                 sorted(record.image_id for record in result.records),

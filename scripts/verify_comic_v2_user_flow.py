@@ -226,6 +226,19 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
             {},
         )
         handoff_lineage = (handoff_manifest.get("metadata") or {}).get("production_lineage") or []
+        manifest_assets = (handoff_manifest.get("metadata") or {}).get("assets") or []
+        asset_baseline_chain_ready = (
+            isinstance(manifest_assets, list)
+            and bool(manifest_assets)
+            and all(
+                isinstance(asset, dict)
+                and bool(asset.get("identity_baseline_image_id"))
+                and bool(asset.get("identity_baseline_image_kind"))
+                and asset.get("identity_baseline_image_id") in set(asset.get("image_ids") or [])
+                and asset.get("identity_baseline_image_id") in set((asset.get("image_ids_by_kind") or {}).values())
+                for asset in manifest_assets
+            )
+        )
         lineage_handoff_ready = (
             isinstance(handoff_lineage, list)
             and bool(handoff_lineage)
@@ -255,6 +268,7 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
             "handoff_manifest_uri": handoff_manifest_uri,
             "handoff_manifest_artifact": bool(handoff_manifest),
             "handoff_manifest_production_lineage": bool(handoff_lineage),
+            "handoff_manifest_asset_baseline_chain": asset_baseline_chain_ready,
             "production_lineage_handoff_fields": lineage_handoff_ready,
             "production_lineage_stages": [
                 item.get("stage", "")
@@ -272,6 +286,8 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
         if not summary["delivery_audit"].get("handoff_ready"):
             raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
         if not summary["production_lineage_handoff_fields"]:
+            raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
+        if not summary["handoff_manifest_asset_baseline_chain"]:
             raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
         return summary
     finally:

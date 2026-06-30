@@ -1557,6 +1557,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
             else ""
         )
         production_lineage = _comic_v2_handoff_production_lineage(delivery.handoff_manifest_path)
+        asset_baseline_chains = _comic_v2_handoff_asset_baseline_chains(delivery.handoff_manifest_path)
         ready = ComicProductionV2.attach_delivery(
             state,
             str(delivery.path),
@@ -1631,6 +1632,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
                 "download_uri": handoff_manifest_uri,
                 "word_canvas_uri": uri,
                 "production_lineage": production_lineage,
+                "assets": asset_baseline_chains,
             },
             created_by="libu",
         )
@@ -1816,6 +1818,43 @@ def _comic_v2_handoff_production_lineage(path: Path | None) -> list[dict]:
         stage = {key: str(item.get(key, "")) for key in allowed if item.get(key) is not None}
         if stage.get("stage") and stage.get("department") and stage.get("status"):
             summary.append(stage)
+    return summary
+
+
+def _comic_v2_handoff_asset_baseline_chains(path: Path | None) -> list[dict]:
+    """Read compact asset identity chains from the generated V2 handoff manifest."""
+    if not path or not Path(path).exists():
+        return []
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    assets = payload.get("assets")
+    if not isinstance(assets, list):
+        return []
+    summary = []
+    for item in assets:
+        if not isinstance(item, dict):
+            continue
+        asset_id = str(item.get("asset_id") or "")
+        baseline_id = str(item.get("identity_baseline_image_id") or "")
+        baseline_kind = str(item.get("identity_baseline_image_kind") or "")
+        image_ids = [str(value) for value in (item.get("image_ids") or []) if value]
+        image_ids_by_kind = {
+            str(key): str(value)
+            for key, value in (item.get("image_ids_by_kind") or {}).items()
+            if key and value
+        }
+        if asset_id and baseline_id:
+            summary.append({
+                "asset_id": asset_id,
+                "asset_type": str(item.get("asset_type") or ""),
+                "name": str(item.get("name") or ""),
+                "identity_baseline_image_id": baseline_id,
+                "identity_baseline_image_kind": baseline_kind,
+                "image_ids": image_ids,
+                "image_ids_by_kind": image_ids_by_kind,
+            })
     return summary
 
 

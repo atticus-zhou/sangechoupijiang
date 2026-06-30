@@ -132,6 +132,12 @@ def _write_handoff_manifest(
     }
     assets = []
     for asset in manifest.items:
+        asset_images = [
+            image_by_asset_kind[(asset.asset_id, image_kind)]
+            for image_kind in asset.planned_images
+            if (asset.asset_id, image_kind) in image_by_asset_kind
+        ]
+        identity_baseline = next((record for record in asset_images if record.is_identity_baseline), asset_images[0] if asset_images else None)
         assets.append({
             "asset_id": asset.asset_id,
             "asset_type": asset.asset_type,
@@ -149,11 +155,13 @@ def _write_handoff_manifest(
             "allowed_changes": list(asset.allowed_changes),
             "planned_images": list(asset.planned_images),
             "review_status": asset.review_status,
-            "image_ids": [
-                image_by_asset_kind[(asset.asset_id, image_kind)].image_id
-                for image_kind in asset.planned_images
-                if (asset.asset_id, image_kind) in image_by_asset_kind
-            ],
+            "identity_baseline_image_id": identity_baseline.image_id if identity_baseline else "",
+            "identity_baseline_image_kind": identity_baseline.image_kind if identity_baseline else "",
+            "image_ids": [record.image_id for record in asset_images],
+            "image_ids_by_kind": {
+                record.image_kind: record.image_id
+                for record in asset_images
+            },
         })
     images = []
     for record in image_result.records:

@@ -26,6 +26,7 @@ class ComicV2UserFlowVerifierTests(unittest.TestCase):
         self.assertTrue(result["handoff_manifest_uri"].endswith("_handoff_manifest.json"))
         self.assertTrue(result["handoff_manifest_artifact"])
         self.assertTrue(result["handoff_manifest_production_lineage"])
+        self.assertTrue(result["handoff_manifest_asset_baseline_chain"])
         self.assertTrue(result["production_lineage_handoff_fields"])
         self.assertGreater(result["event_count"], 0)
         self.assertEqual(result["task_status"], "completed")
