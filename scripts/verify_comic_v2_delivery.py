@@ -181,6 +181,25 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not shot_execution_notes_ready:
         raise AssertionError("handoff manifest shot records are missing execution notes")
+    shot_production_package_ready = all(
+        isinstance(shot.get("first_frame_reference_image"), dict)
+        and bool((shot.get("first_frame_reference_image") or {}).get("file"))
+        and isinstance(shot.get("reference_asset_chain"), list)
+        and bool(shot.get("reference_asset_chain"))
+        and all(
+            item.get("asset_id")
+            and item.get("name")
+            and item.get("first_frame_file")
+            for item in (shot.get("reference_asset_chain") or [])
+        )
+        and bool(shot.get("video_prompt_block"))
+        and bool(shot.get("negative_prompt_block"))
+        and isinstance(shot.get("execution_steps"), list)
+        and len(shot.get("execution_steps") or []) >= 3
+        for shot in (handoff_manifest.get("shots") or [])
+    )
+    if not shot_production_package_ready:
+        raise AssertionError("handoff manifest shot records are missing production-ready shot packages")
     lineage = handoff_manifest.get("production_lineage") or []
     lineage_handoff_ready = (
         isinstance(lineage, list)
@@ -219,6 +238,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_asset_baseline_chain": asset_baseline_chain_ready,
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
         "handoff_manifest_shot_execution_notes": shot_execution_notes_ready,
+        "handoff_manifest_shot_production_package": shot_production_package_ready,
         "handoff_manifest_production_lineage": lineage_ready,
         "handoff_manifest_lineage_handoff_fields": lineage_handoff_ready,
         "word_canvas_agent_handoff": word_canvas_agent_handoff,

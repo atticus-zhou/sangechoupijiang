@@ -170,6 +170,7 @@ def format_readiness_markdown(audit: dict) -> str:
                 f"asset_baseline_chain={delivery.get('handoff_manifest_asset_baseline_chain', False)}; "
                 f"shot_refs={delivery.get('handoff_manifest_shot_reference_images', False)}; "
                 f"shot_notes={delivery.get('handoff_manifest_shot_execution_notes', False)}; "
+                f"shot_package={delivery.get('handoff_manifest_shot_production_package', False)}; "
                 f"lineage={delivery.get('handoff_manifest_production_lineage', False)}; "
                 f"lineage_handoff={delivery.get('handoff_manifest_lineage_handoff_fields', False)}; "
                 f"word_asset_files={delivery.get('word_canvas_asset_file_references', False)}; "

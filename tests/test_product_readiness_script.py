@@ -60,6 +60,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertTrue(runtime["delivery"]["handoff_manifest_asset_baseline_chain"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_shot_reference_images"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_shot_execution_notes"])
+        self.assertTrue(runtime["delivery"]["handoff_manifest_shot_production_package"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_production_lineage"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_lineage_handoff_fields"])
         self.assertTrue(runtime["delivery"]["word_canvas_agent_handoff"])
@@ -82,6 +83,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
 
         self.assertIn("运行时验证", result.stdout)
         self.assertIn("ready_for_handoff", result.stdout)
+        self.assertIn("shot_package=True", result.stdout)
 
 
 if __name__ == "__main__":
