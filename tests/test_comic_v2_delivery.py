@@ -237,6 +237,19 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(reference_image["image_id"], result.records[0].image_id)
             self.assertEqual(reference_image["image_kind"], result.records[0].image_kind)
             self.assertTrue(reference_image["file"].endswith(".png"))
+            self.assertEqual(handoff["shots"][0]["first_frame_reference_image"], reference_image)
+            reference_asset = handoff["shots"][0]["reference_asset_chain"][0]
+            self.assertEqual(reference_asset["asset_id"], manifest.items[0].asset_id)
+            self.assertEqual(reference_asset["name"], manifest.items[0].name)
+            self.assertEqual(reference_asset["first_frame_file"], reference_image["file"])
+            self.assertEqual(handoff["shots"][0]["video_prompt_block"], package.shots[0].generator_prompt)
+            self.assertEqual(
+                handoff["shots"][0]["negative_prompt_block"],
+                "；".join(package.shots[0].negative_prompt),
+            )
+            self.assertIn("绑定首帧参考图片", handoff["shots"][0]["execution_steps"][0])
+            self.assertIn("粘贴视频提示词", handoff["shots"][0]["execution_steps"][1])
+            self.assertIn("按验收标准检查", handoff["shots"][0]["execution_steps"][2])
             lineage = handoff["production_lineage"]
             self.assertEqual(
                 [stage["stage"] for stage in lineage],

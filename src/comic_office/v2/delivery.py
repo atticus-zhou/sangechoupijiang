@@ -183,16 +183,28 @@ def _write_handoff_manifest(
         })
     shots = []
     for shot in prompt_package.shots:
+        reference_images = _shot_reference_images(shot.reference_asset_ids, image_result.records)
+        reference_asset_chain = _shot_reference_asset_chain(shot.reference_asset_ids, manifest, reference_images)
         shots.append({
             "shot_id": shot.shot_id,
             "scene_id": shot.scene_id,
             "story_beat": shot.story_beat,
             "evidence_quote": shot.evidence_quote,
             "reference_asset_ids": list(shot.reference_asset_ids),
-            "reference_images": _shot_reference_images(shot.reference_asset_ids, image_result.records),
+            "reference_images": reference_images,
+            "first_frame_reference_image": reference_images[0] if reference_images else {},
+            "reference_asset_chain": reference_asset_chain,
             "action_chain": list(shot.action_chain),
             "generator_prompt": shot.generator_prompt,
             "negative_prompt": list(shot.negative_prompt),
+            "video_prompt_block": shot.generator_prompt,
+            "negative_prompt_block": "；".join(shot.negative_prompt),
+            "execution_steps": [
+                "绑定首帧参考图片：" + (reference_images[0]["file"] if reference_images else "未绑定图片"),
+                "粘贴视频提示词，并保持动作链顺序：" + " -> ".join(shot.action_chain),
+                "按验收标准检查人物、道具、场景、运镜和故事节点。",
+                "失败时执行重试策略：" + shot.retry_strategy,
+            ],
             "retry_strategy": shot.retry_strategy,
             "acceptance_criteria": list(shot.acceptance_criteria),
             "platform_note": shot.platform_note,
@@ -346,3 +358,26 @@ def _shot_reference_images(asset_ids: tuple[str, ...], records: tuple) -> list[d
             "file": Path(record.path).name,
         })
     return references
+
+
+def _shot_reference_asset_chain(
+    asset_ids: tuple[str, ...],
+    manifest: AssetManifest,
+    reference_images: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    asset_by_id = {asset.asset_id: asset for asset in manifest.items}
+    image_by_asset_id = {image["asset_id"]: image for image in reference_images}
+    chain = []
+    for asset_id in asset_ids:
+        asset = asset_by_id.get(asset_id)
+        image = image_by_asset_id.get(asset_id, {})
+        chain.append({
+            "asset_id": asset_id,
+            "name": asset.name if asset else "",
+            "asset_type": asset.asset_type if asset else "",
+            "story_purpose": asset.story_purpose if asset else "",
+            "first_frame_image_id": image.get("image_id", ""),
+            "first_frame_image_kind": image.get("image_kind", ""),
+            "first_frame_file": image.get("file", ""),
+        })
+    return chain
