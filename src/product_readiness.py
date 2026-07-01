@@ -93,6 +93,22 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "history_trace",
+            "历史追溯",
+            [
+                _contains(root / "src/web/app.py", '"shots": handoff_meta.get("shots")'),
+                _contains(root / "src/web/static/js/app.js", "renderComicV2HistoryShotPackages(trace.shots)"),
+                _contains(root / "tests/test_web_comic_api.py", "trace[\"shots\"]"),
+                _contains(root / "tests/test_frontend_comic_routing.py", "镜头生产包"),
+            ],
+            [
+                "src/web/app.py",
+                "src/web/static/js/app.js",
+                "tests/test_web_comic_api.py",
+                "tests/test_frontend_comic_routing.py",
+            ],
+        ),
+        _check(
             "readme",
             "清晰 README",
             [

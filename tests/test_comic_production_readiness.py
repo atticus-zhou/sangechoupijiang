@@ -19,6 +19,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
             "model_preflight",
             "local_doctor",
             "end_to_end_verifier",
+            "history_trace",
             "readme",
             "failure_handling",
         ):
@@ -32,6 +33,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown
 
         markdown = format_readiness_markdown(audit_comic_production_readiness())
+        self.assertIn("历史追溯", markdown)
 
         self.assertIn("AI 漫剧制片办公室真实产品 readiness", markdown)
         self.assertIn("完整工作流状态", markdown)
