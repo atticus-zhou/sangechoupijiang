@@ -257,6 +257,35 @@ class ComicV2WordCanvasTests(unittest.TestCase):
             self.assertIn("SHOT-01:missing_printed_asset_refs", result.audit.structural_errors)
             self.assertFalse(result.audit.handoff_ready)
 
+    def test_shot_pages_print_production_ready_reference_chain(self):
+        bundle, manifest, shots = delivery_parts()
+        with tempfile.TemporaryDirectory() as tmp:
+            images = {}
+            for item in manifest.items:
+                image = Path(tmp) / f"{item.asset_id}_baseline.png"
+                image.write_bytes(PNG_1X1)
+                images[item.asset_id] = str(image)
+
+            result = build_word_canvas_v2(bundle, manifest, shots, images, Path(tmp))
+            text = all_text(Document(result.path))
+            shot = shots[0]
+
+            self.assertIn("镜头执行卡", text)
+            self.assertIn("首帧参考图片", text)
+            self.assertIn("引用资产链路", text)
+            self.assertIn("视频平台执行步骤", text)
+            self.assertIn("视频提示词复制区", text)
+            self.assertIn("负面提示词复制区", text)
+            self.assertIn("镜头验收标准", text)
+            self.assertIn("动作链", text)
+            self.assertIn("平台执行备注", text)
+            for asset in manifest.items:
+                self.assertIn(asset.name, text)
+                self.assertIn(f"{asset.asset_id}_baseline.png", text)
+            self.assertIn(" -> ".join(shot.action_chain), text)
+            self.assertIn(shot.generator_prompt, text)
+            self.assertIn("；".join(shot.negative_prompt), text)
+
     def test_canvas_uses_compact_print_margins_for_asset_cards(self):
         bundle, manifest, shots = delivery_parts()
         with tempfile.TemporaryDirectory() as tmp:

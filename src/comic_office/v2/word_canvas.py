@@ -105,7 +105,7 @@ def build_word_canvas_v2(
             )
     _add_continuity_page(doc, manifest)
     for shot in shots:
-        _add_shot_page(doc, shot)
+        _add_shot_page(doc, shot, manifest, image_paths)
     _add_handoff_page(doc, manifest, shots)
     doc.save(path)
     visual_qa = (
@@ -357,9 +357,20 @@ def _add_continuity_page(doc: Document, manifest: AssetManifest) -> None:
     _add_label_detail(doc, rows)
 
 
-def _add_shot_page(doc: Document, shot: ShotCard) -> None:
+def _add_shot_page(
+    doc: Document,
+    shot: ShotCard,
+    manifest: AssetManifest,
+    image_paths: dict[str, str | dict[str, str]],
+) -> None:
     _new_page_heading(doc, f"{shot.shot_id} | 镜头执行卡")
     _add_callout(doc, "叙事任务", shot.story_beat, fill=SILVER, accent=INDIGO, compact=True)
+    reference_rows = _shot_reference_rows(shot, manifest, image_paths)
+    if reference_rows:
+        _add_label_detail(doc, [
+            ("首帧参考图片", "；".join(row["image"] for row in reference_rows)),
+            ("引用资产链路", "；".join(f"{row['asset_id']} / {row['name']} / {row['image']}" for row in reference_rows)),
+        ], compact=True)
     _add_label_detail(doc, [
         ("参考资产", "、".join(shot.reference_asset_ids)),
         ("动作链", " -> ".join(shot.action_chain)),
@@ -370,13 +381,22 @@ def _add_shot_page(doc: Document, shot: ShotCard) -> None:
         ("声音", shot.sound),
         ("平台执行备注", shot.platform_note),
     ], compact=True)
-    doc.add_heading("视频生成提示词", level=2)
+    _add_callout(
+        doc,
+        "视频平台执行步骤",
+        "先上传并绑定首帧参考图片，再粘贴视频提示词；生成失败时先检查资产引用、动作链和运镜，再按失败重试策略降级。"
+        f"平台备注：{shot.platform_note}",
+        fill=PALE,
+        accent=INDIGO,
+        compact=True,
+    )
+    doc.add_heading("视频生成提示词 / 视频提示词复制区", level=2)
     prompt = doc.add_paragraph(shot.generator_prompt)
     prompt.paragraph_format.line_spacing = 1.08
     prompt.paragraph_format.space_after = Pt(3)
     for run in prompt.runs:
         _font(run, 8.8, INK)
-    doc.add_heading("负面提示词", level=3)
+    doc.add_heading("负面提示词 / 负面提示词复制区", level=3)
     negative = doc.add_paragraph("；".join(shot.negative_prompt))
     negative.paragraph_format.line_spacing = 1.05
     negative.paragraph_format.space_after = Pt(3)
@@ -391,6 +411,29 @@ def _add_shot_page(doc: Document, shot: ShotCard) -> None:
         compact=True,
     )
     _add_callout(doc, "失败重试", shot.retry_strategy, fill="FAF4F4", accent=VERMILION, compact=True)
+
+
+def _shot_reference_rows(
+    shot: ShotCard,
+    manifest: AssetManifest,
+    image_paths: dict[str, str | dict[str, str]],
+) -> list[dict[str, str]]:
+    asset_by_id = {item.asset_id: item for item in manifest.items}
+    rows = []
+    for asset_id in shot.reference_asset_ids:
+        asset = asset_by_id.get(asset_id)
+        if asset is None:
+            rows.append({"asset_id": asset_id, "name": "未找到资产", "image": "未绑定图片"})
+            continue
+        resolved = _resolve_asset_images(asset, image_paths)
+        first_kind = asset.planned_images[0] if asset.planned_images else ""
+        image_path = resolved.get(first_kind) or next(iter(resolved.values()), None)
+        rows.append({
+            "asset_id": asset.asset_id,
+            "name": asset.name,
+            "image": image_path.name if image_path else "未绑定图片",
+        })
+    return rows
 
 
 def _add_handoff_page(doc: Document, manifest: AssetManifest, shots: tuple[ShotCard, ...] | list[ShotCard]) -> None:
