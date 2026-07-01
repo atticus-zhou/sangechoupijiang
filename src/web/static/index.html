@@ -56,16 +56,24 @@
             <div id="system-preflight-panel" class="preflight-panel"></div>
 
             <div class="office-card-grid">
-                <button class="office-card available" onclick="navigate('research')">
+                <button id="office-card-research" class="office-card available" onclick="navigate('research')">
                     <strong>研究办公室</strong>
                     <span>市场调研、竞品分析、开品建议和老板简报。</span>
+                    <div id="office-availability-research" class="office-availability">
+                        <b>可用性检查中</b>
+                        <small>正在确认办公室能力</small>
+                    </div>
                     <em onclick="event.stopPropagation()">样品展示</em>
                 </button>
 
-                <button class="office-card available" onclick="navigate('comic_production')">
+                <button id="office-card-comic-production" class="office-card available" onclick="navigate('comic_production')">
                     <strong>ai漫剧办公室</strong>
                     <span>从灵感或完整剧本出发，进入隔离版制片链，生成资产拆解、分镜、运镜、提示词和 Word 画布。</span>
                     <small>当前统一进入 AI 漫剧制片办公室，避免旧办公室与新制片链混用。</small>
+                    <div id="office-availability-comic-production" class="office-availability">
+                        <b>可用性检查中</b>
+                        <small>正在确认办公室能力</small>
+                    </div>
                     <em onclick="event.stopPropagation(); showSampleUnavailable('AI 漫剧办公室')">样品展示</em>
                 </button>
 

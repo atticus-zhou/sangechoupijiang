@@ -52,6 +52,10 @@ const OFFICE_LABELS = {
 
 OFFICE_LABELS.comic_production = 'AI漫剧制片办公室';
 const WORKBENCH_PAGES = new Set(['research', 'comic', 'comic_production']);
+const OFFICE_HALL_PREFLIGHTS = [
+    { officeId: 'research', targetId: 'office-availability-research' },
+    { officeId: 'comic_production', targetId: 'office-availability-comic-production' },
+];
 
 let ACTIVE_OFFICE_ID = readStoredOfficeId();
 let MODEL_OFFICE_ID = ACTIVE_OFFICE_ID;
@@ -84,6 +88,7 @@ function navigate(page) {
     else if (page === 'prompts') loadPrompts();
     else if (page === 'history') loadHistory();
     if (page === 'offices') loadSystemPreflight();
+    if (page === 'offices') loadOfficeHallAvailability();
 }
 
 function navigateActiveWorkbench() {
@@ -3152,6 +3157,36 @@ async function loadSystemPreflight() {
         </div>`;
         return null;
     }
+}
+
+async function loadOfficeHallAvailability() {
+    await Promise.all(OFFICE_HALL_PREFLIGHTS.map(async ({ officeId, targetId }) => {
+        const target = document.getElementById(targetId);
+        if (!target) return null;
+        target.className = 'office-availability checking';
+        target.innerHTML = '<b>可用性检查中</b><small>正在确认办公室能力</small>';
+        try {
+            const result = await API.get(`/api/offices/${officeId}/preflight`);
+            renderOfficeHallAvailability(result, targetId);
+            return result;
+        } catch (e) {
+            target.className = 'office-availability blocked';
+            target.innerHTML = `<b>检查失败</b><small>${escapeHtml(e.message || String(e))}</small>`;
+            return null;
+        }
+    }));
+}
+
+function renderOfficeHallAvailability(result, targetId) {
+    const target = document.getElementById(targetId);
+    if (!target || !result) return;
+    const status = result.status || 'unknown';
+    const summary = result.next_action || result.summary || '';
+    target.className = `office-availability ${escapeHtml(status)}`;
+    target.innerHTML = `
+        <b>${escapeHtml(preflightStatusText(status))}</b>
+        <small>${escapeHtml(summary)}</small>
+    `;
 }
 
 function renderSystemPreflight(result) {

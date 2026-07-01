@@ -79,6 +79,20 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("/api/system/preflight", js)
         self.assertIn("if (page === 'offices') loadSystemPreflight()", js)
 
+    def test_office_hall_cards_render_office_availability(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn('id="office-card-research"', html)
+        self.assertIn('id="office-card-comic-production"', html)
+        self.assertIn('id="office-availability-research"', html)
+        self.assertIn('id="office-availability-comic-production"', html)
+        self.assertIn("const OFFICE_HALL_PREFLIGHTS", js)
+        self.assertIn("async function loadOfficeHallAvailability", js)
+        self.assertIn("renderOfficeHallAvailability", js)
+        self.assertIn("/api/offices/${officeId}/preflight", js)
+        self.assertIn("if (page === 'offices') loadOfficeHallAvailability()", js)
+
     def test_comic_v2_actions_check_preflight_before_costly_steps(self):
         js = APP_JS.read_text(encoding="utf-8")
 

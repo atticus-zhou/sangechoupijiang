@@ -325,6 +325,44 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     line-height: 1.45;
     margin: -2px 0 12px;
 }
+.office-availability {
+    width: 100%;
+    padding: 9px 10px;
+    margin: 0 0 12px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.45);
+    text-align: left;
+}
+.office-availability b,
+.office-availability small {
+    display: block;
+}
+.office-availability b {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+}
+.office-availability small {
+    margin: 3px 0 0;
+    color: var(--text3);
+    font-size: 11px;
+    line-height: 1.45;
+}
+.office-availability.ready {
+    border-color: rgba(63, 185, 80, 0.24);
+    background: rgba(35, 134, 54, 0.12);
+}
+.office-availability.partial,
+.office-availability.checking,
+.office-availability.unknown {
+    border-color: rgba(88, 166, 255, 0.24);
+    background: rgba(88, 166, 255, 0.1);
+}
+.office-availability.blocked {
+    border-color: rgba(248, 81, 73, 0.24);
+    background: rgba(248, 81, 73, 0.1);
+}
 .office-card em {
     display: inline-flex;
     align-items: center;
