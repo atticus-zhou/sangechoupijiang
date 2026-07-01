@@ -933,6 +933,80 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     white-space: pre-wrap;
     word-break: break-word;
 }
+.v2-asset-identity-panel {
+    margin-bottom: 12px;
+    padding: 13px;
+    border: 1px solid rgba(88, 166, 255, 0.26);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.58);
+}
+.v2-asset-identity-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.v2-asset-identity-head strong,
+.v2-asset-identity-head span,
+.v2-asset-identity-head b {
+    display: block;
+}
+.v2-asset-identity-head strong {
+    color: var(--text);
+    font-size: 14px;
+}
+.v2-asset-identity-head span {
+    margin-top: 3px;
+    color: var(--text2);
+    font-size: 12px;
+}
+.v2-asset-identity-head b {
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--side-active);
+    font-size: 12px;
+}
+.v2-asset-identity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+}
+.v2-asset-identity-grid > div {
+    padding: 9px 10px;
+    border: 1px solid rgba(139, 148, 158, 0.16);
+    border-radius: 10px;
+    background: rgba(22, 27, 34, 0.68);
+}
+.v2-asset-identity-grid span,
+.v2-asset-reference-chain span,
+.v2-asset-reference-chain small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.45;
+}
+.v2-asset-identity-grid code,
+.v2-asset-identity-grid p {
+    margin: 4px 0 0;
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.45;
+    word-break: break-word;
+}
+.v2-asset-reference-chain {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(139, 148, 158, 0.16);
+}
+.v2-asset-reference-chain strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text);
+    font-size: 13px;
+}
 .artifact-detail-body {
     color: var(--text);
     font-size: 13px;

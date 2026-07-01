@@ -1182,7 +1182,7 @@ function comicArtifactGroups(artifacts) {
         { key: 'review', title: '待确认', hint: '需要你做决定的内容', types: ['asset_review_package'], filter: a => a.artifact_type === 'asset_review_package' && (a.metadata || {}).review_status !== 'approved' },
         { key: 'script', title: '剧本与确认', hint: '故事、确认稿、内阁意见', types: ['creative_brief', 'script_preview', 'story_draft', 'confirmed_script', 'cabinet_review', 'script'] },
         { key: 'asset_docs', title: '资产拆解', hint: '人物、道具、场景和审核包', types: ['comic_v2_contract', 'asset_review_package', 'style_bible', 'character_sheet', 'prop_sheet', 'scene_sheet', 'asset_registry'] },
-        { key: 'images', title: '图片资产库', hint: '人物、道具、场景基础资产图', types: ['generated_image'] },
+        { key: 'images', title: '图片资产库', hint: '人物、道具、场景基础资产图', types: ['generated_image', 'comic_v2_generated_image'] },
         { key: 'shot_docs', title: '镜头提示词', hint: '镜头画面提示词、视频生成提示词、交接台', types: ['shot_prompt_table', 'shot_prompt_handoff'] },
         { key: 'delivery', title: '交付文件', hint: 'Word 画布、引用清单、提示词包、执行材料', types: ['word_canvas', 'comic_v2_word_canvas', 'comic_v2_handoff_manifest', 'prompt_package', 'comic_v2_prompt_package', 'production_canvas', 'production_brief', 'dispatch_plan'] },
         { key: 'quality', title: '质检与问题', hint: '质量报告、错误记录、链路状态', types: ['image_quality_report', 'image_generation_error', 'consistency_checklist', 'production_chain_state'] },
@@ -1801,13 +1801,13 @@ function selectComicArtifact(index) {
         el.classList.toggle('active', el.getAttribute('onclick')?.includes(`selectComicArtifact(${index})`));
     });
     detail.className = 'artifact-detail';
-    const imagePreview = artifact.artifact_type === 'generated_image' && artifact.uri
+    const imagePreview = (artifact.artifact_type === 'generated_image' || artifact.artifact_type === 'comic_v2_generated_image') && artifact.uri
         ? `<div class="evidence-preview"><img src="${escapeHtml(artifact.uri)}" alt="${escapeHtml(artifact.title)}"></div>`
         : '';
     const downloadAction = artifact.uri
         ? `<a class="ghost btn-sm" href="${escapeHtml(artifact.uri)}" target="_blank">下载/打开文件</a>`
         : '';
-    const regenerateAction = artifact.artifact_type === 'generated_image'
+    const regenerateAction = (artifact.artifact_type === 'generated_image' || artifact.artifact_type === 'comic_v2_generated_image')
         ? `<button class="ghost btn-sm" onclick="regenerateComicImage(${index})">重生成这张图</button>`
         : '';
     const reviewStatus = (artifact.metadata || {}).review_status || 'pending';
@@ -1817,6 +1817,7 @@ function selectComicArtifact(index) {
             : `<button class="ghost btn-sm" onclick="requestComicAssetRevision()">退回补充</button><button class="btn-sm" onclick="approveComicAssetsAndSubmit()">确认拆解无误，继续生成</button>`)
         : '';
     const bindingPanel = renderComicArtifactBinding(artifact);
+    const identityPanel = renderComicV2AssetIdentityPanel(artifact);
     detail.innerHTML = `
         <div class="artifact-detail-head">
             <span class="artifact-type">${escapeHtml(artifact.artifact_type)}</span>
@@ -1826,14 +1827,71 @@ function selectComicArtifact(index) {
             ${assetReviewAction}
         </div>
         ${bindingPanel}
+        ${identityPanel}
         ${imagePreview}
         <div class="artifact-detail-body">${simpleMarkdown(artifact.content || '') || '<em>空内容</em>'}</div>
     `;
 }
 
+function renderComicV2AssetIdentityPanel(artifact) {
+    const identity = comicV2AssetIdentityForArtifact(artifact);
+    if (!identity) return '';
+    const asset = identity.asset || {};
+    const records = identity.records || [];
+    const prompts = identity.prompts || [];
+    const shots = identity.shots || [];
+    const baseline = records.find(record => record.is_identity_baseline) || records[0] || {};
+    return `
+        <div class="v2-asset-identity-panel">
+            <div class="v2-asset-identity-head">
+                <div>
+                    <strong>资产身份证</strong>
+                    <span>${escapeHtml(asset.asset_id || identity.asset_id || '')} · ${escapeHtml(asset.name || '')}</span>
+                </div>
+                <b>${escapeHtml(asset.type_label || asset.asset_type || '')}</b>
+            </div>
+            <div class="v2-asset-identity-grid">
+                <div><span>资产ID</span><code>${escapeHtml(asset.asset_id || identity.asset_id || '')}</code></div>
+                <div><span>原文证据</span><p>${escapeHtml(asset.evidence_quote || asset.source_evidence || '未记录')}</p></div>
+                <div><span>故事用途</span><p>${escapeHtml(asset.story_purpose || asset.story_use || '未记录')}</p></div>
+                <div><span>计划图片</span><p>${escapeHtml((asset.planned_images || asset.planned_image_labels || []).join('、') || '未记录')}</p></div>
+                <div><span>身份基准图</span><code>${escapeHtml(baseline.image_id || asset.identity_baseline_image_id || '等待生成')}</code></div>
+                <div><span>视觉锁定</span><p>${escapeHtml((asset.visual_locks || []).join('、') || '未记录')}</p></div>
+            </div>
+            <div class="v2-asset-reference-chain">
+                <strong>引用链路</strong>
+                <span>图片 ${records.length} 张 · 提示词 ${prompts.length} 条 · 引用镜头 ${shots.length} 个</span>
+                ${records.length ? `<small>图片：${escapeHtml(records.map(record => `${record.image_kind || ''}/${record.image_id || ''}`).join('、'))}</small>` : ''}
+                ${prompts.length ? `<small>提示词：${escapeHtml(prompts.map(prompt => prompt.image_kind || prompt.object_id || '').filter(Boolean).join('、'))}</small>` : ''}
+                ${shots.length ? `<small>引用镜头：${escapeHtml(shots.map(shot => shot.shot_id || shot.story_beat || '').filter(Boolean).join('、'))}</small>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function comicV2AssetIdentityForArtifact(artifact) {
+    if (!currentComicV2Status) return null;
+    const metadata = artifact.metadata || {};
+    const titleAssetId = String(artifact.title || '').split('/')[0].trim();
+    const assetId = metadata.asset_id || metadata.source_id || metadata.object_id || titleAssetId;
+    const items = currentComicV2Status.asset_manifest?.items || [];
+    const prompts = currentComicV2Status.prompt_package?.prompts || [];
+    const records = currentComicV2Status.image_production?.records || [];
+    const shots = currentComicV2Status.prompt_package?.shots || [];
+    const asset = items.find(item => item.asset_id === assetId);
+    if (!asset) return null;
+    return {
+        asset_id: assetId,
+        asset,
+        prompts: prompts.filter(prompt => prompt.object_id === assetId),
+        records: records.filter(record => record.asset_id === assetId),
+        shots: shots.filter(shot => (shot.reference_asset_ids || []).includes(assetId)),
+    };
+}
+
 async function regenerateComicImage(index) {
     const artifact = currentComicArtifacts[index];
-    if (!artifact || artifact.artifact_type !== 'generated_image') return;
+    if (!artifact || (artifact.artifact_type !== 'generated_image' && artifact.artifact_type !== 'comic_v2_generated_image')) return;
     const instruction = window.prompt('这张图想怎么改？例如：短发、表情更冷、服装颜色保持灰黑。', '');
     if (instruction === null) return;
     try {

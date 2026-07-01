@@ -470,6 +470,23 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("资产重拆已提交", js)
         self.assertIn(".v2-asset-revision-summary", css)
 
+    def test_v2_asset_detail_renders_identity_and_reference_chain(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        select_fn = js[js.index("function selectComicArtifact"):js.index("async function regenerateComicImage")]
+
+        self.assertIn("comic_v2_generated_image", select_fn)
+        self.assertIn("renderComicV2AssetIdentityPanel(artifact)", select_fn)
+        self.assertIn("function renderComicV2AssetIdentityPanel", js)
+        self.assertIn("function comicV2AssetIdentityForArtifact", js)
+        self.assertIn("currentComicV2Status.asset_manifest?.items", js)
+        self.assertIn("currentComicV2Status.prompt_package?.prompts", js)
+        self.assertIn("currentComicV2Status.image_production?.records", js)
+        self.assertIn("reference_asset_ids", js)
+        self.assertIn("资产身份证", js)
+        self.assertIn("引用链路", js)
+        self.assertIn(".v2-asset-identity-panel", css)
+
 
 if __name__ == "__main__":
     unittest.main()
