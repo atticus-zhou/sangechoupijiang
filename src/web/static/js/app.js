@@ -1495,6 +1495,7 @@ function renderComicV2ProductionFlow() {
             ${renderComicV2ReviewGateMap(currentComicV2Status.production_lineage)}
             ${renderComicV2DepartmentFlow(currentComicV2Status.department_flow)}
             ${reviewSummary}
+            ${renderComicV2ShotPromptCards(currentComicV2Status)}
             ${actions ? `<div class="v2-action-row">${actions}</div>` : ''}
         </div>
     `;
@@ -1636,6 +1637,68 @@ function renderComicV2ReviewSummary(status) {
         `;
     }
     return '';
+}
+
+function renderComicV2ShotPromptCards(status) {
+    const shots = currentComicV2Status.prompt_package?.shots || status?.prompt_package?.shots || [];
+    if (!Array.isArray(shots) || !shots.length) return '';
+    const assetItems = status?.asset_manifest?.items || [];
+    const assetNameById = new Map(assetItems.map(item => [item.asset_id, item.name || item.asset_id]));
+    const visibleShots = shots.slice(0, 6);
+    const hiddenCount = Math.max(0, shots.length - visibleShots.length);
+    return `
+        <section class="v2-shot-prompt-cards">
+            <div class="v2-shot-prompt-head">
+                <div>
+                    <strong>镜头执行卡</strong>
+                    <span>把分镜意图、首帧参考资产、动作链和视频提示词放在一起，方便直接交给视频生成平台。</span>
+                </div>
+                <span>${shots.length} 个镜头</span>
+            </div>
+            <div class="v2-shot-card-grid">
+                ${visibleShots.map((shot, index) => {
+                    const references = Array.isArray(shot.reference_asset_ids) ? shot.reference_asset_ids : [];
+                    const referenceLabels = references.map(assetId => assetNameById.get(assetId) || assetId);
+                    const criteria = Array.isArray(shot.acceptance_criteria) ? shot.acceptance_criteria.join('；') : '';
+                    const actionChain = shot.action_chain || shot.action || '';
+                    const camera = shot.camera_movement || shot.camera || '';
+                    const dialogue = shot.dialogue || '';
+                    const prompt = shot.generator_prompt || shot.prompt || '';
+                    const negative = shot.negative_prompt || '';
+                    return `
+                        <article class="v2-shot-card">
+                            <div class="v2-shot-card-top">
+                                <strong>${escapeHtml(shot.shot_id || `shot_${index + 1}`)}</strong>
+                                <span>${escapeHtml(shot.framing || '镜头景别待确认')}</span>
+                            </div>
+                            <div class="v2-shot-assets">
+                                <small>首帧参考资产</small>
+                                ${referenceLabels.length
+                                    ? referenceLabels.map(label => `<b>${escapeHtml(label)}</b>`).join('')
+                                    : '<em>暂无引用资产</em>'}
+                            </div>
+                            <p><b>动作链</b>${escapeHtml(actionChain || '待补充角色动作与状态变化')}</p>
+                            <p><b>运镜</b>${escapeHtml(camera || '待补充镜头运动')}</p>
+                            ${dialogue ? `<p><b>台词</b>${escapeHtml(dialogue)}</p>` : ''}
+                            <div class="v2-shot-prompt-block">
+                                <small>视频提示词</small>
+                                <p>${escapeHtml(prompt || '待生成视频提示词')}</p>
+                            </div>
+                            <div class="v2-shot-negative">
+                                <small>负面提示词</small>
+                                <p>${escapeHtml(negative || '禁止脸型变化、服装不一致、画风漂移、不可读文字。')}</p>
+                            </div>
+                            <div class="v2-shot-acceptance">
+                                <small>验收标准</small>
+                                <p>${escapeHtml(criteria || '人物、资产、动作、镜头和故事节点必须与资产身份证一致。')}</p>
+                            </div>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+            ${hiddenCount ? `<small class="v2-shot-hidden-count">还有 ${hiddenCount} 个镜头会写入 Word 画布。</small>` : ''}
+        </section>
+    `;
 }
 
 function renderComicV2AssetRevisionSummary(review) {

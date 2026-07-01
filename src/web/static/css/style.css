@@ -1977,6 +1977,115 @@ code { font-family: var(--mono); font-size: 13px; }
     margin: 2px 0;
     color: var(--text);
 }
+.v2-shot-prompt-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid rgba(88, 166, 255, 0.22);
+    border-radius: var(--r);
+    background: rgba(12, 18, 32, 0.58);
+}
+.v2-shot-prompt-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+.v2-shot-prompt-head div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.v2-shot-prompt-head strong {
+    color: var(--text);
+    font-size: 16px;
+}
+.v2-shot-prompt-head span,
+.v2-shot-prompt-head > span,
+.v2-shot-hidden-count {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.45;
+}
+.v2-shot-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+}
+.v2-shot-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: rgba(255, 255, 255, 0.035);
+}
+.v2-shot-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.v2-shot-card-top strong {
+    color: var(--text);
+    font-size: 14px;
+}
+.v2-shot-card-top span {
+    color: var(--blue);
+    font-size: 12px;
+}
+.v2-shot-card p,
+.v2-shot-prompt-block p,
+.v2-shot-negative p,
+.v2-shot-acceptance p {
+    margin: 0;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.v2-shot-card p b {
+    margin-right: 8px;
+    color: var(--text);
+}
+.v2-shot-assets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.v2-shot-assets small,
+.v2-shot-prompt-block small,
+.v2-shot-negative small,
+.v2-shot-acceptance small {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+}
+.v2-shot-assets b,
+.v2-shot-assets em {
+    padding: 4px 8px;
+    border: 1px solid rgba(88, 166, 255, 0.24);
+    border-radius: 999px;
+    color: var(--text2);
+    font-size: 11px;
+    font-style: normal;
+    background: rgba(88, 166, 255, 0.08);
+}
+.v2-shot-prompt-block,
+.v2-shot-negative,
+.v2-shot-acceptance {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    border-radius: var(--r-sm);
+    background: rgba(9, 13, 24, 0.4);
+}
+.v2-shot-negative {
+    border: 1px solid rgba(240, 101, 93, 0.18);
+}
 .lineage-stage-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

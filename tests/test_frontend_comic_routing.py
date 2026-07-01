@@ -388,7 +388,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_index_uses_fresh_comic_v2_script_cache_key(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=comic-v2-handoff-manifest-20260630", html)
+        self.assertIn("/static/js/app.js?v=comic-v2-shot-cards-20260701", html)
         self.assertNotIn("comic-confirm-feedback-20260610", html)
 
     def test_empty_artifact_board_still_renders_v2_stage_actions(self):
@@ -486,6 +486,28 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("资产身份证", js)
         self.assertIn("引用链路", js)
         self.assertIn(".v2-asset-identity-panel", css)
+
+    def test_v2_stage_board_renders_production_ready_shot_prompt_cards(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function renderComicV2StageActions")]
+
+        self.assertIn("renderComicV2ShotPromptCards(currentComicV2Status)", v2_flow)
+        self.assertIn("function renderComicV2ShotPromptCards", js)
+        self.assertIn("currentComicV2Status.prompt_package?.shots", js)
+        self.assertIn("reference_asset_ids", js)
+        self.assertIn("action_chain", js)
+        self.assertIn("camera_movement", js)
+        self.assertIn("generator_prompt", js)
+        self.assertIn("negative_prompt", js)
+        self.assertIn("镜头执行卡", js)
+        self.assertIn("首帧参考资产", js)
+        self.assertIn("视频提示词", js)
+        self.assertIn("负面提示词", js)
+        self.assertIn("验收标准", js)
+        self.assertIn(".v2-shot-prompt-cards", css)
+        self.assertIn(".v2-shot-card", css)
+        self.assertIn(".v2-shot-negative", css)
 
 
 if __name__ == "__main__":
