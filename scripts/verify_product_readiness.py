@@ -61,6 +61,7 @@ def run_runtime_verification(root: Path) -> dict:
             "final_stage": user_flow.get("final_stage", ""),
             "visited_stages": user_flow.get("visited_stages", []),
             "handoff_manifest_asset_baseline_chain": bool(user_flow.get("handoff_manifest_asset_baseline_chain")),
+            "handoff_manifest_shot_production_package": bool(user_flow.get("handoff_manifest_shot_production_package")),
             "production_lineage_handoff_fields": bool(user_flow.get("production_lineage_handoff_fields")),
             "generated_images": user_flow.get("generated_images", 0),
             "download_bytes": user_flow.get("download_bytes", 0),

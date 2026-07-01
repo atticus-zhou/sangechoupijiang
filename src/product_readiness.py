@@ -183,6 +183,7 @@ def format_readiness_markdown(audit: dict) -> str:
                 f"{user_flow.get('status', '')} | "
                 f"final_stage={user_flow.get('final_stage', '')}; "
                 f"asset_baseline_chain={user_flow.get('handoff_manifest_asset_baseline_chain', False)}; "
+                f"shot_package={user_flow.get('handoff_manifest_shot_production_package', False)}; "
                 f"lineage_handoff={user_flow.get('production_lineage_handoff_fields', False)}; "
                 f"generated_images={user_flow.get('generated_images', 0)}; "
                 f"download_bytes={user_flow.get('download_bytes', 0)} |"

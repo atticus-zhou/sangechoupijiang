@@ -1558,6 +1558,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
         )
         production_lineage = _comic_v2_handoff_production_lineage(delivery.handoff_manifest_path)
         asset_baseline_chains = _comic_v2_handoff_asset_baseline_chains(delivery.handoff_manifest_path)
+        shot_production_packages = _comic_v2_handoff_shot_production_packages(delivery.handoff_manifest_path)
         ready = ComicProductionV2.attach_delivery(
             state,
             str(delivery.path),
@@ -1633,6 +1634,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
                 "word_canvas_uri": uri,
                 "production_lineage": production_lineage,
                 "assets": asset_baseline_chains,
+                "shots": shot_production_packages,
             },
             created_by="libu",
         )
@@ -1855,6 +1857,54 @@ def _comic_v2_handoff_asset_baseline_chains(path: Path | None) -> list[dict]:
                 "image_ids": image_ids,
                 "image_ids_by_kind": image_ids_by_kind,
             })
+    return summary
+
+
+def _comic_v2_handoff_shot_production_packages(path: Path | None) -> list[dict]:
+    """Read compact, machine-usable shot execution packages from the V2 handoff manifest."""
+    if not path or not Path(path).exists():
+        return []
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    shots = payload.get("shots")
+    if not isinstance(shots, list):
+        return []
+    summary = []
+    for item in shots:
+        if not isinstance(item, dict):
+            continue
+        shot_id = str(item.get("shot_id") or "")
+        first_frame = item.get("first_frame_reference_image") if isinstance(item.get("first_frame_reference_image"), dict) else {}
+        reference_chain = item.get("reference_asset_chain") if isinstance(item.get("reference_asset_chain"), list) else []
+        execution_steps = item.get("execution_steps") if isinstance(item.get("execution_steps"), list) else []
+        if not shot_id:
+            continue
+        summary.append({
+            "shot_id": shot_id,
+            "scene_id": str(item.get("scene_id") or ""),
+            "story_beat": str(item.get("story_beat") or ""),
+            "first_frame_reference_image": {
+                "asset_id": str(first_frame.get("asset_id") or ""),
+                "image_id": str(first_frame.get("image_id") or ""),
+                "image_kind": str(first_frame.get("image_kind") or ""),
+                "file": str(first_frame.get("file") or ""),
+            },
+            "reference_asset_chain": [
+                {
+                    "asset_id": str(ref.get("asset_id") or ""),
+                    "name": str(ref.get("name") or ""),
+                    "asset_type": str(ref.get("asset_type") or ""),
+                    "first_frame_file": str(ref.get("first_frame_file") or ""),
+                }
+                for ref in reference_chain
+                if isinstance(ref, dict)
+            ],
+            "video_prompt_block": str(item.get("video_prompt_block") or ""),
+            "negative_prompt_block": str(item.get("negative_prompt_block") or ""),
+            "execution_steps": [str(step) for step in execution_steps if str(step).strip()],
+        })
     return summary
 
 

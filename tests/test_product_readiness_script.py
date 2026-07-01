@@ -68,6 +68,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertEqual(runtime["user_flow"]["status"], "passed")
         self.assertEqual(runtime["user_flow"]["final_stage"], "ready_for_handoff")
         self.assertTrue(runtime["user_flow"]["handoff_manifest_asset_baseline_chain"])
+        self.assertTrue(runtime["user_flow"]["handoff_manifest_shot_production_package"])
         self.assertTrue(runtime["user_flow"]["production_lineage_handoff_fields"])
         self.assertGreater(runtime["user_flow"]["download_bytes"], 1000)
         self.assertGreater(runtime["user_flow"]["generated_images"], 0)

@@ -227,6 +227,7 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
         )
         handoff_lineage = (handoff_manifest.get("metadata") or {}).get("production_lineage") or []
         manifest_assets = (handoff_manifest.get("metadata") or {}).get("assets") or []
+        manifest_shots = (handoff_manifest.get("metadata") or {}).get("shots") or []
         asset_baseline_chain_ready = (
             isinstance(manifest_assets, list)
             and bool(manifest_assets)
@@ -249,6 +250,29 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
                 for item in handoff_lineage
             )
         )
+        shot_production_package_ready = (
+            isinstance(manifest_shots, list)
+            and bool(manifest_shots)
+            and all(
+                isinstance(shot, dict)
+                and isinstance(shot.get("first_frame_reference_image"), dict)
+                and bool((shot.get("first_frame_reference_image") or {}).get("file"))
+                and isinstance(shot.get("reference_asset_chain"), list)
+                and bool(shot.get("reference_asset_chain"))
+                and all(
+                    isinstance(item, dict)
+                    and bool(item.get("asset_id"))
+                    and bool(item.get("name"))
+                    and bool(item.get("first_frame_file"))
+                    for item in (shot.get("reference_asset_chain") or [])
+                )
+                and bool(shot.get("video_prompt_block"))
+                and bool(shot.get("negative_prompt_block"))
+                and isinstance(shot.get("execution_steps"), list)
+                and len(shot.get("execution_steps") or []) >= 3
+                for shot in manifest_shots
+            )
+        )
         config_manager.update_task_run(
             task_id,
             "completed",
@@ -269,6 +293,7 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
             "handoff_manifest_artifact": bool(handoff_manifest),
             "handoff_manifest_production_lineage": bool(handoff_lineage),
             "handoff_manifest_asset_baseline_chain": asset_baseline_chain_ready,
+            "handoff_manifest_shot_production_package": shot_production_package_ready,
             "production_lineage_handoff_fields": lineage_handoff_ready,
             "production_lineage_stages": [
                 item.get("stage", "")
@@ -288,6 +313,8 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
         if not summary["production_lineage_handoff_fields"]:
             raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
         if not summary["handoff_manifest_asset_baseline_chain"]:
+            raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
+        if not summary["handoff_manifest_shot_production_package"]:
             raise AssertionError(json.dumps(summary, ensure_ascii=False, indent=2))
         return summary
     finally:
