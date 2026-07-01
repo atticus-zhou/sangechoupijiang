@@ -316,6 +316,21 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("currentComicV2Status.blocking_reason", js)
         self.assertIn("currentComicV2Status.next_action", js)
 
+    def test_v2_stage_board_renders_review_gate_map_from_lineage(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function buildComicV2PendingAction")]
+        self.assertIn("function renderComicV2ReviewGateMap", js)
+        gate_fn = js[js.index("function renderComicV2ReviewGateMap"):js.index("function renderComicV2LineageTimeline")]
+
+        self.assertIn("renderComicV2ReviewGateMap(currentComicV2Status.production_lineage)", v2_flow)
+        self.assertIn("human_checkpoint", gate_fn)
+        self.assertIn("handoff_to", gate_fn)
+        self.assertIn("acceptance_criteria", gate_fn)
+        self.assertIn("审核节点", gate_fn)
+        self.assertIn(".v2-review-gate-map", css)
+        self.assertIn(".v2-review-gate.current", css)
+
     def test_comic_production_confirm_story_enters_v2_pipeline_not_legacy_task(self):
         js = APP_JS.read_text(encoding="utf-8")
         confirm_fn = js[js.index("async function confirmComicScript"):js.index("function unconfirmComicScript")]

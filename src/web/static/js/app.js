@@ -1492,6 +1492,7 @@ function renderComicV2ProductionFlow() {
             ${renderComicV2ActionError()}
             ${renderComicV2PendingAction()}
             ${renderComicV2LineageTimeline(currentComicV2Status.production_lineage)}
+            ${renderComicV2ReviewGateMap(currentComicV2Status.production_lineage)}
             ${renderComicV2DepartmentFlow(currentComicV2Status.department_flow)}
             ${reviewSummary}
             ${actions ? `<div class="v2-action-row">${actions}</div>` : ''}
@@ -3587,6 +3588,35 @@ function renderComicV2HistoryTrace(trace) {
             <li><strong>引用清单</strong> · ${trace.handoff_manifest_uri ? `<a href="${escapeHtml(trace.handoff_manifest_uri)}" target="_blank">打开 JSON</a>` : '未生成'}</li>
         </ul>
         ${renderComicV2LineageTimeline(trace.production_lineage)}
+    `;
+}
+
+function renderComicV2ReviewGateMap(lineage) {
+    const items = Array.isArray(lineage)
+        ? lineage.filter(item => item && item.stage && (item.human_checkpoint || item.handoff_to || item.acceptance_criteria))
+        : [];
+    if (!items.length) return '';
+    return `
+        <div class="v2-review-gate-map">
+            <div class="v2-review-gate-head">
+                <strong>审核节点</strong>
+                <span>每一关都显示谁负责、交给谁、用什么标准验收。</span>
+            </div>
+            <div class="v2-review-gate-grid">
+                ${items.map((item, index) => `
+                    <article class="v2-review-gate ${escapeHtml(item.status || 'waiting')}">
+                        <div class="v2-review-gate-index">${index + 1}</div>
+                        <div class="v2-review-gate-body">
+                            <strong>${escapeHtml(item.stage_label || item.stage)}</strong>
+                            <span>${escapeHtml(item.department || '')} · ${escapeHtml(item.agent || '')}</span>
+                            ${item.human_checkpoint ? `<p>人工确认：${escapeHtml(item.human_checkpoint)}</p>` : ''}
+                            ${item.handoff_to ? `<small>交给：${escapeHtml(item.handoff_to)}</small>` : ''}
+                            ${item.acceptance_criteria ? `<small>验收：${escapeHtml(item.acceptance_criteria)}</small>` : ''}
+                        </div>
+                    </article>
+                `).join('')}
+            </div>
+        </div>
     `;
 }
 

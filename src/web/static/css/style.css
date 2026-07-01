@@ -1823,6 +1823,86 @@ code { font-family: var(--mono); font-size: 13px; }
 .lineage-timeline {
     margin: 18px 0;
 }
+.v2-review-gate-map {
+    margin: 16px 0;
+    padding: 14px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: var(--r);
+    background: rgba(15, 23, 42, 0.46);
+}
+.v2-review-gate-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+.v2-review-gate-head strong,
+.v2-review-gate-head span {
+    display: block;
+}
+.v2-review-gate-head strong {
+    color: var(--text);
+    font-size: 14px;
+}
+.v2-review-gate-head span {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.v2-review-gate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 10px;
+}
+.v2-review-gate {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
+    padding: 11px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: var(--r-sm);
+    background: rgba(22, 27, 34, 0.62);
+}
+.v2-review-gate.current {
+    border-color: rgba(88, 166, 255, 0.48);
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+}
+.v2-review-gate.completed {
+    border-color: rgba(63, 185, 80, 0.22);
+}
+.v2-review-gate-index {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--side-active-bg);
+    color: var(--side-active);
+    font-size: 12px;
+    font-weight: 700;
+}
+.v2-review-gate-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.v2-review-gate-body strong {
+    color: var(--text);
+    font-size: 13px;
+}
+.v2-review-gate-body span,
+.v2-review-gate-body small,
+.v2-review-gate-body p {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.45;
+}
+.v2-review-gate-body p {
+    margin: 2px 0;
+    color: var(--text);
+}
 .lineage-stage-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
