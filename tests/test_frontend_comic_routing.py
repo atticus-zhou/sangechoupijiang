@@ -217,6 +217,11 @@ class FrontendComicRoutingTests(unittest.TestCase):
 
         self.assertIn("function renderComicV2LineageTimeline", js)
         self.assertIn("renderComicV2LineageTimeline(trace.production_lineage)", js)
+        self.assertIn("function renderComicV2HistoryShotPackages", js)
+        self.assertIn("renderComicV2HistoryShotPackages(trace.shots)", js)
+        self.assertIn("镜头生产包", js)
+        self.assertIn("首帧参考", js)
+        self.assertIn("视频提示词", js)
         self.assertIn("lineage-stage-card", js)
         self.assertIn("human_checkpoint", js)
         self.assertIn(".lineage-stage-grid", css)

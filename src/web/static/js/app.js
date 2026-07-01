@@ -3708,7 +3708,67 @@ function renderComicV2HistoryTrace(trace) {
             <li><strong>交付审计</strong> · 资产 ${escapeHtml(audit.asset_count || 0)} 个，镜头 ${escapeHtml(audit.shot_count || 0)} 个，${audit.handoff_ready ? '可交付' : '需复查'}</li>
             <li><strong>引用清单</strong> · ${trace.handoff_manifest_uri ? `<a href="${escapeHtml(trace.handoff_manifest_uri)}" target="_blank">打开 JSON</a>` : '未生成'}</li>
         </ul>
+        ${renderComicV2HistoryShotPackages(trace.shots)}
         ${renderComicV2LineageTimeline(trace.production_lineage)}
+    `;
+}
+
+function renderComicV2HistoryShotPackages(shots) {
+    const items = Array.isArray(shots) ? shots.filter(shot => shot && shot.shot_id) : [];
+    if (!items.length) return '';
+    const visibleShots = items.slice(0, 6);
+    const hiddenCount = Math.max(0, items.length - visibleShots.length);
+    return `
+        <section class="v2-shot-prompt-cards">
+            <div class="v2-shot-prompt-head">
+                <div>
+                    <strong>镜头生产包</strong>
+                    <span>历史记录保留每个镜头的首帧参考、资产引用链、视频提示词和执行步骤。</span>
+                </div>
+                <span>${items.length} 个镜头</span>
+            </div>
+            <div class="v2-shot-card-grid">
+                ${visibleShots.map((shot, index) => {
+                    const firstFrame = shot.first_frame_reference_image || {};
+                    const references = Array.isArray(shot.reference_asset_chain) ? shot.reference_asset_chain : [];
+                    const steps = Array.isArray(shot.execution_steps) ? shot.execution_steps : [];
+                    return `
+                        <article class="v2-shot-card">
+                            <div class="v2-shot-card-top">
+                                <strong>${escapeHtml(shot.shot_id || `shot_${index + 1}`)}</strong>
+                                <span>${escapeHtml(shot.scene_id || '')}</span>
+                            </div>
+                            <p><b>故事节点</b>${escapeHtml(shot.story_beat || '待补充镜头故事节点')}</p>
+                            <div class="v2-shot-assets">
+                                <small>首帧参考</small>
+                                ${firstFrame.file
+                                    ? `<b>${escapeHtml(firstFrame.file)}</b>`
+                                    : '<em>暂无首帧参考</em>'}
+                            </div>
+                            <div class="v2-shot-assets">
+                                <small>资产引用链</small>
+                                ${references.length
+                                    ? references.map(asset => `<b>${escapeHtml(asset.name || asset.asset_id || asset.file || '')}${asset.file ? ` · ${escapeHtml(asset.file)}` : ''}</b>`).join('')
+                                    : '<em>暂无资产引用</em>'}
+                            </div>
+                            <div class="v2-shot-prompt-block">
+                                <small>视频提示词</small>
+                                <p>${escapeHtml(shot.video_prompt_block || '待生成视频提示词')}</p>
+                            </div>
+                            <div class="v2-shot-negative">
+                                <small>负面提示词</small>
+                                <p>${escapeHtml(shot.negative_prompt_block || '禁止脸型变化、服装不一致、画风漂移。')}</p>
+                            </div>
+                            <div class="v2-shot-acceptance">
+                                <small>执行步骤</small>
+                                <p>${escapeHtml(steps.length ? steps.join('；') : '按首帧参考、资产引用链和视频提示词执行。')}</p>
+                            </div>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+            ${hiddenCount ? `<small class="v2-shot-hidden-count">还有 ${hiddenCount} 个镜头保存在 Word 画布和交付 JSON 中。</small>` : ''}
+        </section>
     `;
 }
 

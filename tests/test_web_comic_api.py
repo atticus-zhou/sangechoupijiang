@@ -613,6 +613,29 @@ class WebComicApiTests(unittest.TestCase):
                         "human_checkpoint": "交付前结构审计",
                     },
                 ],
+                "shots": [
+                    {
+                        "shot_id": "shot_001",
+                        "story_beat": "主角推门进入月塔",
+                        "first_frame_reference_image": {
+                            "asset_id": "char_001",
+                            "image_id": "img_char_001_three_view",
+                            "image_kind": "three_view",
+                            "file": "char_001_three_view.png",
+                        },
+                        "reference_asset_chain": [
+                            {
+                                "asset_id": "char_001",
+                                "name": "林昭",
+                                "asset_type": "character",
+                                "first_frame_file": "char_001_three_view.png",
+                            }
+                        ],
+                        "video_prompt_block": "首帧参考林昭，缓慢前推。",
+                        "negative_prompt_block": "禁止脸型变化",
+                        "execution_steps": ["绑定首帧参考图片", "粘贴视频提示词", "按验收标准检查"],
+                    }
+                ],
             },
             created_by="libu",
         )
@@ -662,6 +685,10 @@ class WebComicApiTests(unittest.TestCase):
             self.assertTrue(trace["handoff_manifest_uri"].endswith("/v2_handoff_manifest.json"))
             self.assertEqual(trace["asset_prompt_count"], 7)
             self.assertEqual(trace["shot_prompt_count"], 9)
+            self.assertEqual(trace["shots"][0]["shot_id"], "shot_001")
+            self.assertEqual(trace["shots"][0]["first_frame_reference_image"]["file"], "char_001_three_view.png")
+            self.assertEqual(trace["shots"][0]["reference_asset_chain"][0]["name"], "林昭")
+            self.assertIn("首帧参考林昭", trace["shots"][0]["video_prompt_block"])
             self.assertEqual(trace["visual_review"]["record_count"], 7)
             self.assertEqual(
                 [item["stage"] for item in trace["production_lineage"]],

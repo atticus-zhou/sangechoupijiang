@@ -4456,6 +4456,7 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         (a for a in reversed(artifacts) if a.get("artifact_type") == "comic_v2_visual_review"),
         {},
     )
+    handoff_meta = handoff_manifest.get("metadata") or {}
     prompt_meta = prompt_package.get("metadata") or {}
     review_meta = visual_review.get("metadata") or {}
     return {
@@ -4466,7 +4467,8 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "manifest_version": word_meta.get("manifest_version") or prompt_meta.get("manifest_version", 0),
         "handoff_manifest_uri": handoff_manifest.get("uri", "") or word_meta.get("handoff_manifest_uri", ""),
         "handoff_manifest_title": handoff_manifest.get("title", ""),
-        "production_lineage": (handoff_manifest.get("metadata") or {}).get("production_lineage") or [],
+        "production_lineage": handoff_meta.get("production_lineage") or [],
+        "shots": handoff_meta.get("shots") or [],
         "prompt_package_title": prompt_package.get("title", ""),
         "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),
