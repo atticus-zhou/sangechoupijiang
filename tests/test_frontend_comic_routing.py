@@ -70,6 +70,19 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("/api/offices/${officeId}/readiness", js)
         self.assertIn("renderProductReadiness", js)
 
+    def test_model_page_renders_current_office_model_requirement_summary(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+
+        self.assertIn('id="model-requirement-summary"', html)
+        self.assertIn("function renderModelRequirementSummary", js)
+        self.assertIn("renderModelRequirementSummary()", js)
+        self.assertIn("MODEL_REQUIREMENT_GROUPS", js)
+        self.assertIn("MODEL_OFFICE_ID", js[js.index("function renderModelRequirementSummary"):js.index("async function loadModels")])
+        self.assertIn("关键部门先填", js)
+        self.assertIn("生图模型", js)
+        self.assertIn("视觉理解", js)
+
     def test_office_hall_renders_system_preflight(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
         js = APP_JS.read_text(encoding="utf-8")

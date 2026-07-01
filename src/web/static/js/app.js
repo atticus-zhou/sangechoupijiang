@@ -2996,6 +2996,24 @@ const MODEL_REQUIREMENTS = {
     },
 };
 
+const MODEL_REQUIREMENT_GROUPS = {
+    default: [
+        { title: '关键部门先填', agents: ['zhongshu', 'menxia', 'shangshu', 'gongbu'] },
+        { title: '数据与取证辅助', agents: ['hubu', 'bingbu', 'xingbu'] },
+        { title: '记忆与交付说明', agents: ['libu', 'libu_comm'] },
+    ],
+    research: [
+        { title: '关键部门先填', agents: ['zhongshu', 'menxia', 'hubu', 'gongbu'] },
+        { title: '取证与质检', agents: ['bingbu', 'xingbu'] },
+        { title: '调度、归档与交付', agents: ['shangshu', 'libu', 'libu_comm'] },
+    ],
+    comic_production: [
+        { title: '关键部门先填', agents: ['zhongshu', 'menxia', 'shangshu'] },
+        { title: '资产、提示词与交付', agents: ['hubu', 'libu', 'libu_comm', 'bingbu'] },
+        { title: '生图模型与视觉理解', agents: ['gongbu', 'xingbu'] },
+    ],
+};
+
 function modelRequirement(agentId) {
     const requirement = {
         ...(MODEL_REQUIREMENTS.default[agentId] || {}),
@@ -3034,10 +3052,42 @@ function agentName(id) {
     return AGENT_NAMES[id] || id;
 }
 
+function renderModelRequirementSummary() {
+    const target = document.getElementById('model-requirement-summary');
+    if (!target) return;
+    const groups = MODEL_REQUIREMENT_GROUPS[MODEL_OFFICE_ID] || MODEL_REQUIREMENT_GROUPS.default;
+    target.innerHTML = `
+        <div class="model-summary-head">
+            <div>
+                <strong>${escapeHtml(OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research)}模型需求</strong>
+                <span>先按下面清单补齐关键部门，再逐个测试。每个办公室的 Key 和模型配置互相隔离。</span>
+            </div>
+        </div>
+        <div class="model-summary-grid">
+            ${groups.map(group => `
+                <div class="model-summary-group">
+                    <h4>${escapeHtml(group.title)}</h4>
+                    ${group.agents.map(agentId => {
+                        const requirement = modelRequirement(agentId);
+                        return `
+                            <div class="model-summary-item">
+                                <b>${escapeHtml(agentName(agentId))}</b>
+                                <span>${escapeHtml(requirement.type || '文本模型')}</span>
+                                <small>${escapeHtml(requirement.key || '')}</small>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 async function loadModels() {
     const officeLabel = document.getElementById('model-office-label');
     if (officeLabel) officeLabel.textContent = `当前：${OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research}`;
     await loadOfficePreflight(MODEL_OFFICE_ID, 'model-preflight-panel');
+    renderModelRequirementSummary();
     const data = await API.get('/api/config/models?office_id=' + encodeURIComponent(MODEL_OFFICE_ID));
     const models = data.models || {};
     const el = document.getElementById('model-list');

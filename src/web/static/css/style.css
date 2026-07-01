@@ -1602,6 +1602,78 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     color: var(--text2);
     font-size: 13px;
 }
+.model-requirement-summary {
+    margin: 0 0 18px;
+    padding: 16px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: var(--r);
+    background: linear-gradient(180deg, rgba(22, 27, 34, 0.82), rgba(15, 23, 42, 0.68));
+}
+.model-summary-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+.model-summary-head strong,
+.model-summary-head span {
+    display: block;
+}
+.model-summary-head strong {
+    color: var(--text);
+    font-size: 15px;
+}
+.model-summary-head span {
+    margin-top: 4px;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+}
+.model-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.model-summary-group {
+    padding: 12px;
+    border: 1px solid rgba(139, 148, 158, 0.16);
+    border-radius: var(--r-sm);
+    background: rgba(15, 23, 42, 0.5);
+}
+.model-summary-group h4 {
+    margin: 0 0 10px;
+    color: var(--text);
+    font-size: 13px;
+}
+.model-summary-item {
+    padding: 9px 0;
+    border-top: 1px solid rgba(139, 148, 158, 0.12);
+}
+.model-summary-item:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+.model-summary-item b,
+.model-summary-item span,
+.model-summary-item small {
+    display: block;
+}
+.model-summary-item b {
+    color: var(--text);
+    font-size: 12px;
+}
+.model-summary-item span {
+    margin-top: 2px;
+    color: var(--side-active);
+    font-size: 12px;
+}
+.model-summary-item small {
+    margin-top: 2px;
+    color: var(--text3);
+    font-size: 11px;
+    line-height: 1.45;
+}
 .model-card-actions {
     display: flex;
     align-items: center;
@@ -1856,6 +1928,14 @@ code { font-family: var(--mono); font-size: 13px; }
     }
     .office-card-grid {
         grid-template-columns: 1fr;
+    }
+    .model-summary-grid {
+        grid-template-columns: 1fr;
+    }
+    .model-test-toolbar,
+    .model-summary-head {
+        align-items: flex-start;
+        flex-direction: column;
     }
     .package-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
