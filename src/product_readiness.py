@@ -125,12 +125,31 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "office_protocols",
+            "办公室协议",
+            [
+                _contains(root / "src/offices.py", "input_types"),
+                _contains(root / "src/offices.py", "output_types"),
+                _contains(root / "src/offices.py", "model_requirements"),
+                _contains(root / "src/offices.py", "human_checkpoints"),
+                _contains(root / "src/offices.py", "artifact_contract"),
+                _contains(root / "src/web/app.py", "/api/offices/protocols"),
+                _contains(root / "tests/test_office_preflight.py", "test_office_protocol_api_declares_platform_contracts"),
+            ],
+            [
+                "src/offices.py",
+                "src/web/app.py:/api/offices/protocols",
+                "tests/test_office_preflight.py",
+            ],
+        ),
+        _check(
             "readme",
             "清晰 README",
             [
                 _contains(root / "README.md", "AI 漫剧制片办公室"),
                 _contains(root / "README.md", "verify_comic_v2_user_flow.py"),
                 _contains(root / "README.md", "office_models"),
+                _contains(root / "README.md", "办公室协议"),
             ],
             ["README.md"],
         ),

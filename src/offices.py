@@ -14,8 +14,13 @@ class OfficeProfile:
     id: str
     name: str
     description: str
+    input_types: list[str] = field(default_factory=list)
+    output_types: list[str] = field(default_factory=list)
     agent_duties: dict[str, str] = field(default_factory=dict)
     artifact_types: list[str] = field(default_factory=list)
+    model_requirements: list[dict] = field(default_factory=list)
+    human_checkpoints: list[dict] = field(default_factory=list)
+    artifact_contract: dict[str, object] = field(default_factory=dict)
     acceptance_criteria: list[str] = field(default_factory=list)
     default_template: str = ""
 
@@ -30,6 +35,8 @@ RESEARCH_OFFICE = OfficeProfile(
         "用于产品调研、电商平台分析、竞品表格、证据截图、老板简报和开品决策的人机协作办公室；"
         "第三方平台取证依赖账号权限、登录状态和页面可访问性，系统提供辅助截图与待补证据整理。"
     ),
+    input_types=["调研对象", "完整调研需求", "第三方平台截图", "已有资料"],
+    output_types=["阶段调研报告", "来源清单", "数据表", "竞品表", "截图计划", "证据清单"],
     agent_duties={
         "zhongshu": "把用户需求拆成调研计划，明确行业、平台数据、竞品、评论痛点、机会点和开品判断。",
         "menxia": "审查调研计划是否遗漏平台数据、竞品表、痛点分析、机会映射或老板可读的交付内容。",
@@ -56,6 +63,23 @@ RESEARCH_OFFICE = OfficeProfile(
         "screenshot_plan",
         "quality_report",
     ],
+    model_requirements=[
+        {"agent": "zhongshu", "model_kind": "text", "purpose": "调研目标拆解与报告结构规划"},
+        {"agent": "bingbu", "model_kind": "text", "purpose": "来源整理、截图计划和平台取证说明"},
+        {"agent": "hubu", "model_kind": "text", "purpose": "数据表、竞品表和评论痛点结构化"},
+        {"agent": "xingbu", "model_kind": "text", "purpose": "来源质量、年份、结论依据和缺口检查"},
+        {"agent": "gongbu", "model_kind": "text", "purpose": "报告、简报和材料包组装"},
+    ],
+    human_checkpoints=[
+        {"id": "research_scope", "title": "确认调研范围", "owner": "zhongshu", "required": True},
+        {"id": "evidence_capture", "title": "人工登录或补充第三方平台截图", "owner": "bingbu", "required": False},
+        {"id": "report_review", "title": "确认阶段报告是否可继续补证据", "owner": "xingbu", "required": True},
+    ],
+    artifact_contract={
+        "id_field": "artifact_id",
+        "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
+        "trace_rule": "报告、截图、数据点和结论必须能追溯到来源或待补证据说明。",
+    },
     acceptance_criteria=[
         "最终报告必须有清晰的老板摘要。",
         "近期数据尽量标注年份、日期和来源。",
@@ -85,6 +109,8 @@ COMIC_OFFICE = OfficeProfile(
     description=(
         "用于 AI 漫剧前期制作：完善剧本、拆人物/道具/场景、制定风格圣经、镜头提示词、视频提示词和一致性检查。"
     ),
+    input_types=["灵感", "完整剧本", "已有角色设定", "参考风格"],
+    output_types=["剧本方向", "人物表", "道具表", "场景表", "提示词包", "交付清单"],
     agent_duties={
         "zhongshu": "把用户灵感整理成短剧方向、冲突结构、分集节奏和需要人工确认的节点。",
         "menxia": "审查故事方向是否有钩子、代价、动机闭环和可复用的生产标准。",
@@ -107,6 +133,23 @@ COMIC_OFFICE = OfficeProfile(
         "consistency_checklist",
         "delivery_manifest",
     ],
+    model_requirements=[
+        {"agent": "zhongshu", "model_kind": "text", "purpose": "故事方向、结构和生产信息整理"},
+        {"agent": "hubu", "model_kind": "text", "purpose": "人物、道具、场景资产表维护"},
+        {"agent": "bingbu", "model_kind": "text", "purpose": "镜头提示词和视频提示词规划"},
+        {"agent": "xingbu", "model_kind": "vision", "purpose": "人物、道具、场景和画风连续性质检"},
+        {"agent": "gongbu", "model_kind": "image", "purpose": "基础资产图和交付材料组装"},
+    ],
+    human_checkpoints=[
+        {"id": "story_confirmation", "title": "确认故事方向", "owner": "neige", "required": True},
+        {"id": "asset_review", "title": "确认人物、道具、场景清单", "owner": "menxia", "required": True},
+        {"id": "delivery_review", "title": "确认交付包是否可给下游平台", "owner": "xingbu", "required": True},
+    ],
+    artifact_contract={
+        "id_field": "artifact_id",
+        "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
+        "trace_rule": "每个资产、镜头和提示词都必须引用故事来源和资产身份。",
+    },
     acceptance_criteria=[
         "材料包要把原始灵感推进成可拍的剧本方向。",
         "人物、道具、场景需要有独立且可锁定的资产表。",
@@ -132,6 +175,8 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
     description=(
         "隔离版 AI 漫剧制片办公室。它把已确认故事转换成结构化生产链：故事合约、部门交接、资产表、镜头提示词、视频提示词、质检和 Word 画布。"
     ),
+    input_types=["灵感", "完整剧本", "已有角色设定", "参考风格"],
+    output_types=["故事合同", "视觉母版", "资产身份证", "镜头生产包", "提示词包", "Word 制片画布"],
     agent_duties={
         "neige": "先和人类创作者对齐故事方向，在生产开始前冻结故事合约。",
         "zhongshu": "把确认稿转成生产任务书，列清需要填写的资产槽位、验收规则和部门交接要求。",
@@ -166,6 +211,26 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
         "quality_report",
         "word_canvas",
     ],
+    model_requirements=[
+        {"agent": "zhongshu", "model_kind": "text", "purpose": "故事合同、视觉母版和资产拆解初稿"},
+        {"agent": "menxia", "model_kind": "text", "purpose": "故事、视觉母版和资产拆解审核"},
+        {"agent": "bingbu", "model_kind": "text", "purpose": "镜头执行卡、动作链和视频提示词"},
+        {"agent": "hubu", "model_kind": "text", "purpose": "资产登记、资源台账和引用关系"},
+        {"agent": "xingbu", "model_kind": "vision", "purpose": "视觉质检、图片一致性和交付风险检查"},
+        {"agent": "gongbu", "model_kind": "image", "purpose": "基础资产图生成和 Word 制片画布组装"},
+    ],
+    human_checkpoints=[
+        {"id": "story_confirmation", "title": "确认完整故事后再生产", "owner": "neige", "required": True},
+        {"id": "visual_bible_review", "title": "确认视觉母版和风格边界", "owner": "menxia", "required": True},
+        {"id": "asset_review", "title": "确认人物、道具、场景资产拆解", "owner": "menxia", "required": True},
+        {"id": "visual_quality_release", "title": "确认图片质检后进入交付", "owner": "xingbu", "required": False},
+        {"id": "delivery_review", "title": "确认 Word 制片画布和引用清单", "owner": "libu_comm", "required": True},
+    ],
+    artifact_contract={
+        "id_field": "artifact_id",
+        "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
+        "trace_rule": "故事合同、视觉母版、资产、图片、镜头、提示词和 Word 画布必须保持可追溯引用链路。",
+    },
     acceptance_criteria=[
         "本办公室必须使用独立的 office_id，不能和旧 AI 漫剧办公室混用底层配置。",
         "内阁先冻结故事合约，之后才能进入制片生产。",
@@ -196,6 +261,34 @@ OFFICE_PROFILES = {
 
 def list_offices() -> list[dict]:
     return [office.to_dict() for office in OFFICE_PROFILES.values()]
+
+
+def list_office_protocols() -> list[dict]:
+    return [_office_protocol(office) for office in OFFICE_PROFILES.values()]
+
+
+def _office_protocol(office: OfficeProfile) -> dict:
+    return {
+        "office_id": office.id,
+        "office_name": office.name,
+        "description": office.description,
+        "input_types": office.input_types,
+        "output_types": office.output_types,
+        "agent_duties": office.agent_duties,
+        "model_requirements": office.model_requirements,
+        "human_checkpoints": office.human_checkpoints,
+        "artifact_contract": office.artifact_contract or _default_artifact_contract(),
+        "artifact_types": office.artifact_types,
+        "acceptance_criteria": office.acceptance_criteria,
+    }
+
+
+def _default_artifact_contract() -> dict:
+    return {
+        "id_field": "artifact_id",
+        "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
+        "trace_rule": "所有交付产物必须能追溯到来源、版本、责任 Agent 和上游引用。",
+    }
 
 
 def get_office(office_id: str) -> OfficeProfile:

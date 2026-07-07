@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from src.config_manager import config_manager
-from src.offices import get_office, list_offices
+from src.offices import get_office, list_office_protocols, list_offices
 from src.comic_artifacts import build_comic_artifacts
 from src.comic_office.production_handoff import build_production_handoff_artifacts
 from src.comic_office.production_chain import build_production_chain_state, format_production_chain_state
@@ -296,6 +296,12 @@ async def index():
 async def get_offices():
     """List available office profiles."""
     return {"offices": list_offices()}
+
+
+@app.get("/api/offices/protocols")
+async def get_office_protocols_api():
+    """List product contracts every office must expose before it can scale."""
+    return {"protocols": list_office_protocols()}
 
 
 @app.get("/api/offices/{office_id}")

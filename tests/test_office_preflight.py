@@ -111,6 +111,28 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertIn("downloadable_delivery", checks)
         self.assertIn("failure_handling", checks)
 
+    def test_office_protocol_api_declares_platform_contracts(self):
+        response = self.client.get("/api/offices/protocols")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        protocols = {item["office_id"]: item for item in payload["protocols"]}
+
+        self.assertIn("comic_production", protocols)
+        self.assertIn("research", protocols)
+
+        comic = protocols["comic_production"]
+        self.assertIn("完整剧本", comic["input_types"])
+        self.assertIn("Word 制片画布", comic["output_types"])
+        self.assertTrue(any(item["agent"] == "zhongshu" and item["model_kind"] == "text" for item in comic["model_requirements"]))
+        self.assertTrue(any(item["agent"] == "gongbu" and item["model_kind"] == "image" for item in comic["model_requirements"]))
+        self.assertTrue(any(item["id"] == "story_confirmation" for item in comic["human_checkpoints"]))
+        self.assertTrue(any(item["id"] == "asset_review" for item in comic["human_checkpoints"]))
+        self.assertEqual(comic["artifact_contract"]["id_field"], "artifact_id")
+        self.assertIn("source", comic["artifact_contract"]["required_metadata"])
+        self.assertIn("responsible_agent", comic["artifact_contract"]["required_metadata"])
+        self.assertIn("reference_chain", comic["artifact_contract"]["required_metadata"])
+
     def test_comic_production_demo_api_is_no_key_and_read_only(self):
         with patch("src.web.app.config_manager.get_model_config") as get_model_config, \
              patch("src.web.app.config_manager.create_workspace") as create_workspace:
