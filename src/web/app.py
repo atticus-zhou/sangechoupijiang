@@ -321,7 +321,7 @@ async def get_office_readiness_api(office_id: str):
     if normalized != "comic_production":
         return {
             "office_id": normalized,
-            "mode": "real_product_without_demo",
+            "mode": "real_product_with_no_key_demo",
             "status": "not_applicable",
             "summary": "当前只有 AI 漫剧制片办公室接入了产品级 readiness 审计。",
             "checks": [],
@@ -333,6 +333,58 @@ async def get_office_readiness_api(office_id: str):
 async def get_system_preflight_api():
     """Return local startup checks without calling external providers."""
     return build_system_preflight(config_manager, base_dir=APP_BASE_DIR)
+
+
+@app.get("/api/demo/comic-production")
+async def get_comic_production_demo_api():
+    """Return a fixed no-key demo package without touching live model or workspace state."""
+    fixture_path = APP_BASE_DIR / "tests" / "fixtures" / "comic_v2_sample.json"
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    story = payload.get("source_story", "")
+    assets = payload.get("assets") or []
+    shots = payload.get("shots") or []
+    planner = payload.get("planner_payload") or {}
+    return {
+        "mode": "no_key_demo",
+        "office_id": "comic_production",
+        "title": planner.get("title") or "AI 漫剧制片办公室固定样例",
+        "summary": "固定样例演示：展示从故事到资产、镜头、提示词和交付物的生产链，不消耗 API Key。",
+        "uses_real_models": False,
+        "api_key_required": False,
+        "writes_workspace": False,
+        "source_story_preview": story[:360],
+        "asset_count": len(assets),
+        "shot_count": len(shots),
+        "stages": [
+            {"id": "story", "title": "故事确认", "owner": "内阁 / 中书省", "status": "completed"},
+            {"id": "visual_bible", "title": "视觉母版", "owner": "中书省 / 门下省", "status": "completed"},
+            {"id": "assets", "title": "资产拆解", "owner": "户部 / 门下省", "status": "completed"},
+            {"id": "prompts", "title": "镜头提示词", "owner": "兵部", "status": "completed"},
+            {"id": "delivery", "title": "Word 制片画布", "owner": "礼部 / 刑部", "status": "completed"},
+        ],
+        "assets": [
+            {
+                "asset_id": item.get("asset_id", ""),
+                "name": item.get("name", ""),
+                "asset_type": item.get("asset_type", ""),
+                "purpose": item.get("purpose", ""),
+            }
+            for item in assets[:6]
+        ],
+        "shots": [
+            {
+                "shot_id": item.get("shot_id", ""),
+                "story_beat": item.get("story_beat", ""),
+                "reference_asset_ids": item.get("reference_asset_ids") or [],
+            }
+            for item in shots[:6]
+        ],
+        "artifacts": [
+            {"type": "word_canvas", "title": "样例 Word 制片画布", "status": "available_in_fixture"},
+            {"type": "handoff_manifest", "title": "资产与镜头引用清单", "status": "available_in_fixture"},
+            {"type": "prompt_package", "title": "图片与视频提示词包", "status": "available_in_fixture"},
+        ],
+    }
 
 
 @app.get("/api/workspaces")

@@ -131,7 +131,7 @@ python scripts/verify_comic_v2_user_flow.py
 python scripts/verify_product_readiness.py --format markdown
 ```
 
-这个脚本不会调用模型，只会审计仓库内的证据：完整工作流状态、可下载交付物、模型预检、端到端验证、README 和失败处理策略。无 Key 演示模式当前仍按阶段计划暂缓，不计入这条 readiness。
+这个脚本不会调用模型，只会审计仓库内的证据：完整工作流状态、可下载交付物、模型预检、端到端验证、历史追溯、无 Key 演示入口、README 和失败处理策略。
 
 如果要做更深一层的真实产品验收，可以加上运行时验证：
 
@@ -179,7 +179,7 @@ python -m unittest discover -s tests -q
 python scripts/check_no_secrets.py
 ```
 
-如果要公开部署，不要把自己的 API Key 暴露给访问者。更安全的方式是让使用者填写自己的 Key，或者只提供演示模式。真实产品模式下，使用者填写自己的 Key 后才能调用对应供应商模型。
+如果要公开部署，不要把自己的 API Key 暴露给访问者。当前推荐方式是公开页面只开放固定样例演示模式；真实生产继续走本地模式，由使用者填写自己的 Key 后再调用对应供应商模型。
 
 ## 当前限制
 

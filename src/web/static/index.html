@@ -53,6 +53,22 @@
                 <h1>三个臭皮匠</h1>
             </div>
 
+            <section id="product-showcase" class="product-showcase">
+                <div>
+                    <span class="showcase-kicker">多 Agent 协作工作台</span>
+                    <h2>把一个想法拆成可审核、可追溯、可交付的制片包</h2>
+                    <p>当前主力办公室是 AI 漫剧制片办公室：从灵感或完整剧本出发，生成故事合同、资产身份证、镜头生产包、提示词和 Word 制片画布。</p>
+                    <div class="showcase-badges">
+                        <span>本地真实模式：使用你自己的 API Key</span>
+                        <span>演示模式：不消耗 API Key，不调用真实模型</span>
+                    </div>
+                </div>
+                <div class="showcase-actions">
+                    <button id="btn-open-comic-demo" onclick="navigate('demo_comic')">体验无 Key 演示</button>
+                    <button class="ghost" onclick="navigate('comic_production')">进入真实办公室</button>
+                </div>
+            </section>
+
             <div id="system-preflight-panel" class="preflight-panel"></div>
 
             <div class="office-card-grid">
@@ -104,6 +120,19 @@
                     <small>暂未开放：还没有配置 Agent 分工和产物模板。</small>
                     <em onclick="event.stopPropagation(); showSampleUnavailable('预留办公室')">样品展示</em>
                 </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- No-key Demo -->
+    <section class="page" id="page-demo" style="display:none">
+        <div class="demo-page">
+            <div class="demo-topbar">
+                <button class="ghost" onclick="navigate('offices')">返回大厅</button>
+                <button onclick="navigate('comic_production')">进入真实办公室</button>
+            </div>
+            <div id="comic-demo-content" class="comic-demo-content">
+                <div class="empty-state">正在加载 AI 漫剧制片办公室演示...</div>
             </div>
         </div>
     </section>

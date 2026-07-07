@@ -18,7 +18,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
         self.assertNotIn("onclick=\"navigate('comic')\"", html)
-        self.assertEqual(html.count("onclick=\"navigate('comic_production')\""), 1)
+        self.assertIn('id="office-card-comic-production"', html)
+        self.assertIn("onclick=\"navigate('comic_production')\"", html)
 
     def test_stored_legacy_comic_context_migrates_to_production(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -105,6 +106,23 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("renderOfficeHallAvailability", js)
         self.assertIn("/api/offices/${officeId}/preflight", js)
         self.assertIn("if (page === 'offices') loadOfficeHallAvailability()", js)
+
+    def test_hall_renders_public_showcase_and_no_key_demo_entry(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="product-showcase"', html)
+        self.assertIn('id="btn-open-comic-demo"', html)
+        self.assertIn("navigate('demo_comic')", html)
+        self.assertIn('id="page-demo"', html)
+        self.assertIn('id="comic-demo-content"', html)
+        self.assertIn("demo_comic", js)
+        self.assertIn("async function loadComicDemo", js)
+        self.assertIn("/api/demo/comic-production", js)
+        self.assertIn("function renderComicDemo", js)
+        self.assertIn(".product-showcase", css)
+        self.assertIn(".demo-stage-grid", css)
 
     def test_comic_v2_actions_check_preflight_before_costly_steps(self):
         js = APP_JS.read_text(encoding="utf-8")

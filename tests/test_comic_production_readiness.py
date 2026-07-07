@@ -2,16 +2,16 @@ import unittest
 
 
 class ComicProductionReadinessTests(unittest.TestCase):
-    def test_real_product_readiness_is_evidence_backed_without_demo_mode(self):
+    def test_real_product_readiness_is_evidence_backed_with_no_key_demo_mode(self):
         from src.product_readiness import audit_comic_production_readiness
 
         audit = audit_comic_production_readiness()
         checks = {item["id"]: item for item in audit["checks"]}
 
         self.assertEqual(audit["office_id"], "comic_production")
-        self.assertEqual(audit["mode"], "real_product_without_demo")
-        self.assertEqual(audit["status"], "ready_without_demo")
-        self.assertNotIn("no_key_demo", checks)
+        self.assertEqual(audit["mode"], "real_product_with_no_key_demo")
+        self.assertEqual(audit["status"], "ready_with_demo")
+        self.assertIn("no_key_demo", checks)
 
         for check_id in (
             "workflow_state",
@@ -20,6 +20,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
             "local_doctor",
             "end_to_end_verifier",
             "history_trace",
+            "no_key_demo",
             "readme",
             "failure_handling",
         ):

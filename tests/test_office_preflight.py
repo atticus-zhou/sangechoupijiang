@@ -104,12 +104,31 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["office_id"], "comic_production")
-        self.assertEqual(payload["mode"], "real_product_without_demo")
-        self.assertEqual(payload["status"], "ready_without_demo")
+        self.assertEqual(payload["mode"], "real_product_with_no_key_demo")
+        self.assertEqual(payload["status"], "ready_with_demo")
         checks = {item["id"]: item for item in payload["checks"]}
         self.assertIn("workflow_state", checks)
         self.assertIn("downloadable_delivery", checks)
         self.assertIn("failure_handling", checks)
+
+    def test_comic_production_demo_api_is_no_key_and_read_only(self):
+        with patch("src.web.app.config_manager.get_model_config") as get_model_config, \
+             patch("src.web.app.config_manager.create_workspace") as create_workspace:
+            response = self.client.get("/api/demo/comic-production")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["mode"], "no_key_demo")
+        self.assertEqual(payload["office_id"], "comic_production")
+        self.assertFalse(payload["uses_real_models"])
+        self.assertFalse(payload["api_key_required"])
+        self.assertFalse(payload["writes_workspace"])
+        self.assertGreaterEqual(payload["asset_count"], 1)
+        self.assertGreaterEqual(payload["shot_count"], 1)
+        self.assertTrue(payload["stages"])
+        self.assertTrue(payload["artifacts"])
+        get_model_config.assert_not_called()
+        create_workspace.assert_not_called()
 
 
 if __name__ == "__main__":

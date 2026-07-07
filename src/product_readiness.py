@@ -9,12 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict:
-    """Audit real-product readiness for the AI comic production office.
-
-    This deliberately excludes no-key demo mode because the current product
-    plan has that phase postponed. Each check points at concrete files or code
-    paths that prove the real local product capability exists.
-    """
+    """Audit product readiness for the AI comic production office."""
     root = Path(base_dir) if base_dir is not None else REPO_ROOT
     checks = [
         _check(
@@ -109,6 +104,22 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "no_key_demo",
+            "无 Key 演示",
+            [
+                _contains(root / "src/web/app.py", "/api/demo/comic-production"),
+                _contains(root / "src/web/static/index.html", 'id="product-showcase"'),
+                _contains(root / "src/web/static/js/app.js", "loadComicDemo"),
+                _contains(root / "tests/test_office_preflight.py", "test_comic_production_demo_api_is_no_key_and_read_only"),
+            ],
+            [
+                "src/web/app.py",
+                "src/web/static/index.html",
+                "src/web/static/js/app.js",
+                "tests/test_office_preflight.py",
+            ],
+        ),
+        _check(
             "readme",
             "清晰 README",
             [
@@ -137,10 +148,10 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
     failed = [item for item in checks if item["status"] != "passed"]
     return {
         "office_id": "comic_production",
-        "mode": "real_product_without_demo",
-        "status": "needs_work" if failed else "ready_without_demo",
+        "mode": "real_product_with_no_key_demo",
+        "status": "needs_work" if failed else "ready_with_demo",
         "summary": (
-            "AI 漫剧制片办公室真实产品条件已具备，暂缓项只剩无 Key 演示模式。"
+            "AI 漫剧制片办公室真实产品条件已具备，并提供不消耗 API Key 的固定样例演示入口。"
             if not failed else
             "AI 漫剧制片办公室仍有真实产品条件缺口。"
         ),

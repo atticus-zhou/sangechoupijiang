@@ -64,11 +64,11 @@ let currentOfficePreflight = null;
 function navigate(page) {
     page = normalizeNavigationTarget(page);
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    const targetPageId = page === 'comic_production' ? 'comic' : page;
+    const targetPageId = page === 'comic_production' ? 'comic' : page === 'demo_comic' ? 'demo' : page;
     const targetPage = document.getElementById('page-' + targetPageId);
     if (!targetPage) return;
     targetPage.style.display = (page === 'task') ? 'flex' : 'block';
-    document.body.classList.toggle('hall-mode', page === 'offices');
+    document.body.classList.toggle('hall-mode', page === 'offices' || page === 'demo_comic');
     if (page === 'research') setActiveOfficeContext('research', '研究办公室');
     if (page === 'comic') setActiveOfficeContext('comic', 'AI漫剧办公室');
     
@@ -85,6 +85,7 @@ function navigate(page) {
     else if (page === 'skills') loadSkills();
     else if (page === 'research') loadResearchOffice();
     else if (page === 'comic' || page === 'comic_production') loadComicOffice();
+    else if (page === 'demo_comic') loadComicDemo();
     else if (page === 'prompts') loadPrompts();
     else if (page === 'history') loadHistory();
     if (page === 'offices') loadSystemPreflight();
@@ -3428,7 +3429,8 @@ function renderProductReadiness(result, targetId = '') {
     const target = targetId ? document.getElementById(targetId) : null;
     if (!target || !result || result.status === 'not_applicable') return;
     const checks = (result.checks || []).slice(0, 6);
-    const status = result.status === 'ready_without_demo' ? 'ready' : 'partial';
+    const readyStatuses = ['ready_without_demo', 'ready_with_demo'];
+    const status = readyStatuses.includes(result.status) ? 'ready' : 'partial';
     target.insertAdjacentHTML('beforeend', `
         <div class="preflight-card preflight-${escapeHtml(status)} product-readiness-card">
             <div class="preflight-head">
@@ -3436,7 +3438,7 @@ function renderProductReadiness(result, targetId = '') {
                     <strong>产品 readiness</strong>
                     <p>${escapeHtml(result.summary || '')}</p>
                 </div>
-                <span class="badge ${preflightBadgeClass(status)}">${escapeHtml(result.status === 'ready_without_demo' ? '真实产品已具备' : '需继续补齐')}</span>
+                <span class="badge ${preflightBadgeClass(status)}">${escapeHtml(readyStatuses.includes(result.status) ? '真实产品已具备' : '需继续补齐')}</span>
             </div>
             <div class="preflight-grid">
                 ${checks.map(item => `
@@ -3824,6 +3826,104 @@ function renderComicV2LineageTimeline(lineage) {
                 `).join('')}
             </div>
         </div>
+    `;
+}
+
+async function loadComicDemo() {
+    const box = document.getElementById('comic-demo-content');
+    if (!box) return;
+    box.innerHTML = '<div class="empty-state">正在加载 AI 漫剧制片办公室演示...</div>';
+    try {
+        const demo = await API.get('/api/demo/comic-production');
+        box.innerHTML = renderComicDemo(demo);
+    } catch (e) {
+        box.innerHTML = `<div class="empty-state">演示加载失败：${escapeHtml(e.message || e)}</div>`;
+    }
+}
+
+function renderComicDemo(demo) {
+    const stages = Array.isArray(demo.stages) ? demo.stages : [];
+    const assets = Array.isArray(demo.assets) ? demo.assets : [];
+    const shots = Array.isArray(demo.shots) ? demo.shots : [];
+    const artifacts = Array.isArray(demo.artifacts) ? demo.artifacts : [];
+    return `
+        <section class="demo-hero">
+            <span class="showcase-kicker">No-key demo</span>
+            <h1>${escapeHtml(demo.title || 'AI 漫剧制片办公室演示')}</h1>
+            <p>${escapeHtml(demo.summary || '')}</p>
+            <div class="showcase-badges">
+                <span>不消耗 API Key，不调用真实模型</span>
+                <span>不写入真实工作区</span>
+                <span>固定样例，可安全公开展示</span>
+            </div>
+        </section>
+        <section class="demo-section">
+            <h2>样例故事</h2>
+            <p>${escapeHtml(demo.source_story_preview || '')}</p>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>生产流程</h2>
+                <span>${stages.length} 个阶段</span>
+            </div>
+            <div class="demo-stage-grid">
+                ${stages.map((stage, index) => `
+                    <article class="demo-stage-card">
+                        <b>${index + 1}</b>
+                        <strong>${escapeHtml(stage.title || stage.id || '')}</strong>
+                        <span>${escapeHtml(stage.owner || '')}</span>
+                        <small>${escapeHtml(stage.status || '')}</small>
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+        <section class="demo-two-col">
+            <div class="demo-section">
+                <div class="demo-section-head">
+                    <h2>资产样例</h2>
+                    <span>${escapeHtml(demo.asset_count || 0)} 个资产</span>
+                </div>
+                <div class="demo-list">
+                    ${assets.map(asset => `
+                        <article>
+                            <strong>${escapeHtml(asset.name || asset.asset_id || '')}</strong>
+                            <span>${escapeHtml(asset.asset_type || '')}</span>
+                            <p>${escapeHtml(asset.purpose || '')}</p>
+                        </article>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="demo-section">
+                <div class="demo-section-head">
+                    <h2>镜头样例</h2>
+                    <span>${escapeHtml(demo.shot_count || 0)} 个镜头</span>
+                </div>
+                <div class="demo-list">
+                    ${shots.map(shot => `
+                        <article>
+                            <strong>${escapeHtml(shot.shot_id || '')}</strong>
+                            <span>${escapeHtml((shot.reference_asset_ids || []).join(' / '))}</span>
+                            <p>${escapeHtml(shot.story_beat || '')}</p>
+                        </article>
+                    `).join('')}
+                </div>
+            </div>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>交付物</h2>
+                <span>固定样例</span>
+            </div>
+            <div class="demo-artifact-grid">
+                ${artifacts.map(item => `
+                    <article>
+                        <strong>${escapeHtml(item.title || '')}</strong>
+                        <span>${escapeHtml(item.type || '')}</span>
+                        <small>${escapeHtml(item.status || '')}</small>
+                    </article>
+                `).join('')}
+            </div>
+        </section>
     `;
 }
 

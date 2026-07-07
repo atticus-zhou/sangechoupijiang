@@ -21,7 +21,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         payload = json.loads(result.stdout)
 
         self.assertEqual(payload["office_id"], "comic_production")
-        self.assertEqual(payload["status"], "ready_without_demo")
+        self.assertEqual(payload["status"], "ready_with_demo")
         self.assertTrue(payload["checks"])
 
     def test_script_outputs_markdown_readiness_audit(self):

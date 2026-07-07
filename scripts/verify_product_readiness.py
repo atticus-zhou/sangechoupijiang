@@ -102,7 +102,7 @@ def main() -> int:
         print(format_readiness_markdown(audit))
     else:
         print(json.dumps(audit, ensure_ascii=False, indent=2))
-    return 0 if audit.get("status") == "ready_without_demo" else 1
+    return 0 if audit.get("status") in {"ready_without_demo", "ready_with_demo"} else 1
 
 
 if __name__ == "__main__":
