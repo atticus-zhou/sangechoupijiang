@@ -183,6 +183,8 @@ python scripts/check_no_secrets.py
 
 如果要公开部署，不要把自己的 API Key 暴露给访问者。当前推荐方式是公开页面只开放固定样例演示模式；真实生产继续走本地模式，由使用者填写自己的 Key 后再调用对应供应商模型。
 
+更完整的公开展示、本地真实模式和未来 SaaS 模式边界见 [docs/DEPLOYMENT_MODES.md](docs/DEPLOYMENT_MODES.md)。
+
 ## 当前限制
 
 - 这是本地优先原型，长期任务队列、权限、计费、多用户账号体系还没有完整 SaaS 化。

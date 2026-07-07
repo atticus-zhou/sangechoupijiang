@@ -27,6 +27,18 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python -m unittest tests.test_sample_project_fixtures -q", text)
         self.assertIn("config.yaml", text)
         self.assertIn("不会提交到 GitHub", text)
+        self.assertIn("docs/DEPLOYMENT_MODES.md", text)
+
+    def test_deployment_modes_doc_separates_demo_local_and_saas(self):
+        text = Path("docs/DEPLOYMENT_MODES.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("锟", text)
+        self.assertNotIn("�", text)
+        self.assertIn("演示模式", text)
+        self.assertIn("本地真实模式", text)
+        self.assertIn("未来 SaaS 模式", text)
+        self.assertIn("不要把个人 API Key 写入前端", text)
+        self.assertIn("Vercel", text)
 
 
 if __name__ == "__main__":
