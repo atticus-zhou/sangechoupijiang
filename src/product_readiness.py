@@ -108,12 +108,17 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             "无 Key 演示",
             [
                 _contains(root / "src/web/app.py", "/api/demo/comic-production"),
+                _contains(root / "src/web/app.py", "/api/demo/research"),
                 _contains(root / "src/web/static/index.html", 'id="product-showcase"'),
+                _contains(root / "src/web/static/index.html", 'id="btn-open-research-demo"'),
                 _contains(root / "src/web/static/js/app.js", "loadComicDemo"),
+                _contains(root / "src/web/static/js/app.js", "loadResearchDemo"),
                 _contains(root / "tests/test_office_preflight.py", "test_comic_production_demo_api_is_no_key_and_read_only"),
+                _contains(root / "tests/test_office_preflight.py", "test_research_demo_api_is_no_key_and_read_only"),
             ],
             [
-                "src/web/app.py",
+                "src/web/app.py:/api/demo/comic-production",
+                "src/web/app.py:/api/demo/research",
                 "src/web/static/index.html",
                 "src/web/static/js/app.js",
                 "tests/test_office_preflight.py",

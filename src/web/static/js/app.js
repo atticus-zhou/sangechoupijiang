@@ -64,11 +64,13 @@ let currentOfficePreflight = null;
 function navigate(page) {
     page = normalizeNavigationTarget(page);
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    const targetPageId = page === 'comic_production' ? 'comic' : page === 'demo_comic' ? 'demo' : page;
+    const targetPageId = page === 'comic_production'
+        ? 'comic'
+        : (page === 'demo_comic' || page === 'demo_research' ? 'demo' : page);
     const targetPage = document.getElementById('page-' + targetPageId);
     if (!targetPage) return;
     targetPage.style.display = (page === 'task') ? 'flex' : 'block';
-    document.body.classList.toggle('hall-mode', page === 'offices' || page === 'demo_comic');
+    document.body.classList.toggle('hall-mode', page === 'offices' || page === 'demo_comic' || page === 'demo_research');
     if (page === 'research') setActiveOfficeContext('research', '研究办公室');
     if (page === 'comic') setActiveOfficeContext('comic', 'AI漫剧办公室');
     
@@ -86,6 +88,7 @@ function navigate(page) {
     else if (page === 'research') loadResearchOffice();
     else if (page === 'comic' || page === 'comic_production') loadComicOffice();
     else if (page === 'demo_comic') loadComicDemo();
+    else if (page === 'demo_research') loadResearchDemo();
     else if (page === 'prompts') loadPrompts();
     else if (page === 'history') loadHistory();
     if (page === 'offices') loadSystemPreflight();
@@ -3904,6 +3907,116 @@ function renderComicDemo(demo) {
                             <strong>${escapeHtml(shot.shot_id || '')}</strong>
                             <span>${escapeHtml((shot.reference_asset_ids || []).join(' / '))}</span>
                             <p>${escapeHtml(shot.story_beat || '')}</p>
+                        </article>
+                    `).join('')}
+                </div>
+            </div>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>交付物</h2>
+                <span>固定样例</span>
+            </div>
+            <div class="demo-artifact-grid">
+                ${artifacts.map(item => `
+                    <article>
+                        <strong>${escapeHtml(item.title || '')}</strong>
+                        <span>${escapeHtml(item.type || '')}</span>
+                        <small>${escapeHtml(item.status || '')}</small>
+                        ${item.uri ? `<a class="ghost btn-sm demo-download-link" href="${escapeHtml(item.uri)}" target="_blank">下载样例</a>` : ''}
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+async function loadResearchDemo() {
+    const box = document.getElementById('comic-demo-content');
+    if (!box) return;
+    box.innerHTML = '<div class="empty-state">正在加载研究办公室演示...</div>';
+    try {
+        const demo = await API.get('/api/demo/research');
+        box.innerHTML = renderResearchDemo(demo);
+    } catch (e) {
+        box.innerHTML = `<div class="empty-state">演示加载失败：${escapeHtml(e.message || e)}</div>`;
+    }
+}
+
+function renderResearchDemo(demo) {
+    const stages = Array.isArray(demo.stages) ? demo.stages : [];
+    const sources = Array.isArray(demo.sources) ? demo.sources : [];
+    const dataPoints = Array.isArray(demo.data_points) ? demo.data_points : [];
+    const competitors = Array.isArray(demo.competitors) ? demo.competitors : [];
+    const artifacts = Array.isArray(demo.artifacts) ? demo.artifacts : [];
+    return `
+        <section class="demo-hero">
+            <span class="showcase-kicker">Research no-key demo</span>
+            <h1>${escapeHtml(demo.title || '研究办公室演示')}</h1>
+            <p>${escapeHtml(demo.summary || '')}</p>
+            <div class="showcase-badges">
+                <span>不消耗 API Key，不调用真实模型</span>
+                <span>固定样例，可安全公开展示</span>
+                <span>展示报告、来源和截图计划</span>
+            </div>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>调研目标</h2>
+                <span>${escapeHtml(demo.deliverable || '阶段报告')}</span>
+            </div>
+            <p>${escapeHtml(demo.objective || demo.report_preview || '')}</p>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>研究流程</h2>
+                <span>${stages.length} 个阶段</span>
+            </div>
+            <div class="demo-stage-grid">
+                ${stages.map((stage, index) => `
+                    <article class="demo-stage-card">
+                        <b>${index + 1}</b>
+                        <strong>${escapeHtml(stage.title || stage.id || '')}</strong>
+                        <span>${escapeHtml(stage.owner || '')}</span>
+                        <small>${escapeHtml(stage.status || '')}</small>
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+        <section class="demo-two-col">
+            <div class="demo-section">
+                <div class="demo-section-head">
+                    <h2>来源与证据</h2>
+                    <span>${escapeHtml(demo.source_count || 0)} 个来源</span>
+                </div>
+                <div class="demo-list">
+                    ${sources.map(source => `
+                        <article>
+                            <strong>${escapeHtml(source.title || source.url || '')}</strong>
+                            <span>${escapeHtml(source.publisher || '')}</span>
+                            <p>${escapeHtml(source.note || source.url || '')}</p>
+                        </article>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="demo-section">
+                <div class="demo-section-head">
+                    <h2>数据与竞品</h2>
+                    <span>${escapeHtml(demo.data_point_count || 0)} 个数据点 · ${escapeHtml(demo.competitor_count || 0)} 个竞品</span>
+                </div>
+                <div class="demo-list">
+                    ${dataPoints.map(point => `
+                        <article>
+                            <strong>${escapeHtml(point.metric || '')}</strong>
+                            <span>${escapeHtml(point.value || '')}</span>
+                            <p>${escapeHtml(point.note || point.confidence || '')}</p>
+                        </article>
+                    `).join('')}
+                    ${competitors.map(item => `
+                        <article>
+                            <strong>${escapeHtml(item.product_name || item.brand || '')}</strong>
+                            <span>${escapeHtml(item.brand || '')}</span>
+                            <p>${escapeHtml(item.selling_points || item.negative_pain_points || '')}</p>
                         </article>
                     `).join('')}
                 </div>

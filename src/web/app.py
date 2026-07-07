@@ -442,6 +442,150 @@ async def get_comic_production_demo_file_api(filename: str):
     return FileResponse(str(file_path), filename=safe_name, media_type=media_type)
 
 
+@app.get("/api/demo/research")
+async def get_research_demo_api():
+    """Return a fixed no-key research-office demo without touching live model or workspace state."""
+    fixture = _load_research_demo_fixture()
+    plan = fixture.get("plan") or {}
+    results = fixture.get("results") or []
+    delivery = _ensure_research_demo_delivery()
+    sources = _research_demo_sources(results)
+    data_points = _research_demo_data_points(results)
+    competitors = _research_demo_competitors(results)
+    chart_suggestions = _research_demo_chart_suggestions(results)
+    return {
+        "mode": "no_key_demo",
+        "office_id": "research",
+        "title": plan.get("title") or "研究办公室固定样例",
+        "summary": "固定样例演示：展示从调研目标到来源、数据点、竞品表、截图取证计划和阶段报告的工作链，不消耗 API Key。",
+        "uses_real_models": False,
+        "api_key_required": False,
+        "writes_workspace": False,
+        "objective": plan.get("objective", ""),
+        "deliverable": plan.get("deliverable", ""),
+        "report_preview": (fixture.get("final_report") or "")[:520],
+        "source_count": len(sources),
+        "data_point_count": len(data_points),
+        "competitor_count": len(competitors),
+        "chart_count": len(chart_suggestions),
+        "stages": [
+            {"id": "plan", "title": "调研目标拆解", "owner": "中书省", "status": "completed"},
+            {"id": "evidence", "title": "来源与截图计划", "owner": "兵部 / 刑部", "status": "verified"},
+            {"id": "tables", "title": "数据表与竞品表", "owner": "户部", "status": "completed"},
+            {"id": "delivery", "title": "阶段报告", "owner": "礼部", "status": "completed"},
+        ],
+        "sources": sources[:5],
+        "data_points": data_points[:5],
+        "competitors": competitors[:5],
+        "chart_suggestions": chart_suggestions[:4],
+        "artifacts": [
+            {
+                "type": "report_markdown",
+                "title": "样例阶段调研报告",
+                "status": "downloadable",
+                "uri": "/api/demo/research/files/report.md",
+            },
+            {
+                "type": "evidence_manifest",
+                "title": "来源、数据与截图清单",
+                "status": "downloadable",
+                "uri": "/api/demo/research/files/evidence_manifest.json",
+            },
+        ],
+    }
+
+
+def _load_research_demo_fixture() -> dict:
+    return json.loads((APP_BASE_DIR / "tests" / "fixtures" / "research_sample.json").read_text(encoding="utf-8"))
+
+
+def _ensure_research_demo_delivery() -> dict[str, Path]:
+    """Build deterministic research demo files under output/demo without workspace writes."""
+    output_root = APP_BASE_DIR / "output" / "demo" / "research"
+    delivery_dir = output_root / "delivery"
+    delivery_dir.mkdir(parents=True, exist_ok=True)
+    fixture = _load_research_demo_fixture()
+    artifacts = build_research_artifacts("demo_research", fixture)
+    by_type = {item.get("artifact_type"): item for item in artifacts}
+    report = by_type.get("standard_report") or by_type.get("report")
+    if not report:
+        raise HTTPException(status_code=500, detail="Demo research report was not generated.")
+    report_path = delivery_dir / "report.md"
+    report_path.write_text(report.get("content", ""), encoding="utf-8")
+    manifest_path = delivery_dir / "evidence_manifest.json"
+    manifest = {
+        "title": (fixture.get("plan") or {}).get("title") or "研究办公室固定样例",
+        "mode": "no_key_demo",
+        "sources": _research_demo_sources(fixture.get("results") or []),
+        "data_points": _research_demo_data_points(fixture.get("results") or []),
+        "competitors": _research_demo_competitors(fixture.get("results") or []),
+        "chart_suggestions": _research_demo_chart_suggestions(fixture.get("results") or []),
+        "screenshot_plan": (by_type.get("screenshot_plan") or {}).get("content", ""),
+        "artifacts": [
+            {
+                "artifact_type": item.get("artifact_type"),
+                "title": item.get("title"),
+                "created_by": item.get("created_by"),
+            }
+            for item in artifacts
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"report_markdown": report_path, "evidence_manifest": manifest_path}
+
+
+@app.get("/api/demo/research/files/{filename}")
+async def get_research_demo_file_api(filename: str):
+    """Download one deterministic research demo file."""
+    safe_name = Path(filename).name
+    delivery = _ensure_research_demo_delivery()
+    allowed = {
+        "report.md": delivery["report_markdown"],
+        "evidence_manifest.json": delivery["evidence_manifest"],
+    }
+    file_path = allowed.get(safe_name)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Demo file not found.")
+    media_type = "application/json" if file_path.suffix.lower() == ".json" else "text/markdown; charset=utf-8"
+    return FileResponse(str(file_path), filename=safe_name, media_type=media_type)
+
+
+def _research_demo_sources(results: list[dict]) -> list[dict]:
+    sources: list[dict] = []
+    for step in results:
+        for source in step.get("sources", []) or []:
+            if isinstance(source, dict):
+                sources.append(source)
+    return sources
+
+
+def _research_demo_data_points(results: list[dict]) -> list[dict]:
+    data_points: list[dict] = []
+    for step in results:
+        for point in step.get("data_points", []) or []:
+            if isinstance(point, dict):
+                data_points.append(point)
+    return data_points
+
+
+def _research_demo_competitors(results: list[dict]) -> list[dict]:
+    competitors: list[dict] = []
+    for step in results:
+        for item in step.get("competitors", []) or []:
+            if isinstance(item, dict):
+                competitors.append(item)
+    return competitors
+
+
+def _research_demo_chart_suggestions(results: list[dict]) -> list[dict]:
+    suggestions: list[dict] = []
+    for step in results:
+        for item in step.get("chart_suggestions", []) or []:
+            if isinstance(item, dict):
+                suggestions.append(item)
+    return suggestions
+
+
 @app.get("/api/workspaces")
 async def list_workspace_api(limit: int = 50, office_id: str = ""):
     """List project workspaces."""

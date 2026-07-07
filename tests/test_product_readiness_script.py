@@ -23,6 +23,8 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertEqual(payload["office_id"], "comic_production")
         self.assertEqual(payload["status"], "ready_with_demo")
         self.assertTrue(payload["checks"])
+        no_key_demo = next(item for item in payload["checks"] if item["id"] == "no_key_demo")
+        self.assertIn("research", "\n".join(no_key_demo["evidence"]))
 
     def test_script_outputs_markdown_readiness_audit(self):
         result = subprocess.run(
@@ -35,6 +37,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
 
         self.assertIn("AI 漫剧制片办公室真实产品 readiness", result.stdout)
         self.assertIn("完整工作流状态", result.stdout)
+        self.assertIn("/api/demo/research", result.stdout)
 
     def test_script_can_run_deterministic_runtime_verification(self):
         result = subprocess.run(

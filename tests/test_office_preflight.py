@@ -154,6 +154,45 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertIn("application/json", manifest.headers.get("content-type", ""))
         self.assertIn("word_canvas", manifest.json())
 
+    def test_research_demo_api_is_no_key_and_read_only(self):
+        with patch("src.web.app.config_manager.get_model_config") as get_model_config, \
+             patch("src.web.app.config_manager.create_workspace") as create_workspace:
+            response = self.client.get("/api/demo/research")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["mode"], "no_key_demo")
+        self.assertEqual(payload["office_id"], "research")
+        self.assertFalse(payload["uses_real_models"])
+        self.assertFalse(payload["api_key_required"])
+        self.assertFalse(payload["writes_workspace"])
+        self.assertGreaterEqual(payload["source_count"], 1)
+        self.assertGreaterEqual(payload["data_point_count"], 1)
+        self.assertGreaterEqual(payload["competitor_count"], 1)
+        self.assertTrue(payload["stages"])
+        artifact_uris = {item["type"]: item.get("uri", "") for item in payload["artifacts"]}
+        self.assertTrue(artifact_uris["report_markdown"].endswith("/report.md"))
+        self.assertTrue(artifact_uris["evidence_manifest"].endswith("/evidence_manifest.json"))
+        get_model_config.assert_not_called()
+        create_workspace.assert_not_called()
+
+    def test_research_demo_downloads_fixed_delivery_files(self):
+        response = self.client.get("/api/demo/research")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        artifacts = {item["type"]: item for item in payload["artifacts"]}
+
+        report = self.client.get(artifacts["report_markdown"]["uri"])
+        manifest = self.client.get(artifacts["evidence_manifest"]["uri"])
+
+        self.assertEqual(report.status_code, 200)
+        self.assertIn("text/markdown", report.headers.get("content-type", ""))
+        self.assertIn("民用无人机", report.text)
+        self.assertEqual(manifest.status_code, 200)
+        self.assertIn("application/json", manifest.headers.get("content-type", ""))
+        self.assertIn("sources", manifest.json())
+        self.assertIn("screenshot_plan", manifest.json())
+
 
 if __name__ == "__main__":
     unittest.main()
