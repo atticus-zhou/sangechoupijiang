@@ -32,10 +32,10 @@
 - [ ] 每个办公室必须有独立的配置、模型、工作区、历史、产物和测试。
 - [x] 每个办公室必须声明输入类型、输出类型、Agent 分工、人工审核节点和验收标准。
 - [ ] 所有 Agent 关键输出必须有结构化 schema 校验。
-- [ ] 所有产物必须有 artifact ID、来源、版本、责任 Agent 和引用链路。
+- [x] 所有产物必须有 artifact ID、来源、版本、责任 Agent 和引用链路。
 - [ ] 所有长任务必须可观测、可重试、可恢复，并记录失败原因和下一步建议。
 
-说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；readiness 已把“办公室协议”纳入产品证据。下一步仍需把协议中的产物规则升级成运行时 schema 校验。
+说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。下一步仍需把每类 Agent 输出升级成更细的 schema 校验。
 
 ### 阶段 D：真实使用闭环
 

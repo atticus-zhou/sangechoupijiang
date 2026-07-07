@@ -143,6 +143,21 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "artifact_contract_runtime",
+            "产物协议运行时校验",
+            [
+                _contains(root / "src/config_manager.py", "def _normalize_artifact_metadata"),
+                _contains(root / "src/config_manager.py", "artifact metadata missing required contract fields"),
+                _contains(root / "src/config_manager.py", "reference_chain must be a list"),
+                _contains(root / "tests/test_config_manager.py", "test_artifact_metadata_is_normalized_to_office_contract"),
+                _contains(root / "tests/test_config_manager.py", "test_artifact_contract_rejects_missing_identity"),
+            ],
+            [
+                "src/config_manager.py",
+                "tests/test_config_manager.py",
+            ],
+        ),
+        _check(
             "readme",
             "清晰 README",
             [

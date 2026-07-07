@@ -88,6 +88,56 @@ class ConfigManagerTaskRunTests(unittest.TestCase):
             self.assertEqual(artifacts[0]["artifact_type"], "source_list")
             self.assertEqual(artifacts[0]["metadata"]["count"], 2)
 
+    def test_artifact_metadata_is_normalized_to_office_contract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+            manager.create_workspace(
+                workspace_id="ws-comic",
+                office_id="comic_production",
+                title="Moon city",
+            )
+
+            manager.create_artifact(
+                artifact_id="art-contract-1",
+                workspace_id="ws-comic",
+                task_id="task-comic",
+                artifact_type="word_canvas",
+                title="Word 制片画布",
+                content="canvas",
+                metadata={"custom": "kept"},
+                created_by="gongbu",
+            )
+
+            artifact = manager.get_artifact("art-contract-1")
+            metadata = artifact["metadata"]
+
+            self.assertEqual(metadata["custom"], "kept")
+            self.assertEqual(metadata["office_id"], "comic_production")
+            self.assertEqual(metadata["source"], "workspace:ws-comic")
+            self.assertEqual(metadata["version"], "v1")
+            self.assertEqual(metadata["responsible_agent"], "gongbu")
+            self.assertEqual(metadata["reference_chain"][0]["kind"], "workspace")
+            self.assertEqual(metadata["reference_chain"][0]["id"], "ws-comic")
+            self.assertEqual(metadata["reference_chain"][1]["kind"], "task")
+            self.assertEqual(metadata["reference_chain"][1]["id"], "task-comic")
+
+    def test_artifact_contract_rejects_missing_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+            manager.create_workspace("ws-research", "research", "Market research")
+
+            with self.assertRaises(ValueError) as ctx:
+                manager.create_artifact(
+                    artifact_id="",
+                    workspace_id="ws-research",
+                    task_id="task-research",
+                    artifact_type="report",
+                    title="Report",
+                    created_by="libu_comm",
+                )
+
+            self.assertIn("artifact_id", str(ctx.exception))
+
     def test_model_config_can_be_scoped_by_office(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ConfigManager(base_dir=tmp)

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from src.llm.providers import ModelConfig
+from src.offices import get_office
 
 
 # ============================================================
@@ -694,6 +695,15 @@ class ConfigManager:
         metadata: Optional[dict] = None,
         created_by: str = "",
     ) -> None:
+        metadata = self._normalize_artifact_metadata(
+            artifact_id=artifact_id,
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type=artifact_type,
+            title=title,
+            metadata=metadata,
+            created_by=created_by,
+        )
         conn = sqlite3.connect(str(self.db_path))
         conn.execute(
             """
@@ -709,7 +719,7 @@ class ConfigManager:
                 title,
                 uri,
                 content,
-                json.dumps(metadata or {}, ensure_ascii=False),
+                json.dumps(metadata, ensure_ascii=False),
                 created_by,
             ),
         )
@@ -719,6 +729,61 @@ class ConfigManager:
         )
         conn.commit()
         conn.close()
+
+    def _normalize_artifact_metadata(
+        self,
+        artifact_id: str,
+        workspace_id: str,
+        task_id: str,
+        artifact_type: str,
+        title: str,
+        metadata: Optional[dict],
+        created_by: str,
+    ) -> dict:
+        """Apply the office artifact contract before writing to SQLite."""
+        if not str(artifact_id or "").strip():
+            raise ValueError("artifact_id is required by the office artifact contract")
+        if not str(artifact_type or "").strip():
+            raise ValueError("artifact_type is required by the office artifact contract")
+        if not str(title or "").strip():
+            raise ValueError("title is required by the office artifact contract")
+
+        normalized = dict(metadata or {})
+        workspace = self.get_workspace(workspace_id) if workspace_id else {}
+        office_id = str(normalized.get("office_id") or workspace.get("office_id") or "system").strip()
+        office = get_office(office_id)
+        contract = office.artifact_contract or {}
+        required_metadata = contract.get("required_metadata") or [
+            "office_id",
+            "source",
+            "version",
+            "responsible_agent",
+            "reference_chain",
+        ]
+
+        normalized.setdefault("office_id", office.id if office_id != "system" else "system")
+        normalized.setdefault("source", f"workspace:{workspace_id}" if workspace_id else f"task:{task_id}")
+        normalized.setdefault("version", "v1")
+        normalized.setdefault("responsible_agent", created_by or "system")
+        normalized.setdefault(
+            "reference_chain",
+            self._default_reference_chain(workspace_id=workspace_id, task_id=task_id),
+        )
+
+        missing = [field for field in required_metadata if field not in normalized or normalized[field] in ("", None, [])]
+        if missing:
+            raise ValueError(f"artifact metadata missing required contract fields: {', '.join(missing)}")
+        if not isinstance(normalized.get("reference_chain"), list):
+            raise ValueError("artifact metadata field reference_chain must be a list")
+        return normalized
+
+    def _default_reference_chain(self, workspace_id: str, task_id: str) -> list[dict]:
+        chain = []
+        if workspace_id:
+            chain.append({"kind": "workspace", "id": workspace_id})
+        if task_id:
+            chain.append({"kind": "task", "id": task_id})
+        return chain or [{"kind": "system", "id": "local"}]
 
     def list_artifacts(self, workspace_id: str = "", task_id: str = "") -> list[dict]:
         conn = sqlite3.connect(str(self.db_path))
