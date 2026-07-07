@@ -31,6 +31,9 @@ class ProductReadinessScriptTests(unittest.TestCase):
         artifact_contract = next(item for item in payload["checks"] if item["id"] == "artifact_contract_runtime")
         self.assertEqual(artifact_contract["status"], "passed")
         self.assertIn("src/config_manager.py", "\n".join(artifact_contract["evidence"]))
+        schema_gate = next(item for item in payload["checks"] if item["id"] == "agent_output_schema_gate")
+        self.assertEqual(schema_gate["status"], "passed")
+        self.assertIn("src/comic_office/v2/output_schemas.py", "\n".join(schema_gate["evidence"]))
 
     def test_script_outputs_markdown_readiness_audit(self):
         result = subprocess.run(
@@ -45,6 +48,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertIn("完整工作流状态", result.stdout)
         self.assertIn("办公室协议", result.stdout)
         self.assertIn("产物协议运行时校验", result.stdout)
+        self.assertIn("Agent output schema gate", result.stdout)
         self.assertIn("/api/demo/research", result.stdout)
 
     def test_script_can_run_deterministic_runtime_verification(self):

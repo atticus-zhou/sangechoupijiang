@@ -158,6 +158,21 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "agent_output_schema_gate",
+            "Agent output schema gate",
+            [
+                _contains(root / "src/comic_office/v2/output_schemas.py", "comic_contract"),
+                _contains(root / "src/comic_office/v2/output_schemas.py", "visual_revision"),
+                _contains(root / "src/comic_office/v2/planner.py", "validate_agent_output_schema"),
+                _contains(root / "tests/test_comic_v2_output_schemas.py", "test_schema_registry_exposes_comic_contract_gates"),
+            ],
+            [
+                "src/comic_office/v2/output_schemas.py",
+                "src/comic_office/v2/planner.py",
+                "tests/test_comic_v2_output_schemas.py",
+            ],
+        ),
+        _check(
             "readme",
             "清晰 README",
             [

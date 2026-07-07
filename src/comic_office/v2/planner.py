@@ -7,7 +7,8 @@ import json
 from src.llm.providers import LLMFactory, LLMMessage, ModelConfig
 from src.llm.robust_json import parse_json_object, retry_async
 
-from .contracts import ContractBundle, ContractValidationError, build_contract_bundle
+from .contracts import ContractBundle
+from .output_schemas import AgentOutputSchemaError, validate_agent_output_schema
 
 
 class PlannerError(RuntimeError):
@@ -44,14 +45,18 @@ async def plan_contract(
         if not payload:
             raise PlannerError("模型没有返回可解析的 JSON 合同")
         try:
-            return build_contract_bundle(
-                source_story,
+            return validate_agent_output_schema(
+                "comic_production",
+                "comic_contract",
                 payload,
-                source_mode=source_mode,
-                story_version=story_version,
-                style_version=style_version,
+                context={
+                    "source_story": source_story,
+                    "source_mode": source_mode,
+                    "story_version": story_version,
+                    "style_version": style_version,
+                },
             )
-        except ContractValidationError as exc:
+        except AgentOutputSchemaError as exc:
             raise PlannerError(f"模型合同未通过校验：{exc}") from exc
 
     try:
@@ -109,17 +114,14 @@ async def revise_visual_bible(
             raise PlannerError("模型没有返回可解析的视觉母版")
         if _visual_content(visual) == _visual_content(current_visual):
             raise PlannerError("模型没有落实本次视觉修改意见")
-        payload = _creative_payload(creative)
-        payload["visual"] = visual
         try:
-            return build_contract_bundle(
-                str(creative.get("source_story") or ""),
-                payload,
-                source_mode=str(creative.get("source_mode") or "full_story"),
-                story_version=int(creative.get("story_version") or 1),
-                style_version=int(current_visual.get("style_version") or 1) + 1,
+            return validate_agent_output_schema(
+                "comic_production",
+                "visual_revision",
+                {"visual": visual},
+                context={"current_contract": current_contract},
             )
-        except ContractValidationError as exc:
+        except AgentOutputSchemaError as exc:
             raise PlannerError(f"修改后的视觉母版未通过校验：{exc}") from exc
 
     try:
@@ -205,28 +207,6 @@ def _visual_revision_system_prompt() -> str:
             "保留 visual 的全部原字段，只输出 {\"visual\": {...}}，禁止 Markdown 和解释。",
         ]
     )
-
-
-def _creative_payload(creative: dict) -> dict:
-    return {
-        "title": creative.get("title", ""),
-        "genre": creative.get("genre", ""),
-        "theme": creative.get("theme", ""),
-        "protagonist_goal": creative.get("protagonist_goal", ""),
-        "main_conflict": creative.get("main_conflict", ""),
-        "causal_chain": list(creative.get("causal_chain") or []),
-        "ending": creative.get("ending", ""),
-        "episodes": [
-            {
-                "episode": item.get("episode"),
-                "summary": item.get("summary", ""),
-                "evidence_quote": item.get("evidence_quote", ""),
-            }
-            for item in (creative.get("episodes") or [])
-        ],
-        "must_keep": list(creative.get("must_keep") or []),
-        "must_avoid": list(creative.get("must_avoid") or []),
-    }
 
 
 def _visual_content(visual: dict) -> str:

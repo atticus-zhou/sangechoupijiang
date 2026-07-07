@@ -368,3 +368,13 @@
 6. [x] 继续提升 Word 制片画布审美与下游可用性。
 7. [x] 建立 AI 漫剧制片办公室无 Key 演示模式。
 8. [x] 将个人网站改成产品展示入口，并接入演示模式。
+
+## Schema Gate Progress
+
+- [x] AI comic-production V2 `comic_contract` output is declared and validated by
+  `src/comic_office/v2/output_schemas.py` before production can enter visual
+  bible review.
+- [x] AI comic-production V2 `visual_revision` output is declared and validated
+  through the same schema gate before a new visual bible version can be used.
+- [ ] Continue extending the schema gate to asset manifests, shot execution
+  cards, prompt packages, image QA results, research reports, and future offices.

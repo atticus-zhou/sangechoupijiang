@@ -213,3 +213,10 @@ python scripts/check_no_secrets.py
 ## 项目愿景
 
 三个臭皮匠希望成为一个“办公室式”的 AI 协作平台：用户不需要面对一堆模型参数，而是进入某个办公室，提交目标，和一组有分工的 Agent 一起把事情做完。
+
+## Agent Output Schema Gate
+
+The comic-production V2 pipeline now declares model-output gates in
+`src/comic_office/v2/output_schemas.py`. The first enforced gates are
+`comic_contract` and `visual_revision`; `src/comic_office/v2/planner.py` must
+validate model JSON through those gates before the production chain continues.
