@@ -10,6 +10,13 @@ from .contracts import (
     ContractValidationError,
     build_contract_bundle,
 )
+from .asset_manifest import (
+    AssetManifest,
+    ManifestValidationError,
+    NoManifestChangeError,
+    build_asset_manifest,
+    replace_asset_manifest,
+)
 
 
 class AgentOutputSchemaError(ValueError):
@@ -64,6 +71,26 @@ _SCHEMAS: dict[tuple[str, str], AgentOutputSchema] = {
         failure_impact="The visual bible cannot be approved, so asset prompts would inherit an invalid style.",
         validator="_validate_visual_revision",
     ),
+    ("comic_production", "asset_manifest"): AgentOutputSchema(
+        office_id="comic_production",
+        schema_id="asset_manifest",
+        owner_agent="zhongshu",
+        stage="asset_review",
+        description="Model asset inventory to evidence-backed character, prop, and scene manifest.",
+        required_fields=("assets",),
+        failure_impact="The user cannot review assets and downstream image prompts would lose story evidence.",
+        validator="_validate_asset_manifest",
+    ),
+    ("comic_production", "asset_manifest_revision"): AgentOutputSchema(
+        office_id="comic_production",
+        schema_id="asset_manifest_revision",
+        owner_agent="zhongshu",
+        stage="asset_review",
+        description="Human revision request to a replacement asset manifest with version lineage.",
+        required_fields=("assets",),
+        failure_impact="Returned asset feedback cannot be trusted or traced to a new manifest version.",
+        validator="_validate_asset_manifest_revision",
+    ),
 }
 
 
@@ -84,7 +111,7 @@ def validate_agent_output_schema(
     payload: dict[str, Any],
     *,
     context: dict[str, Any] | None = None,
-) -> ContractBundle:
+) -> ContractBundle | AssetManifest:
     """Validate a model output against a named office schema gate."""
     key = (str(office_id or "").strip(), str(schema_id or "").strip())
     schema = _SCHEMAS.get(key)
@@ -151,6 +178,31 @@ def _validate_visual_revision(payload: dict[str, Any], context: dict[str, Any]) 
         raise AgentOutputSchemaError(f"visual_revision failed schema validation: {exc}") from exc
 
 
+def _validate_asset_manifest(payload: dict[str, Any], context: dict[str, Any]) -> AssetManifest:
+    bundle = context.get("contract_bundle")
+    if not isinstance(bundle, ContractBundle):
+        raise AgentOutputSchemaError("asset_manifest requires a formal contract bundle")
+    try:
+        return build_asset_manifest(bundle, payload["assets"])
+    except (ManifestValidationError, TypeError, ValueError) as exc:
+        raise AgentOutputSchemaError(f"asset_manifest failed schema validation: {exc}") from exc
+
+
+def _validate_asset_manifest_revision(payload: dict[str, Any], context: dict[str, Any]) -> AssetManifest:
+    previous = context.get("previous_manifest")
+    if not isinstance(previous, AssetManifest):
+        raise AgentOutputSchemaError("asset_manifest_revision requires the previous asset manifest")
+    revision_request = str(context.get("revision_request") or "").strip()
+    if not revision_request:
+        raise AgentOutputSchemaError("asset_manifest_revision requires a revision request")
+    try:
+        return replace_asset_manifest(previous, revision_request, payload["assets"])
+    except NoManifestChangeError as exc:
+        raise AgentOutputSchemaError("退回重拆没有产生变化") from exc
+    except (ManifestValidationError, TypeError, ValueError) as exc:
+        raise AgentOutputSchemaError(f"asset_manifest_revision failed schema validation: {exc}") from exc
+
+
 def _has_value(value: Any) -> bool:
     if value is None:
         return False
@@ -164,4 +216,6 @@ def _has_value(value: Any) -> bool:
 _VALIDATORS = {
     "_validate_comic_contract": _validate_comic_contract,
     "_validate_visual_revision": _validate_visual_revision,
+    "_validate_asset_manifest": _validate_asset_manifest,
+    "_validate_asset_manifest_revision": _validate_asset_manifest_revision,
 }

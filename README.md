@@ -217,6 +217,8 @@ python scripts/check_no_secrets.py
 ## Agent Output Schema Gate
 
 The comic-production V2 pipeline now declares model-output gates in
-`src/comic_office/v2/output_schemas.py`. The first enforced gates are
-`comic_contract` and `visual_revision`; `src/comic_office/v2/planner.py` must
-validate model JSON through those gates before the production chain continues.
+`src/comic_office/v2/output_schemas.py`. The enforced gates currently include
+`comic_contract`, `visual_revision`, `asset_manifest`, and
+`asset_manifest_revision`; `src/comic_office/v2/planner.py` and
+`src/comic_office/v2/asset_planner.py` must validate model JSON through those
+gates before the production chain continues.

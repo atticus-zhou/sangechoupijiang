@@ -14,6 +14,8 @@ class ComicV2OutputSchemaTests(unittest.TestCase):
         schema_ids = {item["schema_id"] for item in schemas}
         self.assertIn("comic_contract", schema_ids)
         self.assertIn("visual_revision", schema_ids)
+        self.assertIn("asset_manifest", schema_ids)
+        self.assertIn("asset_manifest_revision", schema_ids)
         contract = next(item for item in schemas if item["schema_id"] == "comic_contract")
         self.assertEqual(contract["office_id"], "comic_production")
         self.assertEqual(contract["owner_agent"], "zhongshu")
@@ -68,6 +70,60 @@ class ComicV2OutputSchemaTests(unittest.TestCase):
         self.assertEqual(revised.creative.source_story, current.creative.source_story)
         self.assertEqual(revised.visual.style_version, current.visual.style_version + 1)
 
+    def test_asset_manifest_schema_validation_returns_formal_manifest(self):
+        bundle = validate_agent_output_schema(
+            "comic_production",
+            "comic_contract",
+            self._planner_payload(),
+            context={"source_story": self.story, "source_mode": "full_story"},
+        )
+
+        manifest = validate_agent_output_schema(
+            "comic_production",
+            "asset_manifest",
+            {"assets": self._asset_payload()},
+            context={"contract_bundle": bundle},
+        )
+
+        self.assertEqual(manifest.story_id, bundle.creative.story_id)
+        self.assertEqual(manifest.review_status, "awaiting_user_review")
+        self.assertEqual({item.asset_type for item in manifest.items}, {"character", "prop", "scene"})
+
+    def test_asset_manifest_revision_schema_replaces_manifest_with_version_chain(self):
+        bundle = validate_agent_output_schema(
+            "comic_production",
+            "comic_contract",
+            self._planner_payload(),
+            context={"source_story": self.story, "source_mode": "full_story"},
+        )
+        first = validate_agent_output_schema(
+            "comic_production",
+            "asset_manifest",
+            {"assets": self._asset_payload()},
+            context={"contract_bundle": bundle},
+        )
+        revised_assets = self._asset_payload()
+        revised_assets.append({
+            "asset_type": "prop",
+            "name": "lamp",
+            "evidence_quote": "lamp",
+            "scene_ids": ["scene_02"],
+            "story_purpose": "secondary lighting reference for the archive",
+            "visual_locks": ["same moonlit material family"],
+            "allowed_changes": ["glow strength"],
+        })
+
+        second = validate_agent_output_schema(
+            "comic_production",
+            "asset_manifest_revision",
+            {"assets": revised_assets},
+            context={"previous_manifest": first, "revision_request": "add the archive key"},
+        )
+
+        self.assertEqual(second.version, first.version + 1)
+        self.assertEqual(second.previous_manifest_hash, first.manifest_hash)
+        self.assertIn("lamp", [item.name for item in second.items])
+
     @property
     def story(self):
         return "A quiet archivist finds a cracked moon lamp and burns it to free the city."
@@ -105,6 +161,37 @@ class ComicV2OutputSchemaTests(unittest.TestCase):
                 "prohibited_elements": ["modern cars", "plastic props"],
             },
         }
+
+    def _asset_payload(self):
+        return [
+            {
+                "asset_type": "character",
+                "name": "archivist",
+                "evidence_quote": "archivist",
+                "scene_ids": ["scene_01"],
+                "story_purpose": "main character who frees the city",
+                "visual_locks": ["plain archive robe"],
+                "allowed_changes": ["expression", "pose"],
+            },
+            {
+                "asset_type": "prop",
+                "name": "cracked moon lamp",
+                "evidence_quote": "cracked moon lamp",
+                "scene_ids": ["scene_01", "scene_03"],
+                "story_purpose": "core evidence and ending trigger",
+                "visual_locks": ["fixed crack pattern"],
+                "allowed_changes": ["glow strength"],
+            },
+            {
+                "asset_type": "scene",
+                "name": "city",
+                "evidence_quote": "city",
+                "scene_ids": ["scene_01"],
+                "story_purpose": "world affected by the memory trade",
+                "visual_locks": ["ancient archive skyline"],
+                "allowed_changes": ["crowd density"],
+            },
+        ]
 
 
 if __name__ == "__main__":

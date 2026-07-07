@@ -11,10 +11,9 @@ from .asset_manifest import (
     AssetManifest,
     ManifestValidationError,
     NoManifestChangeError,
-    build_asset_manifest,
-    replace_asset_manifest,
 )
 from .contracts import ContractBundle
+from .output_schemas import AgentOutputSchemaError, validate_agent_output_schema
 
 
 class AssetPlanningError(RuntimeError):
@@ -71,15 +70,25 @@ async def plan_asset_manifest(
             if not isinstance(assets, list) or not assets:
                 raise AssetPlanningError("中书省没有返回完整资产数组")
             if previous_manifest is None:
-                candidate = build_asset_manifest(bundle, assets)
+                candidate = validate_agent_output_schema(
+                    "comic_production",
+                    "asset_manifest",
+                    {"assets": assets},
+                    context={"contract_bundle": bundle},
+                )
             else:
-                candidate = replace_asset_manifest(previous_manifest, note, assets)
+                candidate = validate_agent_output_schema(
+                    "comic_production",
+                    "asset_manifest_revision",
+                    {"assets": assets},
+                    context={"previous_manifest": previous_manifest, "revision_request": note},
+                )
                 _ensure_revision_request_was_applied(previous_manifest, candidate, note)
         except NoManifestChangeError:
             last_error = "退回重拆没有产生变化"
             review_feedback = [last_error, "必须逐条落实用户退回意见并输出完整新清单"]
             continue
-        except (ManifestValidationError, AssetPlanningError) as exc:
+        except (ManifestValidationError, AgentOutputSchemaError, AssetPlanningError) as exc:
             last_error = str(exc)
             review_feedback = [last_error]
             continue

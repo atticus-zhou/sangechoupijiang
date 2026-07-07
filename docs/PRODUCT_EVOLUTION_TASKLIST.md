@@ -376,5 +376,11 @@
   bible review.
 - [x] AI comic-production V2 `visual_revision` output is declared and validated
   through the same schema gate before a new visual bible version can be used.
-- [ ] Continue extending the schema gate to asset manifests, shot execution
-  cards, prompt packages, image QA results, research reports, and future offices.
+- [x] AI comic-production V2 `asset_manifest` output is declared and validated
+  through the same schema gate before the user can review character, prop, and
+  scene inventories.
+- [x] AI comic-production V2 `asset_manifest_revision` output is declared and
+  validated through the same schema gate before a returned asset list can become
+  a new manifest version.
+- [ ] Continue extending the schema gate to shot execution cards, prompt
+  packages, image QA results, research reports, and future offices.

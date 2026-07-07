@@ -1,5 +1,6 @@
 ﻿import json
 import unittest
+from unittest.mock import patch
 
 from src.comic_office.v2.contracts import build_contract_bundle
 from src.llm.providers import LLMResponse, ModelConfig
@@ -85,7 +86,10 @@ class ComicV2AssetPlannerTests(unittest.IsolatedAsyncioTestCase):
     async def test_two_agent_planning_returns_evidence_backed_manifest(self):
         from src.comic_office.v2.asset_planner import plan_asset_manifest
 
-        planner = FakeProvider([json.dumps({"assets": valid_assets()}, ensure_ascii=False)])
+        planner = FakeProvider([
+            json.dumps({"assets": valid_assets()}, ensure_ascii=False),
+            json.dumps({"assets": valid_assets()}, ensure_ascii=False),
+        ])
         reviewer = FakeProvider([json.dumps({"status": "approved", "issues": []}, ensure_ascii=False)])
         config = ModelConfig(provider="openai", model="fake", api_key="test")
 
@@ -177,6 +181,30 @@ class ComicV2AssetPlannerTests(unittest.IsolatedAsyncioTestCase):
                 planner_llm=planner,
                 reviewer_llm=reviewer,
             )
+
+    async def test_planner_output_must_pass_agent_schema_gate(self):
+        from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
+        from src.comic_office.v2.output_schemas import AgentOutputSchemaError
+
+        planner = FakeProvider([
+            json.dumps({"assets": valid_assets()}, ensure_ascii=False),
+            json.dumps({"assets": valid_assets()}, ensure_ascii=False),
+        ])
+        reviewer = FakeProvider([])
+        config = ModelConfig(provider="openai", model="fake", api_key="test")
+
+        with patch(
+            "src.comic_office.v2.asset_planner.validate_agent_output_schema",
+            side_effect=AgentOutputSchemaError("schema gate rejected asset output"),
+        ):
+            with self.assertRaisesRegex(AssetPlanningError, "schema gate rejected"):
+                await plan_asset_manifest(
+                    contract_bundle(),
+                    config,
+                    config,
+                    planner_llm=planner,
+                    reviewer_llm=reviewer,
+                )
 
 
 if __name__ == "__main__":

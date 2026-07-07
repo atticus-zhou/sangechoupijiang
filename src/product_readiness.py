@@ -163,13 +163,19 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             [
                 _contains(root / "src/comic_office/v2/output_schemas.py", "comic_contract"),
                 _contains(root / "src/comic_office/v2/output_schemas.py", "visual_revision"),
+                _contains(root / "src/comic_office/v2/output_schemas.py", "asset_manifest"),
+                _contains(root / "src/comic_office/v2/output_schemas.py", "asset_manifest_revision"),
                 _contains(root / "src/comic_office/v2/planner.py", "validate_agent_output_schema"),
+                _contains(root / "src/comic_office/v2/asset_planner.py", "validate_agent_output_schema"),
                 _contains(root / "tests/test_comic_v2_output_schemas.py", "test_schema_registry_exposes_comic_contract_gates"),
+                _contains(root / "tests/test_comic_v2_asset_planner.py", "test_planner_output_must_pass_agent_schema_gate"),
             ],
             [
                 "src/comic_office/v2/output_schemas.py",
                 "src/comic_office/v2/planner.py",
+                "src/comic_office/v2/asset_planner.py",
                 "tests/test_comic_v2_output_schemas.py",
+                "tests/test_comic_v2_asset_planner.py",
             ],
         ),
         _check(
