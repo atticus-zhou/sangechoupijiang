@@ -3920,6 +3920,7 @@ function renderComicDemo(demo) {
                         <strong>${escapeHtml(item.title || '')}</strong>
                         <span>${escapeHtml(item.type || '')}</span>
                         <small>${escapeHtml(item.status || '')}</small>
+                        ${item.uri ? `<a class="ghost btn-sm demo-download-link" href="${escapeHtml(item.uri)}" target="_blank">下载样例</a>` : ''}
                     </article>
                 `).join('')}
             </div>

@@ -365,6 +365,13 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 13px;
 }
 
+.demo-download-link {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 12px;
+    text-decoration: none;
+}
+
 .demo-two-col {
     width: min(1040px, calc(100vw - 40px));
     margin: 0 auto;

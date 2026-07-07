@@ -127,8 +127,32 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertGreaterEqual(payload["shot_count"], 1)
         self.assertTrue(payload["stages"])
         self.assertTrue(payload["artifacts"])
+        artifact_uris = {item["type"]: item.get("uri", "") for item in payload["artifacts"]}
+        self.assertIn("/api/demo/comic-production/files/", artifact_uris["word_canvas"])
+        self.assertIn("/api/demo/comic-production/files/", artifact_uris["handoff_manifest"])
+        self.assertTrue(artifact_uris["word_canvas"].endswith("/word_canvas.docx"))
+        self.assertTrue(artifact_uris["handoff_manifest"].endswith("/handoff_manifest.json"))
         get_model_config.assert_not_called()
         create_workspace.assert_not_called()
+
+    def test_comic_production_demo_downloads_fixed_delivery_files(self):
+        response = self.client.get("/api/demo/comic-production")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        artifacts = {item["type"]: item for item in payload["artifacts"]}
+
+        word = self.client.get(artifacts["word_canvas"]["uri"])
+        manifest = self.client.get(artifacts["handoff_manifest"]["uri"])
+
+        self.assertEqual(word.status_code, 200)
+        self.assertGreater(len(word.content), 1000)
+        self.assertIn(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            word.headers.get("content-type", ""),
+        )
+        self.assertEqual(manifest.status_code, 200)
+        self.assertIn("application/json", manifest.headers.get("content-type", ""))
+        self.assertIn("word_canvas", manifest.json())
 
 
 if __name__ == "__main__":

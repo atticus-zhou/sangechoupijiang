@@ -146,6 +146,8 @@ python scripts/verify_product_readiness.py --format markdown --run-e2e
 - `tests/fixtures/comic_v2_sample.json`：AI 漫剧制片办公室样例，可用于验证资产、图片、镜头提示词和 Word 画布。
 - `tests/fixtures/research_sample.json`：研究办公室阶段性报告样例，可用于验证报告、来源、截图清单、数据表和竞品表。
 
+启动本地服务后，首页的无 Key 演示入口会加载 AI 漫剧制片办公室固定样例，并提供样例 Word 制片画布和资产引用清单下载；这个演示不会读取或消耗真实 API Key。
+
 样例项目验证：
 
 ```powershell

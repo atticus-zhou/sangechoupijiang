@@ -344,6 +344,7 @@ async def get_comic_production_demo_api():
     assets = payload.get("assets") or []
     shots = payload.get("shots") or []
     planner = payload.get("planner_payload") or {}
+    demo_delivery = _ensure_comic_production_demo_delivery()
     return {
         "mode": "no_key_demo",
         "office_id": "comic_production",
@@ -380,11 +381,65 @@ async def get_comic_production_demo_api():
             for item in shots[:6]
         ],
         "artifacts": [
-            {"type": "word_canvas", "title": "样例 Word 制片画布", "status": "available_in_fixture"},
-            {"type": "handoff_manifest", "title": "资产与镜头引用清单", "status": "available_in_fixture"},
+            {
+                "type": "word_canvas",
+                "title": "样例 Word 制片画布",
+                "status": "downloadable",
+                "uri": "/api/demo/comic-production/files/word_canvas.docx",
+            },
+            {
+                "type": "handoff_manifest",
+                "title": "资产与镜头引用清单",
+                "status": "downloadable",
+                "uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            },
             {"type": "prompt_package", "title": "图片与视频提示词包", "status": "available_in_fixture"},
         ],
     }
+
+
+def _ensure_comic_production_demo_delivery() -> dict[str, Path]:
+    """Build deterministic demo delivery files under output/demo without workspace writes."""
+    output_root = APP_BASE_DIR / "output" / "demo" / "comic-production"
+    delivery_dir = output_root / "delivery"
+    image_dir = output_root / "images"
+    delivery_dir.mkdir(parents=True, exist_ok=True)
+    fixture = json.loads((APP_BASE_DIR / "tests" / "fixtures" / "comic_v2_sample.json").read_text(encoding="utf-8"))
+    bundle = fixture_contract_bundle(fixture["source_story"])
+    manifest = fixture_revised_manifest(
+        bundle,
+        fixture_initial_manifest(bundle),
+        "公开演示固定样例需要展示完整资产清单。",
+    )
+    prompt_package = fixture_prompt_package(bundle, manifest)
+    image_result = fixture_image_production(prompt_package, manifest, image_dir)
+    delivery = build_delivery_from_v2(bundle, manifest, prompt_package, image_result, delivery_dir)
+    if delivery.handoff_manifest_path is None:
+        raise HTTPException(status_code=500, detail="Demo handoff manifest was not generated.")
+    return {
+        "word_canvas": delivery.path,
+        "handoff_manifest": delivery.handoff_manifest_path,
+    }
+
+
+@app.get("/api/demo/comic-production/files/{filename}")
+async def get_comic_production_demo_file_api(filename: str):
+    """Download one deterministic demo delivery file."""
+    safe_name = Path(filename).name
+    delivery = _ensure_comic_production_demo_delivery()
+    allowed = {
+        "word_canvas.docx": delivery["word_canvas"],
+        "handoff_manifest.json": delivery["handoff_manifest"],
+    }
+    file_path = allowed.get(safe_name)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Demo file not found.")
+    media_type = (
+        "application/json"
+        if file_path.suffix.lower() == ".json"
+        else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    return FileResponse(str(file_path), filename=safe_name, media_type=media_type)
 
 
 @app.get("/api/workspaces")

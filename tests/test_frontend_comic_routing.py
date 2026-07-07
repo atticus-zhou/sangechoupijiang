@@ -121,6 +121,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("async function loadComicDemo", js)
         self.assertIn("/api/demo/comic-production", js)
         self.assertIn("function renderComicDemo", js)
+        self.assertIn("item.uri", js)
+        self.assertIn("下载样例", js)
         self.assertIn(".product-showcase", css)
         self.assertIn(".demo-stage-grid", css)
 
