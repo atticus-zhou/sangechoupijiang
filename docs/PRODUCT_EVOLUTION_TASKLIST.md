@@ -388,5 +388,7 @@
 - [x] AI comic-production V2 `shot_cards` output is declared and validated
   through the same schema gate before shot/video prompts can enter the Word
   canvas and downstream handoff.
-- [ ] Continue extending the schema gate to image QA results, research reports,
-  and future offices.
+- [x] AI comic-production V2 `image_review_result` output is declared and
+  validated through the same schema gate before generated images can be promoted
+  into approved asset records.
+- [ ] Continue extending the schema gate to research reports and future offices.

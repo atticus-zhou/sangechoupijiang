@@ -25,6 +25,12 @@ from .prompt_director import (
     build_shot_card,
     parse_prompt_director_response,
 )
+from .visual_review import (
+    VisualReviewRequest,
+    VisualReviewResult,
+    normalize_baseline_review,
+    normalize_visual_review,
+)
 
 
 class AgentOutputSchemaError(ValueError):
@@ -119,6 +125,16 @@ _SCHEMAS: dict[tuple[str, str], AgentOutputSchema] = {
         failure_impact="The Word canvas and downstream video tools would lose shot-to-asset traceability.",
         validator="_validate_shot_cards",
     ),
+    ("comic_production", "image_review_result"): AgentOutputSchema(
+        office_id="comic_production",
+        schema_id="image_review_result",
+        owner_agent="xingbu",
+        stage="image_quality_review",
+        description="Vision QA output normalized to a formal image consistency review.",
+        required_fields=("status", "scores"),
+        failure_impact="Bad or incomplete image QA could promote inconsistent assets into the final canvas.",
+        validator="_validate_image_review_result",
+    ),
 }
 
 
@@ -139,7 +155,7 @@ def validate_agent_output_schema(
     payload: dict[str, Any],
     *,
     context: dict[str, Any] | None = None,
-) -> ContractBundle | AssetManifest | tuple[PromptPlan, ...] | tuple[ShotCard, ...]:
+) -> ContractBundle | AssetManifest | tuple[PromptPlan, ...] | tuple[ShotCard, ...] | VisualReviewResult:
     """Validate a model output against a named office schema gate."""
     key = (str(office_id or "").strip(), str(schema_id or "").strip())
     schema = _SCHEMAS.get(key)
@@ -267,6 +283,18 @@ def _validate_shot_cards(payload: dict[str, Any], context: dict[str, Any]) -> tu
     return cards
 
 
+def _validate_image_review_result(payload: dict[str, Any], context: dict[str, Any]) -> VisualReviewResult:
+    request = context.get("request")
+    if not isinstance(request, VisualReviewRequest):
+        raise AgentOutputSchemaError("image_review_result requires the visual review request")
+    try:
+        if bool(context.get("baseline")):
+            return normalize_baseline_review(payload, request)
+        return normalize_visual_review(payload, request)
+    except (TypeError, ValueError) as exc:
+        raise AgentOutputSchemaError(f"image_review_result failed schema validation: {exc}") from exc
+
+
 def _validate_prompt_set_binding(asset: AssetPlan, visual: Any, prompts: tuple[PromptPlan, ...]) -> None:
     expected = set(asset.planned_images)
     actual = {prompt.image_kind for prompt in prompts}
@@ -326,4 +354,5 @@ _VALIDATORS = {
     "_validate_asset_manifest_revision": _validate_asset_manifest_revision,
     "_validate_asset_prompt_set": _validate_asset_prompt_set,
     "_validate_shot_cards": _validate_shot_cards,
+    "_validate_image_review_result": _validate_image_review_result,
 }

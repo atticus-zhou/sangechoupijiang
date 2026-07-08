@@ -350,7 +350,16 @@ async def produce_asset_images(
                     visual_bible_summary=_visual_summary(visual),
                     acceptance_criteria=_acceptance_criteria(asset, image_kind),
                 )
-                final_review = await review_image(request, baseline=is_baseline)
+                try:
+                    final_review = _schema_gate_visual_review(
+                        await review_image(request, baseline=is_baseline),
+                        request,
+                        baseline=is_baseline,
+                    )
+                except AgentOutputSchemaError as exc:
+                    if attempt >= max_attempts:
+                        failures.append(f"{asset.asset_id}/{image_kind}: {exc}")
+                    continue
                 if final_review.handoff_ready:
                     break
                 if attempt < max_attempts:
@@ -413,6 +422,21 @@ async def run_visual_review(
     if baseline:
         return normalize_baseline_review(payload, request)
     return normalize_visual_review(payload, request)
+
+
+def _schema_gate_visual_review(
+    review: VisualReviewResult,
+    request: VisualReviewRequest,
+    *,
+    baseline: bool,
+) -> VisualReviewResult:
+    """Run image QA through the same schema gate as other agent outputs."""
+    return validate_agent_output_schema(
+        "comic_production",
+        "image_review_result",
+        asdict(review),
+        context={"request": request, "baseline": baseline},
+    )
 
 
 def _prompt_director_system_prompt(asset: AssetPlan) -> str:

@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
@@ -125,11 +126,22 @@ def prompt_response(asset):
 
 
 def review_result(status="pass", *, ready=True, revision_prompt=""):
+    scores = {
+        "identity_consistency": 90,
+        "style_consistency": 90,
+        "era_media": 90,
+        "spatial_structure": 90,
+        "asset_purity": 90,
+        "anatomy": 90,
+        "purpose_fit": 90,
+    }
+    if not ready:
+        scores["identity_consistency"] = 62
     return VisualReviewResult(
         status=status,
         handoff_ready=ready,
         consistency_status="pass" if ready else "fail",
-        scores={"identity_consistency": 90, "style_consistency": 90},
+        scores=scores,
         issues=() if ready else ("脸型与基准不一致",),
         evidence=("符合视觉母版",) if ready else (),
         revision_prompt=revision_prompt,
@@ -343,6 +355,41 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first.attempts, 2)
         self.assertEqual(first.asset_id, item.asset_id)
         self.assertIn("统一三视图脸型和发髻", generated_prompts[1])
+
+    async def test_generation_rejects_image_review_when_schema_gate_fails(self):
+        from src.comic_office.v2.output_schemas import AgentOutputSchemaError
+        from src.comic_office.v2.production import direct_asset_prompts, produce_asset_images
+
+        item = manifest().items[0]
+        package = await direct_asset_prompts(
+            bundle(), manifest(), ModelConfig(provider="openai", model="fake", api_key="test"),
+            llm=FakePromptProvider([prompt_response(item)]),
+        )
+
+        def generator(config, prompt, output_dir, title):
+            path = Path(output_dir) / f"{title}.png"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"fake-png")
+            return GeneratedImage(title=title, prompt=prompt, path=str(path), provider="doubao", model="seedream")
+
+        async def reviewer(request, *, baseline):
+            return review_result()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "src.comic_office.v2.production.validate_agent_output_schema",
+                side_effect=AgentOutputSchemaError("image review schema rejected"),
+            ) as gate:
+                result = await produce_asset_images(
+                    package, manifest(), bundle().visual,
+                    ModelConfig(provider="doubao", model="doubao-seedream-5", api_key="test"),
+                    ModelConfig(provider="dashscope", model="qwen-vl", api_key="test"),
+                    Path(tmp), generator=generator, reviewer=reviewer, max_attempts=1,
+                )
+
+        self.assertTrue(gate.called)
+        self.assertFalse(result.production_ready)
+        self.assertIn("image review schema rejected", "\n".join(result.failures))
 
     async def test_shot_prompt_cards_reference_approved_assets_without_planning_storyboard_images(self):
         from src.comic_office.v2.production import direct_asset_prompts, direct_shot_cards, prompt_package_from_dict

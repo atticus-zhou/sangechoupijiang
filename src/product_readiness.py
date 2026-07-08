@@ -167,12 +167,14 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
                 _contains(root / "src/comic_office/v2/output_schemas.py", "asset_manifest_revision"),
                 _contains(root / "src/comic_office/v2/output_schemas.py", "asset_prompt_set"),
                 _contains(root / "src/comic_office/v2/output_schemas.py", "shot_cards"),
+                _contains(root / "src/comic_office/v2/output_schemas.py", "image_review_result"),
                 _contains(root / "src/comic_office/v2/planner.py", "validate_agent_output_schema"),
                 _contains(root / "src/comic_office/v2/asset_planner.py", "validate_agent_output_schema"),
                 _contains(root / "src/comic_office/v2/production.py", "validate_agent_output_schema"),
                 _contains(root / "tests/test_comic_v2_output_schemas.py", "test_schema_registry_exposes_comic_contract_gates"),
                 _contains(root / "tests/test_comic_v2_asset_planner.py", "test_planner_output_must_pass_agent_schema_gate"),
                 _contains(root / "tests/test_comic_v2_prompt_director.py", "test_direct_asset_prompts_must_pass_agent_schema_gate"),
+                _contains(root / "tests/test_comic_v2_production.py", "test_generation_rejects_image_review_when_schema_gate_fails"),
             ],
             [
                 "src/comic_office/v2/output_schemas.py",
@@ -182,6 +184,7 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
                 "tests/test_comic_v2_output_schemas.py",
                 "tests/test_comic_v2_asset_planner.py",
                 "tests/test_comic_v2_prompt_director.py",
+                "tests/test_comic_v2_production.py",
             ],
         ),
         _check(

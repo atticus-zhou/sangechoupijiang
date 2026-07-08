@@ -5,6 +5,7 @@ from src.comic_office.v2.output_schemas import (
     list_agent_output_schemas,
     validate_agent_output_schema,
 )
+from src.comic_office.v2.visual_review import build_visual_review_request
 
 
 class ComicV2OutputSchemaTests(unittest.TestCase):
@@ -18,6 +19,7 @@ class ComicV2OutputSchemaTests(unittest.TestCase):
         self.assertIn("asset_manifest_revision", schema_ids)
         self.assertIn("asset_prompt_set", schema_ids)
         self.assertIn("shot_cards", schema_ids)
+        self.assertIn("image_review_result", schema_ids)
         contract = next(item for item in schemas if item["schema_id"] == "comic_contract")
         self.assertEqual(contract["office_id"], "comic_production")
         self.assertEqual(contract["owner_agent"], "zhongshu")
@@ -177,6 +179,39 @@ class ComicV2OutputSchemaTests(unittest.TestCase):
             by_type["scene"].asset_id,
         ))
         self.assertTrue(cards[0].production_ready)
+
+    def test_image_review_result_schema_returns_formal_visual_review(self):
+        request = build_visual_review_request(
+            "current.png",
+            ["approved-character.png"],
+            visual_bible_summary="cinematic ink animation, stable face shape",
+            acceptance_criteria=["same character identity", "same costume palette"],
+        )
+
+        review = validate_agent_output_schema(
+            "comic_production",
+            "image_review_result",
+            {
+                "status": "pass",
+                "scores": {
+                    "identity_consistency": 92,
+                    "style_consistency": 91,
+                    "era_media": 90,
+                    "spatial_structure": 88,
+                    "asset_purity": 94,
+                    "anatomy": 87,
+                    "purpose_fit": 93,
+                },
+                "issues": [],
+                "evidence": ["face shape and costume match the approved reference"],
+                "revision_prompt": "",
+            },
+            context={"request": request, "baseline": False},
+        )
+
+        self.assertEqual(review.status, "pass")
+        self.assertEqual(review.consistency_status, "pass")
+        self.assertTrue(review.handoff_ready)
 
     @property
     def story(self):
