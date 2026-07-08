@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, UploadFile, File, Form
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, UploadFile, File, Form, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel, Field
@@ -4771,6 +4771,45 @@ async def get_history(limit: int = 20):
     return {"history": history}
 
 
+@app.get("/api/tasks/{task_id}/artifacts/{artifact_id}/download")
+async def download_history_artifact_api(task_id: str, artifact_id: str):
+    """Download archived artifact content from history, even when it has no file URI."""
+    artifact = config_manager.get_artifact(artifact_id)
+    if not artifact or artifact.get("task_id") != task_id:
+        raise HTTPException(status_code=404, detail="历史产物不存在或不属于这个任务。")
+    content = artifact.get("content") or json.dumps(artifact.get("metadata") or {}, ensure_ascii=False, indent=2)
+    filename = _history_artifact_filename(artifact)
+    try:
+        parsed = json.loads(content)
+        return JSONResponse(
+            parsed,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except (TypeError, json.JSONDecodeError):
+        return Response(
+            content=content,
+            media_type="text/markdown; charset=utf-8" if filename.endswith(".md") else "text/plain; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+
+@app.get("/api/tasks/{task_id}/comic-v2-trace.json")
+async def download_comic_v2_history_trace_api(task_id: str):
+    """Download the comic-production V2 trace as a reproducible JSON artifact."""
+    artifacts = config_manager.list_artifacts(task_id=task_id)
+    word_canvas = next((
+        a for a in reversed(artifacts)
+        if a.get("artifact_type") in {"word_canvas", "comic_v2_word_canvas"}
+    ), None)
+    trace = _comic_v2_history_trace(artifacts, word_canvas)
+    if not trace:
+        raise HTTPException(status_code=404, detail="这个任务没有可下载的 AI 漫剧 V2 追溯记录。")
+    return JSONResponse(
+        trace,
+        headers={"Content-Disposition": f'attachment; filename="{task_id}_comic_v2_trace.json"'},
+    )
+
+
 def _workspace_id_from_task_run(record: dict) -> str:
     for event in record.get("events", []) or []:
         payload = event.get("payload") or {}
@@ -4780,14 +4819,30 @@ def _workspace_id_from_task_run(record: dict) -> str:
     return ""
 
 
+def _history_artifact_filename(artifact: dict) -> str:
+    artifact_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", artifact.get("artifact_id") or "artifact").strip("_")
+    artifact_type = artifact.get("artifact_type") or ""
+    content = artifact.get("content") or ""
+    if artifact_type.endswith("_package") or artifact_type.endswith("_manifest") or content.lstrip().startswith(("{", "[")):
+        suffix = ".json"
+    elif artifact_type in {"report", "standard_report", "briefing"} or content.lstrip().startswith("#"):
+        suffix = ".md"
+    else:
+        suffix = ".txt"
+    return f"{artifact_id}{suffix}"
+
+
 def _summarize_history_artifact(artifact: dict) -> dict:
     content = artifact.get("content") or ""
     metadata = artifact.get("metadata") or {}
+    task_id = artifact.get("task_id", "")
+    artifact_id = artifact.get("artifact_id", "")
     return {
-        "artifact_id": artifact.get("artifact_id", ""),
+        "artifact_id": artifact_id,
         "artifact_type": artifact.get("artifact_type", ""),
         "title": artifact.get("title", ""),
         "uri": artifact.get("uri", ""),
+        "download_uri": f"/api/tasks/{task_id}/artifacts/{artifact_id}/download" if task_id and artifact_id else "",
         "created_by": artifact.get("created_by", ""),
         "created_at": artifact.get("created_at", ""),
         "metadata": {
@@ -4851,6 +4906,8 @@ def _history_delivery_summary(enriched: dict) -> dict:
         downloadable_files.append("Word 制片画布")
     if handoff_uri:
         downloadable_files.append("引用清单")
+    if enriched.get("comic_v2_trace_uri"):
+        downloadable_files.append("追溯记录")
 
     audit = trace.get("delivery_audit") or {}
     asset_count = int(audit.get("asset_count") or trace.get("visual_review", {}).get("record_count") or 0)
@@ -4944,6 +5001,7 @@ def _enrich_history_item(item: dict) -> dict:
     result = report_record.get("result") or run_record.get("result") or {}
     final_report = result.get("final_report") or ""
     enriched = dict(item)
+    trace = _comic_v2_history_trace(artifacts, word_canvas)
     enriched.update({
         "workspace_id": workspace_id,
         "workspace_title": workspace.get("title", ""),
@@ -4959,7 +5017,8 @@ def _enrich_history_item(item: dict) -> dict:
         "updated_at": run_record.get("updated_at", ""),
         "completed_at": run_record.get("completed_at", ""),
         "final_report_preview": final_report[:1200],
-        "comic_v2_trace": _comic_v2_history_trace(artifacts, word_canvas),
+        "comic_v2_trace": trace,
+        "comic_v2_trace_uri": f"/api/tasks/{task_id}/comic-v2-trace.json" if trace else "",
     })
     enriched["delivery_summary"] = _history_delivery_summary(enriched)
     return enriched

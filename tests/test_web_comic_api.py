@@ -728,7 +728,7 @@ class WebComicApiTests(unittest.TestCase):
             task_id=task_id,
             artifact_type="comic_v2_prompt_package",
             title="V2 Prompt Package",
-            content="{}",
+            content=json.dumps({"asset_prompts": [{"asset_id": "char_001", "prompt": "林昭三视图"}]}, ensure_ascii=False),
             metadata={
                 "office_id": "comic_production",
                 "manifest_version": 5,
@@ -760,6 +760,15 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(row["word_canvas_title"], "V2 Word Canvas")
             self.assertTrue(row["handoff_manifest_uri"].endswith("/v2_handoff_manifest.json"))
             self.assertEqual(row["handoff_manifest_title"], "V2 Handoff Manifest")
+            self.assertEqual(row["comic_v2_trace_uri"], f"/api/tasks/{task_id}/comic-v2-trace.json")
+            prompt_artifact = next(
+                item for item in row["artifacts"]
+                if item["artifact_type"] == "comic_v2_prompt_package"
+            )
+            self.assertEqual(
+                prompt_artifact["download_uri"],
+                f"/api/tasks/{task_id}/artifacts/art_{task_id}_prompt_pkg/download",
+            )
             trace = row["comic_v2_trace"]
             self.assertEqual(trace["story_id"], "story_123")
             self.assertEqual(trace["story_version"], 3)
@@ -785,9 +794,16 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(summary["shot_count"], 9)
             self.assertEqual(summary["prompt_count"], 16)
             self.assertEqual(summary["visual_review_status"], "passed")
-            self.assertEqual(summary["downloadable_files"], ["Word 制片画布", "引用清单"])
+            self.assertEqual(summary["downloadable_files"], ["Word 制片画布", "引用清单", "追溯记录"])
             self.assertEqual(summary["missing_items"], [])
             self.assertIn("可以交给下游", summary["next_action"])
+            prompt_response = self.client.get(prompt_artifact["download_uri"])
+            self.assertEqual(prompt_response.status_code, 200)
+            self.assertEqual(prompt_response.json()["asset_prompts"][0]["asset_id"], "char_001")
+            trace_response = self.client.get(row["comic_v2_trace_uri"])
+            self.assertEqual(trace_response.status_code, 200)
+            self.assertEqual(trace_response.json()["story_id"], "story_123")
+            self.assertEqual(trace_response.json()["shots"][0]["shot_id"], "shot_001")
         finally:
             conn = sqlite3.connect("user_data/config.db")
             conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))

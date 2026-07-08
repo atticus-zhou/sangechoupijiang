@@ -3884,10 +3884,14 @@ async function viewHistoryDetail(taskId) {
         const task = await API.get('/api/tasks/' + taskId);
         const artifacts = item.artifacts || [];
         const report = item.final_report_preview || task.result?.final_report || '';
+        const traceDownloadLink = item.comic_v2_trace_uri
+            ? `<a class="ghost btn-sm" href="${escapeHtml(item.comic_v2_trace_uri)}" target="_blank">下载追溯记录</a>`
+            : '';
         box.innerHTML = `
             <div class="artifact-detail-head">
                 <span class="artifact-type">${escapeHtml(item.office_id || '')}</span>
                 <strong>${escapeHtml(item.workspace_title || item.user_request || taskId)}</strong>
+                ${traceDownloadLink}
                 ${item.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.word_canvas_uri)}" target="_blank">下载Word画布</a>` : ''}
                 ${item.handoff_manifest_uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.handoff_manifest_uri)}" target="_blank">下载引用清单</a>` : ''}
                 ${item.workspace_export_uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.workspace_export_uri)}" target="_blank">导出全部</a>` : ''}
@@ -3896,6 +3900,9 @@ async function viewHistoryDetail(taskId) {
                 ${report ? simpleMarkdown(report) : '<em>暂无最终报告预览</em>'}
                 ${renderHistoryDeliverySummary(item.delivery_summary)}
                 ${renderComicV2HistoryTrace(item.comic_v2_trace)}
+                <div class="history-artifact-links">
+                    ${artifacts.map(renderHistoryArtifactArchiveLink).join('')}
+                </div>
                 <h4>产物清单</h4>
                 <ul>
                     ${artifacts.map(a => `<li><strong>${escapeHtml(a.artifact_type)}</strong> · ${escapeHtml(a.title || '')} ${a.uri ? `<a href="${escapeHtml(a.uri)}" target="_blank">打开</a>` : ''}</li>`).join('')}
@@ -3905,6 +3912,16 @@ async function viewHistoryDetail(taskId) {
     } catch (e) {
         box.innerHTML = '<div class="empty-state">读取失败：' + escapeHtml(e.message) + '</div>';
     }
+}
+
+function renderHistoryArtifactArchiveLink(artifact) {
+    if (!artifact || !artifact.download_uri) return '';
+    const label = artifact.title || artifact.artifact_type || artifact.artifact_id || 'artifact';
+    return `
+        <a class="ghost btn-sm" href="${escapeHtml(artifact.download_uri)}" target="_blank">
+            下载归档 · ${escapeHtml(label)}
+        </a>
+    `;
 }
 
 function renderHistoryDeliverySummary(summary, compact = false) {

@@ -457,6 +457,9 @@
   packaging failures.
 - [x] Research-office background failures include a concrete recovery action for
   organizing already available research outputs.
+- [x] History records expose downloadable archived artifact content and comic V2
+  trace JSON, so prompt packages and lineage evidence can be reproduced from
+  the history page instead of only from the live workspace.
 - [x] Office protocols now declare reusable recovery actions, so future offices
   can expose retry buttons without hard-coding stage maps in task storage.
 - [ ] Extend explicit recovery events to future offices as they are added.
