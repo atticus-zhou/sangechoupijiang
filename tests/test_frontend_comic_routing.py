@@ -110,6 +110,18 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("renderModelSetupPath()", js)
         self.assertIn(".model-setup-path", css)
 
+    def test_history_renders_delivery_summary(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn("function renderHistoryDeliverySummary", js)
+        self.assertIn("renderHistoryDeliverySummary(h.delivery_summary", js)
+        self.assertIn("renderHistoryDeliverySummary(item.delivery_summary", js)
+        self.assertIn("downloadable_files", js)
+        self.assertIn("missing_items", js)
+        self.assertIn("交付摘要", js)
+        self.assertIn(".history-delivery-summary", css)
+
     def test_office_hall_renders_system_preflight(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
         js = APP_JS.read_text(encoding="utf-8")

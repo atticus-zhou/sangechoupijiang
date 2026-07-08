@@ -4841,6 +4841,61 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
     }
 
 
+def _history_delivery_summary(enriched: dict) -> dict:
+    trace = enriched.get("comic_v2_trace") or {}
+    word_uri = enriched.get("word_canvas_uri") or ""
+    handoff_uri = enriched.get("handoff_manifest_uri") or trace.get("handoff_manifest_uri") or ""
+    downloadable_files = []
+    if word_uri:
+        downloadable_files.append("Word 制片画布")
+    if handoff_uri:
+        downloadable_files.append("引用清单")
+
+    audit = trace.get("delivery_audit") or {}
+    asset_count = int(audit.get("asset_count") or trace.get("visual_review", {}).get("record_count") or 0)
+    shot_count = int(audit.get("shot_count") or trace.get("shot_prompt_count") or 0)
+    prompt_count = int(trace.get("asset_prompt_count") or 0) + int(trace.get("shot_prompt_count") or 0)
+    visual_review = trace.get("visual_review") or {}
+    production_ready = bool(visual_review.get("production_ready") or audit.get("handoff_ready"))
+    failure_count = int(visual_review.get("failure_count") or 0)
+
+    missing_items = []
+    if not word_uri:
+        missing_items.append("Word 制片画布")
+    if not handoff_uri and enriched.get("office_id") == "comic_production":
+        missing_items.append("引用清单")
+    if asset_count <= 0 and trace:
+        missing_items.append("资产统计")
+    if shot_count <= 0 and trace:
+        missing_items.append("镜头卡")
+    if failure_count > 0:
+        missing_items.append("视觉质检问题")
+
+    if missing_items:
+        status = "needs_review"
+        next_action = "先补齐缺失项或重新生成 Word 制片画布，再交给下游生产。"
+    elif word_uri and production_ready:
+        status = "ready"
+        next_action = "制片包可以交给下游图片、视频或剪辑平台继续生产。"
+    elif word_uri:
+        status = "partial"
+        next_action = "已有 Word 制片画布，但建议先检查引用清单和视觉质检结果。"
+    else:
+        status = "pending"
+        next_action = "等待生成可下载交付物。"
+
+    return {
+        "status": status,
+        "asset_count": asset_count,
+        "shot_count": shot_count,
+        "prompt_count": prompt_count,
+        "visual_review_status": "passed" if production_ready and failure_count == 0 else "needs_review",
+        "downloadable_files": downloadable_files,
+        "missing_items": missing_items,
+        "next_action": next_action,
+    }
+
+
 def _enrich_history_item(item: dict) -> dict:
     task_id = item.get("task_id", "")
     artifacts = config_manager.list_artifacts(task_id=task_id) if task_id else []
@@ -4880,6 +4935,7 @@ def _enrich_history_item(item: dict) -> dict:
         "final_report_preview": final_report[:1200],
         "comic_v2_trace": _comic_v2_history_trace(artifacts, word_canvas),
     })
+    enriched["delivery_summary"] = _history_delivery_summary(enriched)
     return enriched
 
 

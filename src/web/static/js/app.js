@@ -3843,6 +3843,7 @@ async function loadHistory() {
                 <strong>${escapeHtml(h.workspace_title || '')}</strong>
                 <div>${escapeHtml((h.user_request || '').substring(0, 120))}</div>
                 <small>${escapeHtml(historyArtifactSummary(h))}</small>
+                ${renderHistoryDeliverySummary(h.delivery_summary, true)}
             </td>
             <td><span class="badge badge-${h.status === 'completed' ? 'ok' : 'err'}">${h.status}</span></td>
             <td>${escapeHtml((h.completed_at || h.updated_at || h.created_at || '').replace('T',' ').substring(0,16))}</td>
@@ -3893,6 +3894,7 @@ async function viewHistoryDetail(taskId) {
             </div>
             <div class="artifact-detail-body">
                 ${report ? simpleMarkdown(report) : '<em>暂无最终报告预览</em>'}
+                ${renderHistoryDeliverySummary(item.delivery_summary)}
                 ${renderComicV2HistoryTrace(item.comic_v2_trace)}
                 <h4>产物清单</h4>
                 <ul>
@@ -3903,6 +3905,37 @@ async function viewHistoryDetail(taskId) {
     } catch (e) {
         box.innerHTML = '<div class="empty-state">读取失败：' + escapeHtml(e.message) + '</div>';
     }
+}
+
+function renderHistoryDeliverySummary(summary, compact = false) {
+    if (!summary || !summary.status) return '';
+    const statusLabel = {
+        ready: '可交付',
+        partial: '部分可用',
+        needs_review: '需补齐',
+        pending: '等待交付',
+    }[summary.status] || summary.status;
+    const files = Array.isArray(summary.downloadable_files) ? summary.downloadable_files : [];
+    const missing = Array.isArray(summary.missing_items) ? summary.missing_items : [];
+    return `
+        <div class="history-delivery-summary ${compact ? 'compact' : ''} ${escapeHtml(summary.status)}">
+            <div class="history-delivery-head">
+                <strong>交付摘要</strong>
+                <span>${escapeHtml(statusLabel)}</span>
+            </div>
+            <div class="history-delivery-grid">
+                <span>资产 ${escapeHtml(summary.asset_count || 0)}</span>
+                <span>镜头 ${escapeHtml(summary.shot_count || 0)}</span>
+                <span>提示词 ${escapeHtml(summary.prompt_count || 0)}</span>
+                <span>质检 ${escapeHtml(summary.visual_review_status || 'unknown')}</span>
+            </div>
+            ${compact ? '' : `
+                <p>${escapeHtml(summary.next_action || '')}</p>
+                <small>可下载：${escapeHtml(files.length ? files.join('、') : '暂无')}</small>
+                <small>缺失项：${escapeHtml(missing.length ? missing.join('、') : '无')}</small>
+            `}
+        </div>
+    `;
 }
 
 function renderComicV2HistoryTrace(trace) {

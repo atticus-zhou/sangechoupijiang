@@ -779,6 +779,15 @@ class WebComicApiTests(unittest.TestCase):
             )
             self.assertEqual(trace["production_lineage"][0]["department"], "内阁 / 中书省")
             self.assertTrue(trace["delivery_audit"]["handoff_ready"])
+            summary = row["delivery_summary"]
+            self.assertEqual(summary["status"], "ready")
+            self.assertEqual(summary["asset_count"], 7)
+            self.assertEqual(summary["shot_count"], 9)
+            self.assertEqual(summary["prompt_count"], 16)
+            self.assertEqual(summary["visual_review_status"], "passed")
+            self.assertEqual(summary["downloadable_files"], ["Word 制片画布", "引用清单"])
+            self.assertEqual(summary["missing_items"], [])
+            self.assertIn("可以交给下游", summary["next_action"])
         finally:
             conn = sqlite3.connect("user_data/config.db")
             conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
