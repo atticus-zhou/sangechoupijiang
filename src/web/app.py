@@ -1650,7 +1650,19 @@ async def generate_comic_v2_images_api(workspace_id: str):
             event_type="comic_v2_images_failed",
             status="failed",
             summary=f"基础资产图生产或质检失败：{exc}",
-            payload={"stage": state.stage, "current_agent": state.current_agent},
+            payload={
+                "office_id": "comic_production",
+                "department": "工部 / 刑部",
+                "stage": "image_generation",
+                "agent": state.current_agent,
+                "impact": "基础资产图没有完成生产或质检，Word 制片画布不会继续组装。",
+                "next_action": "检查工部生图模型、刑部视觉模型、API Key、额度和图片输出目录；修复后重新生成并质检基础资产图。",
+                "retry_action": {
+                    "label": "重新生成并质检基础资产图",
+                    "method": "POST",
+                    "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+                },
+            },
         )
         raise _comic_v2_http_error(
             502,

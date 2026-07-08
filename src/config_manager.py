@@ -529,6 +529,23 @@ class ConfigManager:
                 result = json.loads(row[6])
             except json.JSONDecodeError:
                 result = {"raw": row[6]}
+        parsed_events = [
+            {
+                "event_type": e[0],
+                "status": e[1],
+                "summary": e[2],
+                "payload": json.loads(e[3] or "{}"),
+                "created_at": e[4],
+            }
+            for e in events
+        ]
+        recovery_plan = self._build_task_recovery_plan(
+            task_id=row[0],
+            status=row[3],
+            current_phase=row[4],
+            error=row[5],
+            events=parsed_events,
+        )
         return {
             "task_id": row[0],
             "user_request": row[1],
@@ -540,16 +557,56 @@ class ConfigManager:
             "created_at": row[7],
             "updated_at": row[8],
             "completed_at": row[9],
-            "events": [
-                {
-                    "event_type": e[0],
-                    "status": e[1],
-                    "summary": e[2],
-                    "payload": json.loads(e[3] or "{}"),
-                    "created_at": e[4],
-                }
-                for e in events
-            ],
+            "events": parsed_events,
+            "recovery_plan": recovery_plan,
+        }
+
+    def _build_task_recovery_plan(
+        self,
+        *,
+        task_id: str,
+        status: str,
+        current_phase: str,
+        error: str,
+        events: list[dict],
+    ) -> dict:
+        """Summarize how a user can continue after a failed or interrupted run."""
+        failed_statuses = {"failed", "interrupted"}
+        problem_event = {}
+        for event in reversed(events):
+            event_status = str(event.get("status") or "")
+            event_type = str(event.get("event_type") or "")
+            if event_status in failed_statuses or "failed" in event_type or "interrupted" in event_type:
+                problem_event = event
+                break
+        payload = dict(problem_event.get("payload") or {}) if problem_event else {}
+        recoverable = status in failed_statuses or bool(problem_event)
+        retry_action = payload.get("retry_action") if isinstance(payload.get("retry_action"), dict) else {}
+        workspace_id = str(payload.get("workspace_id") or "")
+        stage = str(payload.get("stage") or current_phase or "")
+        office_id = str(payload.get("office_id") or "")
+        if not retry_action and workspace_id and office_id == "comic_production" and stage in {"image_generation", "visual_review"}:
+            retry_action = {
+                "label": "重新生成并质检基础资产图",
+                "method": "POST",
+                "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+            }
+        next_action = str(payload.get("next_action") or "")
+        if not next_action and recoverable:
+            next_action = "查看最后一条失败事件，修复对应模型、配置或人工审核问题后，从失败阶段重新执行。"
+        return {
+            "recoverable": bool(recoverable),
+            "task_id": task_id,
+            "workspace_id": workspace_id,
+            "office_id": office_id,
+            "failed_phase": stage,
+            "failed_event_type": str(problem_event.get("event_type") or ""),
+            "department": str(payload.get("department") or ""),
+            "agent": str(payload.get("agent") or ""),
+            "reason": error or str(problem_event.get("summary") or ""),
+            "impact": str(payload.get("impact") or ""),
+            "next_action": next_action,
+            "retry_action": retry_action,
         }
 
     def list_workspace_task_runs(self, workspace_id: str, limit: int = 20) -> list[dict]:

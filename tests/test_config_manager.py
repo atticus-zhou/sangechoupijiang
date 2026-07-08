@@ -58,6 +58,49 @@ class ConfigManagerTaskRunTests(unittest.TestCase):
             completed = manager.get_task_run("task-done")
             self.assertEqual(completed["status"], "completed")
 
+    def test_failed_task_run_exposes_recovery_plan_from_last_failure_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+
+            manager.create_task_run("task-recover", "generate comic images", "")
+            manager.update_task_run(
+                "task-recover",
+                "failed",
+                current_phase="image_generation",
+                error="资产图片生产失败：vision schema rejected",
+                completed=True,
+            )
+            manager.append_task_event(
+                "task-recover",
+                "comic_v2_images_failed",
+                "failed",
+                "基础资产图生产或质检失败",
+                {
+                    "workspace_id": "ws-comic",
+                    "office_id": "comic_production",
+                    "department": "工部 / 刑部",
+                    "stage": "image_generation",
+                    "agent": "gongbu/xingbu",
+                    "impact": "Word 制片画布不会继续组装。",
+                    "next_action": "修复工部生图模型和刑部视觉模型后重新生成基础资产图。",
+                    "retry_action": {
+                        "label": "重新生成并质检基础资产图",
+                        "method": "POST",
+                        "path": "/api/workspaces/ws-comic/comic/v2/images/generate",
+                    },
+                },
+            )
+
+            run = manager.get_task_run("task-recover")
+            plan = run["recovery_plan"]
+
+            self.assertTrue(plan["recoverable"])
+            self.assertEqual(plan["failed_phase"], "image_generation")
+            self.assertEqual(plan["department"], "工部 / 刑部")
+            self.assertEqual(plan["workspace_id"], "ws-comic")
+            self.assertIn("视觉模型", plan["next_action"])
+            self.assertEqual(plan["retry_action"]["path"], "/api/workspaces/ws-comic/comic/v2/images/generate")
+
     def test_workspace_and_artifact_are_persisted(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ConfigManager(base_dir=tmp)

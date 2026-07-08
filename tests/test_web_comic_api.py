@@ -57,6 +57,50 @@ class WebComicApiTests(unittest.TestCase):
         self.assertIn("视觉母版", summary[0]["acceptance_criteria"])
         self.assertNotIn("internal_notes", summary[0])
 
+    def test_task_detail_exposes_recovery_plan_for_failed_run(self):
+        task_id = f"task_recover_{uuid.uuid4().hex[:8]}"
+        workspace_id = f"ws_recover_{uuid.uuid4().hex[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="恢复计划测试",
+        )
+        config_manager.create_task_run(task_id, "生成基础资产图", "")
+        config_manager.update_task_run(
+            task_id,
+            "failed",
+            current_phase="image_generation",
+            error="资产图片生产失败：视觉质检输出不完整",
+            completed=True,
+        )
+        config_manager.append_task_event(
+            task_id,
+            "comic_v2_images_failed",
+            "failed",
+            "基础资产图生产或质检失败",
+            {
+                "workspace_id": workspace_id,
+                "office_id": "comic_production",
+                "department": "工部 / 刑部",
+                "stage": "image_generation",
+                "next_action": "检查模型配置后重新生成并质检基础资产图。",
+                "retry_action": {
+                    "label": "重新生成基础资产图",
+                    "method": "POST",
+                    "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+                },
+            },
+        )
+
+        response = self.client.get(f"/api/tasks/{task_id}")
+
+        self.assertEqual(response.status_code, 200)
+        plan = response.json()["recovery_plan"]
+        self.assertTrue(plan["recoverable"])
+        self.assertEqual(plan["department"], "工部 / 刑部")
+        self.assertEqual(plan["retry_action"]["method"], "POST")
+
     def test_comic_cabinet_turn_creates_and_persists_session(self):
         response = self.client.post("/api/comic/cabinet/turn", json={
             "idea": "一个女孩每天醒来都会进入不同漫画世界",

@@ -158,6 +158,23 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "task_recovery_plan",
+            "任务失败恢复计划",
+            [
+                _contains(root / "src/config_manager.py", "_build_task_recovery_plan"),
+                _contains(root / "src/config_manager.py", '"recovery_plan"'),
+                _contains(root / "src/web/app.py", '"retry_action"'),
+                _contains(root / "tests/test_config_manager.py", "test_failed_task_run_exposes_recovery_plan_from_last_failure_event"),
+                _contains(root / "tests/test_web_comic_api.py", "test_task_detail_exposes_recovery_plan_for_failed_run"),
+            ],
+            [
+                "src/config_manager.py",
+                "src/web/app.py",
+                "tests/test_config_manager.py",
+                "tests/test_web_comic_api.py",
+            ],
+        ),
+        _check(
             "agent_output_schema_gate",
             "Agent output schema gate",
             [

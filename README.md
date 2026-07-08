@@ -149,7 +149,7 @@ python scripts/verify_comic_v2_user_flow.py
 python scripts/verify_product_readiness.py --format markdown
 ```
 
-这个脚本不会调用模型，只会审计仓库内的证据：完整工作流状态、可下载交付物、模型预检、端到端验证、历史追溯、无 Key 演示入口、办公室协议、产物协议运行时校验、README 和失败处理策略。
+这个脚本不会调用模型，只会审计仓库内的证据：完整工作流状态、可下载交付物、模型预检、端到端验证、历史追溯、无 Key 演示入口、办公室协议、产物协议运行时校验、任务失败恢复计划、README 和失败处理策略。
 
 如果要做更深一层的真实产品验收，可以加上运行时验证：
 

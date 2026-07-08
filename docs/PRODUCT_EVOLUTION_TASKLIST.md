@@ -392,3 +392,15 @@
   validated through the same schema gate before generated images can be promoted
   into approved asset records.
 - [ ] Continue extending the schema gate to research reports and future offices.
+
+## Runtime Recovery Progress
+
+- [x] Failed or interrupted task runs expose a structured `recovery_plan` from
+  `ConfigManager.get_task_run()`, including failed phase, department, impact,
+  next action, and optional retry action.
+- [x] `/api/tasks/{task_id}` returns the recovery plan so the frontend and
+  history views can explain how a user should continue after a failed run.
+- [x] AI comic-production V2 image-generation failures include a concrete retry
+  action for regenerating and visually reviewing base asset images.
+- [ ] Extend recovery actions to every comic-production V2 stage, research
+  report generation, and future offices.
