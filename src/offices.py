@@ -82,6 +82,12 @@ RESEARCH_OFFICE = OfficeProfile(
         "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
         "trace_rule": "报告、截图、数据点和结论必须能追溯到来源或待补证据说明。",
     },
+    schema_gates=[
+        {"schema_id": "research_standard_report", "owner_agent": "gongbu", "stage": "artifact_packaging", "artifact_type": "standard_report"},
+        {"schema_id": "research_source_list", "owner_agent": "bingbu", "stage": "evidence_extraction", "artifact_type": "source_list"},
+        {"schema_id": "research_data_table", "owner_agent": "hubu", "stage": "artifact_packaging", "artifact_type": "data_table"},
+        {"schema_id": "research_competitor_table", "owner_agent": "hubu", "stage": "artifact_packaging", "artifact_type": "competitor_table"},
+    ],
     recovery_actions=[
         {
             "stage": "feigua_evidence_capture",

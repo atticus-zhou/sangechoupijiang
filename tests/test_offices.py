@@ -11,6 +11,11 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("zhongshu", office.agent_duties)
         self.assertIn("report", office.artifact_types)
         self.assertIn("source_list", office.artifact_types)
+        schema_ids = {item["schema_id"] for item in office.schema_gates}
+        self.assertIn("research_standard_report", schema_ids)
+        self.assertIn("research_source_list", schema_ids)
+        self.assertIn("research_data_table", schema_ids)
+        self.assertIn("research_competitor_table", schema_ids)
         self.assertTrue(any(item["stage"] == "agent_workflow" for item in office.recovery_actions))
         self.assertTrue(office.acceptance_criteria)
 
