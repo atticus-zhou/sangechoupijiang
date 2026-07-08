@@ -119,8 +119,13 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("renderHistoryDeliverySummary(item.delivery_summary", js)
         self.assertIn("downloadable_files", js)
         self.assertIn("missing_items", js)
+        self.assertIn("recovery_actions", js)
+        self.assertIn("function runHistoryRecoveryAction", js)
+        self.assertIn("runHistoryRecoveryAction", js)
+        self.assertIn("history-delivery-actions", js)
         self.assertIn("交付摘要", js)
         self.assertIn(".history-delivery-summary", css)
+        self.assertIn(".history-delivery-actions", css)
 
     def test_office_hall_renders_system_preflight(self):
         html = INDEX_HTML.read_text(encoding="utf-8")

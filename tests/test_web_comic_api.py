@@ -796,6 +796,121 @@ class WebComicApiTests(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_history_suggests_recovery_actions_for_incomplete_comic_v2_delivery(self):
+        task_id = f"hist_v2_missing_{str(uuid.uuid4())[:8]}"
+        workspace_id = f"ws_hist_v2_missing_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="V2 Missing Delivery",
+            brief="history recovery",
+        )
+        config_manager.save_task_record(
+            task_id,
+            "build incomplete V2 delivery",
+            "",
+            "completed",
+            {"final_report": "V2 delivery still needs repair"},
+        )
+        config_manager.create_task_run(task_id, "build incomplete V2 delivery", "")
+        config_manager.append_task_event(
+            task_id=task_id,
+            event_type="comic_v2_delivery_failed",
+            status="failed",
+            summary="V2 delivery missing files",
+            payload={"office_id": "comic_production", "workspace_id": workspace_id},
+        )
+        config_manager.update_task_run(
+            task_id,
+            "completed",
+            current_phase="document_generation",
+            result={"final_report": "V2 delivery still needs repair"},
+            completed=True,
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_word_meta",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_word_canvas",
+            title="V2 Word Canvas Metadata Only",
+            content="missing uri",
+            metadata={
+                "office_id": "comic_production",
+                "story_id": "story_missing",
+                "story_version": 2,
+                "style_id": "style_missing",
+                "style_version": 1,
+                "manifest_version": 4,
+                "audit": {"asset_count": 6, "shot_count": 0, "handoff_ready": False},
+            },
+            created_by="libu",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_prompt_pkg",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_prompt_package",
+            title="V2 Prompt Package",
+            content="{}",
+            metadata={
+                "office_id": "comic_production",
+                "manifest_version": 4,
+                "asset_prompt_count": 6,
+                "shot_prompt_count": 8,
+            },
+            created_by="gongbu",
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_visual_review",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_visual_review",
+            title="V2 Visual Review",
+            content="{}",
+            metadata={
+                "office_id": "comic_production",
+                "production_ready": False,
+                "record_count": 6,
+                "failure_count": 2,
+            },
+            created_by="xingbu",
+        )
+
+        try:
+            response = self.client.get("/api/tasks/history?limit=20")
+            self.assertEqual(response.status_code, 200)
+            row = next(item for item in response.json()["history"] if item["task_id"] == task_id)
+            summary = row["delivery_summary"]
+            self.assertEqual(summary["status"], "needs_review")
+            self.assertIn("Word 制片画布", summary["missing_items"])
+            self.assertIn("引用清单", summary["missing_items"])
+            self.assertIn("视觉质检问题", summary["missing_items"])
+            actions = summary["recovery_actions"]
+            self.assertIn(
+                {
+                    "label": "重新生成 Word 制片画布",
+                    "method": "POST",
+                    "path": f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
+                },
+                actions,
+            )
+            self.assertIn(
+                {
+                    "label": "重新生成并质检基础资产图",
+                    "method": "POST",
+                    "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+                },
+                actions,
+            )
+        finally:
+            conn = sqlite3.connect("user_data/config.db")
+            conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_runs WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_events WHERE task_id=?", (task_id,))
+            conn.commit()
+            conn.close()
+
     def test_delivery_download_errors_are_actionable(self):
         workspace_id = f"ws_delivery_err_{str(uuid.uuid4())[:8]}"
         self.created_workspaces.append(workspace_id)

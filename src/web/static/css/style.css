@@ -2387,6 +2387,13 @@ tr:hover td { background: var(--bg); }
     line-height: 1.55;
 }
 
+.history-delivery-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
 /* Badge */
 .badge { display: inline-flex; align-items: center; font-size: 12px; padding: 3px 10px; border-radius: 12px; font-weight: 500; }
 .badge-ok { background: var(--green-bg); color: var(--green); border: 1px solid rgba(66, 120, 85, 0.2); }

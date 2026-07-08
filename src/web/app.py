@@ -4843,6 +4843,7 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
 
 def _history_delivery_summary(enriched: dict) -> dict:
     trace = enriched.get("comic_v2_trace") or {}
+    workspace_id = enriched.get("workspace_id") or ""
     word_uri = enriched.get("word_canvas_uri") or ""
     handoff_uri = enriched.get("handoff_manifest_uri") or trace.get("handoff_manifest_uri") or ""
     downloadable_files = []
@@ -4884,6 +4885,26 @@ def _history_delivery_summary(enriched: dict) -> dict:
         status = "pending"
         next_action = "等待生成可下载交付物。"
 
+    recovery_actions = []
+    if workspace_id and ("Word 制片画布" in missing_items or "引用清单" in missing_items):
+        recovery_actions.append({
+            "label": "重新生成 Word 制片画布",
+            "method": "POST",
+            "path": f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
+        })
+    if workspace_id and "视觉质检问题" in missing_items:
+        recovery_actions.append({
+            "label": "重新生成并质检基础资产图",
+            "method": "POST",
+            "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+        })
+    if workspace_id and status in {"pending", "needs_review"} and not recovery_actions:
+        recovery_actions.append({
+            "label": "回到项目继续处理",
+            "method": "GET",
+            "path": f"/api/workspaces/{workspace_id}",
+        })
+
     return {
         "status": status,
         "asset_count": asset_count,
@@ -4893,6 +4914,7 @@ def _history_delivery_summary(enriched: dict) -> dict:
         "downloadable_files": downloadable_files,
         "missing_items": missing_items,
         "next_action": next_action,
+        "recovery_actions": recovery_actions,
     }
 
 
@@ -4907,6 +4929,10 @@ def _enrich_history_item(item: dict) -> dict:
         workspace_id = _workspace_id_from_task_run(run_record)
     workspace = config_manager.get_workspace(workspace_id) if workspace_id else {}
     word_canvas = next((
+        a for a in reversed(artifacts)
+        if a.get("artifact_type") in {"word_canvas", "comic_v2_word_canvas"}
+    ), None)
+    downloadable_word_canvas = next((
         a for a in reversed(artifacts)
         if a.get("artifact_type") in {"word_canvas", "comic_v2_word_canvas"} and a.get("uri")
     ), None)
@@ -4924,7 +4950,7 @@ def _enrich_history_item(item: dict) -> dict:
         "office_id": workspace.get("office_id", ""),
         "artifact_count": len(artifacts),
         "artifacts": [_summarize_history_artifact(a) for a in artifacts],
-        "word_canvas_uri": word_canvas.get("uri", "") if word_canvas else "",
+        "word_canvas_uri": downloadable_word_canvas.get("uri", "") if downloadable_word_canvas else "",
         "word_canvas_title": word_canvas.get("title", "") if word_canvas else "",
         "handoff_manifest_uri": handoff_manifest.get("uri", "") if handoff_manifest else "",
         "handoff_manifest_title": handoff_manifest.get("title", "") if handoff_manifest else "",

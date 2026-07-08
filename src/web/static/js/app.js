@@ -3917,6 +3917,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
     }[summary.status] || summary.status;
     const files = Array.isArray(summary.downloadable_files) ? summary.downloadable_files : [];
     const missing = Array.isArray(summary.missing_items) ? summary.missing_items : [];
+    const actions = Array.isArray(summary.recovery_actions) ? summary.recovery_actions : [];
     return `
         <div class="history-delivery-summary ${compact ? 'compact' : ''} ${escapeHtml(summary.status)}">
             <div class="history-delivery-head">
@@ -3930,12 +3931,26 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 <span>质检 ${escapeHtml(summary.visual_review_status || 'unknown')}</span>
             </div>
             ${compact ? '' : `
+                ${actions.length ? `
+                    <div class="history-delivery-actions">
+                        ${actions.map(action => `
+                            <button class="ghost btn-sm" onclick="runHistoryRecoveryAction('${escapeJsAttr(action)}')">
+                                ${escapeHtml(action.label || '继续处理')}
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
                 <p>${escapeHtml(summary.next_action || '')}</p>
                 <small>可下载：${escapeHtml(files.length ? files.join('、') : '暂无')}</small>
                 <small>缺失项：${escapeHtml(missing.length ? missing.join('、') : '无')}</small>
             `}
         </div>
     `;
+}
+
+async function runHistoryRecoveryAction(encodedAction) {
+    await retryTaskRecoveryAction(encodedAction);
+    await loadHistory();
 }
 
 function renderComicV2HistoryTrace(trace) {
@@ -4353,6 +4368,7 @@ function exposeInlineHandlers() {
     window.selectComicArtifact = selectComicArtifact;
     window.regenerateComicImage = regenerateComicImage;
     window.retryTaskRecoveryAction = retryTaskRecoveryAction;
+    window.runHistoryRecoveryAction = runHistoryRecoveryAction;
 }
 exposeInlineHandlers();
 

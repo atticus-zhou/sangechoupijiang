@@ -449,6 +449,9 @@
   review, and Word canvas generation stages.
 - [x] AI comic-production V2 Word canvas failures include a concrete retry
   action for rebuilding the delivery package.
+- [x] History delivery summaries expose concrete recovery actions for incomplete
+  comic-production V2 handoffs, including Word canvas rebuilds and base-asset
+  image regeneration.
 - [x] Research-office recovery plans can infer retry actions for Feigua evidence
   capture, screenshot extraction, agent workflow failures, and artifact
   packaging failures.
