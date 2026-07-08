@@ -140,6 +140,46 @@ class ConfigManagerTaskRunTests(unittest.TestCase):
                 self.assertEqual(plan["retry_action"]["path"], expected_path)
                 self.assertEqual(plan["retry_action"]["method"], "POST")
 
+    def test_research_recovery_plan_infers_retry_action_from_failed_stage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+
+            cases = [
+                ("feigua_evidence_capture", "/api/workspaces/ws-research/evidence/sync", "整理已上传/已截取证据"),
+                ("evidence_extraction", "/api/workspaces/ws-research/evidence/extract-all", "重新识别工作区截图证据"),
+                ("agent_workflow", "/api/tasks/task-agent_workflow/recover-artifacts", "整理已有研究产出"),
+                ("artifact_packaging", "/api/tasks/task-artifact_packaging/recover-artifacts", "重新整理研究材料包"),
+            ]
+            for stage, expected_path, expected_label in cases:
+                task_id = f"task-{stage}"
+                manager.create_task_run(task_id, "research stage", "")
+                manager.update_task_run(
+                    task_id,
+                    "failed",
+                    current_phase=stage,
+                    error=f"{stage} failed",
+                    completed=True,
+                )
+                manager.append_task_event(
+                    task_id,
+                    f"research_{stage}_failed",
+                    "failed",
+                    "research stage failed",
+                    {
+                        "workspace_id": "ws-research",
+                        "office_id": "research",
+                        "stage": stage,
+                        "department": "测试部门",
+                    },
+                )
+
+                plan = manager.get_task_run(task_id)["recovery_plan"]
+
+                self.assertTrue(plan["recoverable"], stage)
+                self.assertEqual(plan["retry_action"]["path"], expected_path)
+                self.assertEqual(plan["retry_action"]["method"], "POST")
+                self.assertEqual(plan["retry_action"]["label"], expected_label)
+
     def test_workspace_and_artifact_are_persisted(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ConfigManager(base_dir=tmp)

@@ -4628,6 +4628,31 @@ async def _run_task(
             event_type="task_failed",
             status="failed",
             summary=str(e),
+            payload={
+                "office_id": office_id,
+                "workspace_id": workspace_id,
+                "department": "尚书省 / 刑部",
+                "stage": "agent_workflow" if office_id == "research" else "error",
+                "impact": (
+                    "研究报告没有完成，可能只保留了已经上传或自动截取的证据材料。"
+                    if office_id == "research"
+                    else "任务没有完成，最终交付物不会生成。"
+                ),
+                "next_action": (
+                    "先检查模型配置和已有证据；如果已有截图、数据表或草稿，可以点击恢复动作整理已有研究产出。"
+                    if office_id == "research"
+                    else "查看日志和最后失败阶段，修复后重新执行任务。"
+                ),
+                "retry_action": (
+                    {
+                        "label": "整理已有研究产出",
+                        "method": "POST",
+                        "path": f"/api/tasks/{task_id}/recover-artifacts",
+                    }
+                    if office_id == "research"
+                    else {}
+                ),
+            },
         )
 
 

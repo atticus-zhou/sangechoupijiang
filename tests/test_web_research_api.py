@@ -1,5 +1,6 @@
 ﻿import sqlite3
 import shutil
+import asyncio
 import unittest
 import zipfile
 from io import BytesIO
@@ -10,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from src.llm.providers import LLMResponse, LiteLLMProvider
 from src.browser_capture import BrowserCaptureError
-from src.web.app import app, config_manager
+from src.web.app import app, config_manager, _run_task
 
 
 class WebResearchApiTests(unittest.TestCase):
@@ -29,6 +30,16 @@ class WebResearchApiTests(unittest.TestCase):
         conn.close()
         for workspace_id in self.created_workspaces:
             shutil.rmtree(Path("output") / "workspaces" / workspace_id, ignore_errors=True)
+
+    def _delete_task_records(self, *task_ids):
+        conn = sqlite3.connect("user_data/config.db")
+        for task_id in task_ids:
+            conn.execute("DELETE FROM task_events WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_runs WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM artifacts WHERE task_id=?", (task_id,))
+        conn.commit()
+        conn.close()
 
     def test_workspace_export_contains_artifacts(self):
         response = self.client.post("/api/workspaces", json={
@@ -255,6 +266,43 @@ class WebResearchApiTests(unittest.TestCase):
         self.assertTrue(missing_detail["reason"])
         self.assertTrue(missing_detail["impact"])
         self.assertTrue(missing_detail["next_action"])
+
+    def test_research_background_failure_records_recoverable_task_event(self):
+        workspace_id = "ws_research_failure_recovery"
+        task_id = "task_research_failure_recovery"
+        self._delete_task_records(task_id)
+        response = self.client.post("/api/workspaces", json={
+            "workspace_id": workspace_id,
+            "title": "研究失败恢复测试",
+            "brief": "验证后台失败后的恢复计划",
+            "office_id": "research",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_task_run(task_id, "调研民用无人机", "")
+
+        with (
+            patch("src.web.app._get_engine", side_effect=RuntimeError("模型连接失败")),
+            patch("builtins.print"),
+        ):
+            asyncio.run(_run_task(
+                task_id,
+                "调研民用无人机",
+                office_id="research",
+                workspace_id=workspace_id,
+            ))
+
+        response = self.client.get(f"/api/tasks/{task_id}")
+
+        self.assertEqual(response.status_code, 200)
+        plan = response.json()["recovery_plan"]
+        self.assertTrue(plan["recoverable"])
+        self.assertEqual(plan["office_id"], "research")
+        self.assertEqual(plan["failed_phase"], "agent_workflow")
+        self.assertIn("模型连接失败", plan["reason"])
+        self.assertIn("报告", plan["impact"])
+        self.assertIn("模型", plan["next_action"])
+        self.assertEqual(plan["retry_action"]["path"], f"/api/tasks/{task_id}/recover-artifacts")
 
     def test_missing_workspace_errors_are_actionable(self):
         workspace_id = "ws_missing_common_error"

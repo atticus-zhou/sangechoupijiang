@@ -409,5 +409,9 @@
   review, and Word canvas generation stages.
 - [x] AI comic-production V2 Word canvas failures include a concrete retry
   action for rebuilding the delivery package.
-- [ ] Extend explicit recovery events to research report generation and future
-  offices.
+- [x] Research-office recovery plans can infer retry actions for Feigua evidence
+  capture, screenshot extraction, agent workflow failures, and artifact
+  packaging failures.
+- [x] Research-office background failures include a concrete recovery action for
+  organizing already available research outputs.
+- [ ] Extend explicit recovery events to future offices as they are added.

@@ -587,6 +587,8 @@ class ConfigManager:
         office_id = str(payload.get("office_id") or "")
         if not retry_action and workspace_id and office_id == "comic_production":
             retry_action = self._comic_v2_retry_action(workspace_id, stage)
+        if not retry_action and office_id == "research":
+            retry_action = self._research_retry_action(task_id, workspace_id, stage)
         next_action = str(payload.get("next_action") or "")
         if not next_action and recoverable:
             next_action = "查看最后一条失败事件，修复对应模型、配置或人工审核问题后，从失败阶段重新执行。"
@@ -625,6 +627,34 @@ class ConfigManager:
             "method": "POST",
             "path": f"/api/workspaces/{workspace_id}/comic/v2/{suffix}",
         }
+
+    def _research_retry_action(self, task_id: str, workspace_id: str, stage: str) -> dict:
+        """Infer the safest recovery endpoint for a research-office failed stage."""
+        if stage == "feigua_evidence_capture" and workspace_id:
+            return {
+                "label": "整理已上传/已截取证据",
+                "method": "POST",
+                "path": f"/api/workspaces/{workspace_id}/evidence/sync",
+            }
+        if stage == "evidence_extraction" and workspace_id:
+            return {
+                "label": "重新识别工作区截图证据",
+                "method": "POST",
+                "path": f"/api/workspaces/{workspace_id}/evidence/extract-all",
+            }
+        if stage == "agent_workflow":
+            return {
+                "label": "整理已有研究产出",
+                "method": "POST",
+                "path": f"/api/tasks/{task_id}/recover-artifacts",
+            }
+        if stage == "artifact_packaging":
+            return {
+                "label": "重新整理研究材料包",
+                "method": "POST",
+                "path": f"/api/tasks/{task_id}/recover-artifacts",
+            }
+        return {}
 
     def list_workspace_task_runs(self, workspace_id: str, limit: int = 20) -> list[dict]:
         """List task runs that declared activity for a workspace."""
