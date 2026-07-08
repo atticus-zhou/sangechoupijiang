@@ -1848,7 +1848,19 @@ async def build_comic_v2_delivery_api(workspace_id: str):
             event_type="comic_v2_delivery_failed",
             status="failed",
             summary=f"Word 制片画布生成失败：{exc}",
-            payload={"stage": state.stage, "current_agent": state.current_agent},
+            payload={
+                "office_id": "comic_production",
+                "department": "礼部 / 刑部",
+                "stage": "document_generation",
+                "agent": state.current_agent,
+                "impact": "最终交付文件没有生成，历史记录也不会出现可下载的完整制片画布。",
+                "next_action": "检查礼部组装输入、资产引用链路和结构审计结果；修复缺失项后重新生成 Word 制片画布。",
+                "retry_action": {
+                    "label": "重新生成 Word 制片画布",
+                    "method": "POST",
+                    "path": f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
+                },
+            },
         )
         raise _comic_v2_http_error(
             502,

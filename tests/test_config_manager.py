@@ -101,6 +101,45 @@ class ConfigManagerTaskRunTests(unittest.TestCase):
             self.assertIn("视觉模型", plan["next_action"])
             self.assertEqual(plan["retry_action"]["path"], "/api/workspaces/ws-comic/comic/v2/images/generate")
 
+    def test_comic_v2_recovery_plan_infers_retry_action_from_failed_stage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+
+            cases = [
+                ("visual_bible_planning", "/api/workspaces/ws-comic/comic/v2/plan-confirmed"),
+                ("asset_planning", "/api/workspaces/ws-comic/comic/v2/assets/plan"),
+                ("prompt_planning", "/api/workspaces/ws-comic/comic/v2/prompts/plan"),
+                ("document_generation", "/api/workspaces/ws-comic/comic/v2/delivery/build"),
+            ]
+            for stage, expected_path in cases:
+                task_id = f"task-{stage}"
+                manager.create_task_run(task_id, "recover stage", "")
+                manager.update_task_run(
+                    task_id,
+                    "failed",
+                    current_phase=stage,
+                    error=f"{stage} failed",
+                    completed=True,
+                )
+                manager.append_task_event(
+                    task_id,
+                    f"comic_v2_{stage}_failed",
+                    "failed",
+                    "stage failed",
+                    {
+                        "workspace_id": "ws-comic",
+                        "office_id": "comic_production",
+                        "stage": stage,
+                        "department": "测试部门",
+                    },
+                )
+
+                plan = manager.get_task_run(task_id)["recovery_plan"]
+
+                self.assertTrue(plan["recoverable"], stage)
+                self.assertEqual(plan["retry_action"]["path"], expected_path)
+                self.assertEqual(plan["retry_action"]["method"], "POST")
+
     def test_workspace_and_artifact_are_persisted(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ConfigManager(base_dir=tmp)

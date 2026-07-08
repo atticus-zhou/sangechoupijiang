@@ -404,5 +404,10 @@
   phase, department, next action, and a direct continue button when available.
 - [x] AI comic-production V2 image-generation failures include a concrete retry
   action for regenerating and visually reviewing base asset images.
-- [ ] Extend recovery actions to every comic-production V2 stage, research
-  report generation, and future offices.
+- [x] AI comic-production V2 recovery plans can infer retry actions for visual
+  bible planning, asset planning, prompt planning, image generation, visual
+  review, and Word canvas generation stages.
+- [x] AI comic-production V2 Word canvas failures include a concrete retry
+  action for rebuilding the delivery package.
+- [ ] Extend explicit recovery events to research report generation and future
+  offices.

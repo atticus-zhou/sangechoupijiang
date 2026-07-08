@@ -585,12 +585,8 @@ class ConfigManager:
         workspace_id = str(payload.get("workspace_id") or "")
         stage = str(payload.get("stage") or current_phase or "")
         office_id = str(payload.get("office_id") or "")
-        if not retry_action and workspace_id and office_id == "comic_production" and stage in {"image_generation", "visual_review"}:
-            retry_action = {
-                "label": "重新生成并质检基础资产图",
-                "method": "POST",
-                "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
-            }
+        if not retry_action and workspace_id and office_id == "comic_production":
+            retry_action = self._comic_v2_retry_action(workspace_id, stage)
         next_action = str(payload.get("next_action") or "")
         if not next_action and recoverable:
             next_action = "查看最后一条失败事件，修复对应模型、配置或人工审核问题后，从失败阶段重新执行。"
@@ -607,6 +603,27 @@ class ConfigManager:
             "impact": str(payload.get("impact") or ""),
             "next_action": next_action,
             "retry_action": retry_action,
+        }
+
+    def _comic_v2_retry_action(self, workspace_id: str, stage: str) -> dict:
+        """Infer the safest retry endpoint for a comic-production V2 failed stage."""
+        actions = {
+            "visual_bible_planning": ("重新生成故事合同与视觉母版", "plan-confirmed"),
+            "asset_planning": ("重新生成资产拆解包", "assets/plan"),
+            "asset_review": ("重新生成资产拆解包", "assets/plan"),
+            "prompt_planning": ("重新生成资产与镜头提示词", "prompts/plan"),
+            "image_generation": ("重新生成并质检基础资产图", "images/generate"),
+            "visual_review": ("重新生成并质检基础资产图", "images/generate"),
+            "document_generation": ("重新生成 Word 制片画布", "delivery/build"),
+        }
+        item = actions.get(stage)
+        if not item:
+            return {}
+        label, suffix = item
+        return {
+            "label": label,
+            "method": "POST",
+            "path": f"/api/workspaces/{workspace_id}/comic/v2/{suffix}",
         }
 
     def list_workspace_task_runs(self, workspace_id: str, limit: int = 20) -> list[dict]:

@@ -101,6 +101,45 @@ class WebComicApiTests(unittest.TestCase):
         self.assertEqual(plan["department"], "工部 / 刑部")
         self.assertEqual(plan["retry_action"]["method"], "POST")
 
+    def test_task_detail_exposes_delivery_retry_action_for_word_canvas_failure(self):
+        workspace_id = f"ws_delivery_recover_{uuid.uuid4().hex[:8]}"
+        task_id = f"comic_v2_{workspace_id}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="Word 恢复计划测试",
+        )
+        config_manager.create_task_run(task_id, "生成 Word 制片画布", "")
+        config_manager.update_task_run(
+            task_id,
+            "failed",
+            current_phase="document_generation",
+            error="Word 制片画布生成失败：缺少资产图",
+            completed=True,
+        )
+        config_manager.append_task_event(
+            task_id,
+            "comic_v2_delivery_failed",
+            "failed",
+            "Word 制片画布生成失败",
+            {
+                "workspace_id": workspace_id,
+                "office_id": "comic_production",
+                "department": "礼部 / 刑部",
+                "stage": "document_generation",
+                "next_action": "修复缺失资产后重新生成 Word 制片画布。",
+            },
+        )
+
+        response = self.client.get(f"/api/tasks/{task_id}")
+
+        self.assertEqual(response.status_code, 200)
+        plan = response.json()["recovery_plan"]
+        self.assertTrue(plan["recoverable"])
+        self.assertEqual(plan["retry_action"]["path"], f"/api/workspaces/{workspace_id}/comic/v2/delivery/build")
+        self.assertEqual(plan["retry_action"]["label"], "重新生成 Word 制片画布")
+
     def test_comic_cabinet_turn_creates_and_persists_session(self):
         response = self.client.post("/api/comic/cabinet/turn", json={
             "idea": "一个女孩每天醒来都会进入不同漫画世界",

@@ -162,12 +162,17 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             "任务失败恢复计划",
             [
                 _contains(root / "src/config_manager.py", "_build_task_recovery_plan"),
+                _contains(root / "src/config_manager.py", "_comic_v2_retry_action"),
+                _contains(root / "src/config_manager.py", "delivery/build"),
                 _contains(root / "src/config_manager.py", '"recovery_plan"'),
                 _contains(root / "src/web/app.py", '"retry_action"'),
+                _contains(root / "src/web/app.py", "重新生成 Word 制片画布"),
                 _contains(root / "src/web/static/js/app.js", "renderTaskRecoveryPlan"),
                 _contains(root / "src/web/static/css/style.css", ".task-recovery-plan"),
                 _contains(root / "tests/test_config_manager.py", "test_failed_task_run_exposes_recovery_plan_from_last_failure_event"),
+                _contains(root / "tests/test_config_manager.py", "test_comic_v2_recovery_plan_infers_retry_action_from_failed_stage"),
                 _contains(root / "tests/test_web_comic_api.py", "test_task_detail_exposes_recovery_plan_for_failed_run"),
+                _contains(root / "tests/test_web_comic_api.py", "test_task_detail_exposes_delivery_retry_action_for_word_canvas_failure"),
                 _contains(root / "tests/test_frontend_comic_routing.py", "test_task_timelines_render_recovery_plan"),
             ],
             [
