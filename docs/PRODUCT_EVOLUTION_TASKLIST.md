@@ -414,4 +414,6 @@
   packaging failures.
 - [x] Research-office background failures include a concrete recovery action for
   organizing already available research outputs.
+- [x] Office protocols now declare reusable recovery actions, so future offices
+  can expose retry buttons without hard-coding stage maps in task storage.
 - [ ] Extend explicit recovery events to future offices as they are added.

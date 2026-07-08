@@ -11,6 +11,7 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("zhongshu", office.agent_duties)
         self.assertIn("report", office.artifact_types)
         self.assertIn("source_list", office.artifact_types)
+        self.assertTrue(any(item["stage"] == "agent_workflow" for item in office.recovery_actions))
         self.assertTrue(office.acceptance_criteria)
 
     def test_unknown_office_falls_back_to_research(self):
@@ -43,6 +44,7 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("dispatch_plan", office.artifact_types)
         self.assertIn("asset_registry", office.artifact_types)
         self.assertIn("word_canvas", office.artifact_types)
+        self.assertTrue(any(item["stage"] == "document_generation" for item in office.recovery_actions))
         self.assertIn("zhongshu", office.agent_duties)
         self.assertTrue(any("独立的 office_id" in item for item in office.acceptance_criteria))
 

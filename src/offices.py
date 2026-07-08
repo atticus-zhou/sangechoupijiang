@@ -21,6 +21,7 @@ class OfficeProfile:
     model_requirements: list[dict] = field(default_factory=list)
     human_checkpoints: list[dict] = field(default_factory=list)
     artifact_contract: dict[str, object] = field(default_factory=dict)
+    recovery_actions: list[dict] = field(default_factory=list)
     acceptance_criteria: list[str] = field(default_factory=list)
     default_template: str = ""
 
@@ -80,6 +81,32 @@ RESEARCH_OFFICE = OfficeProfile(
         "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
         "trace_rule": "报告、截图、数据点和结论必须能追溯到来源或待补证据说明。",
     },
+    recovery_actions=[
+        {
+            "stage": "feigua_evidence_capture",
+            "label": "整理已上传/已截取证据",
+            "method": "POST",
+            "path_template": "/api/workspaces/{workspace_id}/evidence/sync",
+        },
+        {
+            "stage": "evidence_extraction",
+            "label": "重新识别工作区截图证据",
+            "method": "POST",
+            "path_template": "/api/workspaces/{workspace_id}/evidence/extract-all",
+        },
+        {
+            "stage": "agent_workflow",
+            "label": "整理已有研究产出",
+            "method": "POST",
+            "path_template": "/api/tasks/{task_id}/recover-artifacts",
+        },
+        {
+            "stage": "artifact_packaging",
+            "label": "重新整理研究材料包",
+            "method": "POST",
+            "path_template": "/api/tasks/{task_id}/recover-artifacts",
+        },
+    ],
     acceptance_criteria=[
         "最终报告必须有清晰的老板摘要。",
         "近期数据尽量标注年份、日期和来源。",
@@ -231,6 +258,15 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
         "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
         "trace_rule": "故事合同、视觉母版、资产、图片、镜头、提示词和 Word 画布必须保持可追溯引用链路。",
     },
+    recovery_actions=[
+        {"stage": "visual_bible_planning", "label": "重新生成故事合同与视觉母版", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/plan-confirmed"},
+        {"stage": "asset_planning", "label": "重新生成资产拆解包", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/assets/plan"},
+        {"stage": "asset_review", "label": "重新生成资产拆解包", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/assets/plan"},
+        {"stage": "prompt_planning", "label": "重新生成资产与镜头提示词", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/prompts/plan"},
+        {"stage": "image_generation", "label": "重新生成并质检基础资产图", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/images/generate"},
+        {"stage": "visual_review", "label": "重新生成并质检基础资产图", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/images/generate"},
+        {"stage": "document_generation", "label": "重新生成 Word 制片画布", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/delivery/build"},
+    ],
     acceptance_criteria=[
         "本办公室必须使用独立的 office_id，不能和旧 AI 漫剧办公室混用底层配置。",
         "内阁先冻结故事合约，之后才能进入制片生产。",
@@ -278,6 +314,7 @@ def _office_protocol(office: OfficeProfile) -> dict:
         "model_requirements": office.model_requirements,
         "human_checkpoints": office.human_checkpoints,
         "artifact_contract": office.artifact_contract or _default_artifact_contract(),
+        "recovery_actions": office.recovery_actions,
         "artifact_types": office.artifact_types,
         "acceptance_criteria": office.acceptance_criteria,
     }

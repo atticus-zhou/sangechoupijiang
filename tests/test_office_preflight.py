@@ -128,10 +128,14 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertTrue(any(item["agent"] == "gongbu" and item["model_kind"] == "image" for item in comic["model_requirements"]))
         self.assertTrue(any(item["id"] == "story_confirmation" for item in comic["human_checkpoints"]))
         self.assertTrue(any(item["id"] == "asset_review" for item in comic["human_checkpoints"]))
+        self.assertTrue(any(item["stage"] == "document_generation" for item in comic["recovery_actions"]))
         self.assertEqual(comic["artifact_contract"]["id_field"], "artifact_id")
         self.assertIn("source", comic["artifact_contract"]["required_metadata"])
         self.assertIn("responsible_agent", comic["artifact_contract"]["required_metadata"])
         self.assertIn("reference_chain", comic["artifact_contract"]["required_metadata"])
+
+        research = protocols["research"]
+        self.assertTrue(any(item["stage"] == "agent_workflow" for item in research["recovery_actions"]))
 
     def test_comic_production_demo_api_is_no_key_and_read_only(self):
         with patch("src.web.app.config_manager.get_model_config") as get_model_config, \

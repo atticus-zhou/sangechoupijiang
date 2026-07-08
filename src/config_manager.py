@@ -585,10 +585,8 @@ class ConfigManager:
         workspace_id = str(payload.get("workspace_id") or "")
         stage = str(payload.get("stage") or current_phase or "")
         office_id = str(payload.get("office_id") or "")
-        if not retry_action and workspace_id and office_id == "comic_production":
-            retry_action = self._comic_v2_retry_action(workspace_id, stage)
-        if not retry_action and office_id == "research":
-            retry_action = self._research_retry_action(task_id, workspace_id, stage)
+        if not retry_action and office_id:
+            retry_action = self._office_retry_action(office_id, task_id, workspace_id, stage)
         next_action = str(payload.get("next_action") or "")
         if not next_action and recoverable:
             next_action = "查看最后一条失败事件，修复对应模型、配置或人工审核问题后，从失败阶段重新执行。"
@@ -609,50 +607,27 @@ class ConfigManager:
 
     def _comic_v2_retry_action(self, workspace_id: str, stage: str) -> dict:
         """Infer the safest retry endpoint for a comic-production V2 failed stage."""
-        actions = {
-            "visual_bible_planning": ("重新生成故事合同与视觉母版", "plan-confirmed"),
-            "asset_planning": ("重新生成资产拆解包", "assets/plan"),
-            "asset_review": ("重新生成资产拆解包", "assets/plan"),
-            "prompt_planning": ("重新生成资产与镜头提示词", "prompts/plan"),
-            "image_generation": ("重新生成并质检基础资产图", "images/generate"),
-            "visual_review": ("重新生成并质检基础资产图", "images/generate"),
-            "document_generation": ("重新生成 Word 制片画布", "delivery/build"),
-        }
-        item = actions.get(stage)
-        if not item:
-            return {}
-        label, suffix = item
-        return {
-            "label": label,
-            "method": "POST",
-            "path": f"/api/workspaces/{workspace_id}/comic/v2/{suffix}",
-        }
+        return self._office_retry_action("comic_production", "", workspace_id, stage)
 
     def _research_retry_action(self, task_id: str, workspace_id: str, stage: str) -> dict:
         """Infer the safest recovery endpoint for a research-office failed stage."""
-        if stage == "feigua_evidence_capture" and workspace_id:
+        return self._office_retry_action("research", task_id, workspace_id, stage)
+
+    def _office_retry_action(self, office_id: str, task_id: str, workspace_id: str, stage: str) -> dict:
+        """Infer a retry endpoint from the office protocol's recovery actions."""
+        office = get_office(office_id)
+        for action in office.recovery_actions:
+            if action.get("stage") != stage:
+                continue
+            path_template = str(action.get("path_template") or "")
+            if "{workspace_id}" in path_template and not workspace_id:
+                return {}
+            if "{task_id}" in path_template and not task_id:
+                return {}
             return {
-                "label": "整理已上传/已截取证据",
-                "method": "POST",
-                "path": f"/api/workspaces/{workspace_id}/evidence/sync",
-            }
-        if stage == "evidence_extraction" and workspace_id:
-            return {
-                "label": "重新识别工作区截图证据",
-                "method": "POST",
-                "path": f"/api/workspaces/{workspace_id}/evidence/extract-all",
-            }
-        if stage == "agent_workflow":
-            return {
-                "label": "整理已有研究产出",
-                "method": "POST",
-                "path": f"/api/tasks/{task_id}/recover-artifacts",
-            }
-        if stage == "artifact_packaging":
-            return {
-                "label": "重新整理研究材料包",
-                "method": "POST",
-                "path": f"/api/tasks/{task_id}/recover-artifacts",
+                "label": str(action.get("label") or "继续处理"),
+                "method": str(action.get("method") or "POST").upper(),
+                "path": path_template.format(task_id=task_id, workspace_id=workspace_id),
             }
         return {}
 
