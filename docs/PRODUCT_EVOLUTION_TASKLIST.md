@@ -400,6 +400,8 @@
   next action, and optional retry action.
 - [x] `/api/tasks/{task_id}` returns the recovery plan so the frontend and
   history views can explain how a user should continue after a failed run.
+- [x] Research and comic task timelines render the recovery plan with failed
+  phase, department, next action, and a direct continue button when available.
 - [x] AI comic-production V2 image-generation failures include a concrete retry
   action for regenerating and visually reviewing base asset images.
 - [ ] Extend recovery actions to every comic-production V2 stage, research

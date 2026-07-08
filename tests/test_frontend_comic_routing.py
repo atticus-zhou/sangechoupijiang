@@ -34,6 +34,18 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("interrupted: '后台已中断'", js)
         self.assertIn("task_interrupted_after_restart: '后台已中断'", js)
 
+    def test_task_timelines_render_recovery_plan(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn("function renderTaskRecoveryPlan", js)
+        research_fn = js[js.index("function renderResearchTaskTimeline"):js.index("function phaseLabel")]
+        comic_fn = js[js.index("async function loadComicTimeline"):js.index("async function loadComicArtifacts")]
+        self.assertIn("renderTaskRecoveryPlan(task.recovery_plan)", research_fn)
+        self.assertIn("renderTaskRecoveryPlan(t.recovery_plan)", comic_fn)
+        self.assertIn("继续处理", js)
+        self.assertIn(".task-recovery-plan", css)
+
     def test_model_page_explains_comic_production_model_requirements(self):
         js = APP_JS.read_text(encoding="utf-8")
 

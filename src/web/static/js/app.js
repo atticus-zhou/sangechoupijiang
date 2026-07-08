@@ -289,6 +289,10 @@ function escapeHtml(text) {
         .replace(/"/g, '&quot;');
 }
 
+function escapeJsAttr(value) {
+    return escapeHtml(encodeURIComponent(JSON.stringify(value || {})));
+}
+
 async function loadResearchOffice() {
     await Promise.all([loadResearchProfile(), loadResearchWorkspaces()]);
 }
@@ -403,6 +407,7 @@ function renderResearchTaskTimeline(task) {
                 </div>
             </div>
             <div class="timeline-phase">当前阶段：${escapeHtml(phaseLabel(task.current_phase))}</div>
+            ${renderTaskRecoveryPlan(task.recovery_plan)}
             <div class="timeline-events">
                 ${visibleEvents.map(e => `
                     <div class="timeline-event ${e.status === 'failed' ? 'failed' : ''}">
@@ -417,6 +422,55 @@ function renderResearchTaskTimeline(task) {
             </div>
         </div>
     `;
+}
+
+function renderTaskRecoveryPlan(plan) {
+    if (!plan || !plan.recoverable) return '';
+    const action = plan.retry_action || {};
+    return `
+        <div class="task-recovery-plan">
+            <div class="task-recovery-plan-head">
+                <strong>恢复建议</strong>
+                <span>${escapeHtml(plan.department || plan.failed_phase || '任务恢复')}</span>
+            </div>
+            ${plan.reason ? `<p><b>卡住原因</b>${escapeHtml(plan.reason)}</p>` : ''}
+            ${plan.impact ? `<p><b>影响</b>${escapeHtml(plan.impact)}</p>` : ''}
+            ${plan.next_action ? `<p><b>下一步</b>${escapeHtml(plan.next_action)}</p>` : ''}
+            ${action.path ? `
+                <button class="ghost btn-sm" onclick="retryTaskRecoveryAction('${escapeJsAttr(action)}')">
+                    ${escapeHtml(action.label || '继续处理')}
+                </button>
+            ` : ''}
+        </div>
+    `;
+}
+
+async function retryTaskRecoveryAction(encodedAction) {
+    let action = {};
+    try {
+        action = JSON.parse(decodeURIComponent(encodedAction || ''));
+    } catch (e) {
+        toast('恢复动作解析失败，请刷新后重试', 'error');
+        return;
+    }
+    if (!action.path) {
+        toast('这个任务暂时没有可自动执行的恢复动作', 'error');
+        return;
+    }
+    try {
+        const method = String(action.method || 'POST').toUpperCase();
+        if (method === 'GET') await API.get(action.path);
+        else if (method === 'PUT') await API.put(action.path, {});
+        else await API.post(action.path, {});
+        toast(action.label ? `${action.label} 已提交` : '恢复动作已提交', 'success');
+        if (currentResearchWorkspace) await loadResearchTimeline(currentResearchWorkspace);
+        if (currentComicWorkspace) {
+            await loadComicTimeline(currentComicWorkspace);
+            await loadComicArtifacts(currentComicWorkspace);
+        }
+    } catch (e) {
+        toast('恢复动作失败：' + formatApiError(e), 'error');
+    }
 }
 
 function phaseLabel(phase) {
@@ -1124,6 +1178,7 @@ async function loadComicTimeline(workspaceId) {
                 <strong>${escapeHtml(t.user_request || '')}</strong>
                 <span>${escapeHtml(t.status || '')} · ${escapeHtml(t.current_phase || '')}</span>
                 <code>${escapeHtml(t.task_id || '')}</code>
+                ${renderTaskRecoveryPlan(t.recovery_plan)}
             </div>
         </div>
     `).join('');
@@ -4088,6 +4143,7 @@ function exposeInlineHandlers() {
     window.filterComicAssets = filterComicAssets;
     window.selectComicArtifact = selectComicArtifact;
     window.regenerateComicImage = regenerateComicImage;
+    window.retryTaskRecoveryAction = retryTaskRecoveryAction;
 }
 exposeInlineHandlers();
 
