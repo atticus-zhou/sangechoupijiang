@@ -162,6 +162,10 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertTrue(payload["stages"])
         self.assertTrue(payload["artifacts"])
         self.assertTrue(payload["quality_gates"])
+        self.assertGreaterEqual(len(payload["viewer_path"]), 3)
+        self.assertGreaterEqual(len(payload["proof_points"]), 3)
+        self.assertIn("先看故事", payload["viewer_path"][0]["title"])
+        self.assertIn("Word", " ".join(payload["proof_points"]))
         gate_ids = {item["id"] for item in payload["quality_gates"]}
         self.assertIn("no_key_read_only", gate_ids)
         self.assertIn("downloadable_delivery", gate_ids)
@@ -211,6 +215,10 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertGreaterEqual(payload["competitor_count"], 1)
         self.assertTrue(payload["stages"])
         self.assertTrue(payload["quality_gates"])
+        self.assertGreaterEqual(len(payload["viewer_path"]), 3)
+        self.assertGreaterEqual(len(payload["proof_points"]), 3)
+        self.assertIn("先看目标", payload["viewer_path"][0]["title"])
+        self.assertIn("证据", " ".join(payload["proof_points"]))
         gate_ids = {item["id"] for item in payload["quality_gates"]}
         self.assertIn("no_key_read_only", gate_ids)
         self.assertIn("traceable_sources", gate_ids)

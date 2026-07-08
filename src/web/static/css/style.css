@@ -324,6 +324,10 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     border-color: rgba(63, 185, 80, 0.2);
 }
 
+.demo-viewer-path {
+    border-color: rgba(88, 166, 255, 0.22);
+}
+
 .demo-stage-grid,
 .demo-artifact-grid,
 .demo-quality-grid {
@@ -332,9 +336,16 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     gap: 12px;
 }
 
+.demo-viewer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
 .demo-stage-card,
 .demo-artifact-grid article,
 .demo-quality-grid article,
+.demo-viewer-grid article,
 .demo-list article {
     border: 1px solid rgba(139, 148, 158, 0.16);
     border-radius: 14px;
@@ -356,6 +367,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .demo-stage-card strong,
 .demo-artifact-grid strong,
 .demo-quality-grid strong,
+.demo-viewer-grid strong,
 .demo-list strong {
     display: block;
     color: #e6edf3;
@@ -393,6 +405,36 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 13px;
     line-height: 1.55;
     margin: 0;
+}
+
+.demo-viewer-grid p {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 8px 0 0;
+}
+
+.demo-viewer-grid small {
+    display: block;
+    margin-top: 10px;
+    color: var(--accent);
+    font-size: 12px;
+}
+
+.demo-proof-points {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.demo-proof-points span {
+    padding: 7px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(88, 166, 255, 0.24);
+    background: rgba(88, 166, 255, 0.08);
+    color: var(--text2);
+    font-size: 12px;
 }
 
 .demo-download-link {

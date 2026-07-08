@@ -4132,6 +4132,7 @@ function renderComicDemo(demo) {
                 <span>固定样例，可安全公开展示</span>
             </div>
         </section>
+        ${renderDemoViewerPath(demo.viewer_path, demo.proof_points)}
         <section class="demo-section">
             <h2>样例故事</h2>
             <p>${escapeHtml(demo.source_story_preview || '')}</p>
@@ -4204,6 +4205,35 @@ function renderComicDemo(demo) {
     `;
 }
 
+function renderDemoViewerPath(path, proofPoints) {
+    const steps = Array.isArray(path) ? path : [];
+    const proofs = Array.isArray(proofPoints) ? proofPoints : [];
+    if (!steps.length && !proofs.length) return '';
+    return `
+        <section class="demo-section demo-viewer-path">
+            <div class="demo-section-head">
+                <h2>建议你这样看</h2>
+                <span>${steps.length} 步看懂</span>
+            </div>
+            <div class="demo-viewer-grid">
+                ${steps.map((item, index) => `
+                    <article>
+                        <b>${index + 1}</b>
+                        <strong>${escapeHtml(item.title || '')}</strong>
+                        <p>${escapeHtml(item.body || '')}</p>
+                        ${item.focus ? `<small>${escapeHtml(item.focus)}</small>` : ''}
+                    </article>
+                `).join('')}
+            </div>
+            ${proofs.length ? `
+                <div class="demo-proof-points">
+                    ${proofs.map(point => `<span>${escapeHtml(point)}</span>`).join('')}
+                </div>
+            ` : ''}
+        </section>
+    `;
+}
+
 function renderDemoQualityGates(gates) {
     const items = Array.isArray(gates) ? gates : [];
     if (!items.length) return '';
@@ -4255,6 +4285,7 @@ function renderResearchDemo(demo) {
                 <span>展示报告、来源和截图计划</span>
             </div>
         </section>
+        ${renderDemoViewerPath(demo.viewer_path, demo.proof_points)}
         <section class="demo-section">
             <div class="demo-section-head">
                 <h2>调研目标</h2>

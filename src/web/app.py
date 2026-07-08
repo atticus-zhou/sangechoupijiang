@@ -363,6 +363,28 @@ async def get_comic_production_demo_api():
         "uses_real_models": False,
         "api_key_required": False,
         "writes_workspace": False,
+        "viewer_path": [
+            {
+                "title": "先看故事如何变成生产合同",
+                "body": "这个样例从完整故事出发，展示内阁确认故事后，三省六部如何进入资产、镜头和交付生产。",
+                "focus": "故事预览、生产流程、人工确认节点",
+            },
+            {
+                "title": "再看资产和镜头如何被引用",
+                "body": "人物、道具、场景和镜头不再是散装文本，而是带有 ID、用途和引用关系的生产对象。",
+                "focus": "资产样例、镜头样例、引用链路",
+            },
+            {
+                "title": "最后下载 Word 画布和引用清单",
+                "body": "交付物可以下载，适合交给下游图片、视频或剪辑平台继续生产，也方便开发者复核结构。",
+                "focus": "Word 制片画布、handoff manifest",
+            },
+        ],
+        "proof_points": [
+            "不需要 API Key 就能安全展示完整流程。",
+            "Word 制片画布和引用清单可以直接下载。",
+            "资产、镜头、提示词和交付物之间保留引用链路。",
+        ],
         "source_story_preview": story[:360],
         "asset_count": len(assets),
         "shot_count": len(shots),
@@ -491,6 +513,28 @@ async def get_research_demo_api():
         "uses_real_models": False,
         "api_key_required": False,
         "writes_workspace": False,
+        "viewer_path": [
+            {
+                "title": "先看目标如何被拆成调研任务",
+                "body": "样例展示研究办公室如何从调研目标进入来源、数据、竞品和截图计划，而不是只生成一段文字。",
+                "focus": "调研目标、阶段流程、部门分工",
+            },
+            {
+                "title": "再看证据和数据是否可追溯",
+                "body": "来源、数据点、竞品和截图计划都被拆成可检查对象，缺权限的数据会标记为待核验。",
+                "focus": "来源清单、数据点、竞品表、截图计划",
+            },
+            {
+                "title": "最后下载阶段报告和证据清单",
+                "body": "公开演示只提供固定样例，但交付形态接近真实调研工作中的报告和证据附件。",
+                "focus": "阶段报告、evidence manifest",
+            },
+        ],
+        "proof_points": [
+            "不需要 API Key 就能查看调研办公室的工作链。",
+            "报告、来源、数据、竞品和截图计划互相对应。",
+            "证据清单可以下载，方便复核哪些结论已验证、哪些待补。",
+        ],
         "objective": plan.get("objective", ""),
         "deliverable": plan.get("deliverable", ""),
         "report_preview": (fixture.get("final_report") or "")[:520],
