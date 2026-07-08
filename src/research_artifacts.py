@@ -4,6 +4,19 @@ from __future__ import annotations
 
 import re
 
+from src.research_office.output_schemas import (
+    ResearchOutputSchemaError,
+    validate_research_output_schema,
+)
+
+
+_SCHEMA_BY_ARTIFACT_TYPE = {
+    "standard_report": "research_standard_report",
+    "source_list": "research_source_list",
+    "data_table": "research_data_table",
+    "competitor_table": "research_competitor_table",
+}
+
 
 def build_research_artifacts(task_id: str, result: dict) -> list[dict]:
     """Create normalized artifacts for the research office.
@@ -127,10 +140,73 @@ def build_research_artifacts(task_id: str, result: dict) -> list[dict]:
             "created_by": "gongbu",
         })
 
+    schema_gate_results = _apply_research_schema_gates(artifacts)
+    if _has_schema_gate_failures(schema_gate_results):
+        artifacts.append(_make_schema_gate_quality_report(title, schema_gate_results))
+
     for index, artifact in enumerate(artifacts, start=1):
         artifact["artifact_id"] = f"art_{task_id}_{artifact['artifact_type']}_{index}"
         artifact["task_id"] = task_id
     return artifacts
+
+
+def _apply_research_schema_gates(artifacts: list[dict]) -> list[dict]:
+    gate_results: list[dict] = []
+    for artifact in artifacts:
+        schema_id = _SCHEMA_BY_ARTIFACT_TYPE.get(artifact.get("artifact_type"))
+        if not schema_id:
+            continue
+        try:
+            result = validate_research_output_schema(schema_id, {"content": artifact.get("content", "")})
+        except ResearchOutputSchemaError as exc:
+            result = {
+                "office_id": "research",
+                "schema_id": schema_id,
+                "status": "failed",
+                "reason": str(exc),
+            }
+        artifact.setdefault("metadata", {})["schema_gate"] = result
+        gate_results.append({
+            "artifact_type": artifact.get("artifact_type", ""),
+            "title": artifact.get("title", ""),
+            **result,
+        })
+    return gate_results
+
+
+def _has_schema_gate_failures(gate_results: list[dict]) -> bool:
+    return any(item.get("status") != "passed" for item in gate_results)
+
+
+def _make_schema_gate_quality_report(title: str, gate_results: list[dict]) -> dict:
+    failed = [item for item in gate_results if item.get("status") != "passed"]
+    lines = [
+        f"# {title} - Schema Gate 质量报告",
+        "",
+        "以下交付物还没有通过结构校验，暂时不建议直接作为老板可读报告交付。",
+        "",
+        "| 交付物 | Schema | 状态 | 原因 |",
+        "| --- | --- | --- | --- |",
+    ]
+    for item in failed:
+        lines.append(
+            f"| {_cell(item.get('artifact_type', ''))} | {_cell(item.get('schema_id', ''))} | "
+            f"{_cell(item.get('status', ''))} | {_cell(item.get('reason', 'needs review'))} |"
+        )
+    return {
+        "artifact_type": "quality_report",
+        "title": f"{title} - Schema Gate 质量报告",
+        "content": "\n".join(lines),
+        "metadata": {
+            "source": "schema_gate",
+            "schema_gate": {
+                "status": "needs_review",
+                "failed_count": len(failed),
+                "failed_schema_ids": [item.get("schema_id", "") for item in failed],
+            },
+        },
+        "created_by": "xingbu",
+    }
 
 
 def _make_research_plan(plan: dict, results: list[dict], report: str) -> str:

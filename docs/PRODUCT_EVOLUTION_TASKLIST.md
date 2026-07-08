@@ -411,6 +411,9 @@
   public demo or real use.
 - [x] Research-office validators now cover the standard report, source list,
   data table, and competitor table gates.
+- [x] Research-office artifact packaging now runs those gates, records
+  `schema_gate` audit metadata on each governed artifact, and adds a
+  `quality_report` when a report package is not delivery-ready.
 - [ ] Continue extending concrete schema validators to future office-specific
   outputs.
 

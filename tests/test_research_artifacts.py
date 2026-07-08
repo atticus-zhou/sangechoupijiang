@@ -124,6 +124,82 @@ class ResearchArtifactTests(unittest.TestCase):
         self.assertIn("样例竞品", by_type["standard_report"]["content"])
         self.assertIn("https://example.com/report", by_type["standard_report"]["content"])
 
+    def test_research_artifacts_record_schema_gate_audits(self):
+        result = {
+            "final_report": "Market size grows steadily. Source: https://example.com/report",
+            "plan": {"title": "Schema checked report"},
+            "results": [{
+                "step_id": 1,
+                "department": "bingbu",
+                "status": "verified",
+                "summary": "Collected source, market metric, and competitor evidence.",
+                "sources": [{
+                    "title": "Industry report",
+                    "url": "https://example.com/report",
+                    "publisher": "Example Research",
+                    "published_at": "2026-01",
+                    "note": "Market size evidence",
+                }],
+                "data_points": [{
+                    "metric": "Market size",
+                    "value": "12 billion",
+                    "period": "2026",
+                    "source_url": "https://example.com/report",
+                    "confidence": "high",
+                    "note": "Verified sample",
+                }],
+                "competitors": [{
+                    "product_name": "Sample product",
+                    "brand": "Sample brand",
+                    "sales": "10000",
+                    "price": "99",
+                    "selling_points": "Fast delivery",
+                    "target_user": "Entry users",
+                    "positive_keywords": "cheap",
+                    "negative_pain_points": "quality varies",
+                }],
+            }],
+        }
+
+        artifacts = build_research_artifacts("task_schema", result)
+        by_type = {a["artifact_type"]: a for a in artifacts}
+
+        expected_gates = {
+            "standard_report": "research_standard_report",
+            "source_list": "research_source_list",
+            "data_table": "research_data_table",
+            "competitor_table": "research_competitor_table",
+        }
+        for artifact_type, schema_id in expected_gates.items():
+            schema_gate = by_type[artifact_type]["metadata"]["schema_gate"]
+            self.assertEqual(schema_gate["schema_id"], schema_id)
+            self.assertEqual(schema_gate["status"], "passed")
+
+        self.assertNotIn("quality_report", by_type)
+
+    def test_research_artifacts_create_quality_report_when_schema_gate_fails(self):
+        result = {
+            "final_report": "Short report without traceable evidence.",
+            "plan": {"title": "Weak report"},
+            "results": [{
+                "step_id": 1,
+                "department": "bingbu",
+                "status": "completed",
+                "summary": "No sources yet.",
+            }],
+        }
+
+        artifacts = build_research_artifacts("task_bad_schema", result)
+        by_type = {a["artifact_type"]: a for a in artifacts}
+
+        self.assertIn("quality_report", by_type)
+        quality_report = by_type["quality_report"]
+        self.assertIn("质量报告", quality_report["content"])
+        self.assertIn("交付物", quality_report["content"])
+        self.assertIn("research_source_list", quality_report["content"])
+        self.assertIn("schema_gate", quality_report["metadata"])
+        self.assertEqual(quality_report["metadata"]["schema_gate"]["status"], "needs_review")
+
 
 if __name__ == "__main__":
     unittest.main()

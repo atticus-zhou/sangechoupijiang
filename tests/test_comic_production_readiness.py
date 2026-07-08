@@ -42,7 +42,9 @@ class ComicProductionReadinessTests(unittest.TestCase):
         schema_evidence = "\n".join(checks["agent_output_schema_gate"]["evidence"])
         self.assertIn("src/offices.py", schema_evidence)
         self.assertIn("src/research_office/output_schemas.py", schema_evidence)
+        self.assertIn("src/research_artifacts.py", schema_evidence)
         self.assertIn("tests/test_research_output_schemas.py", schema_evidence)
+        self.assertIn("tests/test_research_artifacts.py", schema_evidence)
 
     def test_real_product_readiness_can_be_rendered_for_tasklist(self):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown
