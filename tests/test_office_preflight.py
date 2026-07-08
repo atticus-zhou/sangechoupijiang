@@ -116,6 +116,10 @@ class OfficePreflightApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
+        self.assertIn("creation_template", payload)
+        self.assertIn("required_profile_fields", payload["creation_template"])
+        self.assertIn("recovery_actions", payload["creation_template"]["required_profile_fields"])
+        self.assertIn("no_key_demo", payload["creation_template"]["required_launch_gates"])
         protocols = {item["office_id"]: item for item in payload["protocols"]}
 
         self.assertIn("comic_production", protocols)

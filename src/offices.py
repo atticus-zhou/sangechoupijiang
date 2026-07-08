@@ -303,6 +303,41 @@ def list_office_protocols() -> list[dict]:
     return [_office_protocol(office) for office in OFFICE_PROFILES.values()]
 
 
+def list_office_creation_template() -> dict:
+    return {
+        "required_profile_fields": [
+            "id",
+            "name",
+            "description",
+            "input_types",
+            "output_types",
+            "agent_duties",
+            "artifact_types",
+            "model_requirements",
+            "human_checkpoints",
+            "artifact_contract",
+            "recovery_actions",
+            "acceptance_criteria",
+            "default_template",
+        ],
+        "required_launch_gates": [
+            "no_key_demo",
+            "model_preflight",
+            "end_to_end_test",
+            "sample_delivery",
+            "failure_recovery",
+            "history_trace",
+            "readme_documentation",
+            "secret_scan",
+        ],
+        "minimum_artifact_contract": _default_artifact_contract(),
+        "notes": [
+            "New offices must reuse the OfficeProfile protocol instead of copying one-off routes.",
+            "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, failure recovery, and history traceability.",
+        ],
+    }
+
+
 def _office_protocol(office: OfficeProfile) -> dict:
     return {
         "office_id": office.id,

@@ -1,6 +1,6 @@
 import unittest
 
-from src.offices import get_office, list_offices
+from src.offices import get_office, list_office_creation_template, list_offices
 
 
 class OfficeProfileTests(unittest.TestCase):
@@ -24,6 +24,25 @@ class OfficeProfileTests(unittest.TestCase):
 
         self.assertEqual(offices[0]["id"], "research")
         self.assertIn("artifact_types", offices[0])
+
+    def test_new_office_template_declares_productization_gates(self):
+        template = list_office_creation_template()
+
+        self.assertIn("required_profile_fields", template)
+        self.assertIn("input_types", template["required_profile_fields"])
+        self.assertIn("output_types", template["required_profile_fields"])
+        self.assertIn("model_requirements", template["required_profile_fields"])
+        self.assertIn("human_checkpoints", template["required_profile_fields"])
+        self.assertIn("artifact_contract", template["required_profile_fields"])
+        self.assertIn("recovery_actions", template["required_profile_fields"])
+        self.assertIn("acceptance_criteria", template["required_profile_fields"])
+        self.assertIn("required_launch_gates", template)
+        self.assertIn("no_key_demo", template["required_launch_gates"])
+        self.assertIn("model_preflight", template["required_launch_gates"])
+        self.assertIn("end_to_end_test", template["required_launch_gates"])
+        self.assertIn("sample_delivery", template["required_launch_gates"])
+        self.assertIn("failure_recovery", template["required_launch_gates"])
+        self.assertIn("history_trace", template["required_launch_gates"])
 
     def test_comic_office_defines_preproduction_contract(self):
         office = get_office("comic")

@@ -31,11 +31,12 @@
 
 - [ ] 每个办公室必须有独立的配置、模型、工作区、历史、产物和测试。
 - [x] 每个办公室必须声明输入类型、输出类型、Agent 分工、人工审核节点和验收标准。
+- [x] 新办公室创建模板必须声明必需协议字段和上线门槛，避免后续办公室复制临时代码入口。
 - [ ] 所有 Agent 关键输出必须有结构化 schema 校验。
 - [x] 所有产物必须有 artifact ID、来源、版本、责任 Agent 和引用链路。
 - [ ] 所有长任务必须可观测、可重试、可恢复，并记录失败原因和下一步建议。
 
-说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。下一步仍需把每类 Agent 输出升级成更细的 schema 校验。
+说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；协议 API 同时返回 `creation_template`，要求新办公室补齐 `input_types`、`output_types`、`model_requirements`、`human_checkpoints`、`artifact_contract`、`recovery_actions` 和验收标准，并通过无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、README 文档和 secret scan。artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。下一步仍需把每类 Agent 输出升级成更细的 schema 校验。
 
 ### 阶段 D：真实使用闭环
 
@@ -54,6 +55,7 @@
 - [ ] 研究办公室成为可靠的人机协作调研工具，重点解决报告、数据、截图证据和来源追溯。
 - [ ] 新办公室必须复用平台协议，而不是复制一套临时代码。
 - [ ] 每新增一个办公室，都必须同时提供无 Key 演示、模型预检、端到端测试、失败处理和样例交付物。
+- [x] `/api/offices/protocols` 已暴露新办公室创建模板，后续办公室扩展必须先对齐这份模板。
 - [ ] 只有当一个办公室达到“可展示、可试用、可交付、可追溯”四项标准后，才允许标记为主力办公室。
 
 ## 0. 总原则

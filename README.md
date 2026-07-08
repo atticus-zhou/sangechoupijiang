@@ -122,8 +122,12 @@ GET /api/offices/protocols
 - 模型需求：说明每个部门需要文本模型、视觉模型还是生图模型，以及缺失后会影响哪一步。
 - 人工审核节点：说明哪些阶段必须让用户确认，例如故事确认、视觉母版审核、资产拆解审核和交付审核。
 - 产物规则：所有关键产物都要有 `artifact_id`，并在 metadata 中保留来源、版本、责任 Agent 和引用链路。
+- 失败恢复：每个办公室要声明 `recovery_actions`，让 UI 能告诉用户卡在哪一步、可以重试哪个动作。
+- 新办公室模板：接口同时返回 `creation_template`，用于约束后续办公室必须补齐哪些字段和上线门槛。
 
 这个协议是后续扩展新办公室的硬门槛。一个办公室只有同时具备输入、输出、模型需求、人工审核节点、产物规则和验收标准，才应该进入公开演示或真实使用链路。产物写入 SQLite 前会执行运行时校验：缺少 `artifact_id` 会被拒绝，缺少来源、版本、责任 Agent 或引用链路时会按工作区和任务上下文补齐后再保存。
+
+新办公室进入公开展示前，还必须满足 `creation_template.required_launch_gates` 中的上线门槛：`no_key_demo`、`model_preflight`、`end_to_end_test`、`sample_delivery`、`failure_recovery`、`history_trace`、`readme_documentation` 和 `secret_scan`。这条规则的目的不是增加形式，而是确保每个办公室都能被陌生用户试用、被开发者复现、在失败时恢复，并且不会把模型配置或历史产物串到其他办公室。
 
 ## 固定验证
 
