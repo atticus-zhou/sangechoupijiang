@@ -64,7 +64,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         readme = README.read_text(encoding="utf-8")
 
         self.assertIn("| 兵部 | 文本镜头 / 视频提示词 |", readme)
-        self.assertIn("| 工部 | 生图 + 文本组装 |", readme)
+        self.assertIn("| 工部 | 生图 + 文本组装，也就是图片生成模型加文本模型 |", readme)
         self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", readme)
         self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", readme)
         self.assertNotIn("| 兵部 | 生图模型 |", readme)
@@ -95,6 +95,20 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("关键部门先填", js)
         self.assertIn("生图模型", js)
         self.assertIn("视觉理解", js)
+
+    def test_model_page_renders_new_user_setup_path(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="model-setup-path"', html)
+        self.assertIn("function renderModelSetupPath", js)
+        self.assertIn("先跑无 Key 演示", js)
+        self.assertIn("最小可跑配置", js)
+        self.assertIn("完整制片配置", js)
+        self.assertIn("每个部门先点测试按钮", js)
+        self.assertIn("renderModelSetupPath()", js)
+        self.assertIn(".model-setup-path", css)
 
     def test_office_hall_renders_system_preflight(self):
         html = INDEX_HTML.read_text(encoding="utf-8")

@@ -3378,10 +3378,48 @@ function renderModelRequirementSummary() {
     `;
 }
 
+function renderModelSetupPath() {
+    const target = document.getElementById('model-setup-path');
+    if (!target) return;
+    const officeName = OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research || '当前办公室';
+    const isComicProduction = MODEL_OFFICE_ID === 'comic_production';
+    const steps = isComicProduction
+        ? [
+            { title: '先跑无 Key 演示', body: '先看固定样例、Word 制片画布和引用清单，不需要 API Key。' },
+            { title: '最小可跑配置', body: '先补文本部门，让故事、资产拆解和提示词规划能跑通。' },
+            { title: '完整制片配置', body: '再补刑部视觉理解模型和工部图片生成模型，进入图片质检和完整制片包。' },
+            { title: '每个部门先点测试按钮', body: '测试通过后再进工作台，避免长任务中途发现模型不可用。' },
+        ]
+        : [
+            { title: '先跑无 Key 演示', body: '先看固定样例、阶段报告和证据清单，不需要 API Key。' },
+            { title: '最小可跑配置', body: '先补文本部门，让计划、报告和证据整理能跑通。' },
+            { title: '完整工作配置', body: '再补视觉理解模型，用于截图识别、证据提取和质检。' },
+            { title: '每个部门先点测试按钮', body: '测试通过后再提交真实任务，避免等待后才发现配置错误。' },
+        ];
+    target.innerHTML = `
+        <div class="model-setup-head">
+            <strong>${escapeHtml(officeName)}第一次配置路线</strong>
+            <span>按这个顺序配置，不用一开始填满所有模型。</span>
+        </div>
+        <div class="model-setup-steps">
+            ${steps.map((step, index) => `
+                <div class="model-setup-step">
+                    <b>${index + 1}</b>
+                    <div>
+                        <strong>${escapeHtml(step.title)}</strong>
+                        <span>${escapeHtml(step.body)}</span>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 async function loadModels() {
     const officeLabel = document.getElementById('model-office-label');
     if (officeLabel) officeLabel.textContent = `当前：${OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research}`;
     await loadOfficePreflight(MODEL_OFFICE_ID, 'model-preflight-panel');
+    renderModelSetupPath();
     renderModelRequirementSummary();
     const data = await API.get('/api/config/models?office_id=' + encodeURIComponent(MODEL_OFFICE_ID));
     const models = data.models || {};
