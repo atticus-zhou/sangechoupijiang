@@ -22,6 +22,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
             "history_trace",
             "no_key_demo",
             "runtime_status",
+            "long_task_observability",
             "readme",
             "failure_handling",
         ):
@@ -34,6 +35,10 @@ class ComicProductionReadinessTests(unittest.TestCase):
         self.assertIn("src/web/static/js/app.js", runtime_evidence)
         self.assertIn("src/web/static/index.html", runtime_evidence)
         self.assertIn("src/web/static/css/style.css", runtime_evidence)
+        long_task_evidence = "\n".join(checks["long_task_observability"]["evidence"])
+        self.assertIn("src/web/app.py", long_task_evidence)
+        self.assertIn("scripts/verify_comic_v2_user_flow.py", long_task_evidence)
+        self.assertIn("tests/test_comic_v2_pipeline.py", long_task_evidence)
 
     def test_real_product_readiness_can_be_rendered_for_tasklist(self):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown
