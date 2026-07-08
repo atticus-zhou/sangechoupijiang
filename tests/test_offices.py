@@ -35,6 +35,7 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("human_checkpoints", template["required_profile_fields"])
         self.assertIn("artifact_contract", template["required_profile_fields"])
         self.assertIn("recovery_actions", template["required_profile_fields"])
+        self.assertIn("schema_gates", template["required_profile_fields"])
         self.assertIn("acceptance_criteria", template["required_profile_fields"])
         self.assertIn("required_launch_gates", template)
         self.assertIn("no_key_demo", template["required_launch_gates"])
@@ -43,6 +44,7 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("sample_delivery", template["required_launch_gates"])
         self.assertIn("failure_recovery", template["required_launch_gates"])
         self.assertIn("history_trace", template["required_launch_gates"])
+        self.assertIn("schema_gate", template["required_launch_gates"])
 
     def test_comic_office_defines_preproduction_contract(self):
         office = get_office("comic")
@@ -63,6 +65,13 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("dispatch_plan", office.artifact_types)
         self.assertIn("asset_registry", office.artifact_types)
         self.assertIn("word_canvas", office.artifact_types)
+        self.assertTrue(office.schema_gates)
+        schema_ids = {item["schema_id"] for item in office.schema_gates}
+        self.assertIn("comic_contract", schema_ids)
+        self.assertIn("asset_manifest", schema_ids)
+        self.assertIn("asset_prompt_set", schema_ids)
+        self.assertIn("shot_cards", schema_ids)
+        self.assertIn("image_review_result", schema_ids)
         self.assertTrue(any(item["stage"] == "document_generation" for item in office.recovery_actions))
         self.assertIn("zhongshu", office.agent_duties)
         self.assertTrue(any("独立的 office_id" in item for item in office.acceptance_criteria))

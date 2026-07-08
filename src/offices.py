@@ -21,6 +21,7 @@ class OfficeProfile:
     model_requirements: list[dict] = field(default_factory=list)
     human_checkpoints: list[dict] = field(default_factory=list)
     artifact_contract: dict[str, object] = field(default_factory=dict)
+    schema_gates: list[dict] = field(default_factory=list)
     recovery_actions: list[dict] = field(default_factory=list)
     acceptance_criteria: list[str] = field(default_factory=list)
     default_template: str = ""
@@ -258,6 +259,15 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
         "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
         "trace_rule": "故事合同、视觉母版、资产、图片、镜头、提示词和 Word 画布必须保持可追溯引用链路。",
     },
+    schema_gates=[
+        {"schema_id": "comic_contract", "owner_agent": "zhongshu", "stage": "story_contract", "artifact_type": "story_contract"},
+        {"schema_id": "visual_revision", "owner_agent": "zhongshu", "stage": "visual_bible_review", "artifact_type": "style_bible"},
+        {"schema_id": "asset_manifest", "owner_agent": "zhongshu", "stage": "asset_review", "artifact_type": "asset_review_package"},
+        {"schema_id": "asset_manifest_revision", "owner_agent": "zhongshu", "stage": "asset_review", "artifact_type": "asset_review_package"},
+        {"schema_id": "asset_prompt_set", "owner_agent": "gongbu", "stage": "prompt_package", "artifact_type": "prompt_package"},
+        {"schema_id": "shot_cards", "owner_agent": "bingbu", "stage": "shot_package", "artifact_type": "shot_prompt_table"},
+        {"schema_id": "image_review_result", "owner_agent": "xingbu", "stage": "image_quality_review", "artifact_type": "image_quality_report"},
+    ],
     recovery_actions=[
         {"stage": "visual_bible_planning", "label": "重新生成故事合同与视觉母版", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/plan-confirmed"},
         {"stage": "asset_planning", "label": "重新生成资产拆解包", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/assets/plan"},
@@ -316,6 +326,7 @@ def list_office_creation_template() -> dict:
             "model_requirements",
             "human_checkpoints",
             "artifact_contract",
+            "schema_gates",
             "recovery_actions",
             "acceptance_criteria",
             "default_template",
@@ -327,6 +338,7 @@ def list_office_creation_template() -> dict:
             "sample_delivery",
             "failure_recovery",
             "history_trace",
+            "schema_gate",
             "readme_documentation",
             "secret_scan",
         ],
@@ -349,6 +361,7 @@ def _office_protocol(office: OfficeProfile) -> dict:
         "model_requirements": office.model_requirements,
         "human_checkpoints": office.human_checkpoints,
         "artifact_contract": office.artifact_contract or _default_artifact_contract(),
+        "schema_gates": office.schema_gates,
         "recovery_actions": office.recovery_actions,
         "artifact_types": office.artifact_types,
         "acceptance_criteria": office.acceptance_criteria,

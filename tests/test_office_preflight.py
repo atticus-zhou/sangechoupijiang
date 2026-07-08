@@ -133,6 +133,10 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertTrue(any(item["id"] == "story_confirmation" for item in comic["human_checkpoints"]))
         self.assertTrue(any(item["id"] == "asset_review" for item in comic["human_checkpoints"]))
         self.assertTrue(any(item["stage"] == "document_generation" for item in comic["recovery_actions"]))
+        schema_ids = {item["schema_id"] for item in comic["schema_gates"]}
+        self.assertIn("comic_contract", schema_ids)
+        self.assertIn("asset_manifest", schema_ids)
+        self.assertIn("shot_cards", schema_ids)
         self.assertEqual(comic["artifact_contract"]["id_field"], "artifact_id")
         self.assertIn("source", comic["artifact_contract"]["required_metadata"])
         self.assertIn("responsible_agent", comic["artifact_contract"]["required_metadata"])

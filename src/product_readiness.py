@@ -262,6 +262,9 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
                 _contains(root / "src/comic_office/v2/output_schemas.py", "asset_prompt_set"),
                 _contains(root / "src/comic_office/v2/output_schemas.py", "shot_cards"),
                 _contains(root / "src/comic_office/v2/output_schemas.py", "image_review_result"),
+                _contains(root / "src/offices.py", "schema_gates"),
+                _contains(root / "src/offices.py", "comic_contract"),
+                _contains(root / "src/offices.py", "image_review_result"),
                 _contains(root / "src/comic_office/v2/planner.py", "validate_agent_output_schema"),
                 _contains(root / "src/comic_office/v2/asset_planner.py", "validate_agent_output_schema"),
                 _contains(root / "src/comic_office/v2/production.py", "validate_agent_output_schema"),
@@ -272,6 +275,7 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
             [
                 "src/comic_office/v2/output_schemas.py",
+                "src/offices.py",
                 "src/comic_office/v2/planner.py",
                 "src/comic_office/v2/asset_planner.py",
                 "src/comic_office/v2/production.py",

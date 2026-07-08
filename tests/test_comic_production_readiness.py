@@ -39,6 +39,8 @@ class ComicProductionReadinessTests(unittest.TestCase):
         self.assertIn("src/web/app.py", long_task_evidence)
         self.assertIn("scripts/verify_comic_v2_user_flow.py", long_task_evidence)
         self.assertIn("tests/test_comic_v2_pipeline.py", long_task_evidence)
+        schema_evidence = "\n".join(checks["agent_output_schema_gate"]["evidence"])
+        self.assertIn("src/offices.py", schema_evidence)
 
     def test_real_product_readiness_can_be_rendered_for_tasklist(self):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown
