@@ -467,6 +467,7 @@ async function retryTaskRecoveryAction(encodedAction) {
         if (currentComicWorkspace) {
             await loadComicTimeline(currentComicWorkspace);
             await loadComicArtifacts(currentComicWorkspace);
+            await loadComicRuntimeStatus(currentComicWorkspace);
         }
     } catch (e) {
         toast('恢复动作失败：' + formatApiError(e), 'error');
@@ -890,6 +891,7 @@ let currentComicConfirmedScript = null;
 let currentComicCabinetSession = null;
 let currentComicCabinetReady = false;
 let currentComicAssistantMessage = '';
+let currentComicRuntimeStatus = null;
 let currentComicV2Status = null;
 let currentComicV2ActionError = null;
 let currentComicV2PendingAction = null;
@@ -1015,6 +1017,7 @@ async function selectComicWorkspace(workspaceId) {
         await loadComicCabinetSession('');
         await loadComicArtifacts('');
         await loadComicTimeline('');
+        renderOfficeRuntimeStatus(null, '选择一个漫剧项目后查看当前阶段、产物缺口和可恢复动作。');
         
         // 重新渲染左侧列表高亮状态
         const items = document.querySelectorAll('#comic-workspaces .workspace-item');
@@ -1033,6 +1036,7 @@ async function selectComicWorkspace(workspaceId) {
         }
     });
 
+    await loadComicRuntimeStatus(workspaceId);
     await loadComicV2Status(workspaceId);
     await Promise.all([loadComicArtifacts(workspaceId), loadComicTimeline(workspaceId), loadComicCabinetSession(workspaceId)]);
 }
@@ -1045,6 +1049,7 @@ function resetComicWorkspaceState(options = {}) {
     currentComicCabinetSession = null;
     currentComicCabinetReady = false;
     currentComicAssistantMessage = '';
+    currentComicRuntimeStatus = null;
     currentComicV2Status = null;
     currentComicV2ActionError = null;
     currentComicV2PendingAction = null;
@@ -1078,6 +1083,76 @@ function resetComicWorkspaceState(options = {}) {
     if (count) count.textContent = '0';
     const timeline = document.getElementById('comic-timeline');
     if (timeline) timeline.innerHTML = '<div class="empty-state">选择一个漫剧项目后查看创作记录。</div>';
+    renderOfficeRuntimeStatus(null, '选择一个漫剧项目后查看当前阶段、产物缺口和可恢复动作。');
+}
+
+async function loadComicRuntimeStatus(workspaceId) {
+    if (!workspaceId) {
+        currentComicRuntimeStatus = null;
+        renderOfficeRuntimeStatus(null, '选择一个漫剧项目后查看当前阶段、产物缺口和可恢复动作。');
+        return null;
+    }
+    try {
+        currentComicRuntimeStatus = await API.get(`/api/workspaces/${workspaceId}/runtime-status`);
+        renderOfficeRuntimeStatus(currentComicRuntimeStatus);
+    } catch (e) {
+        currentComicRuntimeStatus = {
+            current_stage: { id: 'runtime_status_error', status: 'failed', summary: e.message || String(e) },
+            artifact_progress: { present_count: 0, missing_count: 0, missing: [] },
+            next_action: '刷新工作台；如果仍失败，请查看后端日志。',
+        };
+        renderOfficeRuntimeStatus(currentComicRuntimeStatus);
+    }
+    return currentComicRuntimeStatus;
+}
+
+function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间后查看运行状态。') {
+    const panel = document.getElementById('comic-runtime-status-panel');
+    if (!panel) return;
+    if (!status) {
+        panel.innerHTML = `<div class="empty-state">${escapeHtml(emptyText)}</div>`;
+        return;
+    }
+    const stage = status.current_stage || {};
+    const progress = status.artifact_progress || {};
+    const activeTask = status.active_task || {};
+    const recovery = activeTask.recovery_plan || {};
+    const action = recovery.retry_action || {};
+    const missing = Array.isArray(progress.missing) ? progress.missing.slice(0, 6) : [];
+    const ratio = Number(progress.completion_ratio || 0);
+    const ratioText = `${Math.round(ratio * 100)}%`;
+    panel.innerHTML = `
+        <div class="runtime-status-head">
+            <div>
+                <span class="runtime-kicker">当前状态</span>
+                <strong>${escapeHtml(stage.id || '未开始')}</strong>
+                <small>${escapeHtml(stage.summary || status.next_action || '等待下一步操作。')}</small>
+            </div>
+            <span class="badge ${stage.status === 'failed' || stage.status === 'interrupted' ? 'badge-err' : 'badge-info'}">${escapeHtml(stage.status || 'waiting')}</span>
+        </div>
+        <div class="runtime-status-grid">
+            <div>
+                <b>${escapeHtml(String(progress.present_count ?? 0))}</b>
+                <span>已生成产物</span>
+            </div>
+            <div>
+                <b>${escapeHtml(String(progress.missing_count ?? 0))}</b>
+                <span>缺失产物</span>
+            </div>
+            <div>
+                <b>${escapeHtml(ratioText)}</b>
+                <span>完成度</span>
+            </div>
+        </div>
+        ${missing.length ? `<div class="runtime-missing"><b>优先补齐</b>${missing.map(item => `<code>${escapeHtml(item)}</code>`).join('')}</div>` : ''}
+        ${status.next_action ? `<p class="runtime-next">${escapeHtml(status.next_action)}</p>` : ''}
+        ${recovery.recoverable ? `
+            <div class="runtime-recovery">
+                <span>${escapeHtml(recovery.department || recovery.failed_phase || '可恢复阶段')}</span>
+                ${action.path ? `<button class="ghost btn-sm" onclick="retryTaskRecoveryAction('${escapeJsAttr(action)}')">${escapeHtml(action.label || '继续处理')}</button>` : ''}
+            </div>
+        ` : ''}
+    `;
 }
 
 async function loadComicV2Status(workspaceId) {
@@ -1108,6 +1183,7 @@ async function refreshComicV2Panel(message = '') {
     const status = await loadComicV2Status(currentComicWorkspace);
     currentComicV2ActionError = null;
     await Promise.all([
+        loadComicRuntimeStatus(currentComicWorkspace),
         loadComicArtifacts(currentComicWorkspace),
         loadComicTimeline(currentComicWorkspace),
     ]);
@@ -2448,6 +2524,7 @@ async function submitComicTask(options = {}) {
         toast(revisionMode ? '已按退回意见重新生成资产拆解审核包' : '已开始生成漫剧制片包和 Word 画布', 'success');
         await loadComicWorkspaces();
         await Promise.all([
+            loadComicRuntimeStatus(currentComicWorkspace),
             loadComicArtifacts(currentComicWorkspace),
             loadComicTimeline(currentComicWorkspace),
         ]);
@@ -2522,16 +2599,17 @@ function watchComicTask(taskId, workspaceId) {
             const task = await API.get('/api/tasks/' + taskId);
             if (currentComicWorkspace !== workspaceId) return;
             await loadComicTimeline(workspaceId);
+            await loadComicRuntimeStatus(workspaceId);
             if (task.status === 'needs_review' || task.current_phase === 'asset_review_pending') {
                 stopComicTaskPolling();
-                await loadComicArtifacts(workspaceId);
+                await Promise.all([loadComicArtifacts(workspaceId), loadComicRuntimeStatus(workspaceId)]);
                 focusComicAssetReview();
                 toast('资产拆解审核包已生成，请先确认人物、道具、场景和分镜输入', 'success');
                 return;
             }
             if (task.status === 'completed' || task.status === 'failed' || task.status === 'interrupted' || task.current_phase === 'interrupted') {
                 stopComicTaskPolling();
-                await loadComicArtifacts(workspaceId);
+                await Promise.all([loadComicArtifacts(workspaceId), loadComicRuntimeStatus(workspaceId)]);
                 const wordIndex = currentComicArtifacts.findIndex(a => a.artifact_type === 'word_canvas');
                 if (wordIndex >= 0) selectComicArtifact(wordIndex);
                 const isInterrupted = task.status === 'interrupted' || task.current_phase === 'interrupted';

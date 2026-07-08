@@ -359,6 +359,24 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("currentComicV2Status.blocking_reason", js)
         self.assertIn("currentComicV2Status.next_action", js)
 
+    def test_comic_workbench_renders_runtime_status_panel(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        select_fn = js[js.index("async function selectComicWorkspace"):js.index("function resetComicWorkspaceState")]
+
+        self.assertIn('id="comic-runtime-status-panel"', html)
+        self.assertIn("let currentComicRuntimeStatus = null;", js)
+        self.assertIn("async function loadComicRuntimeStatus", js)
+        self.assertIn("/api/workspaces/${workspaceId}/runtime-status", js)
+        self.assertIn("function renderOfficeRuntimeStatus", js)
+        self.assertIn("artifact_progress", js)
+        self.assertIn("missing_count", js)
+        self.assertIn("retry_action", js)
+        self.assertIn("loadComicRuntimeStatus(workspaceId)", select_fn)
+        self.assertIn("renderOfficeRuntimeStatus(null", js)
+        self.assertIn(".runtime-status-panel", css)
+
     def test_v2_stage_board_renders_review_gate_map_from_lineage(self):
         js = APP_JS.read_text(encoding="utf-8")
         css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")

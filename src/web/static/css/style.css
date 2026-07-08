@@ -1377,6 +1377,83 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     line-height: 1.45;
     text-align: right;
 }
+.runtime-status-panel {
+    display: grid;
+    gap: 12px;
+    margin: 18px 0;
+    padding: 16px;
+    border: 1px solid rgba(88, 166, 255, 0.22);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(88, 166, 255, 0.08), rgba(15, 23, 42, 0.36));
+}
+.runtime-status-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+.runtime-status-head > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+.runtime-kicker {
+    color: var(--side-active);
+    font-size: 12px;
+}
+.runtime-status-head strong {
+    color: var(--text);
+    font-size: 16px;
+}
+.runtime-status-head small,
+.runtime-next {
+    color: var(--text2);
+    line-height: 1.55;
+}
+.runtime-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+.runtime-status-grid div {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.42);
+}
+.runtime-status-grid b {
+    display: block;
+    color: var(--text);
+    font-size: 18px;
+}
+.runtime-status-grid span,
+.runtime-recovery span {
+    color: var(--text3);
+    font-size: 12px;
+}
+.runtime-missing,
+.runtime-recovery {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.runtime-missing b {
+    color: var(--text2);
+    font-size: 13px;
+}
+.runtime-missing code {
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.54);
+    color: var(--text2);
+}
+.runtime-recovery {
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+}
 .v2-action-error {
     border-color: rgba(248, 81, 73, 0.34);
     background: linear-gradient(180deg, rgba(248, 81, 73, 0.12), rgba(15, 23, 42, 0.52));

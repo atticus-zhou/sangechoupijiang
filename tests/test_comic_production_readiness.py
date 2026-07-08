@@ -30,6 +30,10 @@ class ComicProductionReadinessTests(unittest.TestCase):
             self.assertTrue(checks[check_id]["evidence"])
         self.assertTrue(any("办公室可用性" in item for item in checks["local_doctor"]["evidence"]))
         self.assertTrue(any('"offices"' in item for item in checks["local_doctor"]["evidence"]))
+        runtime_evidence = "\n".join(checks["runtime_status"]["evidence"])
+        self.assertIn("src/web/static/js/app.js", runtime_evidence)
+        self.assertIn("src/web/static/index.html", runtime_evidence)
+        self.assertIn("src/web/static/css/style.css", runtime_evidence)
 
     def test_real_product_readiness_can_be_rendered_for_tasklist(self):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown

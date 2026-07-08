@@ -34,10 +34,10 @@
 - [x] 新办公室创建模板必须声明必需协议字段和上线门槛，避免后续办公室复制临时代码入口。
 - [ ] 所有 Agent 关键输出必须有结构化 schema 校验。
 - [x] 所有产物必须有 artifact ID、来源、版本、责任 Agent 和引用链路。
-- [x] 工作空间运行时状态接口必须能展示当前阶段、产物完成度、缺失产物、人工审核节点和恢复动作。
+- [x] 工作空间运行时状态接口和工作台面板必须能展示当前阶段、产物完成度、缺失产物、人工审核节点和恢复动作。
 - [ ] 所有长任务必须可观测、可重试、可恢复，并记录失败原因和下一步建议。
 
-说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；协议 API 同时返回 `creation_template`，要求新办公室补齐 `input_types`、`output_types`、`model_requirements`、`human_checkpoints`、`artifact_contract`、`recovery_actions` 和验收标准，并通过无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、README 文档和 secret scan。工作空间运行时状态通过 `/api/workspaces/{workspace_id}/runtime-status` 暴露，用于统一说明当前阶段、最近任务、产物完成度、缺失产物和恢复动作。artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。下一步仍需把每类 Agent 输出升级成更细的 schema 校验，并把所有长任务的细粒度进度事件补齐。
+说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；协议 API 同时返回 `creation_template`，要求新办公室补齐 `input_types`、`output_types`、`model_requirements`、`human_checkpoints`、`artifact_contract`、`recovery_actions` 和验收标准，并通过无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、README 文档和 secret scan。工作空间运行时状态通过 `/api/workspaces/{workspace_id}/runtime-status` 暴露，并已接入 AI 漫剧制片办公室工作台，用于统一说明当前阶段、最近任务、产物完成度、缺失产物和恢复动作。artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。下一步仍需把每类 Agent 输出升级成更细的 schema 校验，并把所有长任务的细粒度进度事件补齐。
 
 ### 阶段 D：真实使用闭环
 
