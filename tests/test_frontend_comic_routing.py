@@ -570,6 +570,21 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".v2-shot-card", css)
         self.assertIn(".v2-shot-negative", css)
 
+    def test_artifact_detail_renders_schema_gate_status(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        research_detail = js[js.index("function selectResearchArtifact"):js.index("async function submitResearchTask")]
+        comic_detail = js[js.index("function selectComicArtifact"):js.index("function renderComicV2AssetIdentityPanel")]
+
+        self.assertIn("function renderArtifactSchemaGatePanel", js)
+        self.assertIn("schema_gate", js)
+        self.assertIn("renderArtifactSchemaGatePanel(artifact)", research_detail)
+        self.assertIn("renderArtifactSchemaGatePanel(artifact)", comic_detail)
+        self.assertIn("artifact.artifact_type === 'quality_report'", js)
+        self.assertIn("artifact-schema-gate", css)
+        self.assertIn("schema-gate-failed", css)
+        self.assertIn("schema-gate-passed", css)
+
 
 if __name__ == "__main__":
     unittest.main()

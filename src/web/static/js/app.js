@@ -293,6 +293,37 @@ function escapeJsAttr(value) {
     return escapeHtml(encodeURIComponent(JSON.stringify(value || {})));
 }
 
+function renderArtifactSchemaGatePanel(artifact) {
+    const gate = (artifact?.metadata || {}).schema_gate;
+    if (!gate) return '';
+    const status = gate.status || 'unknown';
+    const statusClass = status === 'passed' ? 'schema-gate-passed' : 'schema-gate-failed';
+    const statusLabel = status === 'passed' ? '已通过' : '需要复核';
+    const rows = [
+        ['Schema', gate.schema_id || ''],
+        ['状态', statusLabel],
+        ['责任办公室', gate.office_id || ''],
+        ['行数/段落', gate.row_count || gate.section_count || ''],
+        ['原因', gate.reason || '结构校验通过'],
+    ].filter(([, value]) => String(value || '').trim());
+    return `
+        <div class="artifact-schema-gate ${statusClass}">
+            <div class="artifact-schema-gate-head">
+                <strong>交付结构校验</strong>
+                <span>${escapeHtml(statusLabel)}</span>
+            </div>
+            <div class="artifact-schema-gate-grid">
+                ${rows.map(([label, value]) => `
+                    <div>
+                        <span>${escapeHtml(label)}</span>
+                        <p>${escapeHtml(value)}</p>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
 async function loadResearchOffice() {
     await Promise.all([loadResearchProfile(), loadResearchWorkspaces()]);
 }
@@ -632,6 +663,7 @@ function renderResearchPackageBoard(artifacts) {
 
 function artifactStatus(type, artifact, missing, warnings) {
     if (!artifact || missing.has(type)) return { kind: 'missing', text: '待补' };
+    if (artifact.artifact_type === 'quality_report') return { kind: 'review', text: '需处理' };
     const content = artifact.content || '';
     const isFallback = /暂未|待补充|待核验|无法获取|需要.*补齐/.test(content);
     const sourceWarning = type === 'source_list' && warnings.some(w => String(w).includes('来源清单'));
@@ -673,12 +705,14 @@ function selectResearchArtifact(index) {
                 <button class="ghost btn-sm" onclick="extractResearchEvidence('${escapeHtml(artifact.artifact_id)}')">识别截图</button>
            </div>`
         : '';
+    const schemaGatePanel = renderArtifactSchemaGatePanel(artifact);
     detail.className = 'artifact-detail';
     detail.innerHTML = `
         <div class="artifact-detail-head">
             <span class="artifact-type">${escapeHtml(artifact.artifact_type)}</span>
             <strong>${escapeHtml(artifact.title)}</strong>
         </div>
+        ${schemaGatePanel}
         ${evidenceActions}
         <div class="artifact-detail-body">${body || '<em>空内容</em>'}</div>
     `;
@@ -2016,6 +2050,7 @@ function selectComicArtifact(index) {
         : '';
     const bindingPanel = renderComicArtifactBinding(artifact);
     const identityPanel = renderComicV2AssetIdentityPanel(artifact);
+    const schemaGatePanel = renderArtifactSchemaGatePanel(artifact);
     detail.innerHTML = `
         <div class="artifact-detail-head">
             <span class="artifact-type">${escapeHtml(artifact.artifact_type)}</span>
@@ -2024,6 +2059,7 @@ function selectComicArtifact(index) {
             ${regenerateAction}
             ${assetReviewAction}
         </div>
+        ${schemaGatePanel}
         ${bindingPanel}
         ${identityPanel}
         ${imagePreview}

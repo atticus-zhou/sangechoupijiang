@@ -414,6 +414,8 @@
 - [x] Research-office artifact packaging now runs those gates, records
   `schema_gate` audit metadata on each governed artifact, and adds a
   `quality_report` when a report package is not delivery-ready.
+- [x] Workspace artifact details now render schema-gate status in the UI, so
+  users can see whether a delivery artifact passed or needs review.
 - [ ] Continue extending concrete schema validators to future office-specific
   outputs.
 

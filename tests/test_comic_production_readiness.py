@@ -43,6 +43,8 @@ class ComicProductionReadinessTests(unittest.TestCase):
         self.assertIn("src/offices.py", schema_evidence)
         self.assertIn("src/research_office/output_schemas.py", schema_evidence)
         self.assertIn("src/research_artifacts.py", schema_evidence)
+        self.assertIn("src/web/static/js/app.js", schema_evidence)
+        self.assertIn("src/web/static/css/style.css", schema_evidence)
         self.assertIn("tests/test_research_output_schemas.py", schema_evidence)
         self.assertIn("tests/test_research_artifacts.py", schema_evidence)
 
