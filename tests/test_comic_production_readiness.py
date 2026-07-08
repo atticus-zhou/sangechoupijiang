@@ -47,6 +47,9 @@ class ComicProductionReadinessTests(unittest.TestCase):
         self.assertIn("src/web/static/css/style.css", schema_evidence)
         self.assertIn("tests/test_research_output_schemas.py", schema_evidence)
         self.assertIn("tests/test_research_artifacts.py", schema_evidence)
+        demo_evidence = "\n".join(checks["no_key_demo"]["evidence"])
+        self.assertIn("quality_gates", demo_evidence)
+        self.assertIn("demo-quality-gates", demo_evidence)
 
     def test_real_product_readiness_can_be_rendered_for_tasklist(self):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown

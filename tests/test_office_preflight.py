@@ -161,6 +161,12 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertGreaterEqual(payload["shot_count"], 1)
         self.assertTrue(payload["stages"])
         self.assertTrue(payload["artifacts"])
+        self.assertTrue(payload["quality_gates"])
+        gate_ids = {item["id"] for item in payload["quality_gates"]}
+        self.assertIn("no_key_read_only", gate_ids)
+        self.assertIn("downloadable_delivery", gate_ids)
+        self.assertIn("reference_chain", gate_ids)
+        self.assertTrue(all(item["status"] == "passed" for item in payload["quality_gates"]))
         artifact_uris = {item["type"]: item.get("uri", "") for item in payload["artifacts"]}
         self.assertIn("/api/demo/comic-production/files/", artifact_uris["word_canvas"])
         self.assertIn("/api/demo/comic-production/files/", artifact_uris["handoff_manifest"])
@@ -204,6 +210,12 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertGreaterEqual(payload["data_point_count"], 1)
         self.assertGreaterEqual(payload["competitor_count"], 1)
         self.assertTrue(payload["stages"])
+        self.assertTrue(payload["quality_gates"])
+        gate_ids = {item["id"] for item in payload["quality_gates"]}
+        self.assertIn("no_key_read_only", gate_ids)
+        self.assertIn("traceable_sources", gate_ids)
+        self.assertIn("downloadable_delivery", gate_ids)
+        self.assertTrue(all(item["status"] == "passed" for item in payload["quality_gates"]))
         artifact_uris = {item["type"]: item.get("uri", "") for item in payload["artifacts"]}
         self.assertTrue(artifact_uris["report_markdown"].endswith("/report.md"))
         self.assertTrue(artifact_uris["evidence_manifest"].endswith("/evidence_manifest.json"))

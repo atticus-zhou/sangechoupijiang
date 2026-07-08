@@ -320,8 +320,13 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 13px;
 }
 
+.demo-quality-gates {
+    border-color: rgba(63, 185, 80, 0.2);
+}
+
 .demo-stage-grid,
-.demo-artifact-grid {
+.demo-artifact-grid,
+.demo-quality-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
@@ -329,6 +334,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .demo-stage-card,
 .demo-artifact-grid article,
+.demo-quality-grid article,
 .demo-list article {
     border: 1px solid rgba(139, 148, 158, 0.16);
     border-radius: 14px;
@@ -349,6 +355,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .demo-stage-card strong,
 .demo-artifact-grid strong,
+.demo-quality-grid strong,
 .demo-list strong {
     display: block;
     color: #e6edf3;
@@ -363,6 +370,29 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     display: block;
     color: var(--text2);
     font-size: 13px;
+}
+
+.demo-quality-grid article.passed {
+    border-color: rgba(63, 185, 80, 0.28);
+    background: rgba(35, 134, 54, 0.08);
+}
+
+.demo-quality-grid span {
+    display: inline-flex;
+    margin: 4px 0 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: var(--green);
+    background: rgba(63, 185, 80, 0.1);
+    border: 1px solid rgba(63, 185, 80, 0.2);
+    font-size: 12px;
+}
+
+.demo-quality-grid p {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0;
 }
 
 .demo-download-link {

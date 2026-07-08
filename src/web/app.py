@@ -373,6 +373,26 @@ async def get_comic_production_demo_api():
             {"id": "prompts", "title": "镜头提示词", "owner": "兵部", "status": "completed"},
             {"id": "delivery", "title": "Word 制片画布", "owner": "礼部 / 刑部", "status": "completed"},
         ],
+        "quality_gates": [
+            {
+                "id": "no_key_read_only",
+                "title": "无 Key 只读演示",
+                "status": "passed",
+                "evidence": "不读取模型配置，不创建真实工作区，不消耗作者 API Key。",
+            },
+            {
+                "id": "downloadable_delivery",
+                "title": "可下载交付物",
+                "status": "passed",
+                "evidence": "提供 Word 制片画布和资产/镜头引用清单下载。",
+            },
+            {
+                "id": "reference_chain",
+                "title": "资产引用链路",
+                "status": "passed",
+                "evidence": "样例展示资产、镜头、提示词和交付物之间的引用关系。",
+            },
+        ],
         "assets": [
             {
                 "asset_id": item.get("asset_id", ""),
@@ -483,6 +503,26 @@ async def get_research_demo_api():
             {"id": "evidence", "title": "来源与截图计划", "owner": "兵部 / 刑部", "status": "verified"},
             {"id": "tables", "title": "数据表与竞品表", "owner": "户部", "status": "completed"},
             {"id": "delivery", "title": "阶段报告", "owner": "礼部", "status": "completed"},
+        ],
+        "quality_gates": [
+            {
+                "id": "no_key_read_only",
+                "title": "无 Key 只读演示",
+                "status": "passed",
+                "evidence": "不读取模型配置，不创建真实工作区，不消耗作者 API Key。",
+            },
+            {
+                "id": "traceable_sources",
+                "title": "来源可追溯",
+                "status": "passed",
+                "evidence": "样例包含来源、数据点、竞品和截图取证计划。",
+            },
+            {
+                "id": "downloadable_delivery",
+                "title": "可下载交付物",
+                "status": "passed",
+                "evidence": "提供阶段调研报告和证据清单下载。",
+            },
         ],
         "sources": sources[:5],
         "data_points": data_points[:5],

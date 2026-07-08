@@ -4049,6 +4049,7 @@ function renderComicDemo(demo) {
                 `).join('')}
             </div>
         </section>
+        ${renderDemoQualityGates(demo.quality_gates)}
         <section class="demo-two-col">
             <div class="demo-section">
                 <div class="demo-section-head">
@@ -4093,6 +4094,28 @@ function renderComicDemo(demo) {
                         <span>${escapeHtml(item.type || '')}</span>
                         <small>${escapeHtml(item.status || '')}</small>
                         ${item.uri ? `<a class="ghost btn-sm demo-download-link" href="${escapeHtml(item.uri)}" target="_blank">下载样例</a>` : ''}
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function renderDemoQualityGates(gates) {
+    const items = Array.isArray(gates) ? gates : [];
+    if (!items.length) return '';
+    return `
+        <section class="demo-section demo-quality-gates">
+            <div class="demo-section-head">
+                <h2>交付质量</h2>
+                <span>${items.length} 项门禁</span>
+            </div>
+            <div class="demo-quality-grid">
+                ${items.map(item => `
+                    <article class="${escapeHtml(item.status || 'unknown')}">
+                        <strong>${escapeHtml(item.title || item.id || '')}</strong>
+                        <span>${escapeHtml(item.status === 'passed' ? '已通过' : item.status || '')}</span>
+                        <p>${escapeHtml(item.evidence || '')}</p>
                     </article>
                 `).join('')}
             </div>
@@ -4152,6 +4175,7 @@ function renderResearchDemo(demo) {
                 `).join('')}
             </div>
         </section>
+        ${renderDemoQualityGates(demo.quality_gates)}
         <section class="demo-two-col">
             <div class="demo-section">
                 <div class="demo-section-head">
