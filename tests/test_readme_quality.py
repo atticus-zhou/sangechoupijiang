@@ -67,6 +67,20 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python scripts/check_no_secrets.py", text)
         self.assertIn("python scripts/verify_product_readiness.py --format markdown", text)
 
+    def test_readme_gives_new_user_model_setup_path(self):
+        text = Path("README.md").read_text(encoding="utf-8")
+
+        self.assertIn("## 第一次使用应该怎么走", text)
+        self.assertIn("先跑无 Key 演示", text)
+        self.assertIn("再进入本地真实模式", text)
+        self.assertIn("每个部门先点测试按钮", text)
+        self.assertIn("最小可跑配置", text)
+        self.assertIn("完整制片配置", text)
+        self.assertIn("office_models 会覆盖全局 models", text)
+        self.assertIn("没配置的部门会继续使用全局 models 里的同名部门", text)
+        self.assertIn("视觉理解模型", text)
+        self.assertIn("图片生成模型", text)
+
 
 if __name__ == "__main__":
     unittest.main()
