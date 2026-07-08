@@ -54,6 +54,19 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("不要把个人 API Key 写入前端", text)
         self.assertIn("Vercel", text)
 
+    def test_deployment_modes_doc_gives_public_safety_decision_rules(self):
+        text = Path("docs/DEPLOYMENT_MODES.md").read_text(encoding="utf-8")
+
+        self.assertIn("## 快速选择", text)
+        self.assertIn("公开作品集", text)
+        self.assertIn("只开放 `/api/demo`", text)
+        self.assertIn("禁用真实生产接口", text)
+        self.assertIn("服务端代理", text)
+        self.assertIn("访问者使用自己的 Key", text)
+        self.assertIn("不要把 Key 放进前端 JavaScript、HTML、静态 JSON 或公开环境变量", text)
+        self.assertIn("python scripts/check_no_secrets.py", text)
+        self.assertIn("python scripts/verify_product_readiness.py --format markdown", text)
+
 
 if __name__ == "__main__":
     unittest.main()
