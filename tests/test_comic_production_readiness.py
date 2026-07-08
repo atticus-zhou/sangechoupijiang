@@ -21,6 +21,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
             "end_to_end_verifier",
             "history_trace",
             "no_key_demo",
+            "runtime_status",
             "readme",
             "failure_handling",
         ):

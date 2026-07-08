@@ -76,6 +76,7 @@ from src.image_generation import (
     is_image_generation_config,
 )
 from src.model_connectivity import AGENT_IDS, probe_model_connectivity
+from src.office_runtime import build_office_runtime_status
 from src.office_preflight import build_office_preflight
 from src.product_readiness import audit_comic_production_readiness
 from src.system_preflight import build_system_preflight
@@ -643,6 +644,15 @@ async def list_workspace_tasks_api(workspace_id: str):
     if not config_manager.get_workspace(workspace_id):
         raise _missing_workspace_http_error(workspace_id)
     return {"tasks": config_manager.list_workspace_task_runs(workspace_id=workspace_id)}
+
+
+@app.get("/api/workspaces/{workspace_id}/runtime-status")
+async def get_workspace_runtime_status_api(workspace_id: str):
+    """Explain where an office workspace is, what is missing, and how to recover."""
+    status = build_office_runtime_status(config_manager, workspace_id)
+    if not status:
+        raise _missing_workspace_http_error(workspace_id)
+    return status
 
 
 def _comic_v2_key(workspace_id: str) -> str:

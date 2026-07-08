@@ -197,6 +197,23 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "runtime_status",
+            "办公室运行状态",
+            [
+                _contains(root / "src/office_runtime.py", "def build_office_runtime_status"),
+                _contains(root / "src/office_runtime.py", "artifact_progress"),
+                _contains(root / "src/office_runtime.py", "recovery_actions"),
+                _contains(root / "src/web/app.py", "/api/workspaces/{workspace_id}/runtime-status"),
+                _contains(root / "tests/test_office_runtime.py", "test_runtime_status_summarizes_workspace_artifacts_and_recovery"),
+                _contains(root / "tests/test_office_runtime.py", "test_runtime_status_api_exposes_same_workspace_view"),
+            ],
+            [
+                "src/office_runtime.py",
+                "src/web/app.py:/api/workspaces/{workspace_id}/runtime-status",
+                "tests/test_office_runtime.py",
+            ],
+        ),
+        _check(
             "agent_output_schema_gate",
             "Agent output schema gate",
             [
