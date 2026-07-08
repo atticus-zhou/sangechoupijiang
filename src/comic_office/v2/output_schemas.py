@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -12,10 +13,17 @@ from .contracts import (
 )
 from .asset_manifest import (
     AssetManifest,
+    AssetPlan,
     ManifestValidationError,
     NoManifestChangeError,
     build_asset_manifest,
     replace_asset_manifest,
+)
+from .prompt_director import (
+    PromptPlan,
+    ShotCard,
+    build_shot_card,
+    parse_prompt_director_response,
 )
 
 
@@ -91,6 +99,26 @@ _SCHEMAS: dict[tuple[str, str], AgentOutputSchema] = {
         failure_impact="Returned asset feedback cannot be trusted or traced to a new manifest version.",
         validator="_validate_asset_manifest_revision",
     ),
+    ("comic_production", "asset_prompt_set"): AgentOutputSchema(
+        office_id="comic_production",
+        schema_id="asset_prompt_set",
+        owner_agent="gongbu",
+        stage="prompt_package",
+        description="Model prompt JSON for all planned images of one approved asset.",
+        required_fields=("prompts",),
+        failure_impact="The image generator would receive incomplete or unbound asset prompts.",
+        validator="_validate_asset_prompt_set",
+    ),
+    ("comic_production", "shot_cards"): AgentOutputSchema(
+        office_id="comic_production",
+        schema_id="shot_cards",
+        owner_agent="bingbu",
+        stage="shot_package",
+        description="Model shot/video prompt cards bound to approved asset identities.",
+        required_fields=("shots",),
+        failure_impact="The Word canvas and downstream video tools would lose shot-to-asset traceability.",
+        validator="_validate_shot_cards",
+    ),
 }
 
 
@@ -111,7 +139,7 @@ def validate_agent_output_schema(
     payload: dict[str, Any],
     *,
     context: dict[str, Any] | None = None,
-) -> ContractBundle | AssetManifest:
+) -> ContractBundle | AssetManifest | tuple[PromptPlan, ...] | tuple[ShotCard, ...]:
     """Validate a model output against a named office schema gate."""
     key = (str(office_id or "").strip(), str(schema_id or "").strip())
     schema = _SCHEMAS.get(key)
@@ -203,6 +231,84 @@ def _validate_asset_manifest_revision(payload: dict[str, Any], context: dict[str
         raise AgentOutputSchemaError(f"asset_manifest_revision failed schema validation: {exc}") from exc
 
 
+def _validate_asset_prompt_set(payload: dict[str, Any], context: dict[str, Any]) -> tuple[PromptPlan, ...]:
+    asset = context.get("asset")
+    visual = context.get("visual")
+    if not isinstance(asset, AssetPlan):
+        raise AgentOutputSchemaError("asset_prompt_set requires the current asset plan")
+    if visual is None:
+        raise AgentOutputSchemaError("asset_prompt_set requires the active visual bible")
+    result = parse_prompt_director_response(json.dumps(payload, ensure_ascii=False))
+    if not result.production_ready:
+        raise AgentOutputSchemaError(f"asset_prompt_set failed schema validation: {result.error}")
+    try:
+        _validate_prompt_set_binding(asset, visual, result.prompts)
+    except ValueError as exc:
+        raise AgentOutputSchemaError(f"asset_prompt_set failed schema validation: {exc}") from exc
+    return _ordered_prompts(asset, result.prompts)
+
+
+def _validate_shot_cards(payload: dict[str, Any], context: dict[str, Any]) -> tuple[ShotCard, ...]:
+    bundle = context.get("contract_bundle")
+    manifest = context.get("asset_manifest")
+    if not isinstance(bundle, ContractBundle):
+        raise AgentOutputSchemaError("shot_cards requires a formal contract bundle")
+    if not isinstance(manifest, AssetManifest):
+        raise AgentOutputSchemaError("shot_cards requires an approved asset manifest")
+    shots = payload.get("shots")
+    if not isinstance(shots, list) or not shots:
+        raise AgentOutputSchemaError("shot_cards output must contain at least one shot")
+    try:
+        cards = tuple(_build_shot_card_from_manifest(item, bundle, manifest) for item in shots)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise AgentOutputSchemaError(f"shot_cards failed schema validation: {exc}") from exc
+    if len({shot.shot_id for shot in cards}) != len(cards):
+        raise AgentOutputSchemaError("shot_cards failed schema validation: duplicate shot id")
+    return cards
+
+
+def _validate_prompt_set_binding(asset: AssetPlan, visual: Any, prompts: tuple[PromptPlan, ...]) -> None:
+    expected = set(asset.planned_images)
+    actual = {prompt.image_kind for prompt in prompts}
+    if actual != expected or len(prompts) != len(expected):
+        raise ValueError(f"prompt set does not cover planned images: expected {sorted(expected)}, got {sorted(actual)}")
+    for prompt in prompts:
+        if prompt.object_id != asset.asset_id:
+            raise ValueError("prompt object id does not match asset")
+        if prompt.style_id != getattr(visual, "style_id", ""):
+            raise ValueError("prompt style id does not match visual bible")
+
+
+def _ordered_prompts(asset: AssetPlan, prompts: tuple[PromptPlan, ...]) -> tuple[PromptPlan, ...]:
+    by_kind = {prompt.image_kind: prompt for prompt in prompts}
+    return tuple(by_kind[kind] for kind in asset.planned_images)
+
+
+def _build_shot_card_from_manifest(payload: dict[str, Any], bundle: ContractBundle, manifest: AssetManifest) -> ShotCard:
+    if not isinstance(payload, dict):
+        raise ValueError("shot card must be an object")
+    evidence = str(payload.get("evidence_quote") or "").strip()
+    if not evidence or evidence not in bundle.creative.source_story:
+        raise ValueError("shot card evidence is not present in the confirmed story")
+    by_id = {item.asset_id: item for item in manifest.items}
+    scene_id = str(payload.get("scene_asset_id") or "").strip()
+    if scene_id not in by_id or by_id[scene_id].asset_type != "scene":
+        raise ValueError("shot references an invalid scene asset")
+    character_ids = tuple(str(value).strip() for value in payload.get("character_asset_ids") or [])
+    prop_ids = tuple(str(value).strip() for value in payload.get("prop_asset_ids") or [])
+    if any(value not in by_id or by_id[value].asset_type != "character" for value in character_ids):
+        raise ValueError("shot references an invalid character asset")
+    if any(value not in by_id or by_id[value].asset_type != "prop" for value in prop_ids):
+        raise ValueError("shot references an invalid prop asset")
+    return build_shot_card(
+        payload,
+        characters=[by_id[value] for value in character_ids],
+        props=[by_id[value] for value in prop_ids],
+        scene=by_id[scene_id],
+        visual=bundle.visual,
+    )
+
+
 def _has_value(value: Any) -> bool:
     if value is None:
         return False
@@ -218,4 +324,6 @@ _VALIDATORS = {
     "_validate_visual_revision": _validate_visual_revision,
     "_validate_asset_manifest": _validate_asset_manifest,
     "_validate_asset_manifest_revision": _validate_asset_manifest_revision,
+    "_validate_asset_prompt_set": _validate_asset_prompt_set,
+    "_validate_shot_cards": _validate_shot_cards,
 }

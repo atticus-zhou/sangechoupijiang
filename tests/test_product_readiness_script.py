@@ -35,6 +35,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertEqual(schema_gate["status"], "passed")
         self.assertIn("src/comic_office/v2/output_schemas.py", "\n".join(schema_gate["evidence"]))
         self.assertIn("src/comic_office/v2/asset_planner.py", "\n".join(schema_gate["evidence"]))
+        self.assertIn("src/comic_office/v2/production.py", "\n".join(schema_gate["evidence"]))
 
     def test_script_outputs_markdown_readiness_audit(self):
         result = subprocess.run(

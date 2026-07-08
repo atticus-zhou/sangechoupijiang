@@ -1,13 +1,17 @@
+import asyncio
 import json
 import unittest
+from unittest.mock import patch
 
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
+from src.comic_office.v2.output_schemas import AgentOutputSchemaError
 from src.comic_office.v2.prompt_director import (
     build_asset_prompt_plan,
     build_shot_card,
     parse_prompt_director_response,
 )
+from src.llm.providers import LLMResponse, ModelConfig
 
 
 STORY = "林昭抱着裂纹月灯冲向中央月塔。她逆向转动控制环，最终熄灭月塔。"
@@ -72,6 +76,74 @@ def package_parts():
     ])
     by_type = {item.asset_type: item for item in manifest.items}
     return bundle.visual, by_type
+
+
+def production_parts():
+    bundle = build_contract_bundle(
+        STORY,
+        {
+            "title": "借月人",
+            "genre": "古风幻想",
+            "theme": "记忆与光明的代价",
+            "protagonist_goal": "熄灭月塔",
+            "main_conflict": "守塔人阻止林昭",
+            "causal_chain": ["进入月塔", "转动控制环", "月塔熄灭"],
+            "ending": "林昭最终熄灭月塔",
+            "episodes": [{"episode": 1, "summary": "熄灭月塔", "evidence_quote": STORY}],
+            "visual": {
+                "medium": "电影级国风厚涂动画",
+                "era": "架空古代",
+                "aspect_ratio": "9:16",
+                "palette": ["靛青", "银白", "暗朱红"],
+                "lighting": "冷银月光与暗红火光对照",
+                "camera_language": "稳定构图，克制运镜",
+                "character_rules": ["脸型、发髻和服装主色固定"],
+                "costume_rules": ["古代窄袖长袍"],
+                "prop_rules": ["裂纹位置固定"],
+                "architecture_rules": ["石塔与古铜机械结构"],
+                "visual_motifs": ["裂纹月灯", "逐层熄灭的灯火"],
+                "prohibited_elements": ["现代服装", "现代机械", "可读文字"],
+            },
+        },
+    )
+    manifest = build_asset_manifest(bundle, [
+        {
+            "asset_type": "character",
+            "name": "林昭",
+            "evidence_quote": "林昭",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "抱着月灯冲向塔心并熄灭月塔",
+            "visual_locks": ["靛青窄袖长袍", "高发髻"],
+            "allowed_changes": ["表情", "姿势"],
+        },
+        {
+            "asset_type": "prop",
+            "name": "裂纹月灯",
+            "evidence_quote": "裂纹月灯",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "承载亡者记忆并触发最终选择",
+            "visual_locks": ["右上方固定弧形裂纹", "古铜框架"],
+            "allowed_changes": ["亮度"],
+        },
+        {
+            "asset_type": "scene",
+            "name": "中央月塔",
+            "evidence_quote": "中央月塔",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "最终抉择发生地",
+            "visual_locks": ["圆形外环", "中央控制环", "三条石桥"],
+            "allowed_changes": ["灯火亮灭状态"],
+        },
+    ])
+    return bundle, manifest
+
+
+class FakeProvider:
+    def __init__(self, responses):
+        self.responses = list(responses)
+
+    async def chat(self, messages, tools=None, tool_choice=None, response_format=None):
+        return LLMResponse(content=self.responses.pop(0), model="fake/model", tokens_used=10)
 
 
 class ComicV2PromptDirectorTests(unittest.TestCase):
@@ -212,6 +284,76 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
             prompt.negative_prompt,
             ("禁止脸型变化", "禁止现代车辆", "禁止文字水印"),
         )
+
+
+    def test_direct_asset_prompts_must_pass_agent_schema_gate(self):
+        from src.comic_office.v2.production import ProductionError, direct_asset_prompts
+
+        bundle, manifest = production_parts()
+        response = {
+            "prompts": [
+                {
+                    "object_id": manifest.items[0].asset_id,
+                    "image_kind": image_kind,
+                    "purpose": "identity_reference",
+                    "generator_prompt": "placeholder",
+                    "negative_prompt": ["禁止文字"],
+                    "style_id": bundle.visual.style_id,
+                }
+                for image_kind in manifest.items[0].planned_images
+            ]
+        }
+
+        async def run_case():
+            await direct_asset_prompts(
+                bundle,
+                manifest,
+                ModelConfig(provider="openai", model="fake", api_key="test"),
+                llm=FakeProvider([json.dumps(response, ensure_ascii=False)] * 2),
+            )
+
+        with patch(
+            "src.comic_office.v2.production.validate_agent_output_schema",
+            side_effect=AgentOutputSchemaError("prompt schema rejected"),
+        ):
+            with self.assertRaisesRegex(ProductionError, "prompt schema rejected"):
+                asyncio.run(run_case())
+
+    def test_direct_shot_cards_must_pass_agent_schema_gate(self):
+        from src.comic_office.v2.production import PromptPackage, ProductionError, direct_shot_cards
+
+        bundle, manifest = production_parts()
+        prompts = [
+            build_asset_prompt_plan(asset, bundle.visual, image_kind=image_kind)
+            for asset in manifest.items
+            for image_kind in asset.planned_images
+        ]
+        package = PromptPackage(
+            package_id="prompts_test",
+            story_id=bundle.creative.story_id,
+            story_version=bundle.creative.story_version,
+            style_id=bundle.visual.style_id,
+            style_version=bundle.visual.style_version,
+            manifest_id=manifest.manifest_id,
+            manifest_version=manifest.version,
+            prompts=tuple(prompts),
+        )
+
+        async def run_case():
+            await direct_shot_cards(
+                bundle,
+                manifest,
+                package,
+                ModelConfig(provider="openai", model="fake", api_key="test"),
+                llm=FakeProvider([json.dumps({"shots": [{}]}, ensure_ascii=False)] * 2),
+            )
+
+        with patch(
+            "src.comic_office.v2.production.validate_agent_output_schema",
+            side_effect=AgentOutputSchemaError("shot schema rejected"),
+        ):
+            with self.assertRaisesRegex(ProductionError, "shot schema rejected"):
+                asyncio.run(run_case())
 
 
 if __name__ == "__main__":

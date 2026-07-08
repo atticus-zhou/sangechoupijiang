@@ -16,6 +16,7 @@ from src.llm.robust_json import parse_json_object
 
 from .asset_manifest import AssetManifest, AssetPlan
 from .contracts import ContractBundle, VisualBible
+from .output_schemas import AgentOutputSchemaError, validate_agent_output_schema
 from .prompt_director import PromptPlan, ShotCard, build_shot_card, parse_prompt_director_response
 from .visual_review import (
     VisualReviewRequest,
@@ -197,20 +198,22 @@ async def direct_asset_prompts(
             if not raw or raw.startswith("[API错误]"):
                 last_error = raw.removeprefix("[API错误]").strip() or "模型返回空内容"
                 continue
-            parsed = parse_prompt_director_response(raw)
-            if not parsed.production_ready:
-                last_error = parsed.error
-                continue
             try:
-                _validate_asset_prompt_set(asset, bundle.visual, parsed.prompts)
-            except ProductionError as exc:
+                parsed = validate_agent_output_schema(
+                    "comic_production",
+                    "asset_prompt_set",
+                    parse_json_object(raw),
+                    context={"asset": asset, "visual": bundle.visual},
+                )
+                _validate_asset_prompt_set(asset, bundle.visual, parsed)
+            except (AgentOutputSchemaError, ProductionError) as exc:
                 last_error = str(exc)
                 parsed = None
                 continue
             break
-        if parsed is None or not parsed.production_ready:
+        if parsed is None:
             raise ProductionError(f"{asset.name} 的提示词生成失败：{last_error or '结构不完整'}")
-        prompts.extend(_ordered_prompts(asset, parsed.prompts))
+        prompts.extend(parsed)
     package_raw = json.dumps(
         {
             "story_id": bundle.creative.story_id,
@@ -267,10 +270,15 @@ async def direct_shot_cards(
             last_error = "兵部没有返回镜头提示词卡"
             continue
         try:
-            shots = tuple(_build_model_shot(item, bundle, manifest) for item in shot_payloads)
+            shots = validate_agent_output_schema(
+                "comic_production",
+                "shot_cards",
+                {"shots": shot_payloads},
+                context={"contract_bundle": bundle, "asset_manifest": manifest},
+            )
             if len({shot.shot_id for shot in shots}) != len(shots):
                 raise ProductionError("镜头编号重复")
-        except (KeyError, TypeError, ValueError, ProductionError) as exc:
+        except (KeyError, TypeError, ValueError, AgentOutputSchemaError, ProductionError) as exc:
             last_error = str(exc)
             continue
         return replace(prompt_package, shots=shots)

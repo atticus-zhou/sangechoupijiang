@@ -382,5 +382,11 @@
 - [x] AI comic-production V2 `asset_manifest_revision` output is declared and
   validated through the same schema gate before a returned asset list can become
   a new manifest version.
-- [ ] Continue extending the schema gate to shot execution cards, prompt
-  packages, image QA results, research reports, and future offices.
+- [x] AI comic-production V2 `asset_prompt_set` output is declared and validated
+  through the same schema gate before asset image prompts can enter the prompt
+  package.
+- [x] AI comic-production V2 `shot_cards` output is declared and validated
+  through the same schema gate before shot/video prompts can enter the Word
+  canvas and downstream handoff.
+- [ ] Continue extending the schema gate to image QA results, research reports,
+  and future offices.
