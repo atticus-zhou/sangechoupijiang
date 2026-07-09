@@ -32,6 +32,8 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertEqual(launch_gates["status"], "passed")
         self.assertIn("/api/offices/{office_id}/launch-gates", "\n".join(launch_gates["evidence"]))
         self.assertIn("office-launch-gates-panel", "\n".join(launch_gates["evidence"]))
+        self.assertIn("evidence_links", "\n".join(launch_gates["evidence"]))
+        self.assertIn("launch-gate-links", "\n".join(launch_gates["evidence"]))
         artifact_contract = next(item for item in payload["checks"] if item["id"] == "artifact_contract_runtime")
         self.assertEqual(artifact_contract["status"], "passed")
         self.assertIn("src/config_manager.py", "\n".join(artifact_contract["evidence"]))

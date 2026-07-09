@@ -25,6 +25,15 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("第三里程碑：多办公室组合协作", text)
         self.assertIn("先让一个复杂项目被稳定完成，再让多个办公室协同完成更大的项目", text)
 
+    def test_download_links_are_marked_done_with_launch_gate_evidence(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("- [x] 下载链接必须可用。", text)
+        self.assertIn("evidence_links", text)
+        self.assertIn("/api/offices/{office_id}/launch-gates", text)
+        self.assertIn("/api/demo/comic-production/files/word_canvas.docx", text)
+        self.assertIn("/api/demo/research/files/report.md", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -378,7 +378,8 @@
 - [ ] 检查 DOCX 结构。
 - [ ] 检查图片嵌入数量。
 - [ ] 条件允许时渲染页面检查。
-- [ ] 下载链接必须可用。
+- [x] 下载链接必须可用。
+  说明：无 Key 演示下载链接已纳入 `/api/offices/{office_id}/launch-gates` 的 `evidence_links`，并在办公室大厅展示；AI 漫剧制片办公室样例 Word 指向 `/api/demo/comic-production/files/word_canvas.docx`，研究办公室阶段报告指向 `/api/demo/research/files/report.md`。
 
 发布前：
 
