@@ -53,7 +53,7 @@
 
 目标：把 AI 漫剧制片办公室里跑通的能力沉淀成所有办公室都能复用的底座。
 
-- [ ] 每个办公室必须有独立的配置、模型、工作区、历史、产物和测试。
+- [x] 每个办公室必须有独立的配置、模型、工作区、历史、产物和测试。
 - [x] 每个办公室必须声明输入类型、输出类型、Agent 分工、人工审核节点和验收标准。
 - [x] 新办公室创建模板必须声明必需协议字段和上线门槛，避免后续办公室复制临时代码入口。
 - [x] 每个办公室必须能通过 `/api/offices/{office_id}/launch-gates` 返回上线门禁审计，明确哪些门槛已通过、证据是什么、下一步该补什么。
@@ -64,6 +64,8 @@
 - [x] 所有长任务必须可观测、可重试、可恢复，并记录失败原因和下一步建议。
 
 说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；协议 API 同时返回 `creation_template`，要求新办公室补齐 `input_types`、`output_types`、`model_requirements`、`human_checkpoints`、`artifact_contract`、`schema_gates`、`recovery_actions` 和验收标准，并通过无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、schema gate、README 文档和 secret scan。`/api/offices/{office_id}/launch-gates` 已返回单个办公室的上线门禁审计，后续办公室如果没有证据、状态和下一步动作，就不能进入公开展示或真实使用链路。工作空间运行时状态通过 `/api/workspaces/{workspace_id}/runtime-status` 暴露，并已接入 AI 漫剧制片办公室工作台，用于统一说明当前阶段、最近任务、产物完成度、缺失产物和恢复动作。长任务事件已覆盖任务开始、任务完成、AI 漫剧图片生产、单张图片进度、Word 画布生成、失败恢复和前端时间线展示，并纳入 `long_task_observability` readiness 条件。artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。AI 漫剧制片办公室已把 `comic_contract`、`asset_manifest`、`asset_prompt_set`、`shot_cards` 和 `image_review_result` 等关键模型输出声明进办公室协议；研究办公室已把 `research_standard_report`、`research_source_list`、`research_data_table` 和 `research_competitor_table` 声明进办公室协议，后续办公室必须沿用同一套 schema gate 方式。
+
+办公室隔离已补充离线验收：`python scripts/verify_office_isolation.py --format markdown` 会在临时目录里验证研究办公室和 AI 漫剧制片办公室的模型配置、工作区、历史、产物和输出目录不会串线，并且历史追踪必须按 `payload.workspace_id` 精确归属。
 
 ### 阶段 D：真实使用闭环
 
@@ -89,7 +91,7 @@
 
 - [ ] 不再盲目横向增加办公室；先把一个主力办公室打磨到能展示、能试用、能交付。
 - [ ] 默认主力办公室为 `AI漫剧制片办公室`，研究办公室保持可用但不作为当前主打。
-- [ ] 所有办公室必须保持代码、模型配置、工作区、历史、产物隔离。
+- [x] 所有办公室必须保持代码、模型配置、工作区、历史、产物隔离。
 - [x] 用户每次点击关键按钮后，都必须知道系统正在做什么、由哪个 Agent 做、下一步是什么。
 - [x] 所有真实模型调用失败都必须可见，不允许静默生成伪正式结果。
 - [x] 所有 API Key、Cookie、登录态、运行产物、生成文档和用户数据不得进入 Git。

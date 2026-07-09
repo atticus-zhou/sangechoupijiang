@@ -162,6 +162,24 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "office_isolation_contract",
+            "Office isolation contract",
+            [
+                _contains(root / "src/config_manager.py", 'payload.get("workspace_id")'),
+                _contains(root / "src/config_manager.py", "exact_task_id_set"),
+                _contains(root / "src/config_manager.py", "office_models"),
+                _contains(root / "scripts/verify_office_isolation.py", "model_config_isolation"),
+                _contains(root / "scripts/verify_office_isolation.py", "history_trace_isolation"),
+                _contains(root / "scripts/verify_office_isolation.py", "filesystem_output_isolation"),
+                _contains(root / "tests/test_office_isolation_verifier.py", "test_json_proves_models_workspaces_artifacts_and_history_are_office_scoped"),
+            ],
+            [
+                "src/config_manager.py:list_workspace_task_runs",
+                "scripts/verify_office_isolation.py",
+                "tests/test_office_isolation_verifier.py",
+            ],
+        ),
+        _check(
             "office_launch_gate_audit",
             "Office launch gate audit",
             [

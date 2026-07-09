@@ -25,6 +25,12 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("第三里程碑：多办公室组合协作", text)
         self.assertIn("先让一个复杂项目被稳定完成，再让多个办公室协同完成更大的项目", text)
 
+    def test_office_isolation_verifier_is_part_of_platform_protocol(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("python scripts/verify_office_isolation.py --format markdown", text)
+        self.assertIn("payload.workspace_id", text)
+
     def test_download_links_are_marked_done_with_launch_gate_evidence(self):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
 

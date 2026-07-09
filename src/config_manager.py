@@ -634,7 +634,7 @@ class ConfigManager:
     def list_workspace_task_runs(self, workspace_id: str, limit: int = 20) -> list[dict]:
         """List task runs that declared activity for a workspace."""
         conn = sqlite3.connect(str(self.db_path))
-        rows = conn.execute(
+        candidate_rows = conn.execute(
             """
             SELECT DISTINCT tr.task_id, tr.user_request, tr.status, tr.current_phase,
                    tr.error, tr.created_at, tr.updated_at, tr.completed_at
@@ -642,14 +642,14 @@ class ConfigManager:
             JOIN task_events te ON te.task_id = tr.task_id
             WHERE te.payload LIKE ?
             ORDER BY tr.updated_at DESC, tr.created_at DESC
-            LIMIT ?
             """,
-            (f'%"{workspace_id}"%', limit),
+            (f'%"{workspace_id}"%',),
         ).fetchall()
-        task_ids = [r[0] for r in rows]
-        events_by_task: dict[str, list[dict]] = {task_id: [] for task_id in task_ids}
-        if task_ids:
-            placeholders = ",".join("?" for _ in task_ids)
+        candidate_task_ids = [r[0] for r in candidate_rows]
+        exact_task_id_set: set[str] = set()
+        events_by_task: dict[str, list[dict]] = {task_id: [] for task_id in candidate_task_ids}
+        if candidate_task_ids:
+            placeholders = ",".join("?" for _ in candidate_task_ids)
             event_rows = conn.execute(
                 f"""
                 SELECT task_id, event_type, status, summary, payload, created_at
@@ -657,13 +657,15 @@ class ConfigManager:
                 WHERE task_id IN ({placeholders})
                 ORDER BY id ASC
                 """,
-                task_ids,
+                candidate_task_ids,
             ).fetchall()
             for e in event_rows:
                 try:
                     payload = json.loads(e[4] or "{}")
                 except json.JSONDecodeError:
                     payload = {}
+                if str(payload.get("workspace_id") or "") == workspace_id and e[0] not in exact_task_id_set:
+                    exact_task_id_set.add(e[0])
                 events_by_task.setdefault(e[0], []).append({
                     "event_type": e[1],
                     "status": e[2],
@@ -672,6 +674,7 @@ class ConfigManager:
                     "created_at": e[5],
                 })
         conn.close()
+        rows = [r for r in candidate_rows if r[0] in exact_task_id_set][:limit]
         return [
             {
                 "task_id": r[0],
