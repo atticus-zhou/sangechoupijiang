@@ -13,7 +13,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.config_manager import ConfigManager
-from src.offices import get_office
+from src.offices import audit_office_launch_gates, get_office
 from src.office_preflight import build_office_preflight
 from src.system_preflight import build_system_preflight
 
@@ -69,6 +69,17 @@ def format_doctor_markdown(report: dict) -> str:
         lines.append(_row(item.get("name"), item.get("status"), item.get("summary"), item.get("next_action")))
     lines.extend([
         "",
+        "## Office launch gates",
+        "",
+        "| 办公室 | 门禁状态 | 通过项 | 下一步 |",
+        "| --- | --- | --- | --- |",
+    ])
+    for item in report.get("offices", []):
+        passed = item.get("launch_gate_passed", 0)
+        total = item.get("launch_gate_total", 0)
+        lines.append(_row(item.get("name"), item.get("launch_gate_status"), f"{passed}/{total}", item.get("launch_gate_next_action")))
+    lines.extend([
+        "",
         "## AI 漫剧制片办公室能力",
         "",
         "| 能力 | 状态 | 负责 | 影响 | 下一步 |",
@@ -90,6 +101,10 @@ def _build_office_availability(manager: ConfigManager, root: Path) -> list[dict]
             manager.get_model_config,
             base_dir=root,
         )
+        launch_gate = audit_office_launch_gates(office_id)
+        launch_gates = launch_gate.get("gates", [])
+        launch_gate_passed = sum(1 for gate in launch_gates if gate.get("status") == "passed")
+        launch_gate_next = next((gate.get("next_action", "") for gate in launch_gates if gate.get("status") != "passed"), "保持门禁证据随办公室流程同步更新。")
         offices.append({
             "office_id": preflight.get("office_id", office_id),
             "name": profile.name,
@@ -98,6 +113,10 @@ def _build_office_availability(manager: ConfigManager, root: Path) -> list[dict]
             "next_action": preflight.get("next_action", ""),
             "blocking_reasons": preflight.get("blocking_reasons", []),
             "capability_count": len(preflight.get("capabilities", [])),
+            "launch_gate_status": launch_gate.get("status", "needs_work"),
+            "launch_gate_passed": launch_gate_passed,
+            "launch_gate_total": len(launch_gates),
+            "launch_gate_next_action": launch_gate_next,
         })
     return offices
 
@@ -153,3 +172,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

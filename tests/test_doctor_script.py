@@ -21,6 +21,7 @@ class DoctorScriptTests(unittest.TestCase):
         self.assertIn("三个臭皮匠本地自检", result.stdout)
         self.assertIn("系统启动检查", result.stdout)
         self.assertIn("办公室可用性", result.stdout)
+        self.assertIn("Office launch gates", result.stdout)
         self.assertIn("AI 漫剧制片办公室能力", result.stdout)
         self.assertIn("下一步", result.stdout)
         self.assertNotIn("api_key", result.stdout.lower())
@@ -47,6 +48,9 @@ class DoctorScriptTests(unittest.TestCase):
         self.assertIn("comic_production", office_ids)
         self.assertTrue(all("summary" in office for office in payload["offices"]))
         self.assertTrue(all("next_action" in office for office in payload["offices"]))
+        self.assertTrue(all("launch_gate_status" in office for office in payload["offices"]))
+        self.assertTrue(all("launch_gate_passed" in office for office in payload["offices"]))
+        self.assertTrue(all("launch_gate_total" in office for office in payload["offices"]))
         self.assertNotIn("api_key", result.stdout.lower())
         self.assertNotIn("LiteLLM", result.stdout + result.stderr)
 
