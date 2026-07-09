@@ -27,6 +27,30 @@ class DoctorScriptTests(unittest.TestCase):
         self.assertNotIn("api_key", result.stdout.lower())
         self.assertNotIn("LiteLLM", result.stdout + result.stderr)
 
+    def test_doctor_markdown_tables_have_consistent_columns(self):
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT)],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        lines = result.stdout.splitlines()
+        for index, line in enumerate(lines):
+            if not (line.startswith("| ") and index + 1 < len(lines) and lines[index + 1].startswith("| ---")):
+                continue
+            expected_columns = line.count("|") - 1
+            row_index = index + 2
+            while row_index < len(lines) and lines[row_index].startswith("| "):
+                actual_columns = lines[row_index].count("|") - 1
+                self.assertEqual(
+                    expected_columns,
+                    actual_columns,
+                    f"Markdown table row has {actual_columns} columns, expected {expected_columns}: {lines[row_index]}",
+                )
+                row_index += 1
+
     def test_doctor_outputs_json_without_secrets(self):
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--format", "json"],

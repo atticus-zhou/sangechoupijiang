@@ -88,7 +88,8 @@ def format_doctor_markdown(report: dict) -> str:
     for item in report.get("office", {}).get("capabilities", []):
         owner = item.get("owner_label", "")
         model_kind = item.get("model_kind", "")
-        lines.append(_row(item.get("title"), item.get("status"), f"{owner}{model_kind}：{item.get('impact', '')}", item.get("next_action")))
+        responsible = f"{owner}{model_kind}"
+        lines.append(_row(item.get("title"), item.get("status"), responsible, item.get("impact"), item.get("next_action")))
     return "\n".join(lines)
 
 
