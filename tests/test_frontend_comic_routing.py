@@ -154,6 +154,22 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("/api/offices/${officeId}/preflight", js)
         self.assertIn("if (page === 'offices') loadOfficeHallAvailability()", js)
 
+    def test_office_hall_renders_launch_gate_audit(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="office-launch-gates-panel"', html)
+        self.assertIn("async function loadOfficeLaunchGates", js)
+        self.assertIn("renderOfficeLaunchGates", js)
+        self.assertIn("/api/offices/${officeId}/launch-gates", js)
+        self.assertIn("if (page === 'offices') loadOfficeLaunchGates()", js)
+        self.assertIn("上线门禁", js)
+        self.assertIn("gate.next_action", js)
+        self.assertIn(".launch-gates-panel", css)
+        self.assertIn(".launch-gate-grid", css)
+        self.assertIn(".launch-gates-head,\n    .launch-gate-office > div", css)
+
     def test_hall_renders_public_showcase_and_no_key_demo_entry(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
         js = APP_JS.read_text(encoding="utf-8")

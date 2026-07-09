@@ -158,6 +158,17 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertTrue(gates["no_key_demo"]["evidence"])
         self.assertIn("next_action", gates["no_key_demo"])
 
+    def test_office_launch_gate_api_marks_legacy_comic_as_not_ready(self):
+        response = self.client.get("/api/offices/comic/launch-gates")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["office_id"], "comic")
+        self.assertEqual(payload["status"], "needs_work")
+        gates = {gate["id"]: gate for gate in payload["gates"]}
+        self.assertEqual(gates["no_key_demo"]["status"], "needs_work")
+        self.assertTrue(gates["no_key_demo"]["next_action"])
+
     def test_comic_production_demo_api_is_no_key_and_read_only(self):
         with patch("src.web.app.config_manager.get_model_config") as get_model_config, \
              patch("src.web.app.config_manager.create_workspace") as create_workspace:

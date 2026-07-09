@@ -621,6 +621,110 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     border-color: rgba(248, 81, 73, 0.24);
     background: rgba(248, 81, 73, 0.1);
 }
+.launch-gates-panel {
+    width: 100%;
+    margin: 0 auto 30px;
+}
+.launch-gates-card,
+.launch-gates-loading,
+.launch-gates-error {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(22, 27, 34, 0.82);
+    box-shadow: var(--shadow);
+}
+.launch-gates-loading,
+.launch-gates-error {
+    padding: 18px 20px;
+    color: var(--text2);
+}
+.launch-gates-error {
+    border-color: rgba(248, 81, 73, 0.28);
+    color: #ffb4ad;
+}
+.launch-gates-card {
+    padding: 20px;
+}
+.launch-gates-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+.launch-gates-head strong {
+    display: block;
+    color: var(--text);
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+.launch-gates-head p {
+    margin: 0;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+}
+.launch-gates-head span {
+    flex: 0 0 auto;
+    color: var(--accent);
+    border: 1px solid rgba(88, 166, 255, 0.25);
+    border-radius: 999px;
+    padding: 5px 11px;
+    background: rgba(88, 166, 255, 0.1);
+    font-size: 12px;
+}
+.launch-gate-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.launch-gate-office {
+    min-height: 120px;
+    padding: 14px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.42);
+}
+.launch-gate-office.ready {
+    border-color: rgba(63, 185, 80, 0.24);
+    background: rgba(35, 134, 54, 0.1);
+}
+.launch-gate-office.needs-work {
+    border-color: rgba(210, 153, 34, 0.26);
+    background: rgba(210, 153, 34, 0.08);
+}
+.launch-gate-office > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.launch-gate-office strong,
+.launch-gate-office span,
+.launch-gate-office p,
+.launch-gate-office small {
+    display: block;
+}
+.launch-gate-office strong {
+    color: var(--text);
+    font-size: 14px;
+}
+.launch-gate-office span {
+    flex: 0 0 auto;
+    color: var(--text2);
+    font-size: 12px;
+}
+.launch-gate-office p {
+    margin: 0 0 8px;
+    color: var(--text2);
+    font-size: 13px;
+}
+.launch-gate-office small {
+    color: var(--text3);
+    font-size: 12px;
+    line-height: 1.5;
+}
 .office-card em {
     display: inline-flex;
     align-items: center;
@@ -2758,6 +2862,13 @@ code { font-family: var(--mono); font-size: 13px; }
         padding-right: 16px;
     }
     .office-card-grid {
+        grid-template-columns: 1fr;
+    }
+    .launch-gates-head,
+    .launch-gate-office > div {
+        flex-direction: column;
+    }
+    .launch-gate-grid {
         grid-template-columns: 1fr;
     }
     .model-summary-grid {

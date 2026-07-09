@@ -56,6 +56,7 @@ const OFFICE_HALL_PREFLIGHTS = [
     { officeId: 'research', targetId: 'office-availability-research' },
     { officeId: 'comic_production', targetId: 'office-availability-comic-production' },
 ];
+const OFFICE_HALL_LAUNCH_GATES = ['comic_production', 'research', 'comic'];
 
 let ACTIVE_OFFICE_ID = readStoredOfficeId();
 let MODEL_OFFICE_ID = ACTIVE_OFFICE_ID;
@@ -93,6 +94,7 @@ function navigate(page) {
     else if (page === 'history') loadHistory();
     if (page === 'offices') loadSystemPreflight();
     if (page === 'offices') loadOfficeHallAvailability();
+    if (page === 'offices') loadOfficeLaunchGates();
 }
 
 function navigateActiveWorkbench() {
@@ -3569,6 +3571,56 @@ function renderOfficeHallAvailability(result, targetId) {
     target.innerHTML = `
         <b>${escapeHtml(preflightStatusText(status))}</b>
         <small>${escapeHtml(summary)}</small>
+    `;
+}
+
+async function loadOfficeLaunchGates() {
+    const target = document.getElementById('office-launch-gates-panel');
+    if (!target) return;
+    target.innerHTML = '<div class="launch-gates-loading">正在检查办公室上线门禁...</div>';
+    try {
+        const audits = await Promise.all(OFFICE_HALL_LAUNCH_GATES.map(officeId =>
+            API.get(`/api/offices/${officeId}/launch-gates`)
+        ));
+        renderOfficeLaunchGates(audits);
+    } catch (e) {
+        target.innerHTML = `<div class="launch-gates-error">上线门禁检查失败：${escapeHtml(e.message || String(e))}</div>`;
+    }
+}
+
+function renderOfficeLaunchGates(audits) {
+    const target = document.getElementById('office-launch-gates-panel');
+    if (!target) return;
+    const items = Array.isArray(audits) ? audits : [];
+    const readyCount = items.filter(item => item.status === 'ready').length;
+    target.innerHTML = `
+        <section class="launch-gates-card">
+            <div class="launch-gates-head">
+                <div>
+                    <strong>办公室上线门禁</strong>
+                    <p>判断每个办公室能不能公开展示、复现和进入真实使用链路。</p>
+                </div>
+                <span>${escapeHtml(readyCount)} / ${escapeHtml(items.length)} ready</span>
+            </div>
+            <div class="launch-gate-grid">
+                ${items.map(audit => {
+                    const gates = Array.isArray(audit.gates) ? audit.gates : [];
+                    const passed = gates.filter(gate => gate.status === 'passed').length;
+                    const gate = gates.find(gate => gate.status !== 'passed') || gates[0] || {};
+                    const statusClass = audit.status === 'ready' ? 'ready' : 'needs-work';
+                    return `
+                        <article class="launch-gate-office ${statusClass}">
+                            <div>
+                                <strong>${escapeHtml(audit.office_name || OFFICE_LABELS[audit.office_id] || audit.office_id || '')}</strong>
+                                <span>${escapeHtml(audit.status === 'ready' ? '可公开展示' : '需要补齐')}</span>
+                            </div>
+                            <p>${escapeHtml(passed)} / ${escapeHtml(gates.length)} 项门禁通过</p>
+                            <small>${escapeHtml(gate.next_action || '保持证据随办公室流程同步更新。')}</small>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+        </section>
     `;
 }
 
