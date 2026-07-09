@@ -150,6 +150,30 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "office_launch_gate_audit",
+            "Office launch gate audit",
+            [
+                _contains(root / "src/offices.py", "def audit_office_launch_gates"),
+                _contains(root / "src/web/app.py", "/api/offices/{office_id}/launch-gates"),
+                _contains(root / "src/web/static/index.html", 'id="office-launch-gates-panel"'),
+                _contains(root / "src/web/static/js/app.js", "loadOfficeLaunchGates"),
+                _contains(root / "src/web/static/css/style.css", ".launch-gates-panel"),
+                _contains(root / "tests/test_office_preflight.py", "test_office_launch_gate_api_returns_productization_audit"),
+                _contains(root / "tests/test_frontend_comic_routing.py", "test_office_hall_renders_launch_gate_audit"),
+                _contains(root / "README.md", "/api/offices/{office_id}/launch-gates"),
+            ],
+            [
+                "src/offices.py:audit_office_launch_gates",
+                "src/web/app.py:/api/offices/{office_id}/launch-gates",
+                "src/web/static/index.html:office-launch-gates-panel",
+                "src/web/static/js/app.js:loadOfficeLaunchGates",
+                "src/web/static/css/style.css:.launch-gates-panel",
+                "tests/test_office_preflight.py",
+                "tests/test_frontend_comic_routing.py",
+                "README.md",
+            ],
+        ),
+        _check(
             "artifact_contract_runtime",
             "产物协议运行时校验",
             [
