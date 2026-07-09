@@ -45,6 +45,8 @@ python scripts/doctor.py
 
 它会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
 
+同时，`doctor.py` 会展示 **Office launch gates（办公室上线门禁）**：无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追踪、schema gate、README 文档和密钥安全扫描是否已达标，并告诉你每个办公室距离公开展示、可复现和真实使用还差哪一步。
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
