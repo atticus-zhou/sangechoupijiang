@@ -88,6 +88,23 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "first_run_reproducibility",
+            "First-run reproducibility",
+            [
+                _contains(root / "scripts/verify_first_run_readiness.py", "public_demo"),
+                _contains(root / "scripts/verify_first_run_readiness.py", "local_real_use"),
+                _contains(root / "scripts/verify_first_run_readiness.py", "developer_extension"),
+                _contains(root / "scripts/verify_first_run_readiness.py", "python run.py --port 8080"),
+                _contains(root / "tests/test_first_run_readiness_verifier.py", "FirstRunReadinessVerifierTests"),
+                _contains(root / "README.md", "python scripts/verify_first_run_readiness.py --format markdown"),
+            ],
+            [
+                "scripts/verify_first_run_readiness.py",
+                "tests/test_first_run_readiness_verifier.py",
+                "README.md",
+            ],
+        ),
+        _check(
             "history_trace",
             "历史追溯",
             [

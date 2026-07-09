@@ -14,12 +14,13 @@
 
 ```powershell
 python scripts/check_no_secrets.py
+python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_office_isolation.py --format markdown
 python scripts/verify_public_demo_mode.py --format markdown
 python scripts/verify_product_readiness.py --format markdown
 ```
 
-如果这些检查没有通过，不要把当前仓库、构建产物或公开页面交给别人使用。`verify_office_isolation.py` 会离线验证不同办公室的模型配置、工作区、历史、产物和输出目录不会串线；`verify_public_demo_mode.py` 是公开演示模式验证，用来确认 `/api/demo/public-showcase` 公开展示清单、`/api/demo` 入口、样例下载链接和上线门禁证据链接可用，并且不调用真实模型。
+如果这些检查没有通过，不要把当前仓库、构建产物或公开页面交给别人使用。`verify_first_run_readiness.py` 会把公开演示、本地真实使用和开发者扩展三条路径整理成第一次运行清单；`verify_office_isolation.py` 会离线验证不同办公室的模型配置、工作区、历史、产物和输出目录不会串线；`verify_public_demo_mode.py` 是公开演示模式验证，用来确认 `/api/demo/public-showcase` 公开展示清单、`/api/demo` 入口、样例下载链接和上线门禁证据链接可用，并且不调用真实模型。
 
 ## 演示模式
 

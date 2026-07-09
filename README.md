@@ -43,6 +43,12 @@ V2 的目标交付不是一部成片，而是一份可生产的制片包：人�
 python scripts/doctor.py
 ```
 
+第一次从 GitHub 下载项目时，也建议先跑复现清单。它会把公开演示、本地真实使用和开发者扩展三条路径分开说明：
+
+```powershell
+python scripts/verify_first_run_readiness.py --format markdown
+```
+
 它会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
 
 同时，`doctor.py` 会展示 **Office launch gates（办公室上线门禁）**：无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追踪、schema gate、README 文档和密钥安全扫描是否已达标，并告诉你每个办公室距离公开展示、可复现和真实使用还差哪一步。
