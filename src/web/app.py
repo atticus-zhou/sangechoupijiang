@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from src.config_manager import config_manager
-from src.offices import get_office, list_office_creation_template, list_office_protocols, list_offices
+from src.offices import audit_office_launch_gates, get_office, list_office_creation_template, list_office_protocols, list_offices
 from src.comic_artifacts import build_comic_artifacts
 from src.comic_office.production_handoff import build_production_handoff_artifacts
 from src.comic_office.production_chain import build_production_chain_state, format_production_chain_state
@@ -322,6 +322,12 @@ async def get_office_preflight_api(office_id: str):
         config_manager.get_model_config,
         base_dir=APP_BASE_DIR,
     )
+
+
+@app.get("/api/offices/{office_id}/launch-gates")
+async def get_office_launch_gates_api(office_id: str):
+    """Return the productization launch-gate audit for an office."""
+    return audit_office_launch_gates(office_id)
 
 
 @app.get("/api/offices/{office_id}/readiness")

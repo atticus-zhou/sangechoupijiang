@@ -36,6 +36,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("no_key_demo", text)
         self.assertIn("model_preflight", text)
         self.assertIn("end_to_end_test", text)
+        self.assertIn("/api/offices/{office_id}/launch-gates", text)
         self.assertIn("输入类型", text)
         self.assertIn("人工审核节点", text)
         self.assertIn("python -m unittest tests.test_sample_project_fixtures -q", text)

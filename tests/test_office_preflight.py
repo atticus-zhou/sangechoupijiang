@@ -145,6 +145,19 @@ class OfficePreflightApiTests(unittest.TestCase):
         research = protocols["research"]
         self.assertTrue(any(item["stage"] == "agent_workflow" for item in research["recovery_actions"]))
 
+    def test_office_launch_gate_api_returns_productization_audit(self):
+        response = self.client.get("/api/offices/comic_production/launch-gates")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["office_id"], "comic_production")
+        self.assertEqual(payload["status"], "ready")
+        gates = {gate["id"]: gate for gate in payload["gates"]}
+        self.assertIn("no_key_demo", gates)
+        self.assertEqual(gates["no_key_demo"]["status"], "passed")
+        self.assertTrue(gates["no_key_demo"]["evidence"])
+        self.assertIn("next_action", gates["no_key_demo"])
+
     def test_comic_production_demo_api_is_no_key_and_read_only(self):
         with patch("src.web.app.config_manager.get_model_config") as get_model_config, \
              patch("src.web.app.config_manager.create_workspace") as create_workspace:

@@ -1,6 +1,6 @@
 import unittest
 
-from src.offices import get_office, list_office_creation_template, list_offices
+from src.offices import audit_office_launch_gates, get_office, list_office_creation_template, list_offices
 
 
 class OfficeProfileTests(unittest.TestCase):
@@ -50,6 +50,32 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("failure_recovery", template["required_launch_gates"])
         self.assertIn("history_trace", template["required_launch_gates"])
         self.assertIn("schema_gate", template["required_launch_gates"])
+
+    def test_comic_production_launch_gate_audit_covers_required_gates(self):
+        template = list_office_creation_template()
+
+        audit = audit_office_launch_gates("comic_production")
+
+        self.assertEqual(audit["office_id"], "comic_production")
+        self.assertEqual(audit["status"], "ready")
+        gate_ids = {gate["id"] for gate in audit["gates"]}
+        self.assertEqual(gate_ids, set(template["required_launch_gates"]))
+        for gate in audit["gates"]:
+            self.assertIn(gate["status"], {"passed", "needs_work", "blocked"})
+            self.assertTrue(gate["label"])
+            self.assertTrue(gate["evidence"])
+            self.assertTrue(gate["next_action"])
+        self.assertTrue(all(gate["status"] == "passed" for gate in audit["gates"]))
+
+    def test_legacy_comic_launch_gate_audit_marks_missing_product_gates(self):
+        audit = audit_office_launch_gates("comic")
+
+        self.assertEqual(audit["office_id"], "comic")
+        self.assertEqual(audit["status"], "needs_work")
+        statuses = {gate["id"]: gate["status"] for gate in audit["gates"]}
+        self.assertEqual(statuses["no_key_demo"], "needs_work")
+        self.assertEqual(statuses["end_to_end_test"], "needs_work")
+        self.assertEqual(statuses["sample_delivery"], "needs_work")
 
     def test_comic_office_defines_preproduction_contract(self):
         office = get_office("comic")

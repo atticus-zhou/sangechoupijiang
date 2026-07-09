@@ -356,6 +356,106 @@ def list_office_creation_template() -> dict:
     }
 
 
+LAUNCH_GATE_LABELS = {
+    "no_key_demo": "无 Key 演示",
+    "model_preflight": "模型预检",
+    "end_to_end_test": "端到端测试",
+    "sample_delivery": "样例交付物",
+    "failure_recovery": "失败恢复",
+    "history_trace": "历史追踪",
+    "schema_gate": "结构化验收",
+    "readme_documentation": "README 文档",
+    "secret_scan": "密钥安全扫描",
+}
+
+
+LAUNCH_GATE_EVIDENCE = {
+    "research": {
+        "no_key_demo": "/api/demo/research exposes a read-only public demo.",
+        "model_preflight": "/api/offices/research/preflight checks office-scoped models.",
+        "end_to_end_test": "tests.test_office_preflight covers research demo/readiness paths.",
+        "sample_delivery": "Research demo returns artifacts, viewer_path, and proof_points.",
+        "failure_recovery": "Research profile declares evidence and artifact recovery actions.",
+        "history_trace": "Research artifact contract requires source, version, agent, and reference_chain metadata.",
+        "schema_gate": "Research profile declares report, source list, data table, and competitor table schema gates.",
+        "readme_documentation": "README documents office protocols and public demo endpoints.",
+        "secret_scan": "Readiness script and secret scan keep public source free of API keys.",
+    },
+    "comic_production": {
+        "no_key_demo": "/api/demo/comic-production exposes a read-only public demo.",
+        "model_preflight": "/api/offices/comic_production/preflight checks isolated office models.",
+        "end_to_end_test": "tests cover comic production readiness, routing, history, and demo behavior.",
+        "sample_delivery": "Comic production demo and history expose downloadable Word canvas artifacts.",
+        "failure_recovery": "Comic production profile declares story, asset, prompt, image, and document recovery actions.",
+        "history_trace": "Comic artifact contract requires office_id, source, version, responsible_agent, and reference_chain.",
+        "schema_gate": "Comic production profile declares story, asset, prompt, shot, and image review schema gates.",
+        "readme_documentation": "README documents model setup, safety modes, office protocols, and demos.",
+        "secret_scan": "Repository checks include secret scan before public push.",
+    },
+}
+
+
+def audit_office_launch_gates(office_id: str) -> dict:
+    """Return the productization gate audit for one office."""
+    office = get_office(office_id)
+    required_gates = list_office_creation_template()["required_launch_gates"]
+    evidence_by_gate = LAUNCH_GATE_EVIDENCE.get(office.id, {})
+    gates = []
+
+    for gate_id in required_gates:
+        inferred_evidence = _infer_launch_gate_evidence(office, gate_id)
+        evidence = evidence_by_gate.get(gate_id) or inferred_evidence
+        status = "passed" if evidence_by_gate.get(gate_id) else ("passed" if inferred_evidence else "needs_work")
+        gates.append(
+            {
+                "id": gate_id,
+                "label": LAUNCH_GATE_LABELS.get(gate_id, gate_id),
+                "status": status,
+                "evidence": evidence or "No concrete evidence is declared for this office yet.",
+                "next_action": (
+                    "Keep this evidence current when the office workflow changes."
+                    if status == "passed"
+                    else _launch_gate_next_action(gate_id)
+                ),
+            }
+        )
+
+    audit_status = "ready" if all(gate["status"] == "passed" for gate in gates) else "needs_work"
+    return {
+        "office_id": office.id,
+        "office_name": office.name,
+        "status": audit_status,
+        "gates": gates,
+    }
+
+
+def _infer_launch_gate_evidence(office: OfficeProfile, gate_id: str) -> str:
+    if gate_id == "model_preflight" and office.model_requirements:
+        return "Office profile declares model requirements for preflight checks."
+    if gate_id == "failure_recovery" and office.recovery_actions:
+        return "Office profile declares recovery actions for failed workflow stages."
+    if gate_id == "history_trace" and office.artifact_contract:
+        return "Office profile declares an artifact contract with traceability metadata."
+    if gate_id == "schema_gate" and office.schema_gates:
+        return "Office profile declares schema gates for structured acceptance."
+    return ""
+
+
+def _launch_gate_next_action(gate_id: str) -> str:
+    actions = {
+        "no_key_demo": "Add a read-only no-key demo endpoint before public showcase.",
+        "model_preflight": "Declare office-scoped model requirements and expose a preflight check.",
+        "end_to_end_test": "Add an automated end-to-end test for the office happy path.",
+        "sample_delivery": "Publish at least one safe sample delivery artifact.",
+        "failure_recovery": "Declare recovery actions for every long-running production stage.",
+        "history_trace": "Attach source, version, responsible agent, and reference chain metadata to outputs.",
+        "schema_gate": "Declare structured schema gates for the office artifacts.",
+        "readme_documentation": "Document setup, demo mode, model needs, and safety boundaries in README.",
+        "secret_scan": "Run a secret scan and keep API keys out of committed files.",
+    }
+    return actions.get(gate_id, "Declare concrete evidence and an owner for this launch gate.")
+
+
 def _office_protocol(office: OfficeProfile) -> dict:
     return {
         "office_id": office.id,

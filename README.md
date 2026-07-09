@@ -154,6 +154,14 @@ GET /api/workspaces/{workspace_id}/runtime-status
 
 新办公室进入公开展示前，还必须满足 `creation_template.required_launch_gates` 中的上线门槛：`no_key_demo`、`model_preflight`、`end_to_end_test`、`sample_delivery`、`failure_recovery`、`history_trace`、`schema_gate`、`readme_documentation` 和 `secret_scan`。这条规则的目的不是增加形式，而是确保每个办公室都能被陌生用户试用、被开发者复现、在失败时恢复，并且不会把模型配置或历史产物串到其他办公室。
 
+开发新办公室时，先用下面的接口查看它是否已经具备公开展示和真实使用的最低条件：
+
+```text
+GET /api/offices/{office_id}/launch-gates
+```
+
+这个接口会逐项返回无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追踪、schema gate、README 文档和密钥安全扫描的状态、证据和下一步动作。状态不是 `ready` 的办公室，不应该进入公开展示或真实生产链路。
+
 ## 固定验证
 
 不配置任何真实 API Key，也可以运行确定性 V2 交付验证：
