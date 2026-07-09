@@ -5084,11 +5084,22 @@ def _history_delivery_summary(enriched: dict) -> dict:
     workspace_id = enriched.get("workspace_id") or ""
     word_uri = enriched.get("word_canvas_uri") or ""
     handoff_uri = enriched.get("handoff_manifest_uri") or trace.get("handoff_manifest_uri") or ""
+    artifact_types = {
+        artifact.get("artifact_type")
+        for artifact in enriched.get("artifacts") or []
+        if artifact.get("artifact_type")
+    }
     downloadable_files = []
+    if enriched.get("workspace_export_uri"):
+        downloadable_files.append("完整归档包")
     if word_uri:
         downloadable_files.append("Word 制片画布")
     if handoff_uri:
         downloadable_files.append("引用清单")
+    if "comic_v2_prompt_package" in artifact_types:
+        downloadable_files.append("提示词包")
+    if {"comic_v2_generated_image", "generated_image"} & artifact_types:
+        downloadable_files.append("图片资产")
     if enriched.get("comic_v2_trace_uri"):
         downloadable_files.append("追溯记录")
 

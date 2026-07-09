@@ -752,6 +752,22 @@ class WebComicApiTests(unittest.TestCase):
             },
             created_by="xingbu",
         )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_image_1",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_generated_image",
+            title="林昭 / three_view",
+            uri=f"/api/workspaces/{workspace_id}/files/generated/{task_id}/char_001_three_view.png",
+            content=json.dumps({"image_id": "img_char_001_three_view", "asset_id": "char_001"}, ensure_ascii=False),
+            metadata={
+                "office_id": "comic_production",
+                "asset_id": "char_001",
+                "image_kind": "three_view",
+                "path": f"output/workspaces/{workspace_id}/generated/{task_id}/char_001_three_view.png",
+            },
+            created_by="gongbu",
+        )
         try:
             response = self.client.get("/api/tasks/history?limit=20")
             self.assertEqual(response.status_code, 200)
@@ -794,7 +810,10 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(summary["shot_count"], 9)
             self.assertEqual(summary["prompt_count"], 16)
             self.assertEqual(summary["visual_review_status"], "passed")
-            self.assertEqual(summary["downloadable_files"], ["Word 制片画布", "引用清单", "追溯记录"])
+            self.assertEqual(
+                summary["downloadable_files"],
+                ["完整归档包", "Word 制片画布", "引用清单", "提示词包", "图片资产", "追溯记录"],
+            )
             self.assertEqual(summary["missing_items"], [])
             self.assertIn("可以交给下游", summary["next_action"])
             prompt_response = self.client.get(prompt_artifact["download_uri"])
