@@ -128,6 +128,7 @@
 - [x] 演示入口展示交付质量门禁，说明样例为何可公开、可下载、可追溯。
 - [x] 演示入口提供“建议你这样看”的参观路径和 proof points，让面试官或陌生用户不用阅读代码也能理解产品价值。
 - [x] 提供 `python scripts/verify_public_demo_mode.py --format markdown`，一条命令验证 AI 漫剧制片办公室和研究办公室的无 Key 演示入口、样例下载和门禁证据链接。
+- [x] 提供 `/api/demo/public-showcase` 公开展示清单，供个人网站或作品集页复用产品定位、访客参观路径、推荐 demo、下载物和安全边界。
 
 验收标准：
 

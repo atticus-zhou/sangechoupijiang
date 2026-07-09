@@ -73,7 +73,9 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python scripts/check_no_secrets.py", text)
         self.assertIn("python scripts/verify_product_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
+        self.assertIn("/api/demo/public-showcase", text)
         self.assertIn("公开演示模式验证", text)
+        self.assertIn("公开展示清单", text)
 
     def test_readme_gives_new_user_model_setup_path(self):
         text = Path("README.md").read_text(encoding="utf-8")

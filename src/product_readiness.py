@@ -109,6 +109,7 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             [
                 _contains(root / "src/web/app.py", "/api/demo/comic-production"),
                 _contains(root / "src/web/app.py", "/api/demo/research"),
+                _contains(root / "src/web/app.py", "/api/demo/public-showcase"),
                 _contains(root / "src/web/static/index.html", 'id="product-showcase"'),
                 _contains(root / "src/web/static/index.html", 'id="btn-open-research-demo"'),
                 _contains(root / "src/web/app.py", "quality_gates"),
@@ -127,6 +128,7 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             [
                 "src/web/app.py:/api/demo/comic-production",
                 "src/web/app.py:/api/demo/research",
+                "src/web/app.py:/api/demo/public-showcase",
                 "src/web/app.py:quality_gates",
                 "src/web/static/index.html",
                 "src/web/static/js/app.js",

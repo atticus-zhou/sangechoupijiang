@@ -18,7 +18,7 @@ python scripts/verify_public_demo_mode.py --format markdown
 python scripts/verify_product_readiness.py --format markdown
 ```
 
-如果这些检查没有通过，不要把当前仓库、构建产物或公开页面交给别人使用。`verify_public_demo_mode.py` 是公开演示模式验证，用来确认 `/api/demo` 入口、样例下载链接和上线门禁证据链接可用，并且不调用真实模型。
+如果这些检查没有通过，不要把当前仓库、构建产物或公开页面交给别人使用。`verify_public_demo_mode.py` 是公开演示模式验证，用来确认 `/api/demo/public-showcase` 公开展示清单、`/api/demo` 入口、样例下载链接和上线门禁证据链接可用，并且不调用真实模型。
 
 ## 演示模式
 
@@ -30,7 +30,7 @@ python scripts/verify_product_readiness.py --format markdown
 - 不允许访问真实生产接口，不允许提交需要真实模型执行的任务。
 - 可以部署到 Vercel、Netlify、GitHub Pages 等静态或半静态环境。
 
-公开页面里可以放 GitHub 链接、产品说明、无 Key 演示入口和样例交付物。不要把个人 API Key 写入前端，也不要把它放入 Vercel 前端环境变量。
+公开页面里可以放 GitHub 链接、产品说明、无 Key 演示入口和样例交付物。个人网站可以读取或复制 `/api/demo/public-showcase` 的公开展示清单，用同一份数据展示产品定位、参观路径、推荐 demo 和下载物。不要把个人 API Key 写入前端，也不要把它放入 Vercel 前端环境变量。
 
 ## 本地真实模式
 

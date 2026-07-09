@@ -1,4 +1,4 @@
-﻿"""三个臭皮匠 Web 应用 — FastAPI 后端"""
+"""三个臭皮匠 Web 应用 — FastAPI 后端"""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import json
 import os
 import re
 import zipfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -116,6 +117,34 @@ active_ws: dict[str, list[WebSocket]] = {}  # task_id → [ws, ...]
 court_ws: list[WebSocket] = []  # 朝堂报告的 WebSocket 订阅者
 AGENT_WORKFLOW_TIMEOUT_SECONDS = 420
 APP_BASE_DIR = Path(__file__).parent.parent.parent
+
+
+@contextmanager
+def _demo_delivery_lock(lock_path: Path):
+    """Serialize deterministic demo delivery writes across local verifier processes."""
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+b") as lock_file:
+        if lock_file.tell() == 0:
+            lock_file.write(b"0")
+            lock_file.flush()
+        lock_file.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                lock_file.seek(0)
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 @app.on_event("startup")
@@ -461,24 +490,25 @@ def _ensure_comic_production_demo_delivery() -> dict[str, Path]:
     output_root = APP_BASE_DIR / "output" / "demo" / "comic-production"
     delivery_dir = output_root / "delivery"
     image_dir = output_root / "images"
-    delivery_dir.mkdir(parents=True, exist_ok=True)
-    fixture = json.loads((APP_BASE_DIR / "tests" / "fixtures" / "comic_v2_sample.json").read_text(encoding="utf-8"))
-    bundle = fixture_contract_bundle(fixture["source_story"])
-    manifest = fixture_revised_manifest(
-        bundle,
-        fixture_initial_manifest(bundle),
-        "公开演示固定样例需要展示完整资产清单。",
-    )
-    prompt_package = fixture_prompt_package(bundle, manifest)
-    image_result = fixture_image_production(prompt_package, manifest, image_dir)
-    delivery = build_delivery_from_v2(bundle, manifest, prompt_package, image_result, delivery_dir)
-    if delivery.handoff_manifest_path is None:
-        raise HTTPException(status_code=500, detail="Demo handoff manifest was not generated.")
-    return {
-        "word_canvas": delivery.path,
-        "handoff_manifest": delivery.handoff_manifest_path,
-    }
-
+    lock_path = output_root / "demo_delivery.lock"
+    with _demo_delivery_lock(lock_path):
+        delivery_dir.mkdir(parents=True, exist_ok=True)
+        fixture = json.loads((APP_BASE_DIR / "tests" / "fixtures" / "comic_v2_sample.json").read_text(encoding="utf-8"))
+        bundle = fixture_contract_bundle(fixture["source_story"])
+        manifest = fixture_revised_manifest(
+            bundle,
+            fixture_initial_manifest(bundle),
+            "公开演示固定样例需要展示完整资产清单。",
+        )
+        prompt_package = fixture_prompt_package(bundle, manifest)
+        image_result = fixture_image_production(prompt_package, manifest, image_dir)
+        delivery = build_delivery_from_v2(bundle, manifest, prompt_package, image_result, delivery_dir)
+        if delivery.handoff_manifest_path is None:
+            raise HTTPException(status_code=500, detail="Demo handoff manifest was not generated.")
+        return {
+            "word_canvas": delivery.path,
+            "handoff_manifest": delivery.handoff_manifest_path,
+        }
 
 @app.get("/api/demo/comic-production/files/{filename}")
 async def get_comic_production_demo_file_api(filename: str):
@@ -591,6 +621,109 @@ async def get_research_demo_api():
                 "status": "downloadable",
                 "uri": "/api/demo/research/files/evidence_manifest.json",
             },
+        ],
+    }
+
+
+
+def _public_showcase_downloads(demo: dict) -> list[dict]:
+    downloads = []
+    for item in demo.get("deliverables") or demo.get("artifacts") or []:
+        uri = item.get("uri") or ""
+        if item.get("status") == "downloadable" and uri.startswith("/api/demo/"):
+            downloads.append({
+                "type": item.get("type", "artifact"),
+                "title": item.get("title", uri),
+                "status": "downloadable",
+                "uri": uri,
+            })
+    return downloads
+
+
+def _public_showcase_demo(demo: dict, demo_uri: str, office_label: str, why_it_matters: str) -> dict:
+    return {
+        "office_id": demo.get("office_id", ""),
+        "office_name": office_label,
+        "title": demo.get("title", office_label),
+        "summary": demo.get("summary", ""),
+        "demo_uri": demo_uri,
+        "viewer_path": demo.get("viewer_path", []),
+        "proof_points": demo.get("proof_points", []),
+        "downloads": _public_showcase_downloads(demo),
+        "quality_gates": demo.get("quality_gates", []),
+        "why_it_matters": why_it_matters,
+    }
+
+
+@app.get("/api/demo/public-showcase")
+async def get_public_showcase_demo_api():
+    """Return one public, no-key manifest for portfolio pages and external demos."""
+    comic_demo = await get_comic_production_demo_api()
+    research_demo = await get_research_demo_api()
+    return {
+        "mode": "public_no_key_showcase",
+        "product_name": "三个臭皮匠",
+        "tagline": "把复杂项目交给办公室，而不是只让模型聊一段话。",
+        "positioning": "本地优先的多 Agent 协作工作台：用办公室、人工审核节点、结构化产物和引用链路，把想法推进到可复现、可交付的结果。",
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "safe_for_public_portfolio": True,
+        "safety_boundaries": [
+            "公开展示只开放固定样例和 /api/demo 入口。",
+            "不读取 config.yaml、环境变量、Cookie、登录态或本地用户工作区。",
+            "不要把个人 API Key 写进前端、GitHub、Vercel 公开环境变量或静态文件。",
+            "真实生产继续走本地模式，由使用者填写自己的模型 Key。",
+        ],
+        "audience_paths": [
+            {
+                "id": "interviewer",
+                "label": "面试官",
+                "takeaway": "3 分钟内看懂产品价值：它不是聊天框，而是能展示流程、证据和交付物的多 Agent 工作台。",
+                "steps": [
+                    "先看首页产品定位和无 Key 演示入口。",
+                    "打开 AI 漫剧制片办公室样例，确认故事、资产、镜头、提示词和 Word 画布如何串起来。",
+                    "下载 Word 画布或引用清单，验证交付物不是页面装饰。",
+                ],
+            },
+            {
+                "id": "developer",
+                "label": "开发者",
+                "takeaway": "能快速判断仓库是否可复现、能否扩展新办公室、公开部署是否安全。",
+                "steps": [
+                    "运行 doctor 和 public demo verifier。",
+                    "查看 /api/offices/{office_id}/launch-gates 的门禁证据。",
+                    "按办公室协议补齐新办公室的输入、输出、模型、schema gate 和恢复动作。",
+                ],
+            },
+            {
+                "id": "user",
+                "label": "普通使用者",
+                "takeaway": "先安全体验固定样例，再决定是否在本地填写自己的 Key 进入真实生产。",
+                "steps": [
+                    "先跑无 Key 演示，不需要配置模型。",
+                    "看清每个办公室能交付什么文件。",
+                    "进入本地真实模式前，在模型页逐个测试部门 Key。",
+                ],
+            },
+        ],
+        "featured_demos": [
+            _public_showcase_demo(
+                comic_demo,
+                "/api/demo/comic-production",
+                "AI 漫剧制片办公室",
+                "证明产品能把故事拆成资产、镜头、提示词和 Word 制片画布，而不是只生成一段文字。",
+            ),
+            _public_showcase_demo(
+                research_demo,
+                "/api/demo/research",
+                "研究办公室",
+                "证明同一套办公室框架也能组织报告、来源、数据点、竞品表和截图计划。",
+            ),
+        ],
+        "verification_commands": [
+            "python scripts/verify_public_demo_mode.py --format markdown",
+            "python scripts/verify_product_readiness.py --format markdown",
+            "python scripts/check_no_secrets.py",
         ],
     }
 

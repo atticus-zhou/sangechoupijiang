@@ -1,4 +1,4 @@
-"""Verify public no-key demo endpoints and sample downloads."""
+"""Verify public no-key demo endpoints, showcase manifest, and downloads."""
 
 from __future__ import annotations
 
@@ -57,11 +57,47 @@ def _collect_launch_gate_links(client: TestClient, endpoint: str) -> list[str]:
     return links
 
 
+def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str, Any]:
+    response = client.get("/api/demo/public-showcase")
+    if response.status_code != 200:
+        errors.append(f"public showcase manifest returned {response.status_code}")
+        return {
+            "status_code": response.status_code,
+            "mode": "",
+            "audience_path_count": 0,
+            "featured_demo_count": 0,
+        }
+
+    payload = response.json()
+    audience_paths = payload.get("audience_paths") or []
+    featured_demos = payload.get("featured_demos") or []
+    if payload.get("mode") != "public_no_key_showcase":
+        errors.append("public showcase manifest has unexpected mode")
+    if payload.get("requires_api_key") is not False:
+        errors.append("public showcase manifest must not require API key")
+    if payload.get("calls_real_models") is not False:
+        errors.append("public showcase manifest must not call real models")
+    if len(audience_paths) < 3:
+        errors.append("public showcase manifest needs at least 3 audience paths")
+    if len(featured_demos) < 2:
+        errors.append("public showcase manifest needs at least 2 featured demos")
+
+    return {
+        "status_code": response.status_code,
+        "mode": payload.get("mode", ""),
+        "product_name": payload.get("product_name", ""),
+        "audience_path_count": len(audience_paths),
+        "featured_demo_count": len(featured_demos),
+        "safe_for_public_portfolio": bool(payload.get("safe_for_public_portfolio")),
+    }
+
+
 def verify_public_demo_mode() -> dict[str, Any]:
     client = TestClient(app)
     demos: dict[str, Any] = {}
     all_links: list[str] = []
     errors: list[str] = []
+    showcase_manifest = _verify_showcase_manifest(client, errors)
 
     for office_id, meta in DEMO_ENDPOINTS.items():
         response = client.get(meta["endpoint"])
@@ -118,7 +154,8 @@ def verify_public_demo_mode() -> dict[str, Any]:
     return {
         "status": "passed" if not errors else "failed",
         "mode": "public_no_key_demo",
-        "summary": "公开演示端点、样例下载和上线门禁链接可用" if not errors else "公开演示验证发现问题",
+        "summary": "公开展示清单、演示端点、样例下载和上线门禁链接可用" if not errors else "公开演示验证发现问题",
+        "showcase_manifest": showcase_manifest,
         "demos": demos,
         "launch_gate_links": sorted(set(all_links)),
         "errors": errors,
@@ -126,6 +163,7 @@ def verify_public_demo_mode() -> dict[str, Any]:
 
 
 def format_markdown(payload: dict[str, Any]) -> str:
+    manifest = payload.get("showcase_manifest") or {}
     lines = [
         "# 公开演示模式验证",
         "",
@@ -133,7 +171,16 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"模式：{payload['mode']}",
         f"说明：{payload['summary']}",
         "",
-        "本验证只检查无 Key 演示端点、样例交付物下载和上线门禁链接，不调用真实模型。",
+        "本验证只检查无 Key 演示端点、公开展示清单、样例交付物下载和上线门禁链接，不调用真实模型。",
+        "",
+        "## 公开展示清单",
+        "",
+        f"- 入口：`/api/demo/public-showcase`",
+        f"- HTTP：{manifest.get('status_code')}",
+        f"- 模式：{manifest.get('mode')}",
+        f"- 访客路径：{manifest.get('audience_path_count')} 条",
+        f"- 推荐演示：{manifest.get('featured_demo_count')} 个",
+        f"- 可公开作品集展示：{manifest.get('safe_for_public_portfolio')}",
         "",
     ]
     for demo in payload["demos"].values():
