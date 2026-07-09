@@ -42,12 +42,13 @@ class SystemCheck:
 def build_system_preflight(config_manager: Any, *, base_dir: Path | str = ".") -> dict[str, Any]:
     """Return a cheap, local-only startup readiness report."""
     base = Path(base_dir)
+    main_office = _safe_main_office_preflight(config_manager, base)
     checks = [
         _python_runtime_check(),
         _config_file_check(Path(config_manager.config_path)),
         _database_check(Path(config_manager.db_path)),
         _output_directory_check(base / "output"),
-        _model_configuration_check(config_manager, base),
+        _model_configuration_check(main_office),
     ]
     blocking = [check for check in checks if check.status == "blocked"]
     missing = [check for check in checks if check.status == "missing"]
@@ -72,6 +73,8 @@ def build_system_preflight(config_manager: Any, *, base_dir: Path | str = ".") -
             "executable": sys.executable,
         },
         "blocking_reasons": [check.id for check in blocking],
+        "available_modes": _available_modes(checks, main_office),
+        "limited_features": _limited_features(checks, main_office),
         "checks": [check.to_dict() for check in checks],
     }
 
@@ -179,22 +182,34 @@ def _output_directory_check(output_dir: Path) -> SystemCheck:
         )
 
 
-def _model_configuration_check(config_manager: Any, base_dir: Path) -> SystemCheck:
+def _safe_main_office_preflight(config_manager: Any, base_dir: Path) -> dict[str, Any]:
     try:
-        office = build_office_preflight(
+        return build_office_preflight(
             "comic_production",
             config_manager.get_model_config,
             base_dir=base_dir,
         )
     except Exception as exc:  # pragma: no cover - defensive, reported to user.
+        return {
+            "office_id": "comic_production",
+            "status": "blocked",
+            "summary": str(exc),
+            "next_action": "打开模型页面，检查 AI 漫剧制片办公室各部门供应商、模型名和 API Key。",
+            "blocking_reasons": ["model_configuration"],
+            "capabilities": [],
+        }
+
+
+def _model_configuration_check(office: dict[str, Any]) -> SystemCheck:
+    if office.get("blocking_reasons") == ["model_configuration"] and not office.get("capabilities"):
         return SystemCheck(
             id="model_configuration",
             title="模型配置",
             status="blocked",
             scope="models",
-            detail=str(exc),
+            detail=office.get("summary", ""),
             impact="模型配置无法读取时，用户无法判断哪些部门能工作。",
-            next_action="打开模型页面，检查 AI 漫剧制片办公室各部门供应商、模型名和 API Key。",
+            next_action=office.get("next_action", "打开模型页面补齐模型配置。"),
         )
     status = office.get("status", "blocked")
     if status == "ready":
@@ -216,3 +231,66 @@ def _model_configuration_check(config_manager: Any, base_dir: Path) -> SystemChe
         impact="模型配置不完整时，故事、资产、图片或视觉质检会在对应阶段被阻塞。",
         next_action=office.get("next_action", "打开模型页面补齐缺失部门。"),
     )
+
+
+def _available_modes(checks: list[SystemCheck], office: dict[str, Any]) -> list[dict[str, str]]:
+    modes = [
+        {
+            "id": "no_key_demo",
+            "label": "无 Key 演示模式",
+            "status": "available",
+            "description": "可以直接查看固定样例、下载样例交付物，不读取也不消耗 API Key。",
+        }
+    ]
+    if _has_blocking_runtime(checks):
+        return modes
+
+    capabilities = {item.get("id"): item for item in office.get("capabilities") or []}
+    text_ready = all(
+        (capabilities.get(capability_id) or {}).get("status") == "ok"
+        for capability_id in ("story_planning", "asset_planning", "prompt_planning", "local_output")
+    )
+    image_ready = (capabilities.get("image_generation") or {}).get("status") == "ok"
+    vision_ready = (capabilities.get("visual_review") or {}).get("status") == "ok"
+
+    if text_ready:
+        modes.append({
+            "id": "comic_story_and_prompts",
+            "label": "故事、资产拆解和提示词模式",
+            "status": "available",
+            "description": "文本部门可用，可以先完成故事确认、资产拆解、镜头卡和提示词包。",
+        })
+    if text_ready and image_ready and vision_ready:
+        modes.append({
+            "id": "comic_full_production",
+            "label": "AI 漫剧完整制片模式",
+            "status": "available",
+            "description": "文本、生图、视觉质检和本地输出均可用，可以生成完整制片包。",
+        })
+    return modes
+
+
+def _limited_features(checks: list[SystemCheck], office: dict[str, Any]) -> list[dict[str, str]]:
+    limited = []
+    for check in checks:
+        if check.status == "blocked" and check.id != "model_configuration":
+            limited.append({
+                "id": "local_real_mode",
+                "label": "本地真实生产模式",
+                "reason": f"{check.title}不可用：{check.impact}",
+                "next_action": check.next_action,
+            })
+    for capability in office.get("capabilities") or []:
+        if capability.get("status") == "ok":
+            continue
+        limited.append({
+            "id": capability.get("id", "unknown_capability"),
+            "label": capability.get("title", "受限功能"),
+            "reason": f"{capability.get('owner_label', '')}{capability.get('model_kind', '')}未就绪：{capability.get('impact', '')}",
+            "next_action": capability.get("next_action", ""),
+        })
+    return limited
+
+
+def _has_blocking_runtime(checks: list[SystemCheck]) -> bool:
+    return any(check.status == "blocked" and check.id != "model_configuration" for check in checks)

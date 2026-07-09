@@ -2428,6 +2428,44 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .preflight-next {
     margin: 8px 0 12px;
 }
+.preflight-modes,
+.preflight-limited {
+    margin: 10px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(139, 148, 158, 0.16);
+    border-radius: var(--r-sm);
+    background: rgba(15, 23, 42, 0.42);
+}
+.preflight-modes b,
+.preflight-limited b {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-size: 12px;
+}
+.preflight-modes div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.preflight-modes span {
+    padding: 5px 9px;
+    border: 1px solid rgba(88, 166, 255, 0.28);
+    border-radius: 999px;
+    color: var(--accent);
+    background: rgba(88, 166, 255, 0.1);
+    font-size: 12px;
+}
+.preflight-limited p {
+    margin: 6px 0 0;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.preflight-limited span {
+    margin-right: 6px;
+    color: var(--warn);
+}
 .preflight-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

@@ -3635,6 +3635,8 @@ function renderSystemPreflight(result) {
     if (!target || !result) return;
     const status = result.status || 'unknown';
     const checks = (result.checks || []).slice(0, 5);
+    const availableModes = Array.isArray(result.available_modes) ? result.available_modes : [];
+    const limitedFeatures = Array.isArray(result.limited_features) ? result.limited_features : [];
     target.innerHTML = `
         <div class="preflight-card preflight-${escapeHtml(status)}">
             <div class="preflight-head">
@@ -3645,6 +3647,24 @@ function renderSystemPreflight(result) {
                 <span class="badge ${preflightBadgeClass(status)}">${escapeHtml(preflightStatusText(status))}</span>
             </div>
             <div class="preflight-next">下一步：${escapeHtml(result.next_action || '')}</div>
+            ${availableModes.length ? `
+                <div class="preflight-modes">
+                    <b>当前可用模式</b>
+                    <div>
+                        ${availableModes.map(mode => `
+                            <span title="${escapeHtml(mode.description || '')}">${escapeHtml(mode.label || mode.id || '')}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            ${limitedFeatures.length ? `
+                <div class="preflight-limited">
+                    <b>暂不可用功能</b>
+                    ${limitedFeatures.slice(0, 4).map(feature => `
+                        <p><span>${escapeHtml(feature.label || feature.id || '')}</span>${escapeHtml(feature.reason || feature.next_action || '')}</p>
+                    `).join('')}
+                </div>
+            ` : ''}
             <div class="preflight-grid">
                 ${checks.map(item => `
                     <div class="preflight-item ${escapeHtml(item.status || '')}">

@@ -61,6 +61,9 @@ class SystemPreflightTests(unittest.TestCase):
         self.assertEqual(by_id["config_file"]["title"], "配置文件")
         self.assertEqual(by_id["database"]["title"], "本地数据库")
         self.assertEqual(by_id["output_directory"]["title"], "输出目录")
+        self.assertEqual(result["available_modes"][0]["id"], "no_key_demo")
+        self.assertTrue(any(mode["id"] == "comic_full_production" for mode in result["available_modes"]))
+        self.assertEqual(result["limited_features"], [])
 
     def test_system_preflight_blocks_with_actionable_missing_config_and_database(self):
         from src.system_preflight import build_system_preflight
@@ -79,6 +82,36 @@ class SystemPreflightTests(unittest.TestCase):
         self.assertIn("user_data", by_id["database"]["next_action"])
         self.assertIn("config_file", result["blocking_reasons"])
         self.assertIn("database", result["blocking_reasons"])
+        self.assertEqual(result["available_modes"][0]["id"], "no_key_demo")
+        self.assertTrue(any(feature["id"] == "local_real_mode" for feature in result["limited_features"]))
+
+    def test_system_preflight_explains_partial_model_modes_and_unavailable_features(self):
+        from src.system_preflight import build_system_preflight
+
+        class PartialModelManager(FakeConfigManager):
+            def get_model_config(self, agent: str, office_id: str = "") -> ModelConfig:
+                if agent in {"gongbu", "xingbu"}:
+                    return ModelConfig(provider="", model="", api_key="")
+                return ModelConfig(provider="deepseek", model="deepseek-chat", api_key="text-key")
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            base_dir = Path(tmp)
+            manager = PartialModelManager(base_dir)
+            manager.config_path.write_text("models: {}\n", encoding="utf-8")
+            manager.db_path.parent.mkdir(parents=True, exist_ok=True)
+            with sqlite3.connect(manager.db_path) as conn:
+                conn.execute("CREATE TABLE config_store (key TEXT PRIMARY KEY, value TEXT)")
+
+            result = build_system_preflight(manager, base_dir=base_dir)
+
+        self.assertEqual(result["status"], "partial")
+        mode_ids = [mode["id"] for mode in result["available_modes"]]
+        self.assertIn("comic_story_and_prompts", mode_ids)
+        self.assertNotIn("comic_full_production", mode_ids)
+        feature_ids = [feature["id"] for feature in result["limited_features"]]
+        self.assertIn("image_generation", feature_ids)
+        self.assertIn("visual_review", feature_ids)
+        self.assertTrue(any("工部" in feature["reason"] for feature in result["limited_features"]))
 
     def test_system_preflight_api_returns_startup_checks(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
