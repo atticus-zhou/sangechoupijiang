@@ -72,6 +72,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("不要把 Key 放进前端 JavaScript、HTML、静态 JSON 或公开环境变量", text)
         self.assertIn("python scripts/check_no_secrets.py", text)
         self.assertIn("python scripts/verify_product_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
+        self.assertIn("公开演示模式验证", text)
 
     def test_readme_gives_new_user_model_setup_path(self):
         text = Path("README.md").read_text(encoding="utf-8")

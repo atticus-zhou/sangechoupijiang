@@ -14,10 +14,11 @@
 
 ```powershell
 python scripts/check_no_secrets.py
+python scripts/verify_public_demo_mode.py --format markdown
 python scripts/verify_product_readiness.py --format markdown
 ```
 
-如果这两个检查没有通过，不要把当前仓库、构建产物或公开页面交给别人使用。
+如果这些检查没有通过，不要把当前仓库、构建产物或公开页面交给别人使用。`verify_public_demo_mode.py` 是公开演示模式验证，用来确认 `/api/demo` 入口、样例下载链接和上线门禁证据链接可用，并且不调用真实模型。
 
 ## 演示模式
 

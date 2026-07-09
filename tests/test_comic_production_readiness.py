@@ -53,6 +53,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
         self.assertIn("evidence_links", demo_evidence)
         self.assertIn("/api/demo/comic-production/files/word_canvas.docx", demo_evidence)
         self.assertIn("/api/demo/research/files/report.md", demo_evidence)
+        self.assertIn("scripts/verify_public_demo_mode.py", demo_evidence)
 
     def test_real_product_readiness_can_be_rendered_for_tasklist(self):
         from src.product_readiness import audit_comic_production_readiness, format_readiness_markdown
