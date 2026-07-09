@@ -394,6 +394,26 @@ LAUNCH_GATE_EVIDENCE = {
     },
 }
 
+LAUNCH_GATE_EVIDENCE_LINKS = {
+    "research": {
+        "sample_delivery": [
+            {"label": "阶段调研报告", "uri": "/api/demo/research/files/report.md"},
+            {"label": "证据清单", "uri": "/api/demo/research/files/evidence_manifest.json"},
+        ],
+        "no_key_demo": [
+            {"label": "研究办公室无 Key 演示", "uri": "/api/demo/research"},
+        ],
+    },
+    "comic_production": {
+        "sample_delivery": [
+            {"label": "Word 制片画布", "uri": "/api/demo/comic-production/files/word_canvas.docx"},
+            {"label": "引用清单", "uri": "/api/demo/comic-production/files/handoff_manifest.json"},
+        ],
+        "no_key_demo": [
+            {"label": "AI 漫剧制片办公室无 Key 演示", "uri": "/api/demo/comic-production"},
+        ],
+    },
+}
 
 def audit_office_launch_gates(office_id: str) -> dict:
     """Return the productization gate audit for one office."""
@@ -412,6 +432,7 @@ def audit_office_launch_gates(office_id: str) -> dict:
                 "label": LAUNCH_GATE_LABELS.get(gate_id, gate_id),
                 "status": status,
                 "evidence": evidence or "No concrete evidence is declared for this office yet.",
+                "evidence_links": LAUNCH_GATE_EVIDENCE_LINKS.get(office.id, {}).get(gate_id, []),
                 "next_action": (
                     "Keep this evidence current when the office workflow changes."
                     if status == "passed"

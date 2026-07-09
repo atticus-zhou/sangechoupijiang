@@ -166,7 +166,10 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("if (page === 'offices') loadOfficeLaunchGates()", js)
         self.assertIn("上线门禁", js)
         self.assertIn("gate.next_action", js)
+        self.assertIn("gate.evidence_links", js)
+        self.assertIn("launch-gate-links", js)
         self.assertIn(".launch-gates-panel", css)
+        self.assertIn(".launch-gate-links", css)
         self.assertIn(".launch-gate-grid", css)
         self.assertIn(".launch-gates-head,\n    .launch-gate-office > div", css)
 

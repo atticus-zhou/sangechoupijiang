@@ -725,6 +725,28 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 12px;
     line-height: 1.5;
 }
+.launch-gate-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+.launch-gate-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(88, 166, 255, 0.28);
+    background: rgba(88, 166, 255, 0.1);
+    color: #8cc8ff;
+    font-size: 12px;
+    text-decoration: none;
+}
+.launch-gate-links a:hover {
+    border-color: rgba(88, 166, 255, 0.5);
+    background: rgba(88, 166, 255, 0.16);
+}
 .office-card em {
     display: inline-flex;
     align-items: center;

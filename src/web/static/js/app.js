@@ -3607,6 +3607,7 @@ function renderOfficeLaunchGates(audits) {
                     const gates = Array.isArray(audit.gates) ? audit.gates : [];
                     const passed = gates.filter(gate => gate.status === 'passed').length;
                     const gate = gates.find(gate => gate.status !== 'passed') || gates[0] || {};
+                    const evidenceLinks = gates.flatMap(gate => Array.isArray(gate.evidence_links) ? gate.evidence_links : []);
                     const statusClass = audit.status === 'ready' ? 'ready' : 'needs-work';
                     return `
                         <article class="launch-gate-office ${statusClass}">
@@ -3616,6 +3617,11 @@ function renderOfficeLaunchGates(audits) {
                             </div>
                             <p>${escapeHtml(passed)} / ${escapeHtml(gates.length)} 项门禁通过</p>
                             <small>${escapeHtml(gate.next_action || '保持证据随办公室流程同步更新。')}</small>
+                            ${evidenceLinks.length ? `
+                                <div class="launch-gate-links">
+                                    ${evidenceLinks.slice(0, 3).map(link => `<a href="${escapeHtml(link.uri || '#')}" target="_blank">${escapeHtml(link.label || '查看证据')}</a>`).join('')}
+                                </div>
+                            ` : ''}
                         </article>
                     `;
                 }).join('')}

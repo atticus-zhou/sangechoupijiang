@@ -67,6 +67,21 @@ class OfficeProfileTests(unittest.TestCase):
             self.assertTrue(gate["next_action"])
         self.assertTrue(all(gate["status"] == "passed" for gate in audit["gates"]))
 
+    def test_launch_gate_sample_delivery_exposes_download_links(self):
+        comic = audit_office_launch_gates("comic_production")
+        research = audit_office_launch_gates("research")
+
+        comic_sample = {gate["id"]: gate for gate in comic["gates"]}["sample_delivery"]
+        research_sample = {gate["id"]: gate for gate in research["gates"]}["sample_delivery"]
+
+        comic_links = {link["label"]: link["uri"] for link in comic_sample["evidence_links"]}
+        research_links = {link["label"]: link["uri"] for link in research_sample["evidence_links"]}
+
+        self.assertEqual(comic_links["Word 制片画布"], "/api/demo/comic-production/files/word_canvas.docx")
+        self.assertEqual(comic_links["引用清单"], "/api/demo/comic-production/files/handoff_manifest.json")
+        self.assertEqual(research_links["阶段调研报告"], "/api/demo/research/files/report.md")
+        self.assertEqual(research_links["证据清单"], "/api/demo/research/files/evidence_manifest.json")
+
     def test_legacy_comic_launch_gate_audit_marks_missing_product_gates(self):
         audit = audit_office_launch_gates("comic")
 

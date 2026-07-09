@@ -37,6 +37,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("model_preflight", text)
         self.assertIn("end_to_end_test", text)
         self.assertIn("/api/offices/{office_id}/launch-gates", text)
+        self.assertIn("evidence_links", text)
+        self.assertIn("样例交付物下载链接", text)
         self.assertIn("python scripts/doctor.py", text)
         self.assertIn("Office launch gates", text)
         self.assertIn("办公室上线门禁", text)
