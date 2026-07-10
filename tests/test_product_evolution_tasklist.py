@@ -40,6 +40,19 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("/api/demo/comic-production/files/word_canvas.docx", text)
         self.assertIn("/api/demo/research/files/report.md", text)
 
+    def test_phase_d_real_use_loop_is_fully_checked(self):
+        lines = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8").splitlines()
+
+        start = next(i for i, line in enumerate(lines) if line.startswith("### 阶段 D："))
+        phase_lines = []
+        for line in lines[start + 1:]:
+            if line.startswith("### "):
+                break
+            phase_lines.append(line)
+
+        checks = [line[:5] for line in phase_lines if line.startswith("- [")]
+        self.assertEqual(["- [x]", "- [x]", "- [x]", "- [x]", "- [x]"], checks)
+
 
 if __name__ == "__main__":
     unittest.main()
