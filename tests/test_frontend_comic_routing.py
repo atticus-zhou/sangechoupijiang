@@ -21,6 +21,13 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn('id="office-card-comic-production"', html)
         self.assertIn("onclick=\"navigate('comic_production')\"", html)
 
+    def test_hall_explains_comic_production_is_current_main_office(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn("当前主力办公室是 AI 漫剧制片办公室", html)
+        self.assertIn("当前统一进入 AI 漫剧制片办公室", html)
+        self.assertIn("体验研究办公室演示", html)
+
     def test_stored_legacy_comic_context_migrates_to_production(self):
         js = APP_JS.read_text(encoding="utf-8")
 

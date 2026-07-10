@@ -53,6 +53,12 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         checks = [line[:5] for line in phase_lines if line.startswith("- [")]
         self.assertEqual(["- [x]", "- [x]", "- [x]", "- [x]", "- [x]"], checks)
 
+    def test_product_principles_lock_main_office_strategy(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("- [x] 不再盲目横向增加办公室；先把一个主力办公室打磨到能展示、能试用、能交付。", text)
+        self.assertIn("- [x] 默认主力办公室为 `AI漫剧制片办公室`，研究办公室保持可用但不作为当前主打。", text)
+
 
 if __name__ == "__main__":
     unittest.main()
