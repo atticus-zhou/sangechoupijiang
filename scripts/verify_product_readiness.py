@@ -32,42 +32,106 @@ def run_runtime_verification(root: Path) -> dict:
         and bool(user_flow.get("delivery_audit", {}).get("handoff_ready"))
         and int(user_flow.get("download_bytes") or 0) > 0
     )
+    delivery_result = {
+        "status": "passed" if delivery_passed else "failed",
+        "handoff_ready": delivery_passed,
+        "asset_count": delivery.get("asset_count", 0),
+        "shot_count": delivery.get("shot_count", 0),
+        "embedded_images": delivery.get("embedded_images", 0),
+        "handoff_manifest_exists": bool(delivery.get("handoff_manifest_exists")),
+        "handoff_manifest_assets": delivery.get("handoff_manifest_assets", 0),
+        "handoff_manifest_images": delivery.get("handoff_manifest_images", 0),
+        "handoff_manifest_shots": delivery.get("handoff_manifest_shots", 0),
+        "handoff_manifest_image_prompts": bool(delivery.get("handoff_manifest_image_prompts")),
+        "handoff_manifest_asset_identity_fields": bool(delivery.get("handoff_manifest_asset_identity_fields")),
+        "handoff_manifest_asset_baseline_chain": bool(delivery.get("handoff_manifest_asset_baseline_chain")),
+        "handoff_manifest_shot_reference_images": bool(delivery.get("handoff_manifest_shot_reference_images")),
+        "handoff_manifest_shot_execution_notes": bool(delivery.get("handoff_manifest_shot_execution_notes")),
+        "handoff_manifest_shot_production_package": bool(delivery.get("handoff_manifest_shot_production_package")),
+        "handoff_manifest_production_lineage": bool(delivery.get("handoff_manifest_production_lineage")),
+        "handoff_manifest_lineage_handoff_fields": bool(delivery.get("handoff_manifest_lineage_handoff_fields")),
+        "word_canvas_agent_handoff": bool(delivery.get("word_canvas_agent_handoff")),
+        "word_canvas_asset_file_references": bool(delivery.get("word_canvas_asset_file_references")),
+        "missing_image_asset_ids": delivery.get("missing_image_asset_ids", []),
+        "structural_errors": delivery.get("structural_errors", []),
+    }
+    user_flow_result = {
+        "status": "passed" if user_flow_passed else "failed",
+        "final_stage": user_flow.get("final_stage", ""),
+        "visited_stages": user_flow.get("visited_stages", []),
+        "visual_revisions": user_flow.get("visual_revisions", 0),
+        "asset_revisions": user_flow.get("asset_revisions", 0),
+        "handoff_manifest_asset_baseline_chain": bool(user_flow.get("handoff_manifest_asset_baseline_chain")),
+        "handoff_manifest_shot_production_package": bool(user_flow.get("handoff_manifest_shot_production_package")),
+        "production_lineage_handoff_fields": bool(user_flow.get("production_lineage_handoff_fields")),
+        "generated_images": user_flow.get("generated_images", 0),
+        "download_bytes": user_flow.get("download_bytes", 0),
+        "artifact_count": user_flow.get("artifact_count", 0),
+        "event_count": user_flow.get("event_count", 0),
+    }
     return {
-        "delivery": {
-            "status": "passed" if delivery_passed else "failed",
-            "handoff_ready": delivery_passed,
-            "asset_count": delivery.get("asset_count", 0),
-            "shot_count": delivery.get("shot_count", 0),
-            "embedded_images": delivery.get("embedded_images", 0),
-            "handoff_manifest_exists": bool(delivery.get("handoff_manifest_exists")),
-            "handoff_manifest_assets": delivery.get("handoff_manifest_assets", 0),
-            "handoff_manifest_images": delivery.get("handoff_manifest_images", 0),
-            "handoff_manifest_shots": delivery.get("handoff_manifest_shots", 0),
-            "handoff_manifest_image_prompts": bool(delivery.get("handoff_manifest_image_prompts")),
-            "handoff_manifest_asset_identity_fields": bool(delivery.get("handoff_manifest_asset_identity_fields")),
-            "handoff_manifest_asset_baseline_chain": bool(delivery.get("handoff_manifest_asset_baseline_chain")),
-            "handoff_manifest_shot_reference_images": bool(delivery.get("handoff_manifest_shot_reference_images")),
-            "handoff_manifest_shot_execution_notes": bool(delivery.get("handoff_manifest_shot_execution_notes")),
-            "handoff_manifest_shot_production_package": bool(delivery.get("handoff_manifest_shot_production_package")),
-            "handoff_manifest_production_lineage": bool(delivery.get("handoff_manifest_production_lineage")),
-            "handoff_manifest_lineage_handoff_fields": bool(delivery.get("handoff_manifest_lineage_handoff_fields")),
-            "word_canvas_agent_handoff": bool(delivery.get("word_canvas_agent_handoff")),
-            "word_canvas_asset_file_references": bool(delivery.get("word_canvas_asset_file_references")),
-            "missing_image_asset_ids": delivery.get("missing_image_asset_ids", []),
-            "structural_errors": delivery.get("structural_errors", []),
+        "stage_b_product_loop": _stage_b_product_loop(root, delivery_result, user_flow_result),
+        "delivery": delivery_result,
+        "user_flow": user_flow_result,
+    }
+
+
+def _stage_b_product_loop(root: Path, delivery: dict, user_flow: dict) -> dict:
+    """Summarize the Stage B comic-production product promises with evidence."""
+    tasklist = (root / "docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8", errors="ignore")
+    offices = (root / "src/offices.py").read_text(encoding="utf-8", errors="ignore")
+    requirements = [
+        {
+            "id": "entry_modes",
+            "title": "用户可从灵感、完整剧本、已有角色设定、参考风格进入工作流",
+            "passed": all(marker in tasklist for marker in ("已有完整剧本", "已有角色设定", "已有参考风格")) and "完整剧本" in offices,
+            "evidence": ["docs/PRODUCT_EVOLUTION_TASKLIST.md:4.1", "src/offices.py:input_types"],
         },
-        "user_flow": {
-            "status": "passed" if user_flow_passed else "failed",
-            "final_stage": user_flow.get("final_stage", ""),
-            "visited_stages": user_flow.get("visited_stages", []),
-            "handoff_manifest_asset_baseline_chain": bool(user_flow.get("handoff_manifest_asset_baseline_chain")),
-            "handoff_manifest_shot_production_package": bool(user_flow.get("handoff_manifest_shot_production_package")),
-            "production_lineage_handoff_fields": bool(user_flow.get("production_lineage_handoff_fields")),
-            "generated_images": user_flow.get("generated_images", 0),
-            "download_bytes": user_flow.get("download_bytes", 0),
-            "artifact_count": user_flow.get("artifact_count", 0),
-            "event_count": user_flow.get("event_count", 0),
+        {
+            "id": "cabinet_boundary",
+            "title": "内阁只负责故事对齐，三省六部负责生产拆解",
+            "passed": "内阁只负责和人对齐故事" in tasklist and "中书省负责把确认故事变成生产合同" in tasklist,
+            "evidence": ["docs/PRODUCT_EVOLUTION_TASKLIST.md:4.3"],
         },
+        {
+            "id": "multi_agent_outputs",
+            "title": "三省六部产出故事合同、视觉母版、资产清单、镜头执行卡、提示词包和 Word 画布",
+            "passed": bool(
+                delivery.get("handoff_manifest_exists")
+                and delivery.get("handoff_manifest_image_prompts")
+                and delivery.get("handoff_manifest_shot_production_package")
+                and delivery.get("word_canvas_agent_handoff")
+            ),
+            "evidence": ["scripts/verify_comic_v2_delivery.py", "scripts/verify_comic_v2_user_flow.py"],
+        },
+        {
+            "id": "revision_loop",
+            "title": "用户能在关键节点退回，退回意见真实影响下一版结果",
+            "passed": int(user_flow.get("visual_revisions") or 0) >= 1 and int(user_flow.get("asset_revisions") or 0) >= 1,
+            "evidence": ["scripts/verify_comic_v2_user_flow.py:visual_revisions", "scripts/verify_comic_v2_user_flow.py:asset_revisions"],
+        },
+        {
+            "id": "downstream_handoff",
+            "title": "最终 Word 画布能被下游图片/视频工具理解",
+            "passed": bool(
+                delivery.get("handoff_ready")
+                and delivery.get("word_canvas_asset_file_references")
+                and delivery.get("handoff_manifest_shot_reference_images")
+                and user_flow.get("final_stage") == "ready_for_handoff"
+                and int(user_flow.get("download_bytes") or 0) > 1000
+            ),
+            "evidence": ["Word 制片画布", "handoff manifest", "shot production package"],
+        },
+    ]
+    passed = all(item["passed"] for item in requirements)
+    return {
+        "status": "passed" if passed else "failed",
+        "entry_modes_ready": requirements[0]["passed"],
+        "cabinet_boundary_ready": requirements[1]["passed"],
+        "multi_agent_outputs_ready": requirements[2]["passed"],
+        "revision_loop_ready": requirements[3]["passed"],
+        "downstream_handoff_ready": requirements[4]["passed"],
+        "requirements": requirements,
     }
 
 

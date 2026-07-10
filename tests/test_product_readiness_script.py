@@ -103,6 +103,23 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertTrue(runtime["user_flow"]["production_lineage_handoff_fields"])
         self.assertGreater(runtime["user_flow"]["download_bytes"], 1000)
         self.assertGreater(runtime["user_flow"]["generated_images"], 0)
+        stage_b = runtime["stage_b_product_loop"]
+        self.assertEqual(stage_b["status"], "passed")
+        self.assertTrue(stage_b["entry_modes_ready"])
+        self.assertTrue(stage_b["cabinet_boundary_ready"])
+        self.assertTrue(stage_b["multi_agent_outputs_ready"])
+        self.assertTrue(stage_b["revision_loop_ready"])
+        self.assertTrue(stage_b["downstream_handoff_ready"])
+        self.assertEqual(
+            {item["id"] for item in stage_b["requirements"]},
+            {
+                "entry_modes",
+                "cabinet_boundary",
+                "multi_agent_outputs",
+                "revision_loop",
+                "downstream_handoff",
+            },
+        )
 
     def test_markdown_mentions_runtime_verification_when_enabled(self):
         result = subprocess.run(
@@ -114,6 +131,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         )
 
         self.assertIn("运行时验证", result.stdout)
+        self.assertIn("阶段 B 产品闭环", result.stdout)
         self.assertIn("ready_for_handoff", result.stdout)
         self.assertIn("shot_package=True", result.stdout)
 

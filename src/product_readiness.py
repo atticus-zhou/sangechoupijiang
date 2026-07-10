@@ -449,6 +449,18 @@ def format_readiness_markdown(audit: dict) -> str:
             "| 验证 | 状态 | 结果 |",
             "| --- | --- | --- |",
         ])
+        stage_b = runtime.get("stage_b_product_loop") or {}
+        if stage_b:
+            passed = [
+                f"{item.get('id')}={item.get('passed')}"
+                for item in stage_b.get("requirements", [])
+            ]
+            rows.append(
+                "| 阶段 B 产品闭环 | "
+                f"{stage_b.get('status', '')} | "
+                + "; ".join(passed)
+                + " |"
+            )
         delivery = runtime.get("delivery") or {}
         if delivery:
             rows.append(

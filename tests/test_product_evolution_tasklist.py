@@ -65,6 +65,16 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("- [x] GitHub README 能让面试官、开发者和普通用户分别看懂怎么体验、怎么运行、怎么扩展。", text)
         self.assertIn("- [x] 所有公开展示都不暴露 API Key、Cookie、登录态、用户数据和运行产物。", text)
 
+    def test_stage_b_single_office_product_loop_is_checked(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("- [x] 用户可从灵感、完整剧本、已有角色设定、参考风格进入工作流。", text)
+        self.assertIn("- [x] 内阁只负责和人对齐故事，不替三省六部做生产拆解。", text)
+        self.assertIn("- [x] 三省六部必须产出可审核的故事合同、视觉母版、资产清单、镜头执行卡、提示词包和 Word 制片画布。", text)
+        self.assertIn("- [x] 用户能在关键节点确认、修改、退回，退回意见必须真实影响下一版结果。", text)
+        self.assertIn("- [x] 最终 Word 画布能被下游图片/视频工具理解，而不是只适合展示给人看。", text)
+        self.assertIn("阶段 B 产品闭环", text)
+
 
 if __name__ == "__main__":
     unittest.main()
