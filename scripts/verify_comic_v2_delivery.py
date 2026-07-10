@@ -7,6 +7,7 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from docx import Document
 from PIL import Image, ImageDraw
@@ -269,7 +270,57 @@ def _write_placeholder_image(path: Path, name: str, image_kind: str, asset_type:
     image.save(path, format="PNG")
 
 
-def main() -> None:
+def format_markdown(result: dict[str, Any]) -> str:
+    lines = [
+        "# Comic V2 Delivery Audit",
+        "",
+        f"Status: `{'passed' if result.get('handoff_ready') else 'failed'}`",
+        f"Word canvas: `{result.get('path')}`",
+        f"Handoff manifest: `{result.get('handoff_manifest_path')}`",
+        "",
+        "## Delivery Counts",
+        "",
+        f"- Assets: {result.get('asset_count')}",
+        f"- Shots: {result.get('shot_count')}",
+        f"- Embedded images: {result.get('embedded_images')}",
+        f"- Handoff assets: {result.get('handoff_manifest_assets')}",
+        f"- Handoff images: {result.get('handoff_manifest_images')}",
+        f"- Handoff shots: {result.get('handoff_manifest_shots')}",
+        "",
+        "## Quality Gates",
+        "",
+        "| Gate | Status |",
+        "| --- | --- |",
+    ]
+    gates = [
+        ("handoff_ready", "Overall handoff ready"),
+        ("handoff_manifest_exists", "Machine-readable handoff manifest"),
+        ("handoff_manifest_image_prompts", "Executable image prompts"),
+        ("handoff_manifest_asset_identity_fields", "Asset identity fields"),
+        ("handoff_manifest_asset_baseline_chain", "Asset baseline reference chain"),
+        ("handoff_manifest_shot_reference_images", "Shot reference images"),
+        ("handoff_manifest_shot_execution_notes", "Shot execution notes"),
+        ("handoff_manifest_shot_production_package", "Shot production package"),
+        ("handoff_manifest_production_lineage", "Production lineage"),
+        ("handoff_manifest_lineage_handoff_fields", "Lineage handoff fields"),
+        ("word_canvas_agent_handoff", "Word canvas agent handoff checklist"),
+        ("word_canvas_asset_file_references", "Word canvas approved image file references"),
+    ]
+    for key, label in gates:
+        lines.append(f"| {label} | {bool(result.get(key))} |")
+
+    if result.get("structural_errors") or result.get("missing_image_asset_ids"):
+        lines.extend(["", "## Issues", ""])
+        for item in result.get("structural_errors") or []:
+            lines.append(f"- {item}")
+        if result.get("missing_image_asset_ids"):
+            lines.append("- Missing image assets: " + ", ".join(result["missing_image_asset_ids"]))
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--fixture",
@@ -281,10 +332,17 @@ def main() -> None:
         type=Path,
         default=Path("output/comic_v2_verification"),
     )
+    parser.add_argument("--format", choices=["text", "json", "markdown"], default="text")
     args = parser.parse_args()
     result = verify_delivery(args.fixture, args.output_dir)
-    print(f"V2 delivery verified: {result['path']}")
+    if args.format == "json":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif args.format == "markdown":
+        print(format_markdown(result))
+    else:
+        print(f"V2 delivery verified: {result['path']}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

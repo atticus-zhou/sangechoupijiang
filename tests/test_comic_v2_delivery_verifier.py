@@ -1,4 +1,7 @@
 import importlib.util
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,6 +40,57 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertLessEqual(result["max_table_columns"], 2)
         self.assertEqual(result["missing_image_asset_ids"], [])
         self.assertEqual(result["structural_errors"], [])
+
+    def test_cli_json_exposes_delivery_quality_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--fixture",
+                    str(FIXTURE_PATH),
+                    "--output-dir",
+                    tmp,
+                    "--format",
+                    "json",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        payload = json.loads(completed.stdout)
+        self.assertTrue(payload["handoff_ready"])
+        self.assertEqual(payload["asset_count"], 3)
+        self.assertEqual(payload["shot_count"], 2)
+        self.assertEqual(payload["embedded_images"], 7)
+        self.assertTrue(payload["handoff_manifest_shot_production_package"])
+        self.assertTrue(payload["word_canvas_asset_file_references"])
+
+    def test_cli_markdown_is_portfolio_readable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--fixture",
+                    str(FIXTURE_PATH),
+                    "--output-dir",
+                    tmp,
+                    "--format",
+                    "markdown",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        self.assertIn("Comic V2 Delivery Audit", completed.stdout)
+        self.assertIn("Delivery Counts", completed.stdout)
+        self.assertIn("Quality Gates", completed.stdout)
+        self.assertIn("Word canvas agent handoff checklist", completed.stdout)
 
 
 if __name__ == "__main__":

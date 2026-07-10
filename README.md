@@ -183,7 +183,7 @@ GET /api/offices/{office_id}/launch-gates
 不配置任何真实 API Key，也可以运行确定性 V2 交付验证：
 
 ```powershell
-python scripts/verify_comic_v2_delivery.py
+python scripts/verify_comic_v2_delivery.py --format markdown
 ```
 
 这个脚本验证 Word 制片画布的结构、资产 ID、镜头 ID、图片嵌入和交付审计。
