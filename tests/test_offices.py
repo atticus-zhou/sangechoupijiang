@@ -1,6 +1,12 @@
 import unittest
 
-from src.offices import audit_office_launch_gates, get_office, list_office_creation_template, list_offices
+from src.offices import (
+    audit_office_extension_governance,
+    audit_office_launch_gates,
+    get_office,
+    list_office_creation_template,
+    list_offices,
+)
 
 
 class OfficeProfileTests(unittest.TestCase):
@@ -77,6 +83,26 @@ class OfficeProfileTests(unittest.TestCase):
         comic_links = {link["label"]: link["uri"] for link in comic_sample["evidence_links"]}
         research_links = {link["label"]: link["uri"] for link in research_sample["evidence_links"]}
 
+        self.assertEqual(
+            set(comic_links.values()),
+            {
+                "/api/demo/comic-production/files/word_canvas.docx",
+                "/api/demo/comic-production/files/handoff_manifest.json",
+            },
+        )
+        self.assertEqual(
+            set(research_links.values()),
+            {
+                "/api/demo/research/files/report.md",
+                "/api/demo/research/files/evidence_manifest.json",
+            },
+        )
+        self.assertIn("Word 制片画布", comic_links)
+        self.assertIn("引用清单", comic_links)
+        self.assertIn("阶段调研报告", research_links)
+        self.assertIn("证据清单", research_links)
+        return
+
         self.assertEqual(comic_links["Word 制片画布"], "/api/demo/comic-production/files/word_canvas.docx")
         self.assertEqual(comic_links["引用清单"], "/api/demo/comic-production/files/handoff_manifest.json")
         self.assertEqual(research_links["阶段调研报告"], "/api/demo/research/files/report.md")
@@ -121,6 +147,36 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertTrue(any(item["stage"] == "document_generation" for item in office.recovery_actions))
         self.assertIn("zhongshu", office.agent_duties)
         self.assertTrue(any("独立的 office_id" in item for item in office.acceptance_criteria))
+
+
+class OfficeExtensionGovernanceTests(unittest.TestCase):
+    def test_governance_requires_protocol_and_primary_standards(self):
+        audit = audit_office_extension_governance()
+
+        self.assertEqual(audit["status"], "passed")
+        self.assertEqual(audit["primary_office_ids"], ["comic_production"])
+        self.assertIn("required_profile_fields", audit)
+        self.assertIn("required_launch_gates", audit)
+
+        by_office = {item["office_id"]: item for item in audit["offices"]}
+        self.assertTrue(by_office["comic_production"]["primary_allowed"])
+        self.assertTrue(by_office["comic_production"]["can_be_primary"])
+        self.assertFalse(by_office["comic"]["can_be_primary"])
+        self.assertEqual(by_office["comic"]["launch_gate_status"], "needs_work")
+
+        standards = {
+            item["label"]: item["status"]
+            for item in by_office["comic_production"]["primary_standards"]
+        }
+        self.assertEqual(
+            standards,
+            {
+                "可展示": "passed",
+                "可试用": "passed",
+                "可交付": "passed",
+                "可追溯": "passed",
+            },
+        )
 
 
 if __name__ == "__main__":

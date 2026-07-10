@@ -227,6 +227,24 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "office_extension_governance",
+            "Office extension governance",
+            [
+                _contains(root / "src/offices.py", "def audit_office_extension_governance"),
+                _contains(root / "src/offices.py", "PRIMARY_OFFICE_IDS"),
+                _contains(root / "src/offices.py", "PRIMARY_OFFICE_STANDARDS"),
+                _contains(root / "scripts/verify_office_extension_governance.py", "Office Extension Governance Audit"),
+                _contains(root / "tests/test_office_extension_governance_verifier.py", "test_json_proves_primary_office_can_be_promoted"),
+                _contains(root / "README.md", "verify_office_extension_governance.py"),
+            ],
+            [
+                "src/offices.py:audit_office_extension_governance",
+                "scripts/verify_office_extension_governance.py",
+                "tests/test_office_extension_governance_verifier.py",
+                "README.md",
+            ],
+        ),
+        _check(
             "artifact_contract_runtime",
             "产物协议运行时校验",
             [

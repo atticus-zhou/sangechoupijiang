@@ -77,6 +77,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python scripts/verify_product_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
         self.assertIn("python scripts/verify_office_isolation.py --format markdown", text)
+        self.assertIn("python scripts/verify_office_extension_governance.py --format markdown", text)
         self.assertIn("/api/demo/public-showcase", text)
         self.assertIn("portfolio_embed", text)
         self.assertIn("public_deployment", text)

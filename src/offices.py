@@ -415,6 +415,67 @@ LAUNCH_GATE_EVIDENCE_LINKS = {
     },
 }
 
+LAUNCH_GATE_LABELS.update(
+    {
+        "no_key_demo": "无 Key 演示",
+        "model_preflight": "模型预检",
+        "end_to_end_test": "端到端测试",
+        "sample_delivery": "样例交付物",
+        "failure_recovery": "失败恢复",
+        "history_trace": "历史追踪",
+        "schema_gate": "结构化验收",
+        "readme_documentation": "README 文档",
+        "secret_scan": "密钥安全扫描",
+    }
+)
+
+LAUNCH_GATE_EVIDENCE_LINKS.update(
+    {
+        "research": {
+            "sample_delivery": [
+                {"label": "阶段调研报告", "uri": "/api/demo/research/files/report.md"},
+                {"label": "证据清单", "uri": "/api/demo/research/files/evidence_manifest.json"},
+            ],
+            "no_key_demo": [
+                {"label": "研究办公室无 Key 演示", "uri": "/api/demo/research"},
+            ],
+        },
+        "comic_production": {
+            "sample_delivery": [
+                {"label": "Word 制片画布", "uri": "/api/demo/comic-production/files/word_canvas.docx"},
+                {"label": "引用清单", "uri": "/api/demo/comic-production/files/handoff_manifest.json"},
+            ],
+            "no_key_demo": [
+                {"label": "AI 漫剧制片办公室无 Key 演示", "uri": "/api/demo/comic-production"},
+            ],
+        },
+    }
+)
+
+
+PRIMARY_OFFICE_IDS = {"comic_production"}
+LEGACY_OFFICE_IDS = {"comic"}
+
+PRIMARY_OFFICE_STANDARDS = {
+    "showcaseable": {
+        "label": "可展示",
+        "required_gates": ["no_key_demo", "readme_documentation"],
+    },
+    "trial_ready": {
+        "label": "可试用",
+        "required_gates": ["model_preflight", "end_to_end_test"],
+    },
+    "deliverable": {
+        "label": "可交付",
+        "required_gates": ["sample_delivery", "schema_gate"],
+    },
+    "traceable": {
+        "label": "可追溯",
+        "required_gates": ["history_trace", "failure_recovery", "secret_scan"],
+    },
+}
+
+
 def audit_office_launch_gates(office_id: str) -> dict:
     """Return the productization gate audit for one office."""
     office = get_office(office_id)
@@ -448,6 +509,100 @@ def audit_office_launch_gates(office_id: str) -> dict:
         "status": audit_status,
         "gates": gates,
     }
+
+
+def audit_office_extension_governance() -> dict:
+    """Audit whether office expansion follows the shared product protocol."""
+    template = list_office_creation_template()
+    required_profile_fields = template["required_profile_fields"]
+    office_audits = []
+
+    for office in OFFICE_PROFILES.values():
+        launch_audit = audit_office_launch_gates(office.id)
+        gate_statuses = {gate["id"]: gate["status"] for gate in launch_audit["gates"]}
+        missing_profile_fields = [
+            field
+            for field in required_profile_fields
+            if not _has_profile_field_value(office, field)
+        ]
+        standards = []
+        for standard_id, standard in PRIMARY_OFFICE_STANDARDS.items():
+            missing_gates = [
+                gate_id
+                for gate_id in standard["required_gates"]
+                if gate_statuses.get(gate_id) != "passed"
+            ]
+            standards.append(
+                {
+                    "id": standard_id,
+                    "label": standard["label"],
+                    "status": "passed" if not missing_gates else "needs_work",
+                    "required_gates": standard["required_gates"],
+                    "missing_gates": missing_gates,
+                }
+            )
+        is_legacy = office.id in LEGACY_OFFICE_IDS
+        can_be_primary = not is_legacy and not missing_profile_fields and all(
+            standard["status"] == "passed" for standard in standards
+        )
+        office_audits.append(
+            {
+                "office_id": office.id,
+                "office_name": office.name,
+                "role": (
+                    "primary"
+                    if office.id in PRIMARY_OFFICE_IDS
+                    else "legacy"
+                    if is_legacy
+                    else "available"
+                ),
+                "protocol_status": (
+                    "legacy_needs_upgrade"
+                    if is_legacy and missing_profile_fields
+                    else "passed"
+                    if not missing_profile_fields
+                    else "needs_work"
+                ),
+                "missing_profile_fields": missing_profile_fields,
+                "launch_gate_status": launch_audit["status"],
+                "primary_standards": standards,
+                "can_be_primary": can_be_primary,
+                "primary_allowed": office.id in PRIMARY_OFFICE_IDS and can_be_primary,
+            }
+        )
+
+    protocol_errors = [
+        item["office_id"]
+        for item in office_audits
+        if item["role"] != "legacy" and item["protocol_status"] != "passed"
+    ]
+    primary_errors = [
+        item["office_id"]
+        for item in office_audits
+        if item["office_id"] in PRIMARY_OFFICE_IDS and not item["primary_allowed"]
+    ]
+    return {
+        "status": "passed" if not protocol_errors and not primary_errors else "failed",
+        "mode": "offline_office_extension_governance",
+        "primary_office_ids": sorted(PRIMARY_OFFICE_IDS),
+        "required_profile_fields": required_profile_fields,
+        "required_launch_gates": template["required_launch_gates"],
+        "primary_standards": PRIMARY_OFFICE_STANDARDS,
+        "offices": office_audits,
+        "errors": {
+            "protocol_errors": protocol_errors,
+            "primary_errors": primary_errors,
+        },
+    }
+
+
+def _has_profile_field_value(office: OfficeProfile, field: str) -> bool:
+    value = getattr(office, field, None)
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (dict, list, set, tuple)):
+        return bool(value)
+    return value is not None
 
 
 def _infer_launch_gate_evidence(office: OfficeProfile, gate_id: str) -> str:

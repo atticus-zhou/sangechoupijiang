@@ -220,6 +220,14 @@ python scripts/verify_public_demo_mode.py --format markdown
 python scripts/verify_office_isolation.py --format markdown
 ```
 
+Before adding or promoting another office, run the shared extension-governance audit:
+
+```powershell
+python scripts/verify_office_extension_governance.py --format markdown
+```
+
+This gate checks that every office uses the shared `OfficeProfile` protocol and that any primary office satisfies the four promotion standards: showcaseable, trial-ready, deliverable, and traceable.
+
 这个隔离验证会在临时目录里创建研究办公室和 AI 漫剧制片办公室的独立模型配置、工作区、产物、任务事件和输出目录，不调用真实模型，不读取真实 `user_data`，也不会打印 API Key。它会特别检查历史追踪是否只按 `payload.workspace_id` 精确归属，避免一个办公室的任务因为备注里提到另一个工作区 ID 而出现在错误历史里。
 
 任务失败或后台中断时，任务详情和办公室时间线会展示恢复计划：失败阶段、责任部门、影响、下一步建议，以及可用时的继续处理按钮。

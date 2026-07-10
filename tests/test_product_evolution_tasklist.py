@@ -31,6 +31,13 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("python scripts/verify_office_isolation.py --format markdown", text)
         self.assertIn("payload.workspace_id", text)
 
+    def test_office_extension_governance_verifier_is_part_of_platform_protocol(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("python scripts/verify_office_extension_governance.py --format markdown", text)
+        self.assertIn("OfficeProfile", text)
+        self.assertIn("可展示、可试用、可交付、可追溯", text)
+
     def test_download_links_are_marked_done_with_launch_gate_evidence(self):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
 
