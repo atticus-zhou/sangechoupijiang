@@ -71,6 +71,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     payload = response.json()
     audience_paths = payload.get("audience_paths") or []
     featured_demos = payload.get("featured_demos") or []
+    portfolio_embed = payload.get("portfolio_embed") or {}
+    public_deployment = payload.get("public_deployment") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
     if payload.get("requires_api_key") is not False:
@@ -81,6 +83,18 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public showcase manifest needs at least 3 audience paths")
     if len(featured_demos) < 2:
         errors.append("public showcase manifest needs at least 2 featured demos")
+    if not portfolio_embed.get("repository_url"):
+        errors.append("public showcase manifest must expose a repository URL for portfolio pages")
+    if len(portfolio_embed.get("sample_deliverables") or []) < 4:
+        errors.append("portfolio embed must expose at least 4 sample deliverables")
+    if not any((item.get("kind") == "screenshot_target") for item in portfolio_embed.get("workflow_showcase") or []):
+        errors.append("portfolio embed must include screenshot targets for the main workflow")
+    if public_deployment.get("mode") != "demo_only":
+        errors.append("public deployment profile must be demo_only")
+    if public_deployment.get("allows_real_model_calls") is not False:
+        errors.append("public deployment profile must forbid real model calls")
+    if public_deployment.get("allows_workspace_writes") is not False:
+        errors.append("public deployment profile must forbid workspace writes")
 
     return {
         "status_code": response.status_code,
@@ -89,6 +103,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "audience_path_count": len(audience_paths),
         "featured_demo_count": len(featured_demos),
         "safe_for_public_portfolio": bool(payload.get("safe_for_public_portfolio")),
+        "portfolio_deliverable_count": len(portfolio_embed.get("sample_deliverables") or []),
+        "public_deployment_mode": public_deployment.get("mode", ""),
     }
 
 
@@ -181,6 +197,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 访客路径：{manifest.get('audience_path_count')} 条",
         f"- 推荐演示：{manifest.get('featured_demo_count')} 个",
         f"- 可公开作品集展示：{manifest.get('safe_for_public_portfolio')}",
+        f"- 作品集样例交付物：{manifest.get('portfolio_deliverable_count')} 个",
+        f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]
     for demo in payload["demos"].values():

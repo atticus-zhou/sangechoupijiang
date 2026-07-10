@@ -32,7 +32,7 @@ python scripts/verify_product_readiness.py --format markdown
 - 不允许访问真实生产接口，不允许提交需要真实模型执行的任务。
 - 可以部署到 Vercel、Netlify、GitHub Pages 等静态或半静态环境。
 
-公开页面里可以放 GitHub 链接、产品说明、无 Key 演示入口和样例交付物。个人网站可以读取或复制 `/api/demo/public-showcase` 的公开展示清单，用同一份数据展示产品定位、参观路径、推荐 demo 和下载物。不要把个人 API Key 写入前端，也不要把它放入 Vercel 前端环境变量。
+公开页面里可以放 GitHub 链接、产品说明、无 Key 演示入口和样例交付物。个人网站可以读取或复制 `/api/demo/public-showcase` 的公开展示清单，用同一份数据展示产品定位、参观路径、推荐 demo 和下载物。这个接口里的 `portfolio_embed` 可直接用于作品集区块，`public_deployment` 用来约束在线版只开放 demo-only 路径。不要把个人 API Key 写入前端，也不要把它放入 Vercel 前端环境变量。
 
 ## 本地真实模式
 

@@ -78,6 +78,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
         self.assertIn("python scripts/verify_office_isolation.py --format markdown", text)
         self.assertIn("/api/demo/public-showcase", text)
+        self.assertIn("portfolio_embed", text)
+        self.assertIn("public_deployment", text)
         self.assertIn("公开演示模式验证", text)
         self.assertIn("公开展示清单", text)
 

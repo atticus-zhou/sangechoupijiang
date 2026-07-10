@@ -655,11 +655,40 @@ def _public_showcase_demo(demo: dict, demo_uri: str, office_label: str, why_it_m
     }
 
 
+def _public_showcase_sample_deliverables(demos: list[dict]) -> list[dict]:
+    deliverables: list[dict] = []
+    for demo in demos:
+        for item in demo.get("downloads", []):
+            deliverables.append({
+                "office_id": demo.get("office_id", ""),
+                "office_name": demo.get("office_name", ""),
+                "title": item.get("title", ""),
+                "type": item.get("type", "artifact"),
+                "uri": item.get("uri", ""),
+                "status": item.get("status", "downloadable"),
+            })
+    return deliverables
+
+
 @app.get("/api/demo/public-showcase")
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
     comic_demo = await get_comic_production_demo_api()
     research_demo = await get_research_demo_api()
+    featured_demos = [
+        _public_showcase_demo(
+            comic_demo,
+            "/api/demo/comic-production",
+            "AI 漫剧制片办公室",
+            "证明产品能把故事拆成资产、镜头、提示词和 Word 制片画布，而不是只生成一段文字。",
+        ),
+        _public_showcase_demo(
+            research_demo,
+            "/api/demo/research",
+            "研究办公室",
+            "证明同一套办公室框架也能组织报告、来源、数据点、竞品表和截图计划。",
+        ),
+    ]
     return {
         "mode": "public_no_key_showcase",
         "product_name": "三个臭皮匠",
@@ -706,20 +735,62 @@ async def get_public_showcase_demo_api():
                 ],
             },
         ],
-        "featured_demos": [
-            _public_showcase_demo(
-                comic_demo,
-                "/api/demo/comic-production",
-                "AI 漫剧制片办公室",
-                "证明产品能把故事拆成资产、镜头、提示词和 Word 制片画布，而不是只生成一段文字。",
-            ),
-            _public_showcase_demo(
-                research_demo,
-                "/api/demo/research",
-                "研究办公室",
-                "证明同一套办公室框架也能组织报告、来源、数据点、竞品表和截图计划。",
-            ),
-        ],
+        "featured_demos": featured_demos,
+        "portfolio_embed": {
+            "repository_url": "https://github.com/atticus-zhou/sangechoupijiang",
+            "product_positioning": "办公室式多 Agent 协作平台，用可审核流程和可下载交付物替代一次性聊天回答。",
+            "office_hall": {
+                "title": "办公室大厅",
+                "summary": "首页只突出办公室入口、无 Key 演示、系统预检和上线门禁，让访问者先理解产品结构，再进入具体办公室。",
+                "primary_office": "AI 漫剧制片办公室",
+                "secondary_offices": ["研究办公室"],
+            },
+            "workflow_showcase": [
+                {
+                    "kind": "screenshot_target",
+                    "title": "办公室大厅首屏",
+                    "route": "/",
+                    "selector": "#product-showcase",
+                    "caption": "展示产品定位、无 Key 演示入口和真实办公室入口。",
+                },
+                {
+                    "kind": "screenshot_target",
+                    "title": "AI 漫剧制片办公室演示",
+                    "route": "/#demo_comic",
+                    "selector": "#comic-demo-content",
+                    "caption": "展示故事、资产、镜头、提示词、Word 画布和引用清单如何串联。",
+                },
+                {
+                    "kind": "download",
+                    "title": "样例 Word 制片画布",
+                    "uri": "/api/demo/comic-production/files/word_canvas.docx",
+                    "caption": "证明最终交付物不是网页装饰，可以下载并交给下游工具继续生产。",
+                },
+                {
+                    "kind": "download",
+                    "title": "研究办公室阶段报告",
+                    "uri": "/api/demo/research/files/report.md",
+                    "caption": "证明研究办公室也能输出来源、数据点、竞品和截图计划。",
+                },
+            ],
+            "sample_deliverables": _public_showcase_sample_deliverables(featured_demos),
+        },
+        "public_deployment": {
+            "mode": "demo_only",
+            "allowed_route_prefixes": ["/api/demo"],
+            "allows_real_model_calls": False,
+            "allows_workspace_writes": False,
+            "recommended_hosts": ["Vercel", "Netlify", "GitHub Pages"],
+            "forbidden_public_assets": [
+                "config.yaml",
+                ".env",
+                "user_data/",
+                "output/",
+                "browser profile",
+                "Cookie",
+                "API Key",
+            ],
+        },
         "verification_commands": [
             "python scripts/verify_public_demo_mode.py --format markdown",
             "python scripts/verify_product_readiness.py --format markdown",

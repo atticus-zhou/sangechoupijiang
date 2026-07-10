@@ -39,6 +39,21 @@ class PublicShowcaseManifestTests(unittest.TestCase):
                 self.assertTrue(item["uri"].startswith("/api/demo/"))
                 self.assertEqual(item["status"], "downloadable")
 
+        embed = payload["portfolio_embed"]
+        self.assertEqual(embed["repository_url"], "https://github.com/atticus-zhou/sangechoupijiang")
+        self.assertIn("办公室大厅", embed["office_hall"]["title"])
+        self.assertGreaterEqual(len(embed["workflow_showcase"]), 4)
+        self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
+        self.assertGreaterEqual(len(embed["sample_deliverables"]), 4)
+        self.assertTrue(all(item["uri"].startswith("/api/demo/") for item in embed["sample_deliverables"]))
+
+        public_deployment = payload["public_deployment"]
+        self.assertEqual(public_deployment["mode"], "demo_only")
+        self.assertFalse(public_deployment["allows_real_model_calls"])
+        self.assertFalse(public_deployment["allows_workspace_writes"])
+        self.assertEqual(public_deployment["allowed_route_prefixes"], ["/api/demo"])
+        self.assertIn("config.yaml", " ".join(public_deployment["forbidden_public_assets"]))
+
     def test_public_showcase_manifest_download_links_are_real(self):
         client = TestClient(app)
         payload = client.get("/api/demo/public-showcase").json()

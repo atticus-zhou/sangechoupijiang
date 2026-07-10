@@ -212,6 +212,8 @@ python scripts/verify_public_demo_mode.py --format markdown
 
 这个公开演示模式验证会检查 `/api/demo/public-showcase` 公开展示清单、AI 漫剧制片办公室和研究办公室的 `/api/demo` 入口、样例交付物下载链接和上线门禁证据链接；它不读取个人配置，不调用真实模型，也不消耗 API Key。公开展示清单会把产品定位、面试官/开发者/普通用户参观路径、推荐 demo、下载文件和安全边界打包给个人网站或作品集页面复用。
 
+`/api/demo/public-showcase` 还提供 `portfolio_embed` 和 `public_deployment`：前者给个人网站直接展示产品定位、办公室大厅摘要、主流程截图目标、样例交付物和 GitHub 链接；后者声明公开在线版只能使用 demo-only 模式，只允许 `/api/demo`，不允许真实模型调用或写入用户工作区。
+
 如果要验证新增办公室不会串模型、串工作区、串历史或串产物，可以运行：
 
 ```powershell
