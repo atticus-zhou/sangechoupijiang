@@ -507,6 +507,27 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("resetComicWorkspaceState({ clearInputs: true })", select_fn)
         self.assertIn("renderComicPackageBoard()", select_fn)
 
+    def test_switching_existing_comic_project_clears_old_state_before_loading(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        select_fn = js[js.index("async function selectComicWorkspace"):js.index("async function loadComicV2Status")]
+
+        self.assertIn("resetComicWorkspaceState({ preserveInputs: true })", select_fn)
+        reset_index = select_fn.index("resetComicWorkspaceState({ preserveInputs: true })")
+        load_index = select_fn.index("await loadComicRuntimeStatus(workspaceId)")
+        self.assertLess(reset_index, load_index)
+        self.assertIn("renderComicPackageBoard()", select_fn)
+
+    def test_comic_workspace_async_loaders_ignore_stale_responses(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        status_fn = js[js.index("async function loadComicV2Status"):js.index("async function refreshComicV2Panel")]
+        runtime_fn = js[js.index("async function loadComicRuntimeStatus"):js.index("function renderOfficeRuntimeStatus")]
+        cabinet_fn = js[js.index("async function loadComicCabinetSession"):js.index("async function loadComicTimeline")]
+        timeline_fn = js[js.index("async function loadComicTimeline"):js.index("async function loadComicArtifacts")]
+        artifact_fn = js[js.index("async function loadComicArtifacts"):js.index("function renderComicArtifactNavigator")]
+
+        for fn in [status_fn, runtime_fn, cabinet_fn, timeline_fn, artifact_fn]:
+            self.assertIn("if (currentComicWorkspace !== workspaceId) return null;", fn)
+
     def test_inline_comic_handlers_are_exposed_on_window(self):
         js = APP_JS.read_text(encoding="utf-8")
 

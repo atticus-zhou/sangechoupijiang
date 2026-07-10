@@ -1063,6 +1063,9 @@ async function selectComicWorkspace(workspaceId) {
     }
     
     // 如果不是新建，而是切换到了别的项目，更新左侧列表高亮状态
+    resetComicWorkspaceState({ preserveInputs: true });
+    renderComicPackageBoard();
+
     const items = document.querySelectorAll('#comic-workspaces .workspace-item');
     items.forEach(item => {
         if (item.getAttribute('onclick').includes(workspaceId)) {
@@ -1129,9 +1132,12 @@ async function loadComicRuntimeStatus(workspaceId) {
         return null;
     }
     try {
-        currentComicRuntimeStatus = await API.get(`/api/workspaces/${workspaceId}/runtime-status`);
+        const result = await API.get(`/api/workspaces/${workspaceId}/runtime-status`);
+        if (currentComicWorkspace !== workspaceId) return null;
+        currentComicRuntimeStatus = result;
         renderOfficeRuntimeStatus(currentComicRuntimeStatus);
     } catch (e) {
+        if (currentComicWorkspace !== workspaceId) return null;
         currentComicRuntimeStatus = {
             current_stage: { id: 'runtime_status_error', status: 'failed', summary: e.message || String(e) },
             artifact_progress: { present_count: 0, missing_count: 0, missing: [] },
@@ -1197,8 +1203,11 @@ async function loadComicV2Status(workspaceId) {
         return null;
     }
     try {
-        currentComicV2Status = await API.get(`/api/workspaces/${workspaceId}/comic/v2/status`);
+        const result = await API.get(`/api/workspaces/${workspaceId}/comic/v2/status`);
+        if (currentComicWorkspace !== workspaceId) return null;
+        currentComicV2Status = result;
     } catch (e) {
+        if (currentComicWorkspace !== workspaceId) return null;
         currentComicV2Status = {
             pipeline_version: 2,
             status: 'status_error',
@@ -1241,6 +1250,7 @@ async function loadComicCabinetSession(workspaceId) {
     }
     try {
         const result = await API.get(`/api/comic/cabinet/${workspaceId}`);
+        if (currentComicWorkspace !== workspaceId) return null;
         if (result.status !== 'ok') {
             currentComicCabinetSession = null;
             currentComicCabinetReady = false;
@@ -1258,6 +1268,7 @@ async function loadComicCabinetSession(workspaceId) {
         }
         renderComicCabinet();
     } catch (e) {
+        if (currentComicWorkspace !== workspaceId) return null;
         currentComicCabinetSession = null;
         currentComicCabinetReady = false;
         currentComicBrief = null;
@@ -1277,6 +1288,7 @@ async function loadComicTimeline(workspaceId) {
         return;
     }
     const data = await API.get(`/api/workspaces/${workspaceId}/tasks`);
+    if (currentComicWorkspace !== workspaceId) return null;
     const tasks = data.tasks || [];
     count.textContent = String(tasks.length);
     if (!tasks.length) {
@@ -1311,6 +1323,7 @@ async function loadComicArtifacts(workspaceId) {
         return;
     }
     const data = await API.get(`/api/workspaces/${workspaceId}/artifacts`);
+    if (currentComicWorkspace !== workspaceId) return null;
     const artifacts = data.artifacts || [];
     currentComicArtifacts = artifacts;
     renderComicPackageBoard(artifacts);
