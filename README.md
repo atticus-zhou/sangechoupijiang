@@ -67,6 +67,12 @@ python run.py --port 8080
 http://127.0.0.1:8080/
 ```
 
+## 三类读者怎么体验
+
+- 面试官：先看首页的无 Key 演示入口和样例交付物。重点观察 AI 漫剧制片办公室如何把故事、资产、提示词、图片记录和 Word 画布串成一个可追溯交付包；这一条路径不需要 API Key，也不会调用真实模型。
+- 开发者：先跑 `python scripts/verify_first_run_readiness.py --format markdown` 和 `python scripts/doctor.py`，再按 README 配置本地环境。需要扩展新办公室时，先看 `/api/offices/protocols`、上线门禁和隔离验证，不要复制一套临时代码。
+- 普通用户：先体验固定样例，确认产品能交付什么；真正创作时再进入本地真实模式，用自己的 API Key 和资料运行。公开页面、个人网站或 Vercel 展示页不要上传自己的 API Key、Cookie、登录态、用户数据或运行产物。
+
 ## 第一次使用应该怎么走
 
 建议按下面顺序来，不要一开始就把所有模型都填满：

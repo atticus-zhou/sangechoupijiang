@@ -95,6 +95,17 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("视觉理解模型", text)
         self.assertIn("图片生成模型", text)
 
+    def test_readme_splits_public_experience_by_audience(self):
+        text = Path("README.md").read_text(encoding="utf-8")
+
+        self.assertIn("## 三类读者怎么体验", text)
+        self.assertIn("面试官", text)
+        self.assertIn("开发者", text)
+        self.assertIn("普通用户", text)
+        self.assertIn("不需要 API Key", text)
+        self.assertIn("样例交付物", text)
+        self.assertIn("不要上传自己的 API Key、Cookie、登录态、用户数据或运行产物", text)
+
 
 if __name__ == "__main__":
     unittest.main()

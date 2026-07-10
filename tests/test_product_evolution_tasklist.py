@@ -59,6 +59,12 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("- [x] 不再盲目横向增加办公室；先把一个主力办公室打磨到能展示、能试用、能交付。", text)
         self.assertIn("- [x] 默认主力办公室为 `AI漫剧制片办公室`，研究办公室保持可用但不作为当前主打。", text)
 
+    def test_stage_a_trusted_showcase_documents_readme_and_safety(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("- [x] GitHub README 能让面试官、开发者和普通用户分别看懂怎么体验、怎么运行、怎么扩展。", text)
+        self.assertIn("- [x] 所有公开展示都不暴露 API Key、Cookie、登录态、用户数据和运行产物。", text)
+
 
 if __name__ == "__main__":
     unittest.main()
