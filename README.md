@@ -46,6 +46,7 @@ python scripts/doctor.py
 第一次从 GitHub 下载项目时，也建议先跑复现清单。它会把公开演示、本地真实使用和开发者扩展三条路径分开说明：
 
 ```powershell
+python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_first_run_readiness.py --format markdown
 ```
 

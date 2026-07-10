@@ -14,6 +14,7 @@
 
 ```powershell
 python scripts/check_no_secrets.py
+python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_office_isolation.py --format markdown
 python scripts/verify_office_extension_governance.py --format markdown

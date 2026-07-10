@@ -45,6 +45,13 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("阶段报告、来源清单、数据表、竞品表、截图计划", text)
         self.assertIn("人机协作补证据", text)
 
+    def test_release_readiness_verifier_is_part_of_platform_protocol(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("first-run、公开演示、AI 漫剧交付物、研究办公室", text)
+        self.assertIn("敏感信息扫描", text)
+
     def test_download_links_are_marked_done_with_launch_gate_evidence(self):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
 
