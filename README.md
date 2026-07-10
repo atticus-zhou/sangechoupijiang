@@ -208,6 +208,7 @@ python scripts/verify_product_readiness.py --format markdown
 
 ```powershell
 python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_research_office_readiness.py --format markdown
 ```
 
 这个公开演示模式验证会检查 `/api/demo/public-showcase` 公开展示清单、AI 漫剧制片办公室和研究办公室的 `/api/demo` 入口、样例交付物下载链接和上线门禁证据链接；它不读取个人配置，不调用真实模型，也不消耗 API Key。公开展示清单会把产品定位、面试官/开发者/普通用户参观路径、推荐 demo、下载文件和安全边界打包给个人网站或作品集页面复用。

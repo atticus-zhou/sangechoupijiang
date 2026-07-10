@@ -38,6 +38,13 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("OfficeProfile", text)
         self.assertIn("可展示、可试用、可交付、可追溯", text)
 
+    def test_research_office_readiness_verifier_is_part_of_platform_protocol(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("python scripts/verify_research_office_readiness.py --format markdown", text)
+        self.assertIn("阶段报告、来源清单、数据表、竞品表、截图计划", text)
+        self.assertIn("人机协作补证据", text)
+
     def test_download_links_are_marked_done_with_launch_gate_evidence(self):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
 

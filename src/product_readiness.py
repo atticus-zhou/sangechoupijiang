@@ -245,6 +245,24 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             ],
         ),
         _check(
+            "research_office_readiness",
+            "Research office readiness",
+            [
+                _contains(root / "scripts/verify_research_office_readiness.py", "Research Office Readiness Audit"),
+                _contains(root / "scripts/verify_research_office_readiness.py", "assess_research_package"),
+                _contains(root / "scripts/verify_research_office_readiness.py", "/api/demo/research/files/report.md"),
+                _contains(root / "tests/test_research_office_readiness_verifier.py", "test_json_verifies_traceable_research_package_and_demo_downloads"),
+                _contains(root / "src/research_artifacts.py", "screenshot_plan"),
+                _contains(root / "src/research_quality.py", "REQUIRED_ARTIFACTS"),
+            ],
+            [
+                "scripts/verify_research_office_readiness.py",
+                "tests/test_research_office_readiness_verifier.py",
+                "src/research_artifacts.py",
+                "src/research_quality.py",
+            ],
+        ),
+        _check(
             "artifact_contract_runtime",
             "产物协议运行时校验",
             [

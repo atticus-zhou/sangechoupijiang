@@ -18,6 +18,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_office_isolation.py --format markdown
 python scripts/verify_office_extension_governance.py --format markdown
 python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_research_office_readiness.py --format markdown
 python scripts/verify_product_readiness.py --format markdown
 ```
 

@@ -397,6 +397,8 @@ async def get_comic_production_demo_api():
         "summary": "固定样例演示：展示从故事到资产、镜头、提示词和交付物的生产链，不消耗 API Key。",
         "uses_real_models": False,
         "api_key_required": False,
+        "calls_real_models": False,
+        "requires_api_key": False,
         "writes_workspace": False,
         "viewer_path": [
             {
@@ -574,6 +576,8 @@ async def get_research_demo_api():
         "objective": plan.get("objective", ""),
         "deliverable": plan.get("deliverable", ""),
         "report_preview": (fixture.get("final_report") or "")[:520],
+        "calls_real_models": False,
+        "requires_api_key": False,
         "source_count": len(sources),
         "data_point_count": len(data_points),
         "competitor_count": len(competitors),
@@ -835,6 +839,8 @@ def _ensure_research_demo_delivery() -> dict[str, Path]:
         ],
     }
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    if manifest_path.stat().st_size <= 20:
+        raise HTTPException(status_code=500, detail="Demo evidence manifest was not generated.")
     return {"report_markdown": report_path, "evidence_manifest": manifest_path}
 
 
