@@ -24,6 +24,8 @@ class ResearchOfficeReadinessVerifierTests(unittest.TestCase):
 
         package = payload["artifact_package"]
         self.assertEqual(package["quality"]["status"], "ready")
+        self.assertEqual(package["quality"]["score"], 100)
+        self.assertFalse(package["quality"]["warnings"])
         self.assertFalse(package["missing_artifacts"])
         self.assertTrue(package["has_screenshot_plan"])
         self.assertTrue(package["has_source_trace"])
