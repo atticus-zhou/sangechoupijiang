@@ -30,6 +30,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
             {
                 "first_run",
                 "productization_status",
+                "model_guidance",
                 "public_demo",
                 "comic_delivery",
                 "research_readiness",
@@ -61,6 +62,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Release Readiness Audit", completed.stdout)
         self.assertIn("Safe for public release", completed.stdout)
         self.assertIn("Productization objective coverage", completed.stdout)
+        self.assertIn("Model configuration guidance", completed.stdout)
         self.assertIn("AI comic Word canvas delivery", completed.stdout)
         self.assertIn("Research office staged delivery", completed.stdout)
         self.assertIn("Secret and runtime artifact scan", completed.stdout)

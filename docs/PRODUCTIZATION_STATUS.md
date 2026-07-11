@@ -10,11 +10,12 @@
 
 ```powershell
 python scripts/verify_productization_status.py --format markdown
+python scripts/verify_model_configuration_guidance.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
 ```
 
-`verify_productization_status.py` 负责检查这份产品化状态表是否覆盖关键目标；`verify_release_readiness.py` 负责串联 no-key 运行门禁；`check_no_secrets.py` 负责确认仓库没有误提交密钥、日志、数据库和运行产物。
+`verify_productization_status.py` 负责检查这份产品化状态表是否覆盖关键目标；`verify_model_configuration_guidance.py` 负责检查模型配置说明、示例配置、前端模型页和 preflight 是否一致；`verify_release_readiness.py` 负责串联 no-key 运行门禁；`check_no_secrets.py` 负责确认仓库没有误提交密钥、日志、数据库和运行产物。
 
 ## 目标覆盖表
 
@@ -28,6 +29,7 @@ python scripts/check_no_secrets.py
 | P6 | 研究办公室可以公开展示阶段性能力，但不伪装成全自动飞瓜会员级交付 | 已具备 staged demo 和证据缺口说明 | `python scripts/verify_research_office_readiness.py --format markdown`、研究样例报告、证据 manifest |
 | P7 | 新办公室可以继续扩展，同时不会污染已有办公室的模型配置、历史和产物 | 已具备办公室隔离和扩展治理门禁 | `python scripts/verify_office_isolation.py --format markdown`、`python scripts/verify_office_extension_governance.py --format markdown`、`/api/offices/protocols` |
 | P8 | 公开仓库不应包含用户密钥、Cookie、数据库、输出目录或运行日志 | 已具备安全扫描和部署边界文档 | `python scripts/check_no_secrets.py`、`.gitignore`、`docs/DEPLOYMENT_MODES.md` |
+| P9 | 新用户能看懂每个部门需要什么模型，以及最小可跑和完整制片配置的区别 | 已具备模型配置指南和离线一致性验证 | `docs/MODEL_CONFIGURATION.md`、`python scripts/verify_model_configuration_guidance.py --format markdown`、模型页面测试按钮 |
 
 ## 当前可公开展示的形态
 
@@ -81,6 +83,7 @@ python scripts/check_no_secrets.py
 
 ```powershell
 python scripts/verify_productization_status.py --format markdown
+python scripts/verify_model_configuration_guidance.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python -m unittest discover -s tests -q
 python scripts/check_no_secrets.py

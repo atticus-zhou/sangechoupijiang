@@ -21,6 +21,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("视觉质检", text)
         self.assertIn("使用者填写自己的 Key", text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_model_configuration_guidance.py --format markdown", text)
         self.assertIn("python scripts/verify_first_run_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_user_flow.py", text)
@@ -51,6 +52,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("config.yaml", text)
         self.assertIn("不会提交到 GitHub", text)
         self.assertIn("docs/DEPLOYMENT_MODES.md", text)
+        self.assertIn("docs/MODEL_CONFIGURATION.md", text)
 
     def test_deployment_modes_doc_separates_demo_local_and_saas(self):
         text = Path("docs/DEPLOYMENT_MODES.md").read_text(encoding="utf-8")
@@ -75,6 +77,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("不要把 Key 放进前端 JavaScript、HTML、静态 JSON 或公开环境变量", text)
         self.assertIn("python scripts/check_no_secrets.py", text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_model_configuration_guidance.py --format markdown", text)
         self.assertIn("python scripts/verify_first_run_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_product_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
@@ -100,6 +103,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("没配置的部门会继续使用全局 models 里的同名部门", text)
         self.assertIn("视觉理解模型", text)
         self.assertIn("图片生成模型", text)
+        self.assertIn("docs/MODEL_CONFIGURATION.md", text)
 
     def test_readme_splits_public_experience_by_audience(self):
         text = Path("README.md").read_text(encoding="utf-8")

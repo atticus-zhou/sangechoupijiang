@@ -134,6 +134,22 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "docs/DEPLOYMENT_MODES.md",
         ],
     },
+    {
+        "id": "P9",
+        "title": "Model configuration guidance",
+        "markers": [
+            "新用户能看懂每个部门需要什么模型",
+            "docs/MODEL_CONFIGURATION.md",
+            "python scripts/verify_model_configuration_guidance.py --format markdown",
+            "最小可跑",
+            "完整制片",
+        ],
+        "files": [
+            "docs/MODEL_CONFIGURATION.md",
+            "scripts/verify_model_configuration_guidance.py",
+            "tests/test_model_configuration_guidance.py",
+        ],
+    },
 ]
 
 

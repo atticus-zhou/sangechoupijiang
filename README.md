@@ -103,6 +103,12 @@ $env:ARK_API_KEY="your-key"
 
 打开网页后，模型页面会显示每个部门需要的模型类型、职责、缺失影响和下一步建议。每个部门都有测试按钮，建议先测试通过再进入工作台，避免做到一半才发现某个部门无法调用模型。
 
+更完整的部门能力表、最小可跑配置、完整制片配置、办公室隔离规则和常见模型组合见 [docs/MODEL_CONFIGURATION.md](docs/MODEL_CONFIGURATION.md)。如果要确认这部分说明和代码没有漂移，可以运行：
+
+```powershell
+python scripts/verify_model_configuration_guidance.py --format markdown
+```
+
 工作台也会做启动检查：缺少文本模型时会阻止故事/规划，缺少生图模型时会提示只能先生成提示词，缺少视觉模型时会提示可以生图但不能自动质检。
 
 AI 漫剧制片办公室推荐模型类型：
