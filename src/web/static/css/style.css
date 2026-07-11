@@ -384,6 +384,21 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 13px;
 }
 
+.demo-artifact-grid p {
+    margin: 10px 0 0;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.public-deliverable-signals {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.65;
+}
+
 .demo-quality-grid article.passed {
     border-color: rgba(63, 185, 80, 0.28);
     background: rgba(35, 134, 54, 0.08);

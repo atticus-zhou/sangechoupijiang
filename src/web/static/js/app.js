@@ -4291,6 +4291,12 @@ function renderPublicShowcase(showcase) {
                         <strong>${escapeHtml(item.title || '')}</strong>
                         <span>${escapeHtml(item.office_name || item.office_id || '')}</span>
                         <small>${escapeHtml(item.type || item.status || '')}</small>
+                        ${item.reader_guidance ? `<p>${escapeHtml(item.reader_guidance)}</p>` : ''}
+                        ${Array.isArray(item.acceptance_signals) && item.acceptance_signals.length ? `
+                            <ul class="public-deliverable-signals">
+                                ${item.acceptance_signals.map(signal => `<li>${escapeHtml(signal)}</li>`).join('')}
+                            </ul>
+                        ` : ''}
                         ${item.uri ? `<a class="ghost btn-sm demo-download-link" href="${escapeHtml(item.uri)}" target="_blank">下载样例</a>` : ''}
                     </article>
                 `).join('')}

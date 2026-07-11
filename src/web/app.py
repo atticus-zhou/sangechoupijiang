@@ -689,10 +689,39 @@ def _public_showcase_demo(demo: dict, demo_uri: str, office_label: str, why_it_m
     }
 
 
+def _public_showcase_deliverable_guidance(item_type: str) -> tuple[str, list[str]]:
+    guidance = {
+        "word_canvas": (
+            "打开后重点看故事、资产、镜头、提示词和图片记录是否在同一份制片画布里互相对应。",
+            ["包含可交给下游平台的画布结构", "能看到资产 ID、镜头 ID 和引用关系", "不是一次性聊天文本"],
+        ),
+        "handoff_manifest": (
+            "用于开发者或下游工具复核每个资产、镜头、图片和 Word 文件来自哪一版生产链路。",
+            ["保留故事版本和视觉母版版本", "列出资产、镜头和图片记录", "支持失败后追溯和重试"],
+        ),
+        "report_markdown": (
+            "打开后重点看调研结论、数据点、竞品表和截图计划是否分开呈现，而不是混成一段泛泛文字。",
+            ["报告可读", "来源和数据有对应关系", "证据缺口被明确标注"],
+        ),
+        "evidence_manifest": (
+            "用于复核研究办公室到底有哪些来源、数据、截图计划和待人工确认事项。",
+            ["来源清单可追踪", "截图计划可执行", "未验证信息不会伪装成已验证结论"],
+        ),
+    }
+    return guidance.get(
+        item_type,
+        (
+            "用于证明公开演示不是静态介绍页，而是包含可下载、可复核的真实样例产物。",
+            ["可下载", "可复核", "不消耗真实 API Key"],
+        ),
+    )
+
+
 def _public_showcase_sample_deliverables(demos: list[dict]) -> list[dict]:
     deliverables: list[dict] = []
     for demo in demos:
         for item in demo.get("downloads", []):
+            reader_guidance, acceptance_signals = _public_showcase_deliverable_guidance(item.get("type", "artifact"))
             deliverables.append({
                 "office_id": demo.get("office_id", ""),
                 "office_name": demo.get("office_name", ""),
@@ -700,6 +729,8 @@ def _public_showcase_sample_deliverables(demos: list[dict]) -> list[dict]:
                 "type": item.get("type", "artifact"),
                 "uri": item.get("uri", ""),
                 "status": item.get("status", "downloadable"),
+                "reader_guidance": reader_guidance,
+                "acceptance_signals": acceptance_signals,
             })
     return deliverables
 

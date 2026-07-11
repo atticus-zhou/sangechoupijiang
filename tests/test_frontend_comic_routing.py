@@ -237,6 +237,9 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("showcase.audience_paths", js)
         self.assertIn("showcase.featured_demos", js)
         self.assertIn("portfolio.sample_deliverables", js)
+        self.assertIn("item.reader_guidance", js)
+        self.assertIn("item.acceptance_signals", js)
+        self.assertIn("public-deliverable-signals", js)
         self.assertIn("showcase.safety_boundaries", js)
         self.assertIn("deployment.allowed_route_prefixes", js)
         self.assertIn("样例交付物", js)
@@ -244,6 +247,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".public-showcase-content", css)
         self.assertIn(".public-audience-grid", css)
         self.assertIn(".public-safety-section", css)
+        self.assertIn(".public-deliverable-signals", css)
 
     def test_comic_v2_actions_check_preflight_before_costly_steps(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -571,7 +575,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_index_uses_fresh_comic_v2_script_cache_key(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=public-showcase-page-20260711", html)
+        self.assertIn("/static/js/app.js?v=public-showcase-handoff-20260712", html)
         self.assertNotIn("comic-confirm-feedback-20260610", html)
 
     def test_empty_artifact_board_still_renders_v2_stage_actions(self):

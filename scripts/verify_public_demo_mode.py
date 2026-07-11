@@ -87,6 +87,11 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public showcase manifest must expose a repository URL for portfolio pages")
     if len(portfolio_embed.get("sample_deliverables") or []) < 4:
         errors.append("portfolio embed must expose at least 4 sample deliverables")
+    for item in portfolio_embed.get("sample_deliverables") or []:
+        if not item.get("reader_guidance"):
+            errors.append(f"sample deliverable missing reader guidance: {item.get('title') or item.get('uri')}")
+        if len(item.get("acceptance_signals") or []) < 3:
+            errors.append(f"sample deliverable missing acceptance signals: {item.get('title') or item.get('uri')}")
     if not any((item.get("kind") == "screenshot_target") for item in portfolio_embed.get("workflow_showcase") or []):
         errors.append("portfolio embed must include screenshot targets for the main workflow")
     if public_deployment.get("mode") != "demo_only":
@@ -104,6 +109,11 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "featured_demo_count": len(featured_demos),
         "safe_for_public_portfolio": bool(payload.get("safe_for_public_portfolio")),
         "portfolio_deliverable_count": len(portfolio_embed.get("sample_deliverables") or []),
+        "deliverables_with_reader_guidance": sum(
+            1
+            for item in portfolio_embed.get("sample_deliverables") or []
+            if item.get("reader_guidance") and len(item.get("acceptance_signals") or []) >= 3
+        ),
         "public_deployment_mode": public_deployment.get("mode", ""),
     }
 
@@ -198,6 +208,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 推荐演示：{manifest.get('featured_demo_count')} 个",
         f"- 可公开作品集展示：{manifest.get('safe_for_public_portfolio')}",
         f"- 作品集样例交付物：{manifest.get('portfolio_deliverable_count')} 个",
+        f"- 带阅读说明的样例交付物：{manifest.get('deliverables_with_reader_guidance')} 个",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]

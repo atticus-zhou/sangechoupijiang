@@ -46,6 +46,15 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
         self.assertGreaterEqual(len(embed["sample_deliverables"]), 4)
         self.assertTrue(all(item["uri"].startswith("/api/demo/") for item in embed["sample_deliverables"]))
+        for item in embed["sample_deliverables"]:
+            self.assertTrue(item["reader_guidance"])
+            self.assertGreaterEqual(len(item["acceptance_signals"]), 3)
+        self.assertTrue(
+            any(
+                "资产 ID" in " ".join(item["acceptance_signals"])
+                for item in embed["sample_deliverables"]
+            )
+        )
 
         public_deployment = payload["public_deployment"]
         self.assertEqual(public_deployment["mode"], "demo_only")
