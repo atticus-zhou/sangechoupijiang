@@ -5223,6 +5223,13 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
     handoff_meta = handoff_manifest.get("metadata") or {}
     prompt_meta = prompt_package.get("metadata") or {}
     review_meta = visual_review.get("metadata") or {}
+    prompt_quality: dict = {}
+    if prompt_package:
+        try:
+            prompt_payload = json.loads(prompt_package.get("content") or "{}")
+        except (TypeError, json.JSONDecodeError):
+            prompt_payload = {}
+        prompt_quality = audit_prompt_package(prompt_payload)
     return {
         "story_id": word_meta.get("story_id", ""),
         "story_version": word_meta.get("story_version", 0),
@@ -5236,6 +5243,8 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "prompt_package_title": prompt_package.get("title", ""),
         "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),
+        "prompt_quality": prompt_quality,
+        "prompt_quality_status": prompt_quality.get("status", ""),
         "visual_review": {
             "title": visual_review.get("title", ""),
             "production_ready": bool(review_meta.get("production_ready")),
@@ -5274,6 +5283,9 @@ def _history_delivery_summary(enriched: dict) -> dict:
     asset_count = int(audit.get("asset_count") or trace.get("visual_review", {}).get("record_count") or 0)
     shot_count = int(audit.get("shot_count") or trace.get("shot_prompt_count") or 0)
     prompt_count = int(trace.get("asset_prompt_count") or 0) + int(trace.get("shot_prompt_count") or 0)
+    prompt_quality = trace.get("prompt_quality") or {}
+    prompt_quality_status = prompt_quality.get("status") or ""
+    prompt_quality_issue_count = int(prompt_quality.get("issue_count") or 0)
     visual_review = trace.get("visual_review") or {}
     production_ready = bool(visual_review.get("production_ready") or audit.get("handoff_ready"))
     failure_count = int(visual_review.get("failure_count") or 0)
@@ -5287,12 +5299,17 @@ def _history_delivery_summary(enriched: dict) -> dict:
         missing_items.append("资产统计")
     if shot_count <= 0 and trace:
         missing_items.append("镜头卡")
+    if prompt_quality_status == "needs_review":
+        missing_items.append("提示词质量门禁")
     if failure_count > 0:
         missing_items.append("视觉质检问题")
 
     if missing_items:
         status = "needs_review"
-        next_action = "先补齐缺失项或重新生成 Word 制片画布，再交给下游生产。"
+        if "提示词质量门禁" in missing_items:
+            next_action = "先重新生成提示词，或退回资产拆解修正人物、道具、场景，再继续图片和 Word 制片画布生产。"
+        else:
+            next_action = "先补齐缺失项或重新生成 Word 制片画布，再交给下游生产。"
     elif word_uri and production_ready:
         status = "ready"
         next_action = "制片包可以交给下游图片、视频或剪辑平台继续生产。"
@@ -5316,6 +5333,12 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "method": "POST",
             "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
         })
+    if workspace_id and "提示词质量门禁" in missing_items:
+        recovery_actions.append({
+            "label": "重新生成提示词",
+            "method": "POST",
+            "path": f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan",
+        })
     if workspace_id and status in {"pending", "needs_review"} and not recovery_actions:
         recovery_actions.append({
             "label": "回到项目继续处理",
@@ -5328,6 +5351,9 @@ def _history_delivery_summary(enriched: dict) -> dict:
         "asset_count": asset_count,
         "shot_count": shot_count,
         "prompt_count": prompt_count,
+        "prompt_quality_status": prompt_quality_status,
+        "prompt_quality_issue_count": prompt_quality_issue_count,
+        "prompt_quality_summary": prompt_quality.get("summary", ""),
         "visual_review_status": "passed" if production_ready and failure_count == 0 else "needs_review",
         "downloadable_files": downloadable_files,
         "missing_items": missing_items,

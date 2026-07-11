@@ -728,7 +728,23 @@ class WebComicApiTests(unittest.TestCase):
             task_id=task_id,
             artifact_type="comic_v2_prompt_package",
             title="V2 Prompt Package",
-            content=json.dumps({"asset_prompts": [{"asset_id": "char_001", "prompt": "林昭三视图"}]}, ensure_ascii=False),
+            content=json.dumps({
+                "prompts": [
+                    {
+                        "object_id": "character_001",
+                        "image_kind": "three_view",
+                        "generator_prompt": "资产ID character_001，风格身份 ink wash fantasy，林昭人物三视图，纯白或近白色干净背景。",
+                        "negative_prompt": ["禁止剧情动作", "禁止剧情场景", "禁止文字水印"],
+                    }
+                ],
+                "shots": [
+                    {
+                        "shot_id": "shot_001",
+                        "generator_prompt": "首帧参考 char_001_three_view.png，故事目的：主角推门进入月塔；动作链：停步、抬眼、前推；表演意图：警觉；摄影：缓慢前推；灯光：月光侧逆光；严格继承参考资产身份。",
+                        "negative_prompt": ["禁止资产身份漂移", "禁止动作顺序混乱", "禁止文字水印"],
+                    }
+                ],
+            }, ensure_ascii=False),
             metadata={
                 "office_id": "comic_production",
                 "manifest_version": 5,
@@ -793,6 +809,10 @@ class WebComicApiTests(unittest.TestCase):
             self.assertTrue(trace["handoff_manifest_uri"].endswith("/v2_handoff_manifest.json"))
             self.assertEqual(trace["asset_prompt_count"], 7)
             self.assertEqual(trace["shot_prompt_count"], 9)
+            self.assertEqual(trace["prompt_quality_status"], "ready")
+            self.assertEqual(trace["prompt_quality"]["status"], "ready")
+            self.assertEqual(trace["prompt_quality"]["clean_asset_prompt_count"], 1)
+            self.assertEqual(trace["prompt_quality"]["director_prompt_count"], 1)
             self.assertEqual(trace["shots"][0]["shot_id"], "shot_001")
             self.assertEqual(trace["shots"][0]["first_frame_reference_image"]["file"], "char_001_three_view.png")
             self.assertEqual(trace["shots"][0]["reference_asset_chain"][0]["name"], "林昭")
@@ -809,6 +829,8 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(summary["asset_count"], 7)
             self.assertEqual(summary["shot_count"], 9)
             self.assertEqual(summary["prompt_count"], 16)
+            self.assertEqual(summary["prompt_quality_status"], "ready")
+            self.assertEqual(summary["prompt_quality_issue_count"], 0)
             self.assertEqual(summary["visual_review_status"], "passed")
             self.assertEqual(
                 summary["downloadable_files"],
@@ -818,10 +840,11 @@ class WebComicApiTests(unittest.TestCase):
             self.assertIn("可以交给下游", summary["next_action"])
             prompt_response = self.client.get(prompt_artifact["download_uri"])
             self.assertEqual(prompt_response.status_code, 200)
-            self.assertEqual(prompt_response.json()["asset_prompts"][0]["asset_id"], "char_001")
+            self.assertEqual(prompt_response.json()["prompts"][0]["object_id"], "character_001")
             trace_response = self.client.get(row["comic_v2_trace_uri"])
             self.assertEqual(trace_response.status_code, 200)
             self.assertEqual(trace_response.json()["story_id"], "story_123")
+            self.assertEqual(trace_response.json()["prompt_quality_status"], "ready")
             self.assertEqual(trace_response.json()["shots"][0]["shot_id"], "shot_001")
         finally:
             conn = sqlite3.connect("user_data/config.db")
@@ -887,7 +910,23 @@ class WebComicApiTests(unittest.TestCase):
             task_id=task_id,
             artifact_type="comic_v2_prompt_package",
             title="V2 Prompt Package",
-            content="{}",
+            content=json.dumps({
+                "prompts": [
+                    {
+                        "object_id": "character_001",
+                        "image_kind": "three_view",
+                        "generator_prompt": "林昭在战场里挥剑，不要文字。",
+                        "negative_prompt": ["不要变脸"],
+                    }
+                ],
+                "shots": [
+                    {
+                        "shot_id": "shot_001",
+                        "generator_prompt": "林昭冲出去。",
+                        "negative_prompt": ["不要变脸"],
+                    }
+                ],
+            }, ensure_ascii=False),
             metadata={
                 "office_id": "comic_production",
                 "manifest_version": 4,
@@ -920,7 +959,10 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(summary["status"], "needs_review")
             self.assertIn("Word 制片画布", summary["missing_items"])
             self.assertIn("引用清单", summary["missing_items"])
+            self.assertIn("提示词质量门禁", summary["missing_items"])
             self.assertIn("视觉质检问题", summary["missing_items"])
+            self.assertEqual(summary["prompt_quality_status"], "needs_review")
+            self.assertGreater(summary["prompt_quality_issue_count"], 0)
             actions = summary["recovery_actions"]
             self.assertIn(
                 {
@@ -935,6 +977,14 @@ class WebComicApiTests(unittest.TestCase):
                     "label": "重新生成并质检基础资产图",
                     "method": "POST",
                     "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+                },
+                actions,
+            )
+            self.assertIn(
+                {
+                    "label": "重新生成提示词",
+                    "method": "POST",
+                    "path": f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan",
                 },
                 actions,
             )

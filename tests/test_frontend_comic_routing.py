@@ -620,6 +620,20 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".v2-prompt-quality", css)
         self.assertIn(".v2-prompt-quality-recovery", css)
 
+    def test_history_renders_comic_v2_prompt_quality_trace(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        summary_fn = js[js.index("function renderHistoryDeliverySummary"):js.index("async function runHistoryRecoveryAction")]
+        trace_fn = js[js.index("function renderComicV2HistoryTrace"):js.index("function renderComicV2HistoryShotPackages")]
+
+        self.assertIn("summary.prompt_quality_status", summary_fn)
+        self.assertIn("summary.prompt_quality_summary", summary_fn)
+        self.assertIn("提示词门禁", summary_fn)
+        self.assertIn("const quality = trace.prompt_quality || {}", trace_fn)
+        self.assertIn("提示词质量门禁", trace_fn)
+        self.assertIn("quality.clean_asset_prompt_count", trace_fn)
+        self.assertIn("quality.director_prompt_count", trace_fn)
+        self.assertIn("v2-prompt-quality-issues", trace_fn)
+
     def test_v2_stage_board_renders_department_flow(self):
         js = APP_JS.read_text(encoding="utf-8")
 

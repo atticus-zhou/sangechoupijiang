@@ -4083,6 +4083,11 @@ function renderHistoryDeliverySummary(summary, compact = false) {
     const files = Array.isArray(summary.downloadable_files) ? summary.downloadable_files : [];
     const missing = Array.isArray(summary.missing_items) ? summary.missing_items : [];
     const actions = Array.isArray(summary.recovery_actions) ? summary.recovery_actions : [];
+    const promptQualityLabel = {
+        ready: '通过',
+        needs_review: '需复核',
+        waiting: '待生成',
+    }[summary.prompt_quality_status] || summary.prompt_quality_status || '未知';
     return `
         <div class="history-delivery-summary ${compact ? 'compact' : ''} ${escapeHtml(summary.status)}">
             <div class="history-delivery-head">
@@ -4093,6 +4098,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 <span>资产 ${escapeHtml(summary.asset_count || 0)}</span>
                 <span>镜头 ${escapeHtml(summary.shot_count || 0)}</span>
                 <span>提示词 ${escapeHtml(summary.prompt_count || 0)}</span>
+                <span>提示词门禁 ${escapeHtml(promptQualityLabel)}</span>
                 <span>质检 ${escapeHtml(summary.visual_review_status || 'unknown')}</span>
             </div>
             ${compact ? '' : `
@@ -4106,6 +4112,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                     </div>
                 ` : ''}
                 <p>${escapeHtml(summary.next_action || '')}</p>
+                ${summary.prompt_quality_summary ? `<small>提示词质量：${escapeHtml(summary.prompt_quality_summary)}</small>` : ''}
                 <small>可下载：${escapeHtml(files.length ? files.join('、') : '暂无')}</small>
                 <small>缺失项：${escapeHtml(missing.length ? missing.join('、') : '无')}</small>
             `}
@@ -4122,6 +4129,13 @@ function renderComicV2HistoryTrace(trace) {
     if (!trace || !trace.story_id) return '';
     const visual = trace.visual_review || {};
     const audit = trace.delivery_audit || {};
+    const quality = trace.prompt_quality || {};
+    const promptQualityLabel = {
+        ready: '通过',
+        needs_review: '需复核',
+        waiting: '待生成',
+    }[quality.status] || quality.status || '未知';
+    const promptIssues = Array.isArray(quality.issues) ? quality.issues : [];
     return `
         <h4>制片追溯</h4>
         <ul>
@@ -4129,10 +4143,32 @@ function renderComicV2HistoryTrace(trace) {
             <li><strong>风格版本</strong> · ${escapeHtml(trace.style_id || '')} / v${escapeHtml(trace.style_version || '')}</li>
             <li><strong>资产版本</strong> · manifest v${escapeHtml(trace.manifest_version || '')}</li>
             <li><strong>提示词</strong> · 资产 ${escapeHtml(trace.asset_prompt_count || 0)} 条，镜头 ${escapeHtml(trace.shot_prompt_count || 0)} 条</li>
+            <li><strong>提示词质量门禁</strong> · ${escapeHtml(promptQualityLabel)}，问题 ${escapeHtml(quality.issue_count || 0)} 项</li>
             <li><strong>视觉质检</strong> · 图片 ${escapeHtml(visual.record_count || 0)} 张，失败 ${escapeHtml(visual.failure_count || 0)} 项</li>
             <li><strong>交付审计</strong> · 资产 ${escapeHtml(audit.asset_count || 0)} 个，镜头 ${escapeHtml(audit.shot_count || 0)} 个，${audit.handoff_ready ? '可交付' : '需复查'}</li>
             <li><strong>引用清单</strong> · ${trace.handoff_manifest_uri ? `<a href="${escapeHtml(trace.handoff_manifest_uri)}" target="_blank">打开 JSON</a>` : '未生成'}</li>
         </ul>
+        ${quality.summary ? `
+            <div class="v2-prompt-quality history-prompt-quality ${escapeHtml(quality.status || '')}">
+                <div class="v2-prompt-quality-head">
+                    <strong>历史提示词门禁</strong>
+                    <span>${escapeHtml(promptQualityLabel)}</span>
+                </div>
+                <p>${escapeHtml(quality.summary)}</p>
+                <div class="v2-prompt-quality-grid">
+                    <span>干净资产提示词 ${escapeHtml(quality.clean_asset_prompt_count || 0)} / ${escapeHtml(quality.asset_prompt_count || 0)}</span>
+                    <span>导演镜头提示词 ${escapeHtml(quality.director_prompt_count || 0)} / ${escapeHtml(quality.shot_prompt_count || 0)}</span>
+                    <span>问题 ${escapeHtml(quality.issue_count || 0)}</span>
+                </div>
+                ${promptIssues.length ? `
+                    <ul class="v2-prompt-quality-issues">
+                        ${promptIssues.slice(0, 4).map(issue => `
+                            <li>${escapeHtml(issue.id || issue.scope || '提示词')}：${escapeHtml(issue.message || '')}</li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
+            </div>
+        ` : ''}
         ${renderComicV2HistoryShotPackages(trace.shots)}
         ${renderComicV2LineageTimeline(trace.production_lineage)}
     `;
