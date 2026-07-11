@@ -77,6 +77,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertGreater(len(response.content), 20)
 
+    def test_favicon_request_does_not_create_browser_console_noise(self):
+        client = TestClient(app)
+        response = client.get("/favicon.ico")
+
+        self.assertEqual(response.status_code, 204)
+
 
 
     def test_comic_demo_delivery_generation_uses_cross_process_lock(self):

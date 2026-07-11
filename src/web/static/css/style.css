@@ -501,6 +501,30 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     text-decoration: none;
 }
 
+.public-showcase-actions a.ghost,
+.public-workflow-grid a,
+.demo-artifact-grid a.ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(88, 166, 255, 0.28);
+    background: rgba(88, 166, 255, 0.08);
+    color: #8cc8ff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.public-showcase-actions a.ghost:hover,
+.public-workflow-grid a:hover,
+.demo-artifact-grid a.ghost:hover {
+    border-color: rgba(88, 166, 255, 0.52);
+    background: rgba(88, 166, 255, 0.14);
+}
+
 .public-audience-grid,
 .public-demo-grid,
 .public-workflow-grid,
@@ -552,7 +576,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     margin-bottom: 8px;
     padding: 3px 8px;
     border-radius: 999px;
-    color: var(--accent);
+    color: #8cc8ff;
     background: rgba(88, 166, 255, 0.08);
     border: 1px solid rgba(88, 166, 255, 0.18);
     font-size: 12px;
@@ -561,7 +585,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .public-workflow-grid a {
     display: inline-flex;
     margin-top: 10px;
-    color: var(--accent);
+    color: #8cc8ff;
     text-decoration: none;
     font-size: 13px;
 }

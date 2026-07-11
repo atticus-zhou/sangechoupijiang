@@ -119,6 +119,12 @@ AGENT_WORKFLOW_TIMEOUT_SECONDS = 420
 APP_BASE_DIR = Path(__file__).parent.parent.parent
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_api():
+    """Avoid noisy browser 404s in local demos when no favicon asset is bundled."""
+    return Response(status_code=204)
+
+
 @contextmanager
 def _demo_delivery_lock(lock_path: Path):
     """Serialize deterministic demo delivery writes across local verifier processes."""
