@@ -19,6 +19,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_first_run_readiness.py", "--format", "json"],
     },
     {
+        "id": "productization_status",
+        "title": "Productization objective coverage",
+        "command": ["scripts/verify_productization_status.py", "--format", "json"],
+    },
+    {
         "id": "public_demo",
         "title": "Public no-key demo",
         "command": ["scripts/verify_public_demo_mode.py", "--format", "json"],
@@ -117,6 +122,12 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             return (
                 f"mode={parsed.get('mode')}; "
                 f"paths={','.join(parsed.get('recommended_order') or [])}"
+            )
+        if check_id == "productization_status":
+            return (
+                f"requirements={len(parsed.get('requirements') or [])}; "
+                f"doc={parsed.get('document')}; "
+                f"readme_linked={parsed.get('readme_links_status')}"
             )
         return str(parsed.get("summary") or parsed.get("status") or "parsed json")
     text = (stdout or stderr).strip()

@@ -46,11 +46,12 @@ python scripts/doctor.py
 第一次从 GitHub 下载项目时，也建议先跑复现清单。它会把公开演示、本地真实使用和开发者扩展三条路径分开说明：
 
 ```powershell
+python scripts/verify_productization_status.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_first_run_readiness.py --format markdown
 ```
 
-它会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
+`verify_productization_status.py` 会把公开展示、无 Key 样例、本地复现、AI 漫剧制片交付、研究办公室边界、办公室扩展治理和安全扫描逐条映射到证据；`verify_release_readiness.py` 会把这些 no-key 门禁串起来；`verify_first_run_readiness.py` 会检查第一次运行路径。它们会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
 
 同时，`doctor.py` 会展示 **Office launch gates（办公室上线门禁）**：无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追踪、schema gate、README 文档和密钥安全扫描是否已达标，并告诉你每个办公室距离公开展示、可复现和真实使用还差哪一步。
 
@@ -284,7 +285,7 @@ python scripts/check_no_secrets.py
 
 如果要公开部署，不要把自己的 API Key 暴露给访问者。当前推荐方式是公开页面只开放固定样例演示模式；真实生产继续走本地模式，由使用者填写自己的 Key 后再调用对应供应商模型。
 
-更完整的公开展示、本地真实模式和未来 SaaS 模式边界见 [docs/DEPLOYMENT_MODES.md](docs/DEPLOYMENT_MODES.md)。
+更完整的公开展示、本地真实模式和未来 SaaS 模式边界见 [docs/DEPLOYMENT_MODES.md](docs/DEPLOYMENT_MODES.md)。当前产品化目标、证据表和仍未宣称完成的事项见 [docs/PRODUCTIZATION_STATUS.md](docs/PRODUCTIZATION_STATUS.md)。
 
 ## 当前限制
 
