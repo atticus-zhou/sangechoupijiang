@@ -76,11 +76,40 @@ def _public_demo_path() -> dict[str, Any]:
             f"Run `{DOWNSTREAM_HANDOFF_COMMAND}` to verify the AI comic sample can be handed to downstream video production.",
             f"Start the local app with `{SERVER_COMMAND}` if you want to browse the UI.",
             "Open the office hall and choose the no-key demo entry for AI comic production or research.",
+            "Download the sample deliverables and use the reading guide to check what each file proves.",
+        ],
+        "deliverable_reading_guide": [
+            {
+                "file": "AI 漫剧 Word 制片画布",
+                "uri": "/api/demo/comic-production/files/word_canvas.docx",
+                "look_for": "故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单是否在同一份画布里串起来。",
+                "proves": "公开演示不是聊天文本截图，而是可下载、可复核、可继续交给下游工具的制片包。",
+            },
+            {
+                "file": "AI 漫剧 handoff manifest",
+                "uri": "/api/demo/comic-production/files/handoff_manifest.json",
+                "look_for": "story_version、style_version、asset_id、image_id、shot_id、首帧参考和 production_lineage。",
+                "proves": "资产、图片、镜头、提示词和 Word 画布之间有引用链路，后续可以追溯和恢复。",
+            },
+            {
+                "file": "研究办公室阶段报告",
+                "uri": "/api/demo/research/files/report.md",
+                "look_for": "报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现。",
+                "proves": "研究办公室不会伪装成全自动抓取平台；它会把已确认资料和待补证据分开交付。",
+            },
+            {
+                "file": "研究办公室证据清单",
+                "uri": "/api/demo/research/files/evidence_manifest.json",
+                "look_for": "来源、数据、截图计划、缺口和后续人工确认项。",
+                "proves": "调研样例保留证据边界，适合演示 staged delivery 而不是虚假完整自动化。",
+            },
         ],
         "evidence": [
             "/api/demo/public-showcase",
             "/api/demo/comic-production/files/word_canvas.docx",
+            "/api/demo/comic-production/files/handoff_manifest.json",
             "/api/demo/research/files/report.md",
+            "/api/demo/research/files/evidence_manifest.json",
             "docs/COMIC_DOWNSTREAM_HANDOFF.md",
         ],
     }
@@ -167,6 +196,13 @@ def format_markdown(payload: dict[str, Any]) -> str:
         lines.append("- Evidence:")
         for evidence in item.get("evidence", []):
             lines.append(f"  - `{evidence}`")
+        if item.get("deliverable_reading_guide"):
+            lines.append("- Deliverable reading guide:")
+            for guide in item.get("deliverable_reading_guide", []):
+                lines.append(
+                    f"  - `{guide.get('file')}` ({guide.get('uri')}): "
+                    f"{guide.get('look_for')} 证明：{guide.get('proves')}"
+                )
         if item.get("blocking_reasons"):
             lines.append("- Blocking reasons:")
             for reason in item.get("blocking_reasons", []):

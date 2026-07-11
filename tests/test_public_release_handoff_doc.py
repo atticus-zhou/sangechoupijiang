@@ -15,6 +15,10 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("不要公开 API Key", text)
         self.assertIn("不宣称 AI 漫剧制片办公室会直接生成成片", text)
         self.assertIn("面试官或访客建议路径", text)
+        self.assertIn("样例交付物阅读检查", text)
+        self.assertIn("AI 漫剧 Word 制片画布", text)
+        self.assertIn("handoff manifest", text)
+        self.assertIn("研究办公室证据清单", text)
         self.assertIn("新开发者本地复现路径", text)
 
     def test_public_release_handoff_doc_lists_required_release_gates(self):

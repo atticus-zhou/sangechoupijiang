@@ -89,6 +89,17 @@ http://127.0.0.1:8080/
 
 完整制片配置适合真实交付：文本模型、视觉理解模型和图片生成模型都通过测试后，再开始生成 AI 漫剧制片包。
 
+### 样例交付物怎么看
+
+无 Key 演示不是让访客只看页面好不好看，而是让他们下载样例交付物后验证产品是否真的能形成可交接材料：
+
+- AI 漫剧 Word 制片画布：看故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单是否在同一份画布里串起来。
+- AI 漫剧 `handoff_manifest.json`：看 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考和 `production_lineage` 是否能说明每个资产从哪里来、交给谁用。
+- 研究办公室阶段报告：看报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现，避免把未确认信息伪装成完整调研。
+- 研究办公室证据清单：看来源、数据、截图计划、缺口和后续人工确认项是否可追踪。
+
+同一套阅读指南也会出现在 `python scripts/verify_first_run_readiness.py --format markdown` 的 `Deliverable reading guide` 中，方便新开发者和面试官按文件逐项检查。
+
 ## 模型配置
 
 复制 `config.example.yaml` 为 `config.yaml` 后，再填写自己的模型服务。推荐用环境变量保存密钥：

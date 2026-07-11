@@ -30,6 +30,17 @@
 4. 再看研究办公室固定样例，确认报告、来源、截图计划和证据缺口是分开呈现的。
 5. 最后查看 README 和这份交接说明，确认公开演示不消耗作者 API Key，也没有承诺未完成的 SaaS 能力。
 
+## 样例交付物阅读检查
+
+公开演示交付物应该按文件检查，而不是只看页面截图：
+
+- AI 漫剧 Word 制片画布：确认故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单处在同一套制片包里。
+- AI 漫剧 handoff manifest：确认 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考和 `production_lineage` 能追踪每个素材和镜头的来源。
+- 研究办公室阶段报告：确认结论、来源、数据表、截图计划和证据缺口分开呈现。
+- 研究办公室证据清单：确认来源、数据、截图计划、缺口和人工确认项没有被伪装成已完成采集。
+
+这份检查也会由 `python scripts/verify_first_run_readiness.py --format markdown` 输出，作为第一次从 GitHub 下载项目后的交付物阅读指南。
+
 ## 新开发者本地复现路径
 
 第一次下载仓库后，先不要填模型 Key，先运行：
@@ -67,4 +78,3 @@ python scripts/check_no_secrets.py
 - [产品化状态表](PRODUCTIZATION_STATUS.md)
 - [模型配置说明](MODEL_CONFIGURATION.md)
 - [AI 漫剧下游交接说明](COMIC_DOWNSTREAM_HANDOFF.md)
-
