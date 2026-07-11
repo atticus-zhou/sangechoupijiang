@@ -5326,24 +5326,36 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "label": "重新生成 Word 制片画布",
             "method": "POST",
             "path": f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
+            "workspace_id": workspace_id,
+            "office_id": enriched.get("office_id") or "",
+            "focus": "delivery",
         })
     if workspace_id and "视觉质检问题" in missing_items:
         recovery_actions.append({
             "label": "重新生成并质检基础资产图",
             "method": "POST",
             "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+            "workspace_id": workspace_id,
+            "office_id": enriched.get("office_id") or "",
+            "focus": "images",
         })
     if workspace_id and "提示词质量门禁" in missing_items:
         recovery_actions.append({
             "label": "重新生成提示词",
             "method": "POST",
             "path": f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan",
+            "workspace_id": workspace_id,
+            "office_id": enriched.get("office_id") or "",
+            "focus": "prompts",
         })
     if workspace_id and status in {"pending", "needs_review"} and not recovery_actions:
         recovery_actions.append({
             "label": "回到项目继续处理",
             "method": "GET",
             "path": f"/api/workspaces/{workspace_id}",
+            "workspace_id": workspace_id,
+            "office_id": enriched.get("office_id") or "",
+            "focus": "workspace",
         })
 
     return {

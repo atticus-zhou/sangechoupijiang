@@ -499,6 +499,10 @@ async function retryTaskRecoveryAction(encodedAction) {
         else if (method === 'PUT') await API.put(action.path, {});
         else await API.post(action.path, {});
         toast(action.label ? `${action.label} 已提交` : '恢复动作已提交', 'success');
+        if (action.office_id === 'comic_production' && action.workspace_id) {
+            await recoverComicWorkspaceFromHistory(action);
+            return;
+        }
         if (currentResearchWorkspace) await loadResearchTimeline(currentResearchWorkspace);
         if (currentComicWorkspace) {
             await loadComicTimeline(currentComicWorkspace);
@@ -508,6 +512,24 @@ async function retryTaskRecoveryAction(encodedAction) {
     } catch (e) {
         toast('恢复动作失败：' + formatApiError(e), 'error');
     }
+}
+
+async function recoverComicWorkspaceFromHistory(action) {
+    navigate('comic_production');
+    await loadComicWorkspaces();
+    await selectComicWorkspace(action.workspace_id);
+    await refreshComicV2Panel(action.label ? `${action.label} 已提交，已回到对应项目。` : '已回到对应项目。');
+    focusComicRecoveryTarget(action.focus || 'workspace');
+}
+
+function focusComicRecoveryTarget(focus) {
+    const targetId = focus === 'prompts'
+        ? 'comic-package-board'
+        : (focus === 'images'
+            ? 'comic-artifacts'
+            : (focus === 'delivery' ? 'comic-package-board' : 'comic-workspaces'));
+    const target = document.getElementById(targetId) || document.getElementById('comic-package-board');
+    if (target?.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function phaseLabel(phase) {

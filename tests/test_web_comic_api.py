@@ -969,6 +969,9 @@ class WebComicApiTests(unittest.TestCase):
                     "label": "重新生成 Word 制片画布",
                     "method": "POST",
                     "path": f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
+                    "workspace_id": workspace_id,
+                    "office_id": "comic_production",
+                    "focus": "delivery",
                 },
                 actions,
             )
@@ -977,6 +980,9 @@ class WebComicApiTests(unittest.TestCase):
                     "label": "重新生成并质检基础资产图",
                     "method": "POST",
                     "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+                    "workspace_id": workspace_id,
+                    "office_id": "comic_production",
+                    "focus": "images",
                 },
                 actions,
             )
@@ -985,6 +991,9 @@ class WebComicApiTests(unittest.TestCase):
                     "label": "重新生成提示词",
                     "method": "POST",
                     "path": f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan",
+                    "workspace_id": workspace_id,
+                    "office_id": "comic_production",
+                    "focus": "prompts",
                 },
                 actions,
             )

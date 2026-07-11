@@ -138,6 +138,22 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".history-delivery-actions", css)
         self.assertIn(".history-artifact-links", css)
 
+    def test_history_recovery_returns_to_comic_workspace(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        retry_fn = js[js.index("async function retryTaskRecoveryAction"):js.index("function phaseLabel")]
+        recovery_fn = js[js.index("async function recoverComicWorkspaceFromHistory"):js.index("function focusComicRecoveryTarget")]
+        focus_fn = js[js.index("function focusComicRecoveryTarget"):js.index("function phaseLabel")]
+
+        self.assertIn("action.office_id === 'comic_production' && action.workspace_id", retry_fn)
+        self.assertIn("await recoverComicWorkspaceFromHistory(action)", retry_fn)
+        self.assertIn("navigate('comic_production')", recovery_fn)
+        self.assertIn("await selectComicWorkspace(action.workspace_id)", recovery_fn)
+        self.assertIn("refreshComicV2Panel", recovery_fn)
+        self.assertIn("focusComicRecoveryTarget(action.focus", recovery_fn)
+        self.assertIn("comic-package-board", focus_fn)
+        self.assertIn("comic-artifacts", focus_fn)
+        self.assertIn("comic-workspaces", focus_fn)
+
     def test_office_hall_renders_system_preflight(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
         js = APP_JS.read_text(encoding="utf-8")
