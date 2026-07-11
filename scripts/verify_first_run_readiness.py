@@ -17,6 +17,7 @@ from src.product_readiness import audit_comic_production_readiness
 
 
 PUBLIC_DEMO_COMMAND = "python scripts/verify_public_demo_mode.py --format markdown"
+DOWNSTREAM_HANDOFF_COMMAND = "python scripts/verify_comic_v2_downstream_handoff.py --format markdown"
 LOCAL_DOCTOR_COMMAND = "python scripts/doctor.py --format markdown"
 PRODUCT_READINESS_COMMAND = "python scripts/verify_product_readiness.py --format markdown"
 OFFICE_ISOLATION_COMMAND = "python scripts/verify_office_isolation.py --format markdown"
@@ -46,6 +47,7 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
         "recommended_order": [item["id"] for item in paths],
         "commands": {
             "public_demo": PUBLIC_DEMO_COMMAND,
+            "comic_downstream_handoff": DOWNSTREAM_HANDOFF_COMMAND,
             "local_doctor": LOCAL_DOCTOR_COMMAND,
             "product_readiness": PRODUCT_READINESS_COMMAND,
             "office_isolation": OFFICE_ISOLATION_COMMAND,
@@ -71,6 +73,7 @@ def _public_demo_path() -> dict[str, Any]:
         "next_action": f"Run `{PUBLIC_DEMO_COMMAND}` or open the public showcase entry in the web app.",
         "steps": [
             f"Run `{PUBLIC_DEMO_COMMAND}` to verify demo endpoints and downloads.",
+            f"Run `{DOWNSTREAM_HANDOFF_COMMAND}` to verify the AI comic sample can be handed to downstream video production.",
             f"Start the local app with `{SERVER_COMMAND}` if you want to browse the UI.",
             "Open the office hall and choose the no-key demo entry for AI comic production or research.",
         ],
@@ -78,6 +81,7 @@ def _public_demo_path() -> dict[str, Any]:
             "/api/demo/public-showcase",
             "/api/demo/comic-production/files/word_canvas.docx",
             "/api/demo/research/files/report.md",
+            "docs/COMIC_DOWNSTREAM_HANDOFF.md",
         ],
     }
 

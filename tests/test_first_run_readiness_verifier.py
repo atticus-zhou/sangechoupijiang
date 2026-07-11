@@ -35,6 +35,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertEqual(paths["public_demo"]["status"], "ready")
         self.assertFalse(paths["public_demo"]["requires_api_key"])
         self.assertIn("/api/demo/public-showcase", "\n".join(paths["public_demo"]["evidence"]))
+        self.assertIn("verify_comic_v2_downstream_handoff.py", "\n".join(paths["public_demo"]["steps"]))
+        self.assertIn("docs/COMIC_DOWNSTREAM_HANDOFF.md", "\n".join(paths["public_demo"]["evidence"]))
         self.assertTrue(paths["local_real_use"]["requires_api_key"])
         self.assertIn("config.yaml", "\n".join(paths["local_real_use"]["steps"]))
         self.assertIn("verify_office_isolation.py", "\n".join(paths["developer_extension"]["steps"]))
@@ -59,6 +61,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("developer_extension", result.stdout)
         self.assertIn("python run.py --port 8080", result.stdout)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", result.stdout)
+        self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", result.stdout)
         self.assertIn("python scripts/verify_office_isolation.py --format markdown", result.stdout)
 
 
