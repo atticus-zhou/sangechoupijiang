@@ -1,0 +1,230 @@
+"""Verify the comic V2 package from a downstream video-production perspective."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.verify_comic_v2_delivery import verify_delivery
+
+
+DEFAULT_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "comic_v2_sample.json"
+DEFAULT_OUTPUT = REPO_ROOT / "output" / "comic_v2_downstream_handoff"
+
+CHARACTER_REQUIRED_IMAGES = {"three_view", "expression_sheet"}
+PROP_REQUIRED_IMAGES = {"turnaround"}
+SCENE_REQUIRED_IMAGES = {"wide", "top_down"}
+
+
+def verify_downstream_handoff(
+    fixture: Path = DEFAULT_FIXTURE,
+    output_dir: Path = DEFAULT_OUTPUT,
+) -> dict[str, Any]:
+    delivery = verify_delivery(fixture, output_dir)
+    manifest_path = Path(str(delivery["handoff_manifest_path"]))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    errors: list[str] = []
+    story = manifest.get("story") or {}
+    style = manifest.get("style") or {}
+    manifest_meta = manifest.get("manifest") or {}
+    word_canvas = manifest.get("word_canvas") or {}
+    assets = manifest.get("assets") or []
+    shots = manifest.get("shots") or []
+    images = manifest.get("images") or []
+
+    _require_fields(errors, "story", story, ["story_id", "story_version", "title", "source_hash"])
+    _require_fields(errors, "style", style, ["style_id", "style_version", "medium", "era", "aspect_ratio"])
+    _require_fields(errors, "manifest", manifest_meta, ["manifest_id", "manifest_version", "manifest_hash"])
+    _require_fields(errors, "word_canvas", word_canvas, ["filename", "relative_path"])
+
+    image_ids = {item.get("image_id") for item in images if item.get("image_id")}
+    asset_ids = {item.get("asset_id") for item in assets if item.get("asset_id")}
+    asset_failures = _asset_handoff_failures(assets, image_ids)
+    shot_failures = _shot_handoff_failures(shots, asset_ids, image_ids)
+    lineage_failures = _lineage_failures(manifest.get("production_lineage") or [])
+
+    errors.extend(asset_failures)
+    errors.extend(shot_failures)
+    errors.extend(lineage_failures)
+
+    result = {
+        "status": "passed" if not errors else "failed",
+        "delivery_status": "passed" if delivery.get("handoff_ready") else "failed",
+        "word_canvas": delivery.get("path"),
+        "handoff_manifest": str(manifest_path),
+        "story_id": story.get("story_id"),
+        "story_version": story.get("story_version"),
+        "style_id": style.get("style_id"),
+        "style_version": style.get("style_version"),
+        "asset_count": len(assets),
+        "image_count": len(images),
+        "shot_count": len(shots),
+        "character_identity_sets": _count_assets_with_images(assets, CHARACTER_REQUIRED_IMAGES, "character"),
+        "prop_reference_sets": _count_assets_with_images(assets, PROP_REQUIRED_IMAGES, "prop"),
+        "scene_spatial_sets": _count_assets_with_images(assets, SCENE_REQUIRED_IMAGES, "scene"),
+        "shot_video_packages": len(shots) - len(shot_failures),
+        "lineage_stage_count": len(manifest.get("production_lineage") or []),
+        "errors": errors,
+        "downstream_handoff_ready": not errors and bool(delivery.get("handoff_ready")),
+    }
+    if not result["downstream_handoff_ready"]:
+        result["status"] = "failed"
+    return result
+
+
+def _require_fields(errors: list[str], label: str, payload: dict[str, Any], fields: list[str]) -> None:
+    for field in fields:
+        if payload.get(field) in (None, "", []):
+            errors.append(f"{label}.{field} missing")
+
+
+def _asset_handoff_failures(assets: list[dict[str, Any]], image_ids: set[str]) -> list[str]:
+    failures: list[str] = []
+    for asset in assets:
+        asset_id = asset.get("asset_id") or "<missing_asset_id>"
+        image_by_kind = asset.get("image_ids_by_kind") or {}
+        required = _required_images_for_asset(asset)
+        if required and not required.issubset(set(image_by_kind)):
+            failures.append(f"{asset_id}: missing required image kinds {sorted(required - set(image_by_kind))}")
+        baseline = asset.get("identity_baseline_image_id")
+        if not baseline or baseline not in image_ids:
+            failures.append(f"{asset_id}: missing approved identity baseline image")
+        if not asset.get("visual_locks") or not asset.get("allowed_changes") or not asset.get("story_purpose"):
+            failures.append(f"{asset_id}: missing identity card fields")
+    return failures
+
+
+def _required_images_for_asset(asset: dict[str, Any]) -> set[str]:
+    asset_type = asset.get("asset_type")
+    if asset_type == "character":
+        return CHARACTER_REQUIRED_IMAGES
+    if asset_type == "prop":
+        return PROP_REQUIRED_IMAGES
+    if asset_type == "scene":
+        return SCENE_REQUIRED_IMAGES
+    return set()
+
+
+def _shot_handoff_failures(
+    shots: list[dict[str, Any]],
+    asset_ids: set[str],
+    image_ids: set[str],
+) -> list[str]:
+    failures: list[str] = []
+    for shot in shots:
+        shot_id = shot.get("shot_id") or "<missing_shot_id>"
+        refs = shot.get("reference_asset_ids") or []
+        if not refs:
+            failures.append(f"{shot_id}: missing reference assets")
+        missing_assets = [asset_id for asset_id in refs if asset_id not in asset_ids]
+        if missing_assets:
+            failures.append(f"{shot_id}: references unknown assets {missing_assets}")
+        first_frame = shot.get("first_frame_reference_image") or {}
+        if first_frame.get("image_id") not in image_ids:
+            failures.append(f"{shot_id}: first-frame reference image is not in approved images")
+        if not shot.get("video_prompt_block") or not shot.get("negative_prompt_block"):
+            failures.append(f"{shot_id}: missing copyable video prompt blocks")
+        if len(shot.get("execution_steps") or []) < 3:
+            failures.append(f"{shot_id}: missing downstream execution steps")
+        if len(shot.get("acceptance_criteria") or []) < 3:
+            failures.append(f"{shot_id}: missing acceptance criteria")
+        if not shot.get("retry_strategy"):
+            failures.append(f"{shot_id}: missing retry strategy")
+    return failures
+
+
+def _lineage_failures(lineage: list[dict[str, Any]]) -> list[str]:
+    failures: list[str] = []
+    required_stages = {
+        "story_contract",
+        "visual_bible",
+        "asset_manifest",
+        "prompt_package",
+        "image_production",
+        "visual_review",
+        "delivery",
+    }
+    stages = {item.get("stage") for item in lineage}
+    missing = sorted(required_stages - stages)
+    if missing:
+        failures.append("production_lineage missing stages: " + ", ".join(missing))
+    for item in lineage:
+        if not item.get("department") or not item.get("agent") or not item.get("handoff_to"):
+            failures.append(f"production_lineage.{item.get('stage', '<unknown>')}: missing owner or handoff")
+    return failures
+
+
+def _count_assets_with_images(
+    assets: list[dict[str, Any]],
+    required: set[str],
+    asset_type: str,
+) -> int:
+    count = 0
+    for asset in assets:
+        if asset.get("asset_type") != asset_type:
+            continue
+        if required.issubset(set((asset.get("image_ids_by_kind") or {}).keys())):
+            count += 1
+    return count
+
+
+def format_markdown(result: dict[str, Any]) -> str:
+    lines = [
+        "# Comic V2 Downstream Handoff Audit",
+        "",
+        f"Status: `{result.get('status')}`",
+        f"Downstream handoff ready: `{result.get('downstream_handoff_ready')}`",
+        f"Word canvas: `{result.get('word_canvas')}`",
+        f"Handoff manifest: `{result.get('handoff_manifest')}`",
+        "",
+        "## Package Shape",
+        "",
+        f"- Story: `{result.get('story_id')}` v{result.get('story_version')}",
+        f"- Style: `{result.get('style_id')}` v{result.get('style_version')}",
+        f"- Assets: {result.get('asset_count')}",
+        f"- Images: {result.get('image_count')}",
+        f"- Shots: {result.get('shot_count')}",
+        f"- Lineage stages: {result.get('lineage_stage_count')}",
+        "",
+        "## Downstream Readiness",
+        "",
+        f"- Character identity sets: {result.get('character_identity_sets')}",
+        f"- Prop reference sets: {result.get('prop_reference_sets')}",
+        f"- Scene spatial sets: {result.get('scene_spatial_sets')}",
+        f"- Shot video packages: {result.get('shot_video_packages')}",
+    ]
+    if result.get("errors"):
+        lines.extend(["", "## Issues", ""])
+        lines.extend(f"- {item}" for item in result["errors"])
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fixture", type=Path, default=DEFAULT_FIXTURE)
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--format", choices=["json", "markdown", "text"], default="text")
+    args = parser.parse_args()
+
+    result = verify_downstream_handoff(args.fixture, args.output_dir)
+    if args.format == "json":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif args.format == "markdown":
+        print(format_markdown(result))
+    else:
+        print(f"Comic V2 downstream handoff: {result['status']}")
+        if result.get("errors"):
+            print("\n".join(result["errors"]))
+    return 0 if result["status"] == "passed" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

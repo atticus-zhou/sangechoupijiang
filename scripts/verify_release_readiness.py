@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -39,6 +40,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_v2_delivery.py", "--format", "json"],
     },
     {
+        "id": "comic_downstream_handoff",
+        "title": "AI comic downstream handoff",
+        "command": ["scripts/verify_comic_v2_downstream_handoff.py", "--format", "json"],
+    },
+    {
         "id": "research_readiness",
         "title": "Research office staged delivery",
         "command": ["scripts/verify_research_office_readiness.py", "--format", "json"],
@@ -69,6 +75,7 @@ def _run_check(check: dict[str, Any]) -> dict[str, Any]:
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
     )
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
@@ -106,6 +113,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"assets={parsed.get('asset_count')}; "
                 f"shots={parsed.get('shot_count')}; "
                 f"embedded_images={parsed.get('embedded_images')}"
+            )
+        if check_id == "comic_downstream_handoff":
+            return (
+                f"downstream_handoff_ready={parsed.get('downstream_handoff_ready')}; "
+                f"assets={parsed.get('asset_count')}; "
+                f"images={parsed.get('image_count')}; "
+                f"shots={parsed.get('shot_count')}"
             )
         if check_id == "research_readiness":
             package = parsed.get("artifact_package") or {}

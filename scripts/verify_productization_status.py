@@ -150,6 +150,22 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "tests/test_model_configuration_guidance.py",
         ],
     },
+    {
+        "id": "P10",
+        "title": "Downstream comic handoff readiness",
+        "markers": [
+            "下游视频平台",
+            "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
+            "docs/COMIC_DOWNSTREAM_HANDOFF.md",
+            "人物三视图",
+            "镜头视频包",
+        ],
+        "files": [
+            "docs/COMIC_DOWNSTREAM_HANDOFF.md",
+            "scripts/verify_comic_v2_downstream_handoff.py",
+            "tests/test_comic_v2_downstream_handoff_verifier.py",
+        ],
+    },
 ]
 
 

@@ -20,7 +20,7 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         module = self._module()
         payload = module.verify_productization_status()
         self.assertEqual(payload["status"], "passed", payload.get("errors"))
-        self.assertEqual(len(payload["requirements"]), 9)
+        self.assertEqual(len(payload["requirements"]), 10)
         self.assertTrue(payload["release_gate_includes_status"])
         self.assertTrue(payload["readme_links_status"])
 
@@ -36,6 +36,7 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertIn("Public portfolio demo boundary", result.stdout)
         self.assertIn("AI comic production handoff", result.stdout)
         self.assertIn("Model configuration guidance", result.stdout)
+        self.assertIn("Downstream comic handoff readiness", result.stdout)
 
 
 if __name__ == "__main__":

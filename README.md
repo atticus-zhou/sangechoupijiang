@@ -196,6 +196,14 @@ python scripts/verify_comic_v2_delivery.py --format markdown
 
 这个脚本验证 Word 制片画布的结构、资产 ID、镜头 ID、图片嵌入和交付审计。
 
+如果要站在下游视频平台或剪辑流程的角度检查制片包是否能接手，运行：
+
+```powershell
+python scripts/verify_comic_v2_downstream_handoff.py --format markdown
+```
+
+这个脚本会检查人物三视图、表情表、道具参考图、场景广角/俯视图、镜头视频包、首帧参考图、验收标准和失败重试策略是否齐全。对应说明见 `docs/COMIC_DOWNSTREAM_HANDOFF.md`。
+
 还可以运行完整用户式 V2 流程验证：
 
 ```powershell
