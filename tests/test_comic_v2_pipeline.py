@@ -324,6 +324,8 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertIn(quality["status"], {"ready", "needs_review"})
         self.assertEqual(quality["asset_prompt_count"], 1)
         self.assertIn("summary", quality)
+        self.assertIn("recovery", quality)
+        self.assertIn("department", quality["recovery"])
         self.assertIn("负面提示词单独成段", " ".join(quality["checks"]))
 
     def test_non_production_office_cannot_start_v2(self):
@@ -882,6 +884,34 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(response.json()["stage"], "image_generation")
         self.assertTrue(response.json()["can_generate_images"])
         self.assertEqual(response.json()["prompt_package"]["package_id"], package.package_id)
+
+    @patch("src.web.app.direct_shot_cards", new_callable=AsyncMock)
+    @patch("src.web.app.direct_asset_prompts", new_callable=AsyncMock)
+    @patch("src.web.app.config_manager.get_model_config")
+    def test_prompt_plan_can_recover_after_prompt_quality_failure(self, mock_get_model, mock_assets, mock_shots):
+        state, manifest = self._state_with_approved_assets()
+        package = self._prompt_package(state, manifest)
+        state = ComicProductionV2.attach_prompt_package(state, package)
+        state = state.with_status(
+            image_production={"records": [{"image_id": "old"}]},
+            delivery={"uri": "/old.docx"},
+        )
+        mock_assets.return_value = package
+        mock_shots.return_value = package
+        mock_get_model.return_value = ModelConfig(provider="openai", model="fake", api_key="test")
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace_id}/comic/v2/prompts/plan",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["stage"], "image_generation")
+        self.assertEqual(body["image_production"], {})
+        self.assertEqual(body["delivery"], {})
+        self.assertEqual(body["prompt_package"]["package_id"], package.package_id)
 
     @patch("src.web.app.produce_asset_images", new_callable=AsyncMock)
     @patch("src.web.app.config_manager.get_model_config")

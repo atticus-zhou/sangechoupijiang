@@ -18,6 +18,7 @@ def audit_prompt_package(package: dict[str, Any] | None) -> dict[str, Any]:
     return {
         "status": "ready" if total and not issue_count else ("waiting" if not total else "needs_review"),
         "summary": _summary(total, passed, issue_count),
+        "recovery": _recovery(issue_count),
         "asset_prompt_count": len(prompts),
         "shot_prompt_count": len(shots),
         "clean_asset_prompt_count": len(prompts) - len(asset_issues),
@@ -39,6 +40,26 @@ def _summary(total: int, passed: int, issue_count: int) -> str:
     if issue_count:
         return f"提示词质量需要复核：{passed}/{total} 项通过，{issue_count} 项需要修改。"
     return f"提示词质量已达标：{passed}/{total} 项可交给下游生产。"
+
+
+def _recovery(issue_count: int) -> dict[str, Any]:
+    if issue_count:
+        return {
+            "recoverable": True,
+            "department": "兵部 / 刑部",
+            "impact": "提示词还不适合直接进入生图、视频生成或 Word 交付，继续生产可能导致资产不干净、镜头不连贯或下游无法复用。",
+            "next_action": "回到提示词规划阶段重新生成专属提示词；如果问题来自资产定义，先退回资产拆解补充人物、道具、场景或视觉锁定。",
+            "primary_action": "regenerate_prompts",
+            "secondary_action": "revise_assets",
+        }
+    return {
+        "recoverable": False,
+        "department": "兵部 / 刑部",
+        "impact": "提示词已满足基础交接标准，可以继续生成基础资产图或组装交付。",
+        "next_action": "继续当前生产步骤。",
+        "primary_action": "",
+        "secondary_action": "",
+    }
 
 
 def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -121,4 +142,3 @@ def _shot_prompt_issues(shots: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if "禁止资产身份漂移" not in negative_text or "禁止动作顺序混乱" not in negative_text:
             add("镜头负面提示词必须覆盖资产身份漂移和动作顺序混乱。")
     return issues
-

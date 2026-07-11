@@ -41,6 +41,7 @@ class ComicV2PromptQualityTests(unittest.TestCase):
         self.assertEqual(result["clean_asset_prompt_count"], 3)
         self.assertEqual(result["director_prompt_count"], 1)
         self.assertEqual(result["issue_count"], 0)
+        self.assertFalse(result["recovery"]["recoverable"])
 
     def test_flags_template_or_unreadable_prompt_language(self):
         result = audit_prompt_package({
@@ -59,6 +60,9 @@ class ComicV2PromptQualityTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "needs_review")
         self.assertGreater(result["issue_count"], 0)
+        self.assertTrue(result["recovery"]["recoverable"])
+        self.assertEqual(result["recovery"]["department"], "兵部 / 刑部")
+        self.assertIn("重新生成专属提示词", result["recovery"]["next_action"])
         messages = " ".join(item["message"] for item in result["issues"])
         self.assertIn("不要", messages)
         self.assertIn("导演字段", messages)

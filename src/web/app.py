@@ -1887,7 +1887,14 @@ async def plan_comic_v2_prompts_api(workspace_id: str):
             stage="not_started",
         )
     state = ComicProductionV2.from_dict(raw)
-    if state.stage != "prompt_planning" or state.assets_status != "approved":
+    prompt_recovery_stages = {
+        "prompt_planning",
+        "image_generation",
+        "visual_review",
+        "document_generation",
+        "ready_for_handoff",
+    }
+    if state.stage not in prompt_recovery_stages or state.assets_status != "approved":
         raise _comic_v2_http_error(
             409,
             department="工部",
@@ -1896,6 +1903,19 @@ async def plan_comic_v2_prompts_api(workspace_id: str):
             next_action=state.next_action or "请先完成人物、道具、场景资产拆解审核。",
             stage=state.stage,
             agent=state.current_agent,
+        )
+    if state.stage != "prompt_planning":
+        state = state.with_status(
+            status="active",
+            stage="prompt_planning",
+            current_agent="工部 / 兵部",
+            current_object="逐项资产提示词",
+            blocking_reason="提示词质量门禁要求重新生成提示词，后续图片和交付会重新进入生产。",
+            next_action="重新生成资产提示词和镜头执行卡，再继续生成基础资产图。",
+            can_generate_images=False,
+            shots_status="pending",
+            image_production={},
+            delivery={},
         )
     try:
         bundle = contract_bundle_from_dict(state.contract)

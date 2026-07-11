@@ -613,7 +613,12 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("提示词质量门禁", js)
         self.assertIn("clean_asset_prompt_count", js)
         self.assertIn("director_prompt_count", js)
+        self.assertIn("function renderComicV2PromptQualityRecovery", js)
+        self.assertIn("恢复建议", js)
+        self.assertIn("planComicV2Prompts(this)", js)
+        self.assertIn("focusComicAssetReview()", js)
         self.assertIn(".v2-prompt-quality", css)
+        self.assertIn(".v2-prompt-quality-recovery", css)
 
     def test_v2_stage_board_renders_department_flow(self):
         js = APP_JS.read_text(encoding="utf-8")

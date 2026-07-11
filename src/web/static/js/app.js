@@ -1709,12 +1709,36 @@ function renderComicV2PromptQuality(quality) {
                 <span>问题：${Number(quality.issue_count || 0)}</span>
             </div>
             ${checks.length ? `<div class="v2-prompt-quality-checks">${checks.map(item => `<small>${escapeHtml(item)}</small>`).join('')}</div>` : ''}
+            ${renderComicV2PromptQualityRecovery(quality)}
             ${issueItems.length ? `
                 <div class="v2-prompt-quality-issues">
                     ${issueItems.map(item => `<small>${escapeHtml(item.id || '')}：${escapeHtml(item.message || '')}</small>`).join('')}
                 </div>
             ` : ''}
         </section>
+    `;
+}
+
+function renderComicV2PromptQualityRecovery(quality) {
+    const recovery = quality?.recovery || {};
+    if (!recovery.recoverable) return '';
+    const canRegenerate = currentComicV2Status?.stage === 'image_generation'
+        || currentComicV2Status?.stage === 'prompt_planning'
+        || currentComicV2Status?.stage === 'visual_review'
+        || currentComicV2Status?.stage === 'document_generation'
+        || currentComicV2Status?.stage === 'ready_for_handoff';
+    return `
+        <div class="v2-prompt-quality-recovery">
+            <div>
+                <strong>恢复建议：${escapeHtml(recovery.department || '兵部 / 刑部')}</strong>
+                <span>${escapeHtml(recovery.impact || '提示词质量需要复核。')}</span>
+                <small>下一步：${escapeHtml(recovery.next_action || '重新生成提示词后再继续。')}</small>
+            </div>
+            <div class="v2-prompt-quality-actions">
+                ${canRegenerate ? '<button class="ghost btn-sm" onclick="planComicV2Prompts(this)">重新生成提示词</button>' : ''}
+                <button class="ghost btn-sm" onclick="focusComicAssetReview()">回到资产审核</button>
+            </div>
+        </div>
     `;
 }
 

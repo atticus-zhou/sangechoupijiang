@@ -2908,7 +2908,8 @@ code { font-family: var(--mono); font-size: 13px; }
 }
 .v2-prompt-quality-metrics,
 .v2-prompt-quality-checks,
-.v2-prompt-quality-issues {
+.v2-prompt-quality-issues,
+.v2-prompt-quality-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -2925,6 +2926,35 @@ code { font-family: var(--mono); font-size: 13px; }
     border-radius: var(--r-sm);
     background: rgba(229, 92, 80, 0.1);
     border-color: rgba(229, 92, 80, 0.2);
+}
+.v2-prompt-quality-recovery {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--r-sm);
+    border: 1px solid rgba(229, 92, 80, 0.2);
+    background: rgba(9, 13, 24, 0.38);
+}
+.v2-prompt-quality-recovery div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.v2-prompt-quality-recovery strong {
+    color: var(--text);
+    font-size: 13px;
+}
+.v2-prompt-quality-recovery span,
+.v2-prompt-quality-recovery small {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.v2-prompt-quality-actions {
+    flex-shrink: 0;
+    justify-content: flex-end;
 }
 .v2-shot-prompt-cards {
     display: flex;
