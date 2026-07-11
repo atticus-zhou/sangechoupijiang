@@ -35,6 +35,8 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(result["prop_reference_sets"], 1)
         self.assertEqual(result["scene_spatial_sets"], 1)
         self.assertEqual(result["shot_video_packages"], 2)
+        self.assertEqual(result["clean_asset_prompt_sets"], 7)
+        self.assertEqual(result["director_prompt_sets"], 2)
         self.assertGreaterEqual(result["lineage_stage_count"], 7)
 
     def test_cli_json_exposes_downstream_readiness(self):
@@ -87,6 +89,8 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertIn("Downstream Readiness", completed.stdout)
         self.assertIn("Character identity sets", completed.stdout)
         self.assertIn("Shot video packages", completed.stdout)
+        self.assertIn("Clean asset prompt sets", completed.stdout)
+        self.assertIn("Director prompt sets", completed.stdout)
 
 
 if __name__ == "__main__":
