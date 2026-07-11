@@ -120,6 +120,16 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         errors.append("research demo must not require API key")
     if payload.get("calls_real_models") is not False:
         errors.append("research demo must not call real models")
+    evidence_boundaries = payload.get("evidence_boundaries") or {}
+    covered_in_demo = evidence_boundaries.get("covered_in_demo") or []
+    requires_human_or_account = evidence_boundaries.get("requires_human_or_account") or []
+    public_demo_boundary = str(evidence_boundaries.get("public_demo_boundary") or "")
+    if len(covered_in_demo) < 4:
+        errors.append("research demo must describe which evidence is covered in the fixed sample")
+    if len(requires_human_or_account) < 3:
+        errors.append("research demo must describe account or human-gated evidence")
+    if "不宣称全自动" not in public_demo_boundary:
+        errors.append("research demo must state it does not claim full automation")
 
     downloads = []
     for item in _download_items(payload):
@@ -154,6 +164,9 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         "calls_real_models": bool(payload.get("calls_real_models")),
         "download_count": len(downloads),
         "downloads": downloads,
+        "evidence_boundary_count": len(covered_in_demo),
+        "human_or_account_boundary_count": len(requires_human_or_account),
+        "public_demo_boundary": public_demo_boundary,
     }
 
 
@@ -216,6 +229,9 @@ def format_markdown(payload: dict[str, Any]) -> str:
             f"- Requires API key: {demo.get('requires_api_key')}",
             f"- Calls real models: {demo.get('calls_real_models')}",
             f"- Downloads: {demo.get('download_count')}",
+            f"- Evidence boundaries: {demo.get('evidence_boundary_count')}",
+            f"- Human/account boundaries: {demo.get('human_or_account_boundary_count')}",
+            f"- Public demo boundary: {demo.get('public_demo_boundary')}",
         ]
     )
     for item in demo.get("downloads") or []:

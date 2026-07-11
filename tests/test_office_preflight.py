@@ -243,6 +243,9 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertTrue(payload["quality_gates"])
         self.assertGreaterEqual(len(payload["viewer_path"]), 3)
         self.assertGreaterEqual(len(payload["proof_points"]), 3)
+        self.assertGreaterEqual(len(payload["evidence_boundaries"]["covered_in_demo"]), 4)
+        self.assertGreaterEqual(len(payload["evidence_boundaries"]["requires_human_or_account"]), 3)
+        self.assertIn("不宣称全自动", payload["evidence_boundaries"]["public_demo_boundary"])
         self.assertIn("先看目标", payload["viewer_path"][0]["title"])
         self.assertIn("证据", " ".join(payload["proof_points"]))
         gate_ids = {item["id"] for item in payload["quality_gates"]}

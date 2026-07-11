@@ -586,6 +586,23 @@ async def get_research_demo_api():
             "报告、来源、数据、竞品和截图计划互相对应。",
             "证据清单可以下载，方便复核哪些结论已验证、哪些待补。",
         ],
+        "evidence_boundaries": {
+            "covered_in_demo": [
+                "阶段调研报告",
+                "来源清单",
+                "数据表",
+                "竞品表",
+                "截图取证计划",
+                "证据 manifest",
+            ],
+            "requires_human_or_account": [
+                "第三方平台登录和账号权限",
+                "飞瓜、抖音、电商后台等受限页面截图",
+                "销量、达人榜、商品榜等需要截图或来源记录才能确认的数据",
+                "老板汇报前对关键截图和表格做人工复核",
+            ],
+            "public_demo_boundary": "公开演示只展示固定样例和证据缺口，不读取账号、不登录第三方平台、不宣称全自动会员级采集。",
+        },
         "objective": plan.get("objective", ""),
         "deliverable": plan.get("deliverable", ""),
         "report_preview": (fixture.get("final_report") or "")[:520],
