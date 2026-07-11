@@ -194,10 +194,12 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertIn("no_key_read_only", gate_ids)
         self.assertIn("downloadable_delivery", gate_ids)
         self.assertIn("reference_chain", gate_ids)
+        self.assertIn("downstream_handoff", gate_ids)
         self.assertTrue(all(item["status"] == "passed" for item in payload["quality_gates"]))
         artifact_uris = {item["type"]: item.get("uri", "") for item in payload["artifacts"]}
         self.assertIn("/api/demo/comic-production/files/", artifact_uris["word_canvas"])
         self.assertIn("/api/demo/comic-production/files/", artifact_uris["handoff_manifest"])
+        self.assertEqual(artifact_uris["downstream_handoff_gate"], "docs/COMIC_DOWNSTREAM_HANDOFF.md")
         self.assertTrue(artifact_uris["word_canvas"].endswith("/word_canvas.docx"))
         self.assertTrue(artifact_uris["handoff_manifest"].endswith("/handoff_manifest.json"))
         get_model_config.assert_not_called()

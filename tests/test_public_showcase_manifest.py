@@ -53,6 +53,10 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertFalse(public_deployment["allows_workspace_writes"])
         self.assertEqual(public_deployment["allowed_route_prefixes"], ["/api/demo"])
         self.assertIn("config.yaml", " ".join(public_deployment["forbidden_public_assets"]))
+        self.assertIn(
+            "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
+            payload["verification_commands"],
+        )
 
     def test_public_showcase_manifest_download_links_are_real(self):
         client = TestClient(app)

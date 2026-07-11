@@ -421,6 +421,7 @@ async def get_comic_production_demo_api():
             "不需要 API Key 就能安全展示完整流程。",
             "Word 制片画布和引用清单可以直接下载。",
             "资产、镜头、提示词和交付物之间保留引用链路。",
+            "下游视频平台接手前所需的人物三视图、场景空间图、镜头视频包和失败重试策略都有独立验证命令覆盖。",
         ],
         "source_story_preview": story[:360],
         "asset_count": len(assets),
@@ -450,6 +451,12 @@ async def get_comic_production_demo_api():
                 "title": "资产引用链路",
                 "status": "passed",
                 "evidence": "样例展示资产、镜头、提示词和交付物之间的引用关系。",
+            },
+            {
+                "id": "downstream_handoff",
+                "title": "下游交接门禁",
+                "status": "passed",
+                "evidence": "verify_comic_v2_downstream_handoff.py 检查人物三视图、道具参考图、场景广角/俯视图、镜头视频包、验收标准和失败重试策略。",
             },
         ],
         "assets": [
@@ -481,6 +488,12 @@ async def get_comic_production_demo_api():
                 "title": "资产与镜头引用清单",
                 "status": "downloadable",
                 "uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            },
+            {
+                "type": "downstream_handoff_gate",
+                "title": "下游交接门禁说明",
+                "status": "documented",
+                "uri": "docs/COMIC_DOWNSTREAM_HANDOFF.md",
             },
             {"type": "prompt_package", "title": "图片与视频提示词包", "status": "available_in_fixture"},
         ],
@@ -797,6 +810,7 @@ async def get_public_showcase_demo_api():
         },
         "verification_commands": [
             "python scripts/verify_public_demo_mode.py --format markdown",
+            "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
             "python scripts/verify_product_readiness.py --format markdown",
             "python scripts/check_no_secrets.py",
         ],
