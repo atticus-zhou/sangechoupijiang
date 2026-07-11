@@ -2853,6 +2853,79 @@ code { font-family: var(--mono); font-size: 13px; }
     margin: 2px 0;
     color: var(--text);
 }
+.v2-prompt-quality {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: var(--r);
+    background: rgba(12, 18, 32, 0.58);
+}
+.v2-prompt-quality.ready {
+    border-color: rgba(63, 185, 80, 0.28);
+    background: rgba(35, 134, 54, 0.08);
+}
+.v2-prompt-quality.needs_review {
+    border-color: rgba(240, 101, 93, 0.28);
+    background: rgba(229, 92, 80, 0.08);
+}
+.v2-prompt-quality-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+.v2-prompt-quality-head div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.v2-prompt-quality-head strong {
+    color: var(--text);
+    font-size: 16px;
+}
+.v2-prompt-quality-head span,
+.v2-prompt-quality-checks small,
+.v2-prompt-quality-issues small {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.v2-prompt-quality-head b {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    color: var(--green);
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid rgba(63, 185, 80, 0.24);
+    font-size: 12px;
+}
+.v2-prompt-quality.needs_review .v2-prompt-quality-head b {
+    color: var(--accent-hover);
+    background: rgba(229, 92, 80, 0.12);
+    border-color: rgba(229, 92, 80, 0.26);
+}
+.v2-prompt-quality-metrics,
+.v2-prompt-quality-checks,
+.v2-prompt-quality-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.v2-prompt-quality-metrics span,
+.v2-prompt-quality-checks small,
+.v2-prompt-quality-issues small {
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(88, 166, 255, 0.08);
+    border: 1px solid rgba(88, 166, 255, 0.16);
+}
+.v2-prompt-quality-issues small {
+    border-radius: var(--r-sm);
+    background: rgba(229, 92, 80, 0.1);
+    border-color: rgba(229, 92, 80, 0.2);
+}
 .v2-shot-prompt-cards {
     display: flex;
     flex-direction: column;

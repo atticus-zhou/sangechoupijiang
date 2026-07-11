@@ -1682,9 +1682,39 @@ function renderComicV2ProductionFlow() {
             ${renderComicV2ReviewGateMap(currentComicV2Status.production_lineage)}
             ${renderComicV2DepartmentFlow(currentComicV2Status.department_flow)}
             ${reviewSummary}
+            ${renderComicV2PromptQuality(currentComicV2Status.prompt_quality)}
             ${renderComicV2ShotPromptCards(currentComicV2Status)}
             ${actions ? `<div class="v2-action-row">${actions}</div>` : ''}
         </div>
+    `;
+}
+
+function renderComicV2PromptQuality(quality) {
+    if (!quality || quality.status === 'waiting') return '';
+    const statusText = quality.status === 'ready' ? '可交接' : '需复核';
+    const issueItems = Array.isArray(quality.issues) ? quality.issues.slice(0, 4) : [];
+    const checks = Array.isArray(quality.checks) ? quality.checks : [];
+    return `
+        <section class="v2-prompt-quality ${escapeHtml(quality.status || 'needs_review')}">
+            <div class="v2-prompt-quality-head">
+                <div>
+                    <strong>提示词质量门禁</strong>
+                    <span>${escapeHtml(quality.summary || '等待提示词质量审计')}</span>
+                </div>
+                <b>${escapeHtml(statusText)}</b>
+            </div>
+            <div class="v2-prompt-quality-metrics">
+                <span>资产提示词：${Number(quality.clean_asset_prompt_count || 0)}/${Number(quality.asset_prompt_count || 0)}</span>
+                <span>镜头提示词：${Number(quality.director_prompt_count || 0)}/${Number(quality.shot_prompt_count || 0)}</span>
+                <span>问题：${Number(quality.issue_count || 0)}</span>
+            </div>
+            ${checks.length ? `<div class="v2-prompt-quality-checks">${checks.map(item => `<small>${escapeHtml(item)}</small>`).join('')}</div>` : ''}
+            ${issueItems.length ? `
+                <div class="v2-prompt-quality-issues">
+                    ${issueItems.map(item => `<small>${escapeHtml(item.id || '')}：${escapeHtml(item.message || '')}</small>`).join('')}
+                </div>
+            ` : ''}
+        </section>
     `;
 }
 

@@ -60,6 +60,7 @@ from src.comic_office.v2.production import (
     produce_asset_images,
     prompt_package_from_dict,
 )
+from src.comic_office.v2.prompt_quality import audit_prompt_package
 from src.research_artifacts import build_research_artifacts
 from src.research_quality import assess_research_package
 from src.evidence_artifacts import build_evidence_artifacts
@@ -1130,6 +1131,7 @@ def _comic_v2_state_response(state) -> dict:
             }
     payload["department_flow"] = _comic_v2_department_flow(payload)
     payload["production_lineage"] = _comic_v2_status_lineage(payload)
+    payload["prompt_quality"] = audit_prompt_package(payload.get("prompt_package") or {})
     return payload
 
 

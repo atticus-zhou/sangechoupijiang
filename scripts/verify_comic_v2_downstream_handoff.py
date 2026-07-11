@@ -13,6 +13,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.verify_comic_v2_delivery import verify_delivery
+from src.comic_office.v2.prompt_quality import audit_prompt_package
 
 
 DEFAULT_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "comic_v2_sample.json"
@@ -50,7 +51,11 @@ def verify_downstream_handoff(
     asset_failures = _asset_handoff_failures(assets, image_ids)
     shot_failures = _shot_handoff_failures(shots, asset_ids, image_ids)
     lineage_failures = _lineage_failures(manifest.get("production_lineage") or [])
-    prompt_quality_failures = _prompt_quality_failures(images, shots)
+    prompt_quality = _prompt_quality_audit(images, shots)
+    prompt_quality_failures = [
+        f"{item.get('id', '<unknown>')}: {item.get('message', '')}"
+        for item in prompt_quality.get("issues", [])
+    ]
 
     errors.extend(asset_failures)
     errors.extend(shot_failures)
@@ -73,8 +78,8 @@ def verify_downstream_handoff(
         "prop_reference_sets": _count_assets_with_images(assets, PROP_REQUIRED_IMAGES, "prop"),
         "scene_spatial_sets": _count_assets_with_images(assets, SCENE_REQUIRED_IMAGES, "scene"),
         "shot_video_packages": len(shots) - len(shot_failures),
-        "clean_asset_prompt_sets": _count_clean_asset_prompt_sets(images),
-        "director_prompt_sets": len(shots) - len(_shot_prompt_quality_failures(shots)),
+        "clean_asset_prompt_sets": prompt_quality.get("clean_asset_prompt_count", 0),
+        "director_prompt_sets": prompt_quality.get("director_prompt_count", 0),
         "lineage_stage_count": len(manifest.get("production_lineage") or []),
         "errors": errors,
         "downstream_handoff_ready": not errors and bool(delivery.get("handoff_ready")),
@@ -166,89 +171,33 @@ def _lineage_failures(lineage: list[dict[str, Any]]) -> list[str]:
     return failures
 
 
-def _prompt_quality_failures(
+def _prompt_quality_audit(
     images: list[dict[str, Any]],
     shots: list[dict[str, Any]],
-) -> list[str]:
-    return _asset_prompt_quality_failures(images) + _shot_prompt_quality_failures(shots)
+) -> dict[str, Any]:
+    return audit_prompt_package({
+        "prompts": [
+            {
+                "object_id": image.get("asset_id", ""),
+                "image_kind": image.get("image_kind", ""),
+                "generator_prompt": image.get("generator_prompt", ""),
+                "negative_prompt": image.get("negative_prompt") or [],
+            }
+            for image in images
+        ],
+        "shots": [
+            {
+                "shot_id": shot.get("shot_id", ""),
+                "generator_prompt": shot.get("video_prompt_block", ""),
+                "negative_prompt": _split_negative_block(shot.get("negative_prompt_block", "")),
+            }
+            for shot in shots
+        ],
+    })
 
 
-def _asset_prompt_quality_failures(images: list[dict[str, Any]]) -> list[str]:
-    failures: list[str] = []
-    for image in images:
-        image_id = image.get("image_id") or "<missing_image_id>"
-        image_kind = image.get("image_kind") or ""
-        asset_id = image.get("asset_id") or ""
-        prompt = str(image.get("generator_prompt") or "")
-        negative_items = image.get("negative_prompt") or []
-        negative_text = "；".join(str(item) for item in negative_items)
-        combined = f"{prompt}；{negative_text}"
-
-        if "不要" in combined:
-            failures.append(f"{image_id}: prompt uses unreadable negation, use 禁止 instead")
-        if not prompt or not negative_items:
-            failures.append(f"{image_id}: missing generator prompt or negative prompt list")
-        if not all(str(item).startswith("禁止") for item in negative_items):
-            failures.append(f"{image_id}: negative prompt items must start with 禁止")
-        if "风格身份" not in prompt or "资产ID" not in prompt:
-            failures.append(f"{image_id}: prompt missing style identity or asset id")
-
-        if asset_id.startswith("character_"):
-            if "纯白或近白色干净背景" not in prompt:
-                failures.append(f"{image_id}: character asset prompt must require clean white background")
-            if image_kind == "three_view" and "三视图" not in prompt:
-                failures.append(f"{image_id}: character three_view prompt must explicitly request 三视图")
-            if image_kind == "expression_sheet" and "表情表" not in prompt:
-                failures.append(f"{image_id}: character expression_sheet prompt must explicitly request 表情表")
-            if "禁止剧情动作" not in negative_text or "禁止剧情场景" not in negative_text:
-                failures.append(f"{image_id}: character negative prompt must forbid story action and scenes")
-
-        if asset_id.startswith("prop_"):
-            if "纯白或近白色干净背景" not in prompt:
-                failures.append(f"{image_id}: prop asset prompt must require clean white background")
-            if image_kind == "turnaround" and not any(token in prompt for token in ("多角度", "转面")):
-                failures.append(f"{image_id}: prop turnaround prompt must request multi-angle reference")
-            if "禁止人物手持或人物入镜" not in negative_text or "禁止剧情现场" not in negative_text:
-                failures.append(f"{image_id}: prop negative prompt must forbid hands/people and story scenes")
-
-        if asset_id.startswith("scene_"):
-            if image_kind == "wide" and "广角空间图" not in prompt:
-                failures.append(f"{image_id}: scene wide prompt must request a wide spatial view")
-            if image_kind == "top_down" and "俯视" not in prompt:
-                failures.append(f"{image_id}: scene top_down prompt must request a top-down view")
-            if "只展示空场景" not in prompt:
-                failures.append(f"{image_id}: scene prompt must keep the asset as an empty spatial reference")
-            if "禁止人物和人物互动" not in negative_text or "禁止剧情事件" not in negative_text:
-                failures.append(f"{image_id}: scene negative prompt must forbid characters and story events")
-    return failures
-
-
-def _shot_prompt_quality_failures(shots: list[dict[str, Any]]) -> list[str]:
-    failures: list[str] = []
-    required_video_markers = ["首帧参考", "故事目的", "动作链", "表演意图", "摄影", "灯光"]
-    for shot in shots:
-        shot_id = shot.get("shot_id") or "<missing_shot_id>"
-        video_prompt = str(shot.get("video_prompt_block") or "")
-        negative_prompt = str(shot.get("negative_prompt_block") or "")
-        if "不要" in f"{video_prompt}；{negative_prompt}":
-            failures.append(f"{shot_id}: prompt uses unreadable negation, use 禁止 instead")
-        missing = [marker for marker in required_video_markers if marker not in video_prompt]
-        if missing:
-            failures.append(f"{shot_id}: video prompt missing director markers {missing}")
-        if not negative_prompt.startswith("禁止"):
-            failures.append(f"{shot_id}: negative prompt block must be separate and start with 禁止")
-        if "严格继承参考资产" not in video_prompt:
-            failures.append(f"{shot_id}: video prompt must lock approved asset identity")
-        if "禁止资产身份漂移" not in negative_prompt or "禁止动作顺序混乱" not in negative_prompt:
-            failures.append(f"{shot_id}: negative prompt must cover identity drift and action order")
-    return failures
-
-
-def _count_clean_asset_prompt_sets(images: list[dict[str, Any]]) -> int:
-    failures = set()
-    for failure in _asset_prompt_quality_failures(images):
-        failures.add(failure.split(":", 1)[0])
-    return len({image.get("image_id") for image in images if image.get("image_id") and image.get("image_id") not in failures})
+def _split_negative_block(text: str) -> list[str]:
+    return [item.strip() for item in str(text or "").split("；") if item.strip()]
 
 
 def _count_assets_with_images(

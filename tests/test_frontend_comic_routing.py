@@ -603,6 +603,18 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("status.asset_manifest?.items", js)
         self.assertIn("status.delivery?.audit", js)
 
+    def test_v2_stage_board_renders_prompt_quality_gate(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        v2_flow = js[js.index("function renderComicV2ProductionFlow"):js.index("function buildComicV2PendingAction")]
+
+        self.assertIn("renderComicV2PromptQuality(currentComicV2Status.prompt_quality)", v2_flow)
+        self.assertIn("function renderComicV2PromptQuality", js)
+        self.assertIn("提示词质量门禁", js)
+        self.assertIn("clean_asset_prompt_count", js)
+        self.assertIn("director_prompt_count", js)
+        self.assertIn(".v2-prompt-quality", css)
+
     def test_v2_stage_board_renders_department_flow(self):
         js = APP_JS.read_text(encoding="utf-8")
 

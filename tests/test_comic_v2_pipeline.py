@@ -309,6 +309,22 @@ class ComicV2PipelineApiTests(unittest.TestCase):
         self.assertEqual(body["status"], "not_started")
         self.assertEqual(body["current_object"], "已确认故事")
         self.assertFalse(body["can_generate_images"])
+        self.assertEqual(body["prompt_quality"]["status"], "waiting")
+
+    def test_status_exposes_prompt_quality_gate_after_prompt_planning(self):
+        state, manifest = self._state_with_approved_assets()
+        package = self._prompt_package(state, manifest)
+        state = ComicProductionV2.attach_prompt_package(state, package)
+        config_manager.set_kv(f"comic_v2_state:{self.workspace_id}", json.dumps(state.to_dict(), ensure_ascii=False))
+
+        response = self.client.get(f"/api/workspaces/{self.workspace_id}/comic/v2/status")
+
+        self.assertEqual(response.status_code, 200)
+        quality = response.json()["prompt_quality"]
+        self.assertIn(quality["status"], {"ready", "needs_review"})
+        self.assertEqual(quality["asset_prompt_count"], 1)
+        self.assertIn("summary", quality)
+        self.assertIn("负面提示词单独成段", " ".join(quality["checks"]))
 
     def test_non_production_office_cannot_start_v2(self):
         research_id = f"ws_research_{str(uuid.uuid4())[:8]}"
