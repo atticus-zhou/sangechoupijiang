@@ -217,6 +217,8 @@ python scripts/verify_research_office_readiness.py --format markdown
 
 `/api/demo/public-showcase` 还提供 `portfolio_embed` 和 `public_deployment`：前者给个人网站直接展示产品定位、办公室大厅摘要、主流程截图目标、样例交付物和 GitHub 链接；后者声明公开在线版只能使用 demo-only 模式，只允许 `/api/demo`，不允许真实模型调用或写入用户工作区。
 
+首页的“公开展示页”按钮会直接读取同一份 `/api/demo/public-showcase` 清单，把访客路径、可体验办公室、样例交付物、作品集截图目标和公开部署安全边界渲染成可给面试官查看的页面。
+
 如果要验证新增办公室不会串模型、串工作区、串历史或串产物，可以运行：
 
 ```powershell

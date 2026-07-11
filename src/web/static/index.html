@@ -66,6 +66,7 @@
                 <div class="showcase-actions">
                     <button id="btn-open-comic-demo" onclick="navigate('demo_comic')">体验无 Key 演示</button>
                     <button id="btn-open-research-demo" class="ghost" onclick="navigate('demo_research')">体验研究办公室演示</button>
+                    <button id="btn-open-public-showcase" class="ghost" onclick="navigate('public_showcase')">公开展示页</button>
                     <button class="ghost" onclick="navigate('comic_production')">进入真实办公室</button>
                 </div>
             </section>
@@ -135,6 +136,20 @@
             </div>
             <div id="comic-demo-content" class="comic-demo-content">
                 <div class="empty-state">正在加载 AI 漫剧制片办公室演示...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Public Showcase -->
+    <section class="page" id="page-public-showcase" style="display:none">
+        <div class="demo-page">
+            <div class="demo-topbar">
+                <button class="ghost" onclick="navigate('offices')">返回大厅</button>
+                <button class="ghost" onclick="navigate('demo_comic')">AI 漫剧样例</button>
+                <button class="ghost" onclick="navigate('demo_research')">研究样例</button>
+            </div>
+            <div id="public-showcase-content" class="public-showcase-content">
+                <div class="empty-state">正在加载公开展示页...</div>
             </div>
         </div>
     </section>
@@ -675,6 +690,6 @@
     </section>
 </main>
 
-  <script src="/static/js/app.js?v=comic-v2-shot-cards-20260701"></script>
+  <script src="/static/js/app.js?v=public-showcase-page-20260711"></script>
 </body>
 </html>

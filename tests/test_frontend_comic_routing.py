@@ -196,8 +196,10 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn('id="product-showcase"', html)
         self.assertIn('id="btn-open-comic-demo"', html)
         self.assertIn('id="btn-open-research-demo"', html)
+        self.assertIn('id="btn-open-public-showcase"', html)
         self.assertIn("navigate('demo_comic')", html)
         self.assertIn("navigate('demo_research')", html)
+        self.assertIn("navigate('public_showcase')", html)
         self.assertIn('id="page-demo"', html)
         self.assertIn('id="comic-demo-content"', html)
         self.assertIn("demo_comic", js)
@@ -220,6 +222,28 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("下载样例", js)
         self.assertIn(".product-showcase", css)
         self.assertIn(".demo-stage-grid", css)
+
+    def test_public_showcase_page_renders_manifest_for_portfolio_visitors(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="page-public-showcase"', html)
+        self.assertIn('id="public-showcase-content"', html)
+        self.assertIn("public_showcase' ? 'public-showcase'", js)
+        self.assertIn("async function loadPublicShowcase", js)
+        self.assertIn("/api/demo/public-showcase", js)
+        self.assertIn("function renderPublicShowcase", js)
+        self.assertIn("showcase.audience_paths", js)
+        self.assertIn("showcase.featured_demos", js)
+        self.assertIn("portfolio.sample_deliverables", js)
+        self.assertIn("showcase.safety_boundaries", js)
+        self.assertIn("deployment.allowed_route_prefixes", js)
+        self.assertIn("样例交付物", js)
+        self.assertIn("公开部署安全边界", js)
+        self.assertIn(".public-showcase-content", css)
+        self.assertIn(".public-audience-grid", css)
+        self.assertIn(".public-safety-section", css)
 
     def test_comic_v2_actions_check_preflight_before_costly_steps(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -547,7 +571,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_index_uses_fresh_comic_v2_script_cache_key(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=comic-v2-shot-cards-20260701", html)
+        self.assertIn("/static/js/app.js?v=public-showcase-page-20260711", html)
         self.assertNotIn("comic-confirm-feedback-20260610", html)
 
     def test_empty_artifact_board_still_renders_v2_stage_actions(self):

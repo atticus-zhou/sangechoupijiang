@@ -67,11 +67,13 @@ function navigate(page) {
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
     const targetPageId = page === 'comic_production'
         ? 'comic'
-        : (page === 'demo_comic' || page === 'demo_research' ? 'demo' : page);
+        : (page === 'demo_comic' || page === 'demo_research'
+            ? 'demo'
+            : (page === 'public_showcase' ? 'public-showcase' : page));
     const targetPage = document.getElementById('page-' + targetPageId);
     if (!targetPage) return;
     targetPage.style.display = (page === 'task') ? 'flex' : 'block';
-    document.body.classList.toggle('hall-mode', page === 'offices' || page === 'demo_comic' || page === 'demo_research');
+    document.body.classList.toggle('hall-mode', page === 'offices' || page === 'demo_comic' || page === 'demo_research' || page === 'public_showcase');
     if (page === 'research') setActiveOfficeContext('research', '研究办公室');
     if (page === 'comic') setActiveOfficeContext('comic', 'AI漫剧办公室');
     
@@ -90,6 +92,7 @@ function navigate(page) {
     else if (page === 'comic' || page === 'comic_production') loadComicOffice();
     else if (page === 'demo_comic') loadComicDemo();
     else if (page === 'demo_research') loadResearchDemo();
+    else if (page === 'public_showcase') loadPublicShowcase();
     else if (page === 'prompts') loadPrompts();
     else if (page === 'history') loadHistory();
     if (page === 'offices') loadSystemPreflight();
@@ -4192,6 +4195,137 @@ function renderComicV2LineageTimeline(lineage) {
                 `).join('')}
             </div>
         </div>
+    `;
+}
+
+async function loadPublicShowcase() {
+    const box = document.getElementById('public-showcase-content');
+    if (!box) return;
+    box.innerHTML = '<div class="empty-state">正在加载公开展示页...</div>';
+    try {
+        const showcase = await API.get('/api/demo/public-showcase');
+        box.innerHTML = renderPublicShowcase(showcase);
+    } catch (e) {
+        box.innerHTML = `<div class="empty-state">公开展示页加载失败：${escapeHtml(e.message || e)}</div>`;
+    }
+}
+
+function renderPublicShowcase(showcase) {
+    const audiences = Array.isArray(showcase.audience_paths) ? showcase.audience_paths : [];
+    const demos = Array.isArray(showcase.featured_demos) ? showcase.featured_demos : [];
+    const boundaries = Array.isArray(showcase.safety_boundaries) ? showcase.safety_boundaries : [];
+    const portfolio = showcase.portfolio_embed || {};
+    const deliverables = Array.isArray(portfolio.sample_deliverables) ? portfolio.sample_deliverables : [];
+    const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
+    const deployment = showcase.public_deployment || {};
+    return `
+        <section class="demo-hero public-showcase-hero">
+            <span class="showcase-kicker">Public portfolio</span>
+            <h1>${escapeHtml(showcase.product_name || '三个臭皮匠')}</h1>
+            <p>${escapeHtml(showcase.tagline || showcase.positioning || '')}</p>
+            <div class="showcase-badges">
+                <span>无 Key 演示</span>
+                <span>不调用真实模型</span>
+                <span>不写入用户工作区</span>
+                <span>样例交付物可下载</span>
+            </div>
+            <div class="public-showcase-actions">
+                <button onclick="navigate('demo_comic')">看 AI 漫剧样例</button>
+                <button class="ghost" onclick="navigate('demo_research')">看研究样例</button>
+                ${portfolio.repository_url ? `<a class="ghost btn-sm" href="${escapeHtml(portfolio.repository_url)}" target="_blank">打开 GitHub</a>` : ''}
+            </div>
+        </section>
+        <section class="demo-section public-showcase-positioning">
+            <div class="demo-section-head">
+                <h2>这个产品要证明什么</h2>
+                <span>${escapeHtml(showcase.mode || 'public_no_key_showcase')}</span>
+            </div>
+            <p>${escapeHtml(showcase.positioning || '')}</p>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>建议访客这样看</h2>
+                <span>${audiences.length} 类访客</span>
+            </div>
+            <div class="public-audience-grid">
+                ${audiences.map(path => `
+                    <article>
+                        <strong>${escapeHtml(path.label || path.id || '')}</strong>
+                        <p>${escapeHtml(path.takeaway || '')}</p>
+                        <ol>
+                            ${(path.steps || []).map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+                        </ol>
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>可体验的办公室</h2>
+                <span>${demos.length} 个 no-key demo</span>
+            </div>
+            <div class="public-demo-grid">
+                ${demos.map(demo => `
+                    <article>
+                        <strong>${escapeHtml(demo.title || demo.office_name || '')}</strong>
+                        <p>${escapeHtml(demo.summary || demo.why_it_matters || '')}</p>
+                        <div class="demo-proof-points">
+                            ${(demo.proof_points || []).slice(0, 4).map(point => `<span>${escapeHtml(point)}</span>`).join('')}
+                        </div>
+                        <div class="public-showcase-actions">
+                            <a class="ghost btn-sm" href="${escapeHtml(demo.demo_uri || '#')}" target="_blank">查看 API</a>
+                            <button class="btn-sm" onclick="navigate('${demo.office_id === 'research' ? 'demo_research' : 'demo_comic'}')">打开演示页</button>
+                        </div>
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>样例交付物</h2>
+                <span>${deliverables.length} 个下载物</span>
+            </div>
+            <div class="demo-artifact-grid">
+                ${deliverables.map(item => `
+                    <article>
+                        <strong>${escapeHtml(item.title || '')}</strong>
+                        <span>${escapeHtml(item.office_name || item.office_id || '')}</span>
+                        <small>${escapeHtml(item.type || item.status || '')}</small>
+                        ${item.uri ? `<a class="ghost btn-sm demo-download-link" href="${escapeHtml(item.uri)}" target="_blank">下载样例</a>` : ''}
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+        <section class="demo-section">
+            <div class="demo-section-head">
+                <h2>作品集截图目标</h2>
+                <span>${workflow.length} 个证据点</span>
+            </div>
+            <div class="public-workflow-grid">
+                ${workflow.map(item => `
+                    <article>
+                        <strong>${escapeHtml(item.title || item.kind || '')}</strong>
+                        <span>${escapeHtml(item.kind || '')}</span>
+                        <p>${escapeHtml(item.caption || '')}</p>
+                        ${item.uri ? `<a href="${escapeHtml(item.uri)}" target="_blank">打开下载物</a>` : ''}
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+        <section class="demo-section public-safety-section">
+            <div class="demo-section-head">
+                <h2>公开部署安全边界</h2>
+                <span>${escapeHtml(deployment.mode || 'demo_only')}</span>
+            </div>
+            <div class="public-safety-grid">
+                ${boundaries.map(item => `<article><strong>边界</strong><p>${escapeHtml(item)}</p></article>`).join('')}
+            </div>
+            <div class="public-deployment-summary">
+                <span>允许路由：${escapeHtml((deployment.allowed_route_prefixes || []).join(' / ') || '/api/demo')}</span>
+                <span>真实模型调用：${deployment.allows_real_model_calls ? '允许' : '禁止'}</span>
+                <span>写入用户工作区：${deployment.allows_workspace_writes ? '允许' : '禁止'}</span>
+            </div>
+        </section>
     `;
 }
 
