@@ -4676,6 +4676,7 @@ function renderResearchDemo(demo) {
     const dataPoints = Array.isArray(demo.data_points) ? demo.data_points : [];
     const competitors = Array.isArray(demo.competitors) ? demo.competitors : [];
     const artifacts = Array.isArray(demo.artifacts) ? demo.artifacts : [];
+    const readingGuide = Array.isArray(demo.deliverable_reading_guide) ? demo.deliverable_reading_guide : [];
     return `
         <section class="demo-hero">
             <span class="showcase-kicker">Research no-key demo</span>
@@ -4712,6 +4713,27 @@ function renderResearchDemo(demo) {
             </div>
         </section>
         ${renderDemoQualityGates(demo.quality_gates)}
+        ${readingGuide.length ? `
+            <section class="demo-section">
+                <div class="demo-section-head">
+                    <h2>交付物阅读顺序</h2>
+                    <span>${readingGuide.length} 步</span>
+                </div>
+                <div class="public-reading-guide">
+                    ${readingGuide.map(item => `
+                        <article>
+                            <b>${escapeHtml(item.order || '')}</b>
+                            <div>
+                                <strong>${escapeHtml(item.title || '')}</strong>
+                                <p>${escapeHtml(item.look_for || '')}</p>
+                                <small>证明：${escapeHtml(item.proves || '')}</small>
+                                ${item.uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.uri)}" target="_blank">打开文件</a>` : ''}
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
         <section class="demo-two-col">
             <div class="demo-section">
                 <div class="demo-section-head">

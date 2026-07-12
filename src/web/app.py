@@ -610,6 +610,22 @@ async def get_research_demo_api():
             ],
             "public_demo_boundary": "公开演示只展示固定样例和证据缺口，不读取账号、不登录第三方平台、不宣称全自动会员级采集。",
         },
+        "deliverable_reading_guide": [
+            {
+                "order": 1,
+                "title": "先看阶段调研报告",
+                "uri": "/api/demo/research/files/report.md",
+                "look_for": "结论、来源清单、数据表、截图计划和证据缺口是否分开呈现。",
+                "proves": "研究办公室能交付老板可读的阶段性判断，同时不把待补截图伪装成已验证事实。",
+            },
+            {
+                "order": 2,
+                "title": "再看来源、数据与截图清单",
+                "uri": "/api/demo/research/files/evidence_manifest.json",
+                "look_for": "来源、数据点、竞品记录、截图计划、待人工确认项和权限缺口是否可追踪。",
+                "proves": "后续补飞瓜、抖音或电商后台截图时，用户知道该补哪一页、为什么补、补完影响哪条结论。",
+            },
+        ],
         "objective": plan.get("objective", ""),
         "deliverable": plan.get("deliverable", ""),
         "report_preview": (fixture.get("final_report") or "")[:520],

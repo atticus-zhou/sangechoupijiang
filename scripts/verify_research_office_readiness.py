@@ -124,12 +124,20 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     covered_in_demo = evidence_boundaries.get("covered_in_demo") or []
     requires_human_or_account = evidence_boundaries.get("requires_human_or_account") or []
     public_demo_boundary = str(evidence_boundaries.get("public_demo_boundary") or "")
+    reading_guide = payload.get("deliverable_reading_guide") or []
     if len(covered_in_demo) < 4:
         errors.append("research demo must describe which evidence is covered in the fixed sample")
     if len(requires_human_or_account) < 3:
         errors.append("research demo must describe account or human-gated evidence")
     if "不宣称全自动" not in public_demo_boundary:
         errors.append("research demo must state it does not claim full automation")
+    if len(reading_guide) < 2:
+        errors.append("research demo must provide a report/evidence reading guide")
+    for item in reading_guide:
+        if not str(item.get("uri") or "").startswith("/api/demo/research/files/"):
+            errors.append(f"research reading guide item has invalid uri: {item.get('title') or item.get('uri')}")
+        if not item.get("look_for") or not item.get("proves"):
+            errors.append(f"research reading guide item missing look_for/proves: {item.get('title') or item.get('uri')}")
 
     downloads = []
     for item in _download_items(payload):
@@ -167,6 +175,14 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         "evidence_boundary_count": len(covered_in_demo),
         "human_or_account_boundary_count": len(requires_human_or_account),
         "public_demo_boundary": public_demo_boundary,
+        "reading_guide_count": len(reading_guide),
+        "reading_guide_ready_count": sum(
+            1
+            for item in reading_guide
+            if str(item.get("uri") or "").startswith("/api/demo/research/files/")
+            and item.get("look_for")
+            and item.get("proves")
+        ),
     }
 
 
@@ -231,6 +247,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
             f"- Downloads: {demo.get('download_count')}",
             f"- Evidence boundaries: {demo.get('evidence_boundary_count')}",
             f"- Human/account boundaries: {demo.get('human_or_account_boundary_count')}",
+            f"- Reading guide: {demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}",
             f"- Public demo boundary: {demo.get('public_demo_boundary')}",
         ]
     )
