@@ -1186,6 +1186,7 @@ function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间
     const recovery = activeTask.recovery_plan || {};
     const action = recovery.retry_action || {};
     const missing = Array.isArray(progress.missing) ? progress.missing.slice(0, 6) : [];
+    const downloads = Array.isArray(status.downloadable_artifacts) ? status.downloadable_artifacts.slice(0, 5) : [];
     const ratio = Number(progress.completion_ratio || 0);
     const ratioText = `${Math.round(ratio * 100)}%`;
     panel.innerHTML = `
@@ -1212,6 +1213,19 @@ function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间
             </div>
         </div>
         ${missing.length ? `<div class="runtime-missing"><b>优先补齐</b>${missing.map(item => `<code>${escapeHtml(item)}</code>`).join('')}</div>` : ''}
+        ${downloads.length ? `
+            <div class="runtime-downloads">
+                <b>可下载交付物</b>
+                <div>
+                    ${downloads.map(item => `
+                        <a class="runtime-download-link" href="${escapeHtml(item.uri)}" target="_blank" rel="noreferrer">
+                            <span>${escapeHtml(item.title || item.artifact_type || '交付物')}</span>
+                            <small>${escapeHtml(item.created_by || item.artifact_type || '产物')}</small>
+                        </a>
+                    `).join('')}
+                </div>
+            </div>
+        ` : ''}
         ${status.next_action ? `<p class="runtime-next">${escapeHtml(status.next_action)}</p>` : ''}
         ${recovery.recoverable ? `
             <div class="runtime-recovery">

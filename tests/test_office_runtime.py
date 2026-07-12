@@ -27,6 +27,16 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
                 metadata={"office_id": "comic_production"},
                 created_by="zhongshu",
             )
+            manager.create_artifact(
+                artifact_id="art-runtime-prompts",
+                workspace_id="ws-runtime",
+                task_id="task-runtime",
+                artifact_type="prompt_package",
+                title="提示词包",
+                uri="/api/workspaces/ws-runtime/files/delivery/prompt_package.json",
+                metadata={"office_id": "comic_production"},
+                created_by="libu",
+            )
             manager.create_task_run("task-runtime", "produce package", "comic_production")
             manager.update_task_run(
                 "task-runtime",
@@ -62,6 +72,11 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         )
         self.assertIn("story_contract", status["artifact_progress"]["present"])
         self.assertIn("word_canvas", status["artifact_progress"]["missing"])
+        self.assertEqual(
+            status["downloadable_artifacts"][0]["uri"],
+            "/api/workspaces/ws-runtime/files/delivery/prompt_package.json",
+        )
+        self.assertEqual(status["downloadable_artifacts"][0]["title"], "提示词包")
         self.assertTrue(any(item["id"] == "asset_review" for item in status["human_checkpoints"]))
         self.assertTrue(any(item["stage"] == "document_generation" for item in status["recovery_actions"]))
 
@@ -80,6 +95,16 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
             title="Runtime API comic",
         )
         config_manager.create_task_run("task-runtime-api", "build package", "comic_production")
+        config_manager.create_artifact(
+            artifact_id="art-runtime-api-word",
+            workspace_id=workspace_id,
+            task_id="task-runtime-api",
+            artifact_type="word_canvas",
+            title="Word 制片画布",
+            uri=f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx",
+            metadata={"office_id": "comic_production"},
+            created_by="gongbu",
+        )
         config_manager.append_task_event(
             "task-runtime-api",
             "task_created",
@@ -96,6 +121,8 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertEqual(payload["workspace_id"], workspace_id)
         self.assertEqual(payload["office_id"], "comic_production")
         self.assertIn("artifact_progress", payload)
+        self.assertEqual(payload["downloadable_artifacts"][0]["artifact_type"], "word_canvas")
+        self.assertIn("/files/delivery/canvas.docx", payload["downloadable_artifacts"][0]["uri"])
         self.assertIn("recovery_actions", payload)
         self.assertIn("current_stage", payload)
 

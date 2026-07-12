@@ -1887,13 +1887,15 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 12px;
 }
 .runtime-missing,
+.runtime-downloads,
 .runtime-recovery {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
 }
-.runtime-missing b {
+.runtime-missing b,
+.runtime-downloads b {
     color: var(--text2);
     font-size: 13px;
 }
@@ -1903,6 +1905,36 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.54);
     color: var(--text2);
+}
+.runtime-downloads {
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1px solid rgba(88, 166, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.34);
+}
+.runtime-downloads > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.runtime-download-link {
+    display: grid;
+    gap: 2px;
+    min-width: 132px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(88, 166, 255, 0.08);
+    color: var(--text);
+    text-decoration: none;
+}
+.runtime-download-link:hover {
+    border-color: rgba(88, 166, 255, 0.48);
+    background: rgba(88, 166, 255, 0.14);
+}
+.runtime-download-link small {
+    color: var(--text3);
 }
 .runtime-recovery {
     justify-content: space-between;
