@@ -26,6 +26,8 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         by_office = {item["office_id"]: item for item in audit["offices"]}
         self.assertTrue(by_office["comic_production"]["primary_allowed"])
         self.assertFalse(by_office["comic"]["can_be_primary"])
+        self.assertEqual(by_office["comic"]["legacy_migration"]["target_office_id"], "comic_production")
+        self.assertIn("comic_production", by_office["comic"]["legacy_migration"]["action"])
 
     def test_markdown_lists_four_primary_standards(self):
         completed = subprocess.run(
@@ -47,6 +49,8 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("可交付", completed.stdout)
         self.assertIn("可追溯", completed.stdout)
         self.assertIn("comic_production", completed.stdout)
+        self.assertIn("Migration", completed.stdout)
+        self.assertIn("旧 comic", completed.stdout)
 
 
 if __name__ == "__main__":

@@ -455,6 +455,14 @@ LAUNCH_GATE_EVIDENCE_LINKS.update(
 
 PRIMARY_OFFICE_IDS = {"comic_production"}
 LEGACY_OFFICE_IDS = {"comic"}
+LEGACY_OFFICE_MIGRATIONS = {
+    "comic": {
+        "target_office_id": "comic_production",
+        "target_office_name": "AI漫剧制片办公室",
+        "reason": "旧 AI 漫剧办公室已被隔离版 V2 制片链覆盖；真实使用、无 Key 演示、历史追溯和失败恢复都应进入 comic_production。",
+        "action": "在 UI、模型配置和 API 调用中使用 comic_production；旧 comic 只保留为兼容入口和迁移提示。",
+    }
+}
 
 PRIMARY_OFFICE_STANDARDS = {
     "showcaseable": {
@@ -479,6 +487,7 @@ PRIMARY_OFFICE_STANDARDS = {
 def audit_office_launch_gates(office_id: str) -> dict:
     """Return the productization gate audit for one office."""
     office = get_office(office_id)
+    is_legacy = office.id in LEGACY_OFFICE_IDS
     required_gates = list_office_creation_template()["required_launch_gates"]
     evidence_by_gate = LAUNCH_GATE_EVIDENCE.get(office.id, {})
     gates = []
@@ -507,6 +516,8 @@ def audit_office_launch_gates(office_id: str) -> dict:
         "office_id": office.id,
         "office_name": office.name,
         "status": audit_status,
+        "role": "legacy" if is_legacy else ("primary" if office.id in PRIMARY_OFFICE_IDS else "available"),
+        "legacy_migration": LEGACY_OFFICE_MIGRATIONS.get(office.id, {}),
         "gates": gates,
     }
 
@@ -542,6 +553,7 @@ def audit_office_extension_governance() -> dict:
                 }
             )
         is_legacy = office.id in LEGACY_OFFICE_IDS
+        legacy_migration = LEGACY_OFFICE_MIGRATIONS.get(office.id, {})
         can_be_primary = not is_legacy and not missing_profile_fields and all(
             standard["status"] == "passed" for standard in standards
         )
@@ -565,6 +577,7 @@ def audit_office_extension_governance() -> dict:
                 ),
                 "missing_profile_fields": missing_profile_fields,
                 "launch_gate_status": launch_audit["status"],
+                "legacy_migration": legacy_migration,
                 "primary_standards": standards,
                 "can_be_primary": can_be_primary,
                 "primary_allowed": office.id in PRIMARY_OFFICE_IDS and can_be_primary,

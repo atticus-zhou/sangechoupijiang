@@ -38,20 +38,27 @@ def format_markdown(audit: dict[str, Any]) -> str:
             "",
             "## Office Results",
             "",
-            "| Office | Role | Protocol | Launch gates | Can be primary | Missing protocol fields |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Office | Role | Protocol | Launch gates | Can be primary | Missing protocol fields | Migration |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
     for office in audit.get("offices", []):
         missing = ", ".join(office.get("missing_profile_fields", [])) or "-"
+        migration = office.get("legacy_migration") or {}
+        migration_text = (
+            f"{migration.get('target_office_id')} - {migration.get('action')}"
+            if migration
+            else "-"
+        )
         lines.append(
-            "| {office_id} | {role} | {protocol} | {launch} | {primary} | {missing} |".format(
+            "| {office_id} | {role} | {protocol} | {launch} | {primary} | {missing} | {migration} |".format(
                 office_id=office.get("office_id"),
                 role=office.get("role"),
                 protocol=office.get("protocol_status"),
                 launch=office.get("launch_gate_status"),
                 primary=str(bool(office.get("can_be_primary"))).lower(),
                 missing=missing,
+                migration=migration_text,
             )
         )
 

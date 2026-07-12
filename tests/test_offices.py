@@ -113,6 +113,9 @@ class OfficeProfileTests(unittest.TestCase):
 
         self.assertEqual(audit["office_id"], "comic")
         self.assertEqual(audit["status"], "needs_work")
+        self.assertEqual(audit["role"], "legacy")
+        self.assertEqual(audit["legacy_migration"]["target_office_id"], "comic_production")
+        self.assertIn("comic_production", audit["legacy_migration"]["action"])
         statuses = {gate["id"]: gate["status"] for gate in audit["gates"]}
         self.assertEqual(statuses["no_key_demo"], "needs_work")
         self.assertEqual(statuses["end_to_end_test"], "needs_work")
@@ -163,6 +166,8 @@ class OfficeExtensionGovernanceTests(unittest.TestCase):
         self.assertTrue(by_office["comic_production"]["can_be_primary"])
         self.assertFalse(by_office["comic"]["can_be_primary"])
         self.assertEqual(by_office["comic"]["launch_gate_status"], "needs_work")
+        self.assertEqual(by_office["comic"]["legacy_migration"]["target_office_id"], "comic_production")
+        self.assertIn("旧 comic", by_office["comic"]["legacy_migration"]["action"])
 
         standards = {
             item["label"]: item["status"]

@@ -165,6 +165,9 @@ class OfficePreflightApiTests(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["office_id"], "comic")
         self.assertEqual(payload["status"], "needs_work")
+        self.assertEqual(payload["role"], "legacy")
+        self.assertEqual(payload["legacy_migration"]["target_office_id"], "comic_production")
+        self.assertIn("AI漫剧制片办公室", payload["legacy_migration"]["target_office_name"])
         gates = {gate["id"]: gate for gate in payload["gates"]}
         self.assertEqual(gates["no_key_demo"]["status"], "needs_work")
         self.assertTrue(gates["no_key_demo"]["next_action"])
