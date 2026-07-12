@@ -26,6 +26,11 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertEqual(payload["showcase_manifest"]["mode"], "public_no_key_showcase")
         self.assertGreaterEqual(payload["showcase_manifest"]["audience_path_count"], 3)
         self.assertGreaterEqual(payload["showcase_manifest"]["featured_demo_count"], 2)
+        self.assertGreaterEqual(payload["showcase_manifest"]["reading_guide_count"], 4)
+        self.assertEqual(
+            payload["showcase_manifest"]["reading_guide_count"],
+            payload["showcase_manifest"]["reading_guide_ready_count"],
+        )
         self.assertIn("comic_production", payload["demos"])
         self.assertIn("research", payload["demos"])
         for demo in payload["demos"].values():
@@ -60,6 +65,7 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("研究办公室", result.stdout)
         self.assertIn("下载链接", result.stdout)
         self.assertIn("公开展示清单", result.stdout)
+        self.assertIn("交付物阅读顺序", result.stdout)
         self.assertIn("不调用真实模型", result.stdout)
 
 

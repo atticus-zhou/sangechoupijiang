@@ -92,6 +92,14 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append(f"sample deliverable missing reader guidance: {item.get('title') or item.get('uri')}")
         if len(item.get("acceptance_signals") or []) < 3:
             errors.append(f"sample deliverable missing acceptance signals: {item.get('title') or item.get('uri')}")
+    reading_guide = portfolio_embed.get("deliverable_reading_guide") or []
+    if len(reading_guide) < 4:
+        errors.append("portfolio embed must expose a 4-step deliverable reading guide")
+    for item in reading_guide:
+        if not str(item.get("uri") or "").startswith("/api/demo/"):
+            errors.append(f"reading guide item has invalid demo uri: {item.get('title') or item.get('uri')}")
+        if not item.get("look_for") or not item.get("proves"):
+            errors.append(f"reading guide item missing look_for/proves: {item.get('title') or item.get('uri')}")
     if not any((item.get("kind") == "screenshot_target") for item in portfolio_embed.get("workflow_showcase") or []):
         errors.append("portfolio embed must include screenshot targets for the main workflow")
     if public_deployment.get("mode") != "demo_only":
@@ -113,6 +121,12 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             1
             for item in portfolio_embed.get("sample_deliverables") or []
             if item.get("reader_guidance") and len(item.get("acceptance_signals") or []) >= 3
+        ),
+        "reading_guide_count": len(reading_guide),
+        "reading_guide_ready_count": sum(
+            1
+            for item in reading_guide
+            if str(item.get("uri") or "").startswith("/api/demo/") and item.get("look_for") and item.get("proves")
         ),
         "public_deployment_mode": public_deployment.get("mode", ""),
     }
@@ -209,6 +223,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 可公开作品集展示：{manifest.get('safe_for_public_portfolio')}",
         f"- 作品集样例交付物：{manifest.get('portfolio_deliverable_count')} 个",
         f"- 带阅读说明的样例交付物：{manifest.get('deliverables_with_reader_guidance')} 个",
+        f"- 交付物阅读顺序：{manifest.get('reading_guide_count')} 步，其中 {manifest.get('reading_guide_ready_count')} 步可复核",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]
