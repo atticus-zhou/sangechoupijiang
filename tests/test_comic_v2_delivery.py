@@ -196,11 +196,16 @@ class ComicV2DeliveryTests(unittest.TestCase):
             delivery = build_delivery_from_v2(bundle, manifest, package, result, root / "out")
             handoff = json.loads(delivery.handoff_manifest_path.read_text(encoding="utf-8"))
 
-            self.assertEqual(handoff["schema"], "comic_production_handoff_manifest_v2")
-            self.assertEqual(handoff["schema_version"], 2)
+            self.assertEqual(handoff["schema"], "comic_production_handoff_manifest_v3")
+            self.assertEqual(handoff["schema_version"], 3)
             self.assertEqual(handoff["story"]["story_id"], bundle.creative.story_id)
             self.assertEqual(handoff["story"]["story_version"], bundle.creative.story_version)
+            self.assertEqual(handoff["story"]["source_story"], bundle.creative.source_story)
+            self.assertEqual(handoff["story"]["main_conflict"], bundle.creative.main_conflict)
+            self.assertEqual(handoff["story"]["causal_chain"], list(bundle.creative.causal_chain))
             self.assertEqual(handoff["style"]["style_id"], bundle.visual.style_id)
+            self.assertEqual(handoff["style"]["palette"], list(bundle.visual.palette))
+            self.assertEqual(handoff["style"]["character_rules"], list(bundle.visual.character_rules))
             self.assertEqual(handoff["manifest"]["manifest_id"], manifest.manifest_id)
             self.assertEqual(handoff["word_canvas"]["filename"], delivery.path.name)
             self.assertEqual(len(handoff["assets"]), len(manifest.items))
@@ -227,6 +232,10 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("林昭 three_view", first_image["generator_prompt"])
             self.assertIn("禁止文字水印", first_image["negative_prompt"])
             self.assertIn("禁止现代服装", first_image["negative_prompt"])
+            self.assertEqual(first_image["story_id"], bundle.creative.story_id)
+            self.assertEqual(first_image["style_id"], bundle.visual.style_id)
+            self.assertEqual(first_image["manifest_version"], manifest.version)
+            self.assertEqual(first_image["review"], {"status": "pass"})
             self.assertEqual(handoff["shots"][0]["shot_id"], package.shots[0].shot_id)
             self.assertEqual(handoff["shots"][0]["reference_asset_ids"], list(package.shots[0].reference_asset_ids))
             self.assertEqual(
@@ -286,6 +295,11 @@ class ComicV2DeliveryTests(unittest.TestCase):
                 self.assertTrue(stage["handoff_to"])
                 self.assertTrue(stage["acceptance_criteria"])
             self.assertTrue(handoff["audit"]["handoff_ready"])
+            benchmark = handoff["quality_benchmark"]
+            self.assertEqual(benchmark["benchmark"], "comic_production_package_quality")
+            self.assertEqual(benchmark["benchmark_version"], 1)
+            self.assertEqual(benchmark["status"], "needs_review")
+            self.assertFalse(benchmark["production_quality_verified"])
 
 
 if __name__ == "__main__":

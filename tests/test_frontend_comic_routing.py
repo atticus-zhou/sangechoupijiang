@@ -638,6 +638,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("status.contract?.visual", js)
         self.assertIn("status.asset_manifest?.items", js)
         self.assertIn("status.delivery?.audit", js)
+        self.assertIn("status.delivery?.quality_benchmark", js)
+        self.assertIn("制片包 ${Number(benchmark.package_quality_score || 0)}/100", js)
 
     def test_v2_stage_board_renders_prompt_quality_gate(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -669,6 +671,11 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("quality.clean_asset_prompt_count", trace_fn)
         self.assertIn("quality.director_prompt_count", trace_fn)
         self.assertIn("v2-prompt-quality-issues", trace_fn)
+        self.assertIn("summary.package_quality_claim", summary_fn)
+        self.assertIn("summary.package_quality_score", summary_fn)
+        self.assertIn("const benchmark = trace.quality_benchmark || {}", trace_fn)
+        self.assertIn("制片包质量基准", trace_fn)
+        self.assertIn("benchmark.production_quality_verified", trace_fn)
 
     def test_v2_stage_board_renders_department_flow(self):
         js = APP_JS.read_text(encoding="utf-8")

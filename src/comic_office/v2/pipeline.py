@@ -331,6 +331,7 @@ class ComicProductionV2:
         *,
         uri: str = "",
         handoff_manifest_uri: str = "",
+        quality_benchmark: dict[str, Any] | None = None,
     ) -> ComicProductionV2State:
         if state.stage != "document_generation":
             raise ValueError("当前阶段不能写入交付文档")
@@ -338,22 +339,29 @@ class ComicProductionV2:
             raise ValueError("交付文档路径为空")
         if not audit.handoff_ready:
             raise ValueError("Word 文档审计未通过")
+        benchmark = dict(quality_benchmark or {})
+        quality_ready = bool(benchmark.get("package_quality_ready")) if benchmark else True
         return state.with_status(
-            status="completed",
+            status="completed" if quality_ready else "waiting_for_human",
             stage="ready_for_handoff",
             current_agent="礼部",
-            current_object="最终 Word 制片画布",
+            current_object="最终 Word 制片画布" if quality_ready else "质量待复核的 Word 制片画布",
             completed=7,
             total=7,
-            blocking_reason="",
-            next_action="下载 Word 制片画布，交给下游视频生成或剪辑平台。",
+            blocking_reason="" if quality_ready else str(benchmark.get("summary") or "制片包质量基准未通过。"),
+            next_action=(
+                "下载 Word 制片画布，交给下游视频生成或剪辑平台。"
+                if quality_ready
+                else str(benchmark.get("next_action") or "先修正质量阻塞项，再重新生成交付物。")
+            ),
             can_generate_images=False,
-            document_status="ready",
+            document_status="ready" if quality_ready else "needs_review",
             delivery={
                 "path": str(path),
                 "uri": str(uri or ""),
                 "handoff_manifest_uri": str(handoff_manifest_uri or ""),
                 "audit": asdict(audit),
+                "quality_benchmark": benchmark,
             },
         )
 

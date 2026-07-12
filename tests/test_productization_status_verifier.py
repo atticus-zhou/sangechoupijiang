@@ -26,6 +26,9 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         office_governance = next(item for item in module.REQUIREMENTS if item["id"] == "P7")
         self.assertIn("required_demo_contract", office_governance["markers"])
         self.assertIn("参观路径、证明点、下载物、阅读指南、面试脚本和公开安全边界", office_governance["markers"])
+        comic_quality = next(item for item in module.REQUIREMENTS if item["id"] == "P10")
+        self.assertIn("python scripts/verify_comic_v2_production_benchmark.py --format markdown", comic_quality["markers"])
+        self.assertIn("tests/test_comic_v2_production_benchmark_verifier.py", comic_quality["files"])
 
     def test_markdown_output_is_readable(self):
         result = subprocess.run(

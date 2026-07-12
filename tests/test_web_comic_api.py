@@ -10,7 +10,13 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from src.llm.providers import LLMResponse, LiteLLMProvider, ModelConfig
-from src.web.app import _comic_image_specs, _comic_v2_handoff_production_lineage, app, config_manager
+from src.web.app import (
+    _comic_image_specs,
+    _comic_v2_handoff_production_lineage,
+    _comic_v2_handoff_quality_benchmark,
+    app,
+    config_manager,
+)
 
 
 class WebComicApiTests(unittest.TestCase):
@@ -56,6 +62,37 @@ class WebComicApiTests(unittest.TestCase):
         self.assertEqual(summary[0]["handoff_to"], "资产拆解")
         self.assertIn("视觉母版", summary[0]["acceptance_criteria"])
         self.assertNotIn("internal_notes", summary[0])
+
+    def test_handoff_quality_benchmark_summary_is_human_safe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = Path(tmp) / "handoff.json"
+            manifest_path.write_text(json.dumps({
+                "quality_benchmark": {
+                    "benchmark_version": 1,
+                    "status": "production_quality_verified",
+                    "package_quality_score": 94,
+                    "package_quality_ready": True,
+                    "production_quality_verified": True,
+                    "visual_evidence_level": "model_reviewed",
+                    "summary": "真实模型质量已验证。",
+                    "issue_count": 0,
+                    "blocker_count": 0,
+                    "dimensions": [
+                        {"id": "story_grounding", "label": "故事贴合度", "status": "passed", "score": 100, "internal": "drop"}
+                    ],
+                    "limitations": [],
+                    "next_action": "进入下游生产。",
+                    "raw_model_output": "drop",
+                }
+            }, ensure_ascii=False), encoding="utf-8")
+
+            summary = _comic_v2_handoff_quality_benchmark(manifest_path)
+
+        self.assertEqual(summary["package_quality_score"], 94)
+        self.assertTrue(summary["production_quality_verified"])
+        self.assertEqual(summary["dimensions"][0]["label"], "故事贴合度")
+        self.assertNotIn("raw_model_output", summary)
+        self.assertNotIn("internal", summary["dimensions"][0])
 
     def test_task_detail_exposes_recovery_plan_for_failed_run(self):
         task_id = f"task_recover_{uuid.uuid4().hex[:8]}"
@@ -719,6 +756,20 @@ class WebComicApiTests(unittest.TestCase):
                         "execution_steps": ["绑定首帧参考图片", "粘贴视频提示词", "按验收标准检查"],
                     }
                 ],
+                "quality_benchmark": {
+                    "benchmark_version": 1,
+                    "status": "production_quality_verified",
+                    "package_quality_score": 96,
+                    "package_quality_ready": True,
+                    "production_quality_verified": True,
+                    "visual_evidence_level": "model_reviewed",
+                    "summary": "制片包质量已验证。",
+                    "issue_count": 0,
+                    "blocker_count": 0,
+                    "dimensions": [],
+                    "limitations": [],
+                    "next_action": "进入下游生产。",
+                },
             },
             created_by="libu",
         )
@@ -816,6 +867,8 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["shots"][0]["shot_id"], "shot_001")
             self.assertEqual(trace["shots"][0]["first_frame_reference_image"]["file"], "char_001_three_view.png")
             self.assertEqual(trace["shots"][0]["reference_asset_chain"][0]["name"], "林昭")
+            self.assertEqual(trace["quality_benchmark"]["package_quality_score"], 96)
+            self.assertTrue(trace["quality_benchmark"]["production_quality_verified"])
             self.assertIn("首帧参考林昭", trace["shots"][0]["video_prompt_block"])
             self.assertEqual(trace["visual_review"]["record_count"], 7)
             self.assertEqual(
@@ -832,6 +885,9 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(summary["prompt_quality_status"], "ready")
             self.assertEqual(summary["prompt_quality_issue_count"], 0)
             self.assertEqual(summary["visual_review_status"], "passed")
+            self.assertEqual(summary["package_quality_score"], 96)
+            self.assertEqual(summary["package_quality_claim"], "production_quality_verified")
+            self.assertTrue(summary["production_quality_verified"])
             self.assertEqual(
                 summary["downloadable_files"],
                 ["完整归档包", "Word 制片画布", "引用清单", "提示词包", "图片资产", "追溯记录"],

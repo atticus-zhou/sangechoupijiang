@@ -1905,11 +1905,18 @@ function renderComicV2ReviewSummary(status) {
     }
     if (stage === 'ready_for_handoff' || stage === 'document_generation') {
         const audit = status.delivery?.audit || {};
+        const benchmark = status.delivery?.quality_benchmark || {};
+        const benchmarkLabel = {
+            production_quality_verified: '真实质量已验证',
+            demo_structure_verified: '结构演示已验证',
+            needs_review: '质量待复核',
+        }[benchmark.status] || benchmark.status || '等待质量基准';
         return `
             <div class="package-summary v2-review-summary">
                 <strong>交付审计</strong>
                 <span>嵌入图片 ${Number(audit.embedded_images || 0)} 张；资产 ${Number(audit.asset_count || 0)} 个；镜头 ${Number(audit.shot_count || 0)} 个。</span>
-                <small>${audit.handoff_ready ? '结构审计已通过。' : '等待 Word 结构审计。'}</small>
+                <small>${audit.handoff_ready ? '结构审计已通过。' : '等待 Word 结构审计。'}${benchmark.summary ? ` 制片包 ${Number(benchmark.package_quality_score || 0)}/100，${escapeHtml(benchmarkLabel)}。` : ''}</small>
+                ${benchmark.summary ? `<small>${escapeHtml(benchmark.summary)}</small>` : ''}
             </div>
         `;
     }
@@ -4124,6 +4131,11 @@ function renderHistoryDeliverySummary(summary, compact = false) {
         needs_review: '需复核',
         waiting: '待生成',
     }[summary.prompt_quality_status] || summary.prompt_quality_status || '未知';
+    const packageQualityLabel = {
+        production_quality_verified: '真实质量已验证',
+        demo_structure_verified: '结构演示已验证',
+        needs_review: '需复核',
+    }[summary.package_quality_claim] || summary.package_quality_claim || '待生成';
     return `
         <div class="history-delivery-summary ${compact ? 'compact' : ''} ${escapeHtml(summary.status)}">
             <div class="history-delivery-head">
@@ -4136,6 +4148,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 <span>提示词 ${escapeHtml(summary.prompt_count || 0)}</span>
                 <span>提示词门禁 ${escapeHtml(promptQualityLabel)}</span>
                 <span>质检 ${escapeHtml(summary.visual_review_status || 'unknown')}</span>
+                <span>制片包 ${escapeHtml(summary.package_quality_score || 0)}/100</span>
             </div>
             ${compact ? '' : `
                 ${actions.length ? `
@@ -4149,6 +4162,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 ` : ''}
                 <p>${escapeHtml(summary.next_action || '')}</p>
                 ${summary.prompt_quality_summary ? `<small>提示词质量：${escapeHtml(summary.prompt_quality_summary)}</small>` : ''}
+                ${summary.package_quality_summary ? `<small>制片包基准：${escapeHtml(packageQualityLabel)} · ${escapeHtml(summary.package_quality_summary)}</small>` : ''}
                 <small>可下载：${escapeHtml(files.length ? files.join('、') : '暂无')}</small>
                 <small>缺失项：${escapeHtml(missing.length ? missing.join('、') : '无')}</small>
             `}
@@ -4166,12 +4180,18 @@ function renderComicV2HistoryTrace(trace) {
     const visual = trace.visual_review || {};
     const audit = trace.delivery_audit || {};
     const quality = trace.prompt_quality || {};
+    const benchmark = trace.quality_benchmark || {};
     const promptQualityLabel = {
         ready: '通过',
         needs_review: '需复核',
         waiting: '待生成',
     }[quality.status] || quality.status || '未知';
     const promptIssues = Array.isArray(quality.issues) ? quality.issues : [];
+    const benchmarkLabel = {
+        production_quality_verified: '真实质量已验证',
+        demo_structure_verified: '结构演示已验证',
+        needs_review: '需复核',
+    }[benchmark.status] || benchmark.status || '待生成';
     return `
         <h4>制片追溯</h4>
         <ul>
@@ -4182,6 +4202,7 @@ function renderComicV2HistoryTrace(trace) {
             <li><strong>提示词质量门禁</strong> · ${escapeHtml(promptQualityLabel)}，问题 ${escapeHtml(quality.issue_count || 0)} 项</li>
             <li><strong>视觉质检</strong> · 图片 ${escapeHtml(visual.record_count || 0)} 张，失败 ${escapeHtml(visual.failure_count || 0)} 项</li>
             <li><strong>交付审计</strong> · 资产 ${escapeHtml(audit.asset_count || 0)} 个，镜头 ${escapeHtml(audit.shot_count || 0)} 个，${audit.handoff_ready ? '可交付' : '需复查'}</li>
+            <li><strong>制片包质量基准</strong> · ${escapeHtml(benchmarkLabel)}，${escapeHtml(benchmark.package_quality_score || 0)}/100，问题 ${escapeHtml(benchmark.issue_count || 0)} 项</li>
             <li><strong>引用清单</strong> · ${trace.handoff_manifest_uri ? `<a href="${escapeHtml(trace.handoff_manifest_uri)}" target="_blank">打开 JSON</a>` : '未生成'}</li>
         </ul>
         ${quality.summary ? `
@@ -4203,6 +4224,21 @@ function renderComicV2HistoryTrace(trace) {
                         `).join('')}
                     </ul>
                 ` : ''}
+            </div>
+        ` : ''}
+        ${benchmark.summary ? `
+            <div class="v2-prompt-quality history-prompt-quality ${benchmark.package_quality_ready ? 'ready' : 'needs_review'}">
+                <div class="v2-prompt-quality-head">
+                    <strong>历史制片包质量基准</strong>
+                    <span>${escapeHtml(benchmarkLabel)}</span>
+                </div>
+                <p>${escapeHtml(benchmark.summary)}</p>
+                <div class="v2-prompt-quality-grid">
+                    <span>综合分 ${escapeHtml(benchmark.package_quality_score || 0)} / 100</span>
+                    <span>真实质量 ${benchmark.production_quality_verified ? '已验证' : '未验证'}</span>
+                    <span>视觉证据 ${escapeHtml(benchmark.visual_evidence_level || 'unknown')}</span>
+                </div>
+                ${(benchmark.limitations || []).length ? `<small>${escapeHtml(benchmark.limitations[0])}</small>` : ''}
             </div>
         ` : ''}
         ${renderComicV2HistoryShotPackages(trace.shots)}

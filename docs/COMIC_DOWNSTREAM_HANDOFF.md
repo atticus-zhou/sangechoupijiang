@@ -9,10 +9,11 @@
 每次交付至少应该包含：
 
 - Word 制片画布：给人看的主交付物，按故事、风格、资产、镜头、提示词和下游生产清单组织。
-- handoff manifest：给系统或二次工具读取的 JSON，记录 story、style、manifest、images、shots 和 production_lineage。
+- handoff manifest：给系统或二次工具读取的 JSON，记录完整确认故事、完整视觉母版、资产身份证、图片质检、镜头导演合同、production_lineage 和质量基准。
 - 图片资产：人物、道具、场景的批准图片文件，文件名必须能被 Word 和 manifest 同时引用。
 - 镜头视频包：每个镜头必须有参考资产、首帧参考图片、视频提示词、负面提示词、执行步骤、验收标准和失败重试策略。
-- 机器可读导演执行合同：handoff manifest v2 的每个镜头都必须保留参考资产、首帧图片 ID、动作顺序、表演意图、景别、运镜、灯光、台词、声音和风格版本，不能只留一整段提示词。
+- 机器可读导演执行合同：handoff manifest v3 的每个镜头都必须保留参考资产、首帧图片 ID、动作顺序、表演意图、景别、运镜、灯光、台词、声音和风格版本，不能只留一整段提示词。
+- 制片包质量基准：交叉检查故事证据、资产身份证、提示词专属性、导演执行合同、视觉质检和生产谱系，防止“字段齐全但内容仍是模板”的假完成。
 
 ## 资产最低标准
 
@@ -64,6 +65,7 @@
 
 ```powershell
 python scripts/verify_comic_v2_downstream_handoff.py --format markdown
+python scripts/verify_comic_v2_production_benchmark.py --format markdown
 ```
 
 这个命令会复用确定性样例生成 Word 和 manifest，然后检查：
@@ -77,4 +79,8 @@ python scripts/verify_comic_v2_downstream_handoff.py --format markdown
 - 镜头视频提示词包含首帧参考、故事目的、动作链、表演意图、摄影和灯光；负面提示词单独成段，并用“禁止”表达。
 - production_lineage 覆盖故事、视觉、资产、提示词、图片、质检和交付阶段。
 
-如果这条命令失败，不能把当前制片包说成“可交给下游视频平台继续生产”。
+第二条命令进一步检查内容质量：完整故事有没有被替换，资产和镜头能不能回指原文，不同资产是否复制同一提示词模板，每条图片提示词是否落实专属视觉锁定，镜头导演参数是否随剧情变化，以及真实图片是否保留七维视觉质检证据。
+
+无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、且其他维度全部通过时，才会得到 `production_quality_verified`。
+
+如果任一命令失败，不能把当前制片包说成“可交给下游视频平台继续生产”。真实模型产物没有得到 `production_quality_verified` 时，也不能宣称画风和人物一致性已经被完整验证。

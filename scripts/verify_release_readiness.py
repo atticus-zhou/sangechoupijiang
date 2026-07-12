@@ -50,6 +50,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_v2_downstream_handoff.py", "--format", "json"],
     },
     {
+        "id": "comic_production_benchmark",
+        "title": "AI comic production quality benchmark",
+        "command": ["scripts/verify_comic_v2_production_benchmark.py", "--format", "json"],
+    },
+    {
         "id": "research_readiness",
         "title": "Research office staged delivery",
         "command": ["scripts/verify_research_office_readiness.py", "--format", "json"],
@@ -136,6 +141,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"images={parsed.get('image_count')}; "
                 f"shots={parsed.get('shot_count')}; "
                 f"structured_director_shots={parsed.get('structured_director_shots')}"
+            )
+        if check_id == "comic_production_benchmark":
+            return (
+                f"score={parsed.get('package_quality_score')}; "
+                f"claim={parsed.get('quality_claim')}; "
+                f"visual_evidence={parsed.get('visual_evidence_level')}; "
+                f"real_quality_verified={parsed.get('production_quality_verified')}"
             )
         if check_id == "research_readiness":
             package = parsed.get("artifact_package") or {}

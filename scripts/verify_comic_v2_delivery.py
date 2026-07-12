@@ -65,7 +65,12 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
                 style_id=bundle.visual.style_id,
                 style_version=bundle.visual.style_version,
                 manifest_version=manifest.version,
-                review={"status": "pass", "fixture": True},
+                review={
+                    "status": "pass",
+                    "handoff_ready": True,
+                    "fixture": True,
+                    "summary": "无 Key 固定样例，仅验证流程、引用和交付结构。",
+                },
             ))
     prompt_package = PromptPackage(
         package_id="prompts_fixture",

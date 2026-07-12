@@ -220,6 +220,38 @@ class ComicV2PipelineTests(unittest.TestCase):
         self.assertEqual(ready.document_status, "ready")
         self.assertEqual(ready.delivery["path"], "C:/delivery/canvas.docx")
 
+    def test_package_quality_blocker_keeps_generated_document_in_review(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        state = state.with_status(stage="document_generation")
+        audit = DocumentAudit(
+            embedded_images=2,
+            asset_count=1,
+            shot_count=1,
+            missing_image_asset_ids=(),
+            structural_errors=(),
+            max_table_columns=2,
+            handoff_ready=True,
+        )
+
+        reviewed = ComicProductionV2.attach_delivery(
+            state,
+            "C:/delivery/canvas.docx",
+            audit,
+            quality_benchmark={
+                "status": "needs_review",
+                "package_quality_ready": False,
+                "summary": "提示词高度雷同。",
+                "next_action": "重新生成专属提示词。",
+            },
+        )
+
+        self.assertEqual(reviewed.stage, "ready_for_handoff")
+        self.assertEqual(reviewed.status, "waiting_for_human")
+        self.assertEqual(reviewed.document_status, "needs_review")
+        self.assertEqual(reviewed.blocking_reason, "提示词高度雷同。")
+        self.assertEqual(reviewed.next_action, "重新生成专属提示词。")
+        self.assertFalse(reviewed.delivery["quality_benchmark"]["package_quality_ready"])
+
     def test_old_state_payload_can_be_loaded_before_prompt_and_image_fields_exist(self):
         state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
         payload = state.to_dict()

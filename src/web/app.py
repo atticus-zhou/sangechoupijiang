@@ -2327,12 +2327,14 @@ async def build_comic_v2_delivery_api(workspace_id: str):
         production_lineage = _comic_v2_handoff_production_lineage(delivery.handoff_manifest_path)
         asset_baseline_chains = _comic_v2_handoff_asset_baseline_chains(delivery.handoff_manifest_path)
         shot_production_packages = _comic_v2_handoff_shot_production_packages(delivery.handoff_manifest_path)
+        quality_benchmark = _comic_v2_handoff_quality_benchmark(delivery.handoff_manifest_path)
         ready = ComicProductionV2.attach_delivery(
             state,
             str(delivery.path),
             delivery.audit,
             uri=uri,
             handoff_manifest_uri=handoff_manifest_uri,
+            quality_benchmark=quality_benchmark,
         )
     except (ContractValidationError, DeliveryValidationError, ProductionError, ValueError) as exc:
         config_manager.update_task_run(
@@ -2390,6 +2392,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
             "audit": ready.delivery.get("audit", {}),
             "download_uri": uri,
             "handoff_manifest_uri": handoff_manifest_uri,
+            "quality_benchmark": quality_benchmark,
         },
         created_by="libu",
     )
@@ -2415,6 +2418,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
                 "production_lineage": production_lineage,
                 "assets": asset_baseline_chains,
                 "shots": shot_production_packages,
+                "quality_benchmark": quality_benchmark,
             },
             created_by="libu",
         )
@@ -2422,7 +2426,7 @@ async def build_comic_v2_delivery_api(workspace_id: str):
         task_id,
         "completed",
         current_phase="ready_for_handoff",
-        result={"stage": ready.stage, "download_uri": uri},
+        result={"stage": ready.stage, "download_uri": uri, "quality_benchmark": quality_benchmark},
         completed=True,
     )
     config_manager.append_task_event(
@@ -2686,6 +2690,43 @@ def _comic_v2_handoff_shot_production_packages(path: Path | None) -> list[dict]:
             "execution_steps": [str(step) for step in execution_steps if str(step).strip()],
         })
     return summary
+
+
+def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
+    """Read the human-facing package quality claim from a generated handoff manifest."""
+    if not path or not Path(path).exists():
+        return {}
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    benchmark = payload.get("quality_benchmark")
+    if not isinstance(benchmark, dict):
+        return {}
+    dimensions = []
+    for item in benchmark.get("dimensions") or []:
+        if not isinstance(item, dict):
+            continue
+        dimensions.append({
+            "id": str(item.get("id") or ""),
+            "label": str(item.get("label") or ""),
+            "status": str(item.get("status") or ""),
+            "score": int(item.get("score") or 0),
+        })
+    return {
+        "benchmark_version": int(benchmark.get("benchmark_version") or 0),
+        "status": str(benchmark.get("status") or ""),
+        "package_quality_score": int(benchmark.get("package_quality_score") or 0),
+        "package_quality_ready": bool(benchmark.get("package_quality_ready")),
+        "production_quality_verified": bool(benchmark.get("production_quality_verified")),
+        "visual_evidence_level": str(benchmark.get("visual_evidence_level") or ""),
+        "summary": str(benchmark.get("summary") or ""),
+        "issue_count": int(benchmark.get("issue_count") or 0),
+        "blocker_count": int(benchmark.get("blocker_count") or 0),
+        "dimensions": dimensions,
+        "limitations": [str(item) for item in (benchmark.get("limitations") or []) if str(item).strip()],
+        "next_action": str(benchmark.get("next_action") or ""),
+    }
 
 
 def _current_confirmed_script_metadata(workspace_id: str) -> dict:
@@ -5336,6 +5377,7 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "handoff_manifest_title": handoff_manifest.get("title", ""),
         "production_lineage": handoff_meta.get("production_lineage") or [],
         "shots": handoff_meta.get("shots") or [],
+        "quality_benchmark": handoff_meta.get("quality_benchmark") or word_meta.get("quality_benchmark") or {},
         "prompt_package_title": prompt_package.get("title", ""),
         "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),
@@ -5383,7 +5425,9 @@ def _history_delivery_summary(enriched: dict) -> dict:
     prompt_quality_status = prompt_quality.get("status") or ""
     prompt_quality_issue_count = int(prompt_quality.get("issue_count") or 0)
     visual_review = trace.get("visual_review") or {}
-    production_ready = bool(visual_review.get("production_ready") or audit.get("handoff_ready"))
+    quality_benchmark = trace.get("quality_benchmark") or {}
+    benchmark_ready = bool(quality_benchmark.get("package_quality_ready")) if quality_benchmark else True
+    production_ready = bool(visual_review.get("production_ready") or audit.get("handoff_ready")) and benchmark_ready
     failure_count = int(visual_review.get("failure_count") or 0)
 
     missing_items = []
@@ -5397,12 +5441,16 @@ def _history_delivery_summary(enriched: dict) -> dict:
         missing_items.append("镜头卡")
     if prompt_quality_status == "needs_review":
         missing_items.append("提示词质量门禁")
+    if quality_benchmark and not benchmark_ready:
+        missing_items.append("制片包质量基准")
     if failure_count > 0:
         missing_items.append("视觉质检问题")
 
     if missing_items:
         status = "needs_review"
-        if "提示词质量门禁" in missing_items:
+        if "制片包质量基准" in missing_items:
+            next_action = quality_benchmark.get("next_action") or "先处理制片包质量基准中的阻塞项，再重新生成交付物。"
+        elif "提示词质量门禁" in missing_items:
             next_action = "先重新生成提示词，或退回资产拆解修正人物、道具、场景，再继续图片和 Word 制片画布生产。"
         else:
             next_action = "先补齐缺失项或重新生成 Word 制片画布，再交给下游生产。"
@@ -5462,6 +5510,11 @@ def _history_delivery_summary(enriched: dict) -> dict:
         "prompt_quality_status": prompt_quality_status,
         "prompt_quality_issue_count": prompt_quality_issue_count,
         "prompt_quality_summary": prompt_quality.get("summary", ""),
+        "package_quality_score": int(quality_benchmark.get("package_quality_score") or 0),
+        "package_quality_claim": quality_benchmark.get("status", ""),
+        "package_quality_ready": benchmark_ready,
+        "production_quality_verified": bool(quality_benchmark.get("production_quality_verified")),
+        "package_quality_summary": quality_benchmark.get("summary", ""),
         "visual_review_status": "passed" if production_ready and failure_count == 0 else "needs_review",
         "downloadable_files": downloadable_files,
         "missing_items": missing_items,

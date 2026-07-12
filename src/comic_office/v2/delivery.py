@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .asset_manifest import AssetManifest
 from .contracts import ContractBundle
+from .production_benchmark import audit_handoff_manifest
 from .production import ImageProductionResult, PromptPackage
 from .word_canvas import CanvasBuildResult, build_word_canvas_v2
 
@@ -176,10 +177,16 @@ def _write_handoff_manifest(
             "status": record.status,
             "is_identity_baseline": record.is_identity_baseline,
             "reference_image_ids": list(record.reference_image_ids),
+            "story_id": record.story_id,
+            "story_version": record.story_version,
+            "style_id": record.style_id,
+            "style_version": record.style_version,
+            "manifest_version": record.manifest_version,
             "prompt_hash": record.prompt_hash,
             "prompt_purpose": prompt.purpose if prompt else "",
             "generator_prompt": prompt.generator_prompt if prompt else "",
             "negative_prompt": list(prompt.negative_prompt) if prompt else [],
+            "review": dict(record.review or {}),
         })
     shots = []
     for shot in prompt_package.shots:
@@ -191,6 +198,8 @@ def _write_handoff_manifest(
             "scene_id": shot.scene_id,
             "story_beat": shot.story_beat,
             "evidence_quote": shot.evidence_quote,
+            "style_id": shot.style_id,
+            "style_version": bundle.visual.style_version,
             "reference_asset_ids": list(shot.reference_asset_ids),
             "reference_images": reference_images,
             "first_frame_reference_image": first_frame_reference,
@@ -225,13 +234,24 @@ def _write_handoff_manifest(
             "platform_note": shot.platform_note,
         })
     payload = {
-        "schema": "comic_production_handoff_manifest_v2",
-        "schema_version": 2,
+        "schema": "comic_production_handoff_manifest_v3",
+        "schema_version": 3,
         "story": {
             "story_id": bundle.creative.story_id,
             "story_version": bundle.creative.story_version,
             "title": bundle.creative.title,
             "source_hash": bundle.creative.source_hash,
+            "source_mode": bundle.creative.source_mode,
+            "source_story": bundle.creative.source_story,
+            "genre": bundle.creative.genre,
+            "theme": bundle.creative.theme,
+            "protagonist_goal": bundle.creative.protagonist_goal,
+            "main_conflict": bundle.creative.main_conflict,
+            "causal_chain": list(bundle.creative.causal_chain),
+            "ending": bundle.creative.ending,
+            "episodes": [asdict(item) for item in bundle.creative.episodes],
+            "must_keep": list(bundle.creative.must_keep),
+            "must_avoid": list(bundle.creative.must_avoid),
         },
         "style": {
             "style_id": bundle.visual.style_id,
@@ -239,6 +259,15 @@ def _write_handoff_manifest(
             "medium": bundle.visual.medium,
             "era": bundle.visual.era,
             "aspect_ratio": bundle.visual.aspect_ratio,
+            "palette": list(bundle.visual.palette),
+            "lighting": bundle.visual.lighting,
+            "camera_language": bundle.visual.camera_language,
+            "character_rules": list(bundle.visual.character_rules),
+            "costume_rules": list(bundle.visual.costume_rules),
+            "prop_rules": list(bundle.visual.prop_rules),
+            "architecture_rules": list(bundle.visual.architecture_rules),
+            "visual_motifs": list(bundle.visual.visual_motifs),
+            "prohibited_elements": list(bundle.visual.prohibited_elements),
         },
         "manifest": {
             "manifest_id": manifest.manifest_id,
@@ -266,6 +295,7 @@ def _write_handoff_manifest(
         "shots": shots,
         "audit": asdict(audit),
     }
+    payload["quality_benchmark"] = audit_handoff_manifest(payload)
     path = word_path.with_name(f"{word_path.stem}_handoff_manifest.json")
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path

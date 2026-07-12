@@ -85,11 +85,14 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "历史追溯",
             "失败恢复",
             "python scripts/verify_product_readiness.py --format markdown --run-e2e",
+            "python scripts/verify_comic_v2_production_benchmark.py --format markdown",
         ],
         "files": [
             "scripts/verify_product_readiness.py",
             "tests/test_comic_v2_user_flow_verifier.py",
             "tests/test_comic_production_chain.py",
+            "scripts/verify_comic_v2_production_benchmark.py",
+            "src/comic_office/v2/production_benchmark.py",
         ],
     },
     {
@@ -164,11 +167,14 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "docs/COMIC_DOWNSTREAM_HANDOFF.md",
             "人物三视图",
             "镜头视频包",
+            "python scripts/verify_comic_v2_production_benchmark.py --format markdown",
+            "handoff manifest v3",
         ],
         "files": [
             "docs/COMIC_DOWNSTREAM_HANDOFF.md",
             "scripts/verify_comic_v2_downstream_handoff.py",
             "tests/test_comic_v2_downstream_handoff_verifier.py",
+            "tests/test_comic_v2_production_benchmark_verifier.py",
         ],
     },
 ]

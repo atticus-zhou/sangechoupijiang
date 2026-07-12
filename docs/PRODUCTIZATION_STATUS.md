@@ -25,12 +25,12 @@ python scripts/check_no_secrets.py
 | P2 | 面试官可以无 Key 看到固定样例、流程说明、样例交付物和下载物 | 已具备公开演示包 | `/api/demo/public-showcase` 的 `portfolio_embed`、样例 Word 画布、handoff manifest、`python scripts/verify_public_demo_mode.py --format markdown` |
 | P3 | 从 GitHub 下载项目后，开发者能复现本地运行路径 | 已具备第一次运行清单 | `python scripts/verify_first_run_readiness.py --format markdown`、`python scripts/doctor.py`、`README.md` |
 | P4 | AI 漫剧制片办公室输出不止聊天文本，而是可追溯制片包 | 已具备 deterministic 样例交付验证 | `python scripts/verify_comic_v2_delivery.py --format markdown`、`python scripts/verify_comic_v2_user_flow.py`、Word 制片画布、`*_handoff_manifest.json` |
-| P5 | 漫剧生产链路保留资产身份、引用链路、提示词包、图片记录、历史追溯和失败恢复 | 已具备核心验证，仍需真实模型持续打磨质量 | `python scripts/verify_product_readiness.py --format markdown --run-e2e`、`tests/fixtures/comic_v2_sample.json`、历史下载和 lineage 字段 |
+| P5 | 漫剧生产链路保留资产身份、引用链路、提示词包、图片记录、历史追溯和失败恢复 | 已具备核心验证和跨产物质量基准，仍需用真实模型产物持续积累质量证据 | `python scripts/verify_product_readiness.py --format markdown --run-e2e`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、历史下载和 lineage 字段 |
 | P6 | 研究办公室可以公开展示阶段性能力，但不伪装成全自动飞瓜会员级交付 | 已具备 staged demo 和证据缺口说明 | `python scripts/verify_research_office_readiness.py --format markdown`、研究样例报告、证据 manifest |
 | P7 | 新办公室可以继续扩展，同时不会污染已有办公室的模型配置、历史和产物 | 已具备办公室隔离、扩展治理和可读演示契约门禁 | `python scripts/verify_office_isolation.py --format markdown`、`python scripts/verify_office_extension_governance.py --format markdown`、`/api/offices/protocols`、`required_demo_contract`（参观路径、证明点、下载物、阅读指南、面试脚本和公开安全边界） |
 | P8 | 公开仓库不应包含用户密钥、Cookie、数据库、输出目录或运行日志 | 已具备安全扫描和部署边界文档 | `python scripts/check_no_secrets.py`、`.gitignore`、`docs/DEPLOYMENT_MODES.md` |
 | P9 | 新用户能看懂每个部门需要什么模型，以及最小可跑和完整制片配置的区别 | 已具备模型配置指南和离线一致性验证 | `docs/MODEL_CONFIGURATION.md`、`python scripts/verify_model_configuration_guidance.py --format markdown`、模型页面测试按钮 |
-| P10 | AI 漫剧制片包能被下游视频平台或剪辑流程接手，而不是只生成一个 Word 文件 | 已具备下游交接门禁和制片包接手说明 | `docs/COMIC_DOWNSTREAM_HANDOFF.md`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown`、人物三视图、镜头视频包 |
+| P10 | AI 漫剧制片包能被下游视频平台或剪辑流程接手，而不是只生成一个 Word 文件 | 已具备人物三视图、镜头视频包、下游交接门禁、机器可读导演合同和诚实的质量声明 | `docs/COMIC_DOWNSTREAM_HANDOFF.md`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、handoff manifest v3 |
 
 ## 当前可公开展示的形态
 

@@ -228,6 +228,14 @@ python scripts/verify_comic_v2_downstream_handoff.py --format markdown
 
 这个脚本会检查人物三视图、表情表、道具参考图、场景广角/俯视图、镜头视频包、首帧参考图、验收标准和失败重试策略是否齐全。对应说明见 `docs/COMIC_DOWNSTREAM_HANDOFF.md`。
 
+如果要检查内容是否真的贴合故事、提示词是否只是复制模板，以及真实图片是否具有足够的视觉质检证据，运行：
+
+```powershell
+python scripts/verify_comic_v2_production_benchmark.py --format markdown
+```
+
+这个基准会给出故事贴合度、资产身份证、提示词专属性、导演执行力、视觉质检与追溯五项评分。无 Key 样例只会声明“结构演示已验证”，不会冒充真实模型画质已经通过生产验证；也可以用 `--manifest` 检查任意真实生成的 `*_handoff_manifest.json`。
+
 还可以运行完整用户式 V2 流程验证：
 
 ```powershell
