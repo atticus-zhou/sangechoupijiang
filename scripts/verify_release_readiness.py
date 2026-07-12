@@ -127,9 +127,11 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
         if check_id == "research_readiness":
             package = parsed.get("artifact_package") or {}
             quality = package.get("quality") or {}
+            demo = parsed.get("demo_endpoint") or {}
             return (
                 f"quality={quality.get('status')}:{quality.get('score')}; "
-                f"downloads={parsed.get('demo_endpoint', {}).get('download_count')}"
+                f"downloads={demo.get('download_count')}; "
+                f"reading_guide={demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}"
             )
         if check_id == "office_governance":
             demo_contract = parsed.get("required_demo_contract") or []

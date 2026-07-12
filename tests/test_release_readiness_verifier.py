@@ -47,6 +47,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("reading_guide=", public_demo["summary"])
         self.assertIn("interview_script=", public_demo["summary"])
+        research_readiness = next(item for item in payload["checks"] if item["id"] == "research_readiness")
+        self.assertIn("reading_guide=2/2", research_readiness["summary"])
         office_governance = next(item for item in payload["checks"] if item["id"] == "office_governance")
         self.assertIn("demo_contract=", office_governance["summary"])
         self.assertNotIn("sk-", completed.stdout.lower())
@@ -74,6 +76,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Research office staged delivery", completed.stdout)
         self.assertIn("Secret and runtime artifact scan", completed.stdout)
         self.assertIn("interview_script=4/4", completed.stdout)
+        self.assertIn("reading_guide=2/2", completed.stdout)
         self.assertIn("demo_contract=6", completed.stdout)
 
 
