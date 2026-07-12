@@ -112,6 +112,8 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "python scripts/verify_office_isolation.py --format markdown",
             "python scripts/verify_office_extension_governance.py --format markdown",
             "/api/offices/protocols",
+            "required_demo_contract",
+            "参观路径、证明点、下载物、阅读指南、面试脚本和公开安全边界",
         ],
         "files": [
             "scripts/verify_office_isolation.py",

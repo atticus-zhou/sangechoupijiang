@@ -23,6 +23,9 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertEqual(len(payload["requirements"]), 10)
         self.assertTrue(payload["release_gate_includes_status"])
         self.assertTrue(payload["readme_links_status"])
+        office_governance = next(item for item in module.REQUIREMENTS if item["id"] == "P7")
+        self.assertIn("required_demo_contract", office_governance["markers"])
+        self.assertIn("参观路径、证明点、下载物、阅读指南、面试脚本和公开安全边界", office_governance["markers"])
 
     def test_markdown_output_is_readable(self):
         result = subprocess.run(
