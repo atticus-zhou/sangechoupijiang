@@ -742,6 +742,39 @@ def _public_showcase_sample_deliverables(demos: list[dict]) -> list[dict]:
     return deliverables
 
 
+def _public_showcase_deliverable_reading_guide() -> list[dict]:
+    return [
+        {
+            "order": 1,
+            "title": "先看 AI 漫剧 Word 制片画布",
+            "uri": "/api/demo/comic-production/files/word_canvas.docx",
+            "look_for": "故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单是否处在同一份制片包里。",
+            "proves": "AI 漫剧制片办公室交付的是可下载、可复核、可继续生产的制片包，而不是聊天文本截图。",
+        },
+        {
+            "order": 2,
+            "title": "再看 AI 漫剧 handoff manifest",
+            "uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            "look_for": "story_version、style_version、asset_id、image_id、shot_id、首帧参考和 production_lineage 是否完整。",
+            "proves": "故事、资产、图片、镜头、提示词和 Word 文件之间有引用链路，失败后可以追溯和恢复。",
+        },
+        {
+            "order": 3,
+            "title": "再看研究办公室阶段报告",
+            "uri": "/api/demo/research/files/report.md",
+            "look_for": "报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现。",
+            "proves": "研究办公室展示的是 staged delivery，不把未确认信息包装成完整自动化采集结果。",
+        },
+        {
+            "order": 4,
+            "title": "最后看研究办公室证据清单",
+            "uri": "/api/demo/research/files/evidence_manifest.json",
+            "look_for": "来源、数据、截图计划、缺口和人工确认项是否可追踪。",
+            "proves": "公开演示保留证据边界，方便访客判断哪些已确认、哪些需要真实账号或人工补证。",
+        },
+    ]
+
+
 @app.get("/api/demo/public-showcase")
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
@@ -846,6 +879,7 @@ async def get_public_showcase_demo_api():
                 },
             ],
             "sample_deliverables": _public_showcase_sample_deliverables(featured_demos),
+            "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
         },
         "public_deployment": {
             "mode": "demo_only",

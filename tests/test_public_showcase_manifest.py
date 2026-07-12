@@ -46,6 +46,15 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
         self.assertGreaterEqual(len(embed["sample_deliverables"]), 4)
         self.assertTrue(all(item["uri"].startswith("/api/demo/") for item in embed["sample_deliverables"]))
+        self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 4)
+        self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4])
+        for item in embed["deliverable_reading_guide"]:
+            self.assertTrue(item["uri"].startswith("/api/demo/"))
+            self.assertTrue(item["look_for"])
+            self.assertTrue(item["proves"])
+        self.assertTrue(any("Word 制片画布" in item["title"] for item in embed["deliverable_reading_guide"]))
+        self.assertTrue(any("handoff manifest" in item["title"] for item in embed["deliverable_reading_guide"]))
+        self.assertTrue(any("证据清单" in item["title"] for item in embed["deliverable_reading_guide"]))
         for item in embed["sample_deliverables"]:
             self.assertTrue(item["reader_guidance"])
             self.assertGreaterEqual(len(item["acceptance_signals"]), 3)

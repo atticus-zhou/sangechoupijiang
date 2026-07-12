@@ -571,6 +571,56 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     line-height: 1.65;
 }
 
+.public-reading-guide {
+    display: grid;
+    gap: 12px;
+}
+
+.public-reading-guide article {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    border: 1px solid rgba(88, 166, 255, 0.18);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.62);
+    padding: 16px;
+}
+
+.public-reading-guide b {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: #8cc8ff;
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid rgba(88, 166, 255, 0.24);
+}
+
+.public-reading-guide strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #e6edf3;
+}
+
+.public-reading-guide p,
+.public-reading-guide small {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.public-reading-guide a {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 4px;
+    text-decoration: none;
+}
+
 .public-workflow-grid span {
     display: inline-flex;
     margin-bottom: 8px;

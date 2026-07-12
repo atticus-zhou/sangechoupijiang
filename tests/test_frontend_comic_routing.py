@@ -253,8 +253,13 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("showcase.audience_paths", js)
         self.assertIn("showcase.featured_demos", js)
         self.assertIn("portfolio.sample_deliverables", js)
+        self.assertIn("portfolio.deliverable_reading_guide", js)
         self.assertIn("item.reader_guidance", js)
         self.assertIn("item.acceptance_signals", js)
+        self.assertIn("交付物阅读顺序", js)
+        self.assertIn("public-reading-guide", js)
+        self.assertIn("item.look_for", js)
+        self.assertIn("item.proves", js)
         self.assertIn("public-deliverable-signals", js)
         self.assertIn("showcase.safety_boundaries", js)
         self.assertIn("deployment.allowed_route_prefixes", js)
@@ -264,6 +269,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".public-audience-grid", css)
         self.assertIn(".public-safety-section", css)
         self.assertIn(".public-deliverable-signals", css)
+        self.assertIn(".public-reading-guide", css)
 
     def test_comic_v2_actions_check_preflight_before_costly_steps(self):
         js = APP_JS.read_text(encoding="utf-8")

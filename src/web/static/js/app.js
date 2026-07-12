@@ -4328,6 +4328,7 @@ function renderPublicShowcase(showcase) {
     const boundaries = Array.isArray(showcase.safety_boundaries) ? showcase.safety_boundaries : [];
     const portfolio = showcase.portfolio_embed || {};
     const deliverables = Array.isArray(portfolio.sample_deliverables) ? portfolio.sample_deliverables : [];
+    const readingGuide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const deployment = showcase.public_deployment || {};
     return `
@@ -4414,6 +4415,27 @@ function renderPublicShowcase(showcase) {
                 `).join('')}
             </div>
         </section>
+        ${readingGuide.length ? `
+            <section class="demo-section">
+                <div class="demo-section-head">
+                    <h2>交付物阅读顺序</h2>
+                    <span>${readingGuide.length} 步</span>
+                </div>
+                <div class="public-reading-guide">
+                    ${readingGuide.map(item => `
+                        <article>
+                            <b>${escapeHtml(item.order || '')}</b>
+                            <div>
+                                <strong>${escapeHtml(item.title || '')}</strong>
+                                <p>${escapeHtml(item.look_for || '')}</p>
+                                <small>证明：${escapeHtml(item.proves || '')}</small>
+                                ${item.uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.uri)}" target="_blank">打开文件</a>` : ''}
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
         <section class="demo-section">
             <div class="demo-section-head">
                 <h2>作品集截图目标</h2>
