@@ -73,6 +73,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     featured_demos = payload.get("featured_demos") or []
     portfolio_embed = payload.get("portfolio_embed") or {}
     public_deployment = payload.get("public_deployment") or {}
+    interview_script = portfolio_embed.get("interview_demo_script") or []
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
     if payload.get("requires_api_key") is not False:
@@ -102,6 +103,11 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append(f"reading guide item missing look_for/proves: {item.get('title') or item.get('uri')}")
     if not any((item.get("kind") == "screenshot_target") for item in portfolio_embed.get("workflow_showcase") or []):
         errors.append("portfolio embed must include screenshot targets for the main workflow")
+    if len(interview_script) < 4:
+        errors.append("portfolio embed must expose a 4-step interview demo script")
+    for item in interview_script:
+        if not item.get("visitor_action") or not item.get("product_response") or not item.get("proof") or not item.get("boundary"):
+            errors.append(f"interview demo script item is incomplete: {item.get('title') or item.get('order')}")
     if public_deployment.get("mode") != "demo_only":
         errors.append("public deployment profile must be demo_only")
     if public_deployment.get("allows_real_model_calls") is not False:
@@ -127,6 +133,12 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             1
             for item in reading_guide
             if str(item.get("uri") or "").startswith("/api/demo/") and item.get("look_for") and item.get("proves")
+        ),
+        "interview_script_count": len(interview_script),
+        "interview_script_ready_count": sum(
+            1
+            for item in interview_script
+            if item.get("visitor_action") and item.get("product_response") and item.get("proof") and item.get("boundary")
         ),
         "public_deployment_mode": public_deployment.get("mode", ""),
     }
@@ -224,6 +236,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 作品集样例交付物：{manifest.get('portfolio_deliverable_count')} 个",
         f"- 带阅读说明的样例交付物：{manifest.get('deliverables_with_reader_guidance')} 个",
         f"- 交付物阅读顺序：{manifest.get('reading_guide_count')} 步，其中 {manifest.get('reading_guide_ready_count')} 步可复核",
+        f"- 面试演示脚本：{manifest.get('interview_script_count')} 步，其中 {manifest.get('interview_script_ready_count')} 步可复用",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]

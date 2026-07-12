@@ -123,7 +123,7 @@
 
 目标：面试官、朋友或陌生用户不配置模型也能看懂产品价值。
 
-状态：已形成公开展示包。AI 漫剧制片办公室与研究办公室已接入固定样例无 Key 演示入口；`/api/demo/public-showcase` 已提供 `portfolio_embed` 和 `public_deployment`，供个人网站或 Vercel 页面复用产品定位、办公室大厅说明、主流程截图目标、样例交付物、GitHub 链接和 demo-only 部署边界。
+状态：已形成公开展示包。AI 漫剧制片办公室与研究办公室已接入固定样例无 Key 演示入口；`/api/demo/public-showcase` 已提供 `portfolio_embed` 和 `public_deployment`，供个人网站或 Vercel 页面复用产品定位、办公室大厅说明、3 分钟演示脚本、主流程截图目标、样例交付物、GitHub 链接和 demo-only 部署边界。
 
 - [x] 首页增加清晰的“演示模式”入口。
 - [x] 演示入口包含 `体验AI漫剧制片办公室`。
@@ -135,6 +135,7 @@
 - [x] 研究办公室演示入口可直接下载阶段调研报告和证据清单。
 - [x] 演示入口展示交付质量门禁，说明样例为何可公开、可下载、可追溯。
 - [x] 演示入口提供“建议你这样看”的参观路径和 proof points，让面试官或陌生用户不用阅读代码也能理解产品价值。
+- [x] 公开展示清单提供 3 分钟演示脚本，说明访客动作、产品反馈、证明点和安全边界。
 - [x] 提供 `python scripts/verify_public_demo_mode.py --format markdown`，一条命令验证 AI 漫剧制片办公室和研究办公室的无 Key 演示入口、样例下载和门禁证据链接。
 - [x] 提供 `/api/demo/public-showcase` 公开展示清单，供个人网站或作品集页复用产品定位、访客参观路径、推荐 demo、下载物和安全边界。
 
