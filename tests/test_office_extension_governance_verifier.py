@@ -22,6 +22,10 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         audit = json.loads(completed.stdout)
         self.assertEqual(audit["status"], "passed")
         self.assertEqual(audit["primary_office_ids"], ["comic_production"])
+        self.assertIn("required_demo_contract", audit)
+        self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
+        self.assertIn("interview_demo_script", audit["required_demo_contract"])
+        self.assertIn("public_safety_boundaries", audit["required_demo_contract"])
 
         by_office = {item["office_id"]: item for item in audit["offices"]}
         self.assertTrue(by_office["comic_production"]["primary_allowed"])
@@ -44,6 +48,12 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         )
 
         self.assertIn("Office Extension Governance Audit", completed.stdout)
+        self.assertIn("Required Demo Contract", completed.stdout)
+        self.assertIn("viewer_path", completed.stdout)
+        self.assertIn("downloadable_deliverables", completed.stdout)
+        self.assertIn("deliverable_reading_guide", completed.stdout)
+        self.assertIn("interview_demo_script", completed.stdout)
+        self.assertIn("public_safety_boundaries", completed.stdout)
         self.assertIn("可展示", completed.stdout)
         self.assertIn("可试用", completed.stdout)
         self.assertIn("可交付", completed.stdout)

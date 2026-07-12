@@ -56,6 +56,13 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("failure_recovery", template["required_launch_gates"])
         self.assertIn("history_trace", template["required_launch_gates"])
         self.assertIn("schema_gate", template["required_launch_gates"])
+        self.assertIn("required_demo_contract", template)
+        self.assertIn("viewer_path", template["required_demo_contract"])
+        self.assertIn("proof_points", template["required_demo_contract"])
+        self.assertIn("downloadable_deliverables", template["required_demo_contract"])
+        self.assertIn("deliverable_reading_guide", template["required_demo_contract"])
+        self.assertIn("interview_demo_script", template["required_demo_contract"])
+        self.assertIn("public_safety_boundaries", template["required_demo_contract"])
 
     def test_comic_production_launch_gate_audit_covers_required_gates(self):
         template = list_office_creation_template()
@@ -160,6 +167,9 @@ class OfficeExtensionGovernanceTests(unittest.TestCase):
         self.assertEqual(audit["primary_office_ids"], ["comic_production"])
         self.assertIn("required_profile_fields", audit)
         self.assertIn("required_launch_gates", audit)
+        self.assertIn("required_demo_contract", audit)
+        self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
+        self.assertIn("interview_demo_script", audit["required_demo_contract"])
 
         by_office = {item["office_id"]: item for item in audit["offices"]}
         self.assertTrue(by_office["comic_production"]["primary_allowed"])

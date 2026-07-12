@@ -185,9 +185,11 @@ GET /api/workspaces/{workspace_id}/runtime-status
 - 失败恢复：每个办公室要声明 `recovery_actions`，让 UI 能告诉用户卡在哪一步、可以重试哪个动作。
 - 新办公室模板：接口同时返回 `creation_template`，用于约束后续办公室必须补齐哪些字段和上线门槛。
 
-这个协议是后续扩展新办公室的硬门槛。一个办公室只有同时具备输入、输出、模型需求、人工审核节点、产物规则和验收标准，才应该进入公开演示或真实使用链路。产物写入 SQLite 前会执行运行时校验：缺少 `artifact_id` 会被拒绝，缺少来源、版本、责任 Agent 或引用链路时会按工作区和任务上下文补齐后再保存。
+这个协议是后续扩展新办公室的硬门槛。一个办公室只有同时具备输入、输出、模型需求、人工审核节点、产物规则、验收标准和可读的公开演示契约，才应该进入公开演示或真实使用链路。产物写入 SQLite 前会执行运行时校验：缺少 `artifact_id` 会被拒绝，缺少来源、版本、责任 Agent 或引用链路时会按工作区和任务上下文补齐后再保存。
 
 新办公室进入公开展示前，还必须满足 `creation_template.required_launch_gates` 中的上线门槛：`no_key_demo`、`model_preflight`、`end_to_end_test`、`sample_delivery`、`failure_recovery`、`history_trace`、`schema_gate`、`readme_documentation` 和 `secret_scan`。这条规则的目的不是增加形式，而是确保每个办公室都能被陌生用户试用、被开发者复现、在失败时恢复，并且不会把模型配置或历史产物串到其他办公室。
+
+同时，`creation_template.required_demo_contract` 要求新办公室的无 Key 演示必须包含 `viewer_path`、`proof_points`、`downloadable_deliverables`、`deliverable_reading_guide`、`interview_demo_script` 和 `public_safety_boundaries`。换句话说，新办公室不能只给一个能打开的接口，还要告诉访客先看什么、下载什么、每个交付物证明什么，以及公开模式不会读取 Key、调用真实模型或写入用户工作区。
 
 开发新办公室时，先用下面的接口查看它是否已经具备公开展示和真实使用的最低条件：
 

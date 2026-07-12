@@ -59,13 +59,14 @@
 - [x] 每个办公室必须声明输入类型、输出类型、Agent 分工、人工审核节点和验收标准。
 - [x] 新办公室创建模板必须声明必需协议字段和上线门槛，避免后续办公室复制临时代码入口。
 - [x] 每个办公室必须能通过 `/api/offices/{office_id}/launch-gates` 返回上线门禁审计，明确哪些门槛已通过、证据是什么、下一步该补什么。
+- [x] 新办公室公开演示必须声明可读演示契约：参观路径、证明点、可下载交付物、交付物阅读指南、3 分钟演示脚本和公开安全边界。
 - [x] 办公室大厅必须展示上线门禁审计摘要，让用户和开发者能直接看出哪些办公室可公开展示、哪些仍需补齐。
 - [x] 所有 Agent 关键输出必须有结构化 schema 校验。
 - [x] 所有产物必须有 artifact ID、来源、版本、责任 Agent 和引用链路。
 - [x] 工作空间运行时状态接口和工作台面板必须能展示当前阶段、产物完成度、缺失产物、人工审核节点和恢复动作。
 - [x] 所有长任务必须可观测、可重试、可恢复，并记录失败原因和下一步建议。
 
-说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；协议 API 同时返回 `creation_template`，要求新办公室补齐 `input_types`、`output_types`、`model_requirements`、`human_checkpoints`、`artifact_contract`、`schema_gates`、`recovery_actions` 和验收标准，并通过无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、schema gate、README 文档和 secret scan。`/api/offices/{office_id}/launch-gates` 已返回单个办公室的上线门禁审计，后续办公室如果没有证据、状态和下一步动作，就不能进入公开展示或真实使用链路。工作空间运行时状态通过 `/api/workspaces/{workspace_id}/runtime-status` 暴露，并已接入 AI 漫剧制片办公室工作台，用于统一说明当前阶段、最近任务、产物完成度、缺失产物和恢复动作。长任务事件已覆盖任务开始、任务完成、AI 漫剧图片生产、单张图片进度、Word 画布生成、失败恢复和前端时间线展示，并纳入 `long_task_observability` readiness 条件。artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。AI 漫剧制片办公室已把 `comic_contract`、`asset_manifest`、`asset_prompt_set`、`shot_cards` 和 `image_review_result` 等关键模型输出声明进办公室协议；研究办公室已把 `research_standard_report`、`research_source_list`、`research_data_table` 和 `research_competitor_table` 声明进办公室协议，后续办公室必须沿用同一套 schema gate 方式。
+说明：办公室协议已集中到 `src/offices.py`，并通过 `/api/offices/protocols` 暴露；协议 API 同时返回 `creation_template`，要求新办公室补齐 `input_types`、`output_types`、`model_requirements`、`human_checkpoints`、`artifact_contract`、`schema_gates`、`recovery_actions`、验收标准和 `required_demo_contract`，并通过无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、schema gate、README 文档和 secret scan。`/api/offices/{office_id}/launch-gates` 已返回单个办公室的上线门禁审计，后续办公室如果没有证据、状态和下一步动作，就不能进入公开展示或真实使用链路。工作空间运行时状态通过 `/api/workspaces/{workspace_id}/runtime-status` 暴露，并已接入 AI 漫剧制片办公室工作台，用于统一说明当前阶段、最近任务、产物完成度、缺失产物和恢复动作。长任务事件已覆盖任务开始、任务完成、AI 漫剧图片生产、单张图片进度、Word 画布生成、失败恢复和前端时间线展示，并纳入 `long_task_observability` readiness 条件。artifact 写入 SQLite 前会在 `ConfigManager.create_artifact` 中补齐并校验 `artifact_id`、来源、版本、责任 Agent 和引用链路。AI 漫剧制片办公室已把 `comic_contract`、`asset_manifest`、`asset_prompt_set`、`shot_cards` 和 `image_review_result` 等关键模型输出声明进办公室协议；研究办公室已把 `research_standard_report`、`research_source_list`、`research_data_table` 和 `research_competitor_table` 声明进办公室协议，后续办公室必须沿用同一套 schema gate 方式，并提供访客能看懂的公开演示叙事。
 
 办公室隔离已补充离线验收：`python scripts/verify_office_isolation.py --format markdown` 会在临时目录里验证研究办公室和 AI 漫剧制片办公室的模型配置、工作区、历史、产物和输出目录不会串线，并且历史追踪必须按 `payload.workspace_id` 精确归属。
 
@@ -87,6 +88,7 @@
 - [x] 新办公室必须复用平台协议，而不是复制一套临时代码。
 - [x] 每新增一个办公室，都必须同时提供无 Key 演示、模型预检、端到端测试、失败处理和样例交付物。
 - [x] `/api/offices/protocols` 已暴露新办公室创建模板，后续办公室扩展必须先对齐这份模板。
+- [x] 新办公室公开演示必须满足 `required_demo_contract`，不能只提供一个能打开的接口。
 - [x] 新办公室扩展治理已补充离线验收：`python scripts/verify_office_extension_governance.py --format markdown` 会检查所有办公室是否复用 `OfficeProfile` 协议，并确认主力办公室必须满足可展示、可试用、可交付、可追溯四项标准。
 - [x] 研究办公室可靠性已补充离线验收：`python scripts/verify_research_office_readiness.py --format markdown` 会检查阶段报告、来源清单、数据表、竞品表、截图计划、schema gate 和公开演示下载；边界仍是人机协作补证据，不承诺不稳定的一键全自动抓取。
 - [x] 公开交付前总门禁已补充：`python scripts/verify_release_readiness.py --format markdown` 会串联 first-run、公开演示、AI 漫剧交付物、研究办公室、办公室扩展治理、产品 readiness 和敏感信息扫描。

@@ -37,6 +37,8 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("python scripts/verify_office_extension_governance.py --format markdown", text)
         self.assertIn("OfficeProfile", text)
         self.assertIn("可展示、可试用、可交付、可追溯", text)
+        self.assertIn("required_demo_contract", text)
+        self.assertIn("参观路径、证明点、可下载交付物、交付物阅读指南、3 分钟演示脚本和公开安全边界", text)
 
     def test_research_office_readiness_verifier_is_part_of_platform_protocol(self):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")

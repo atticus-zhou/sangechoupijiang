@@ -23,11 +23,31 @@ def format_markdown(audit: dict[str, Any]) -> str:
         f"Mode: `{audit.get('mode')}`",
         f"Primary offices: `{', '.join(audit.get('primary_office_ids', []))}`",
         "",
-        "## Primary Office Standards",
+        "## Required Demo Contract",
         "",
-        "| Standard | Required gates |",
+        "| Field | Purpose |",
         "| --- | --- |",
     ]
+    demo_purposes = {
+        "viewer_path": "告诉陌生访客先看什么、后看什么。",
+        "proof_points": "说明这个办公室演示到底证明了什么。",
+        "downloadable_deliverables": "提供可下载、可复核的样例交付物。",
+        "deliverable_reading_guide": "解释每个交付物应该怎么看、证明什么。",
+        "interview_demo_script": "给面试官或作品集访客一条 3 分钟演示路线。",
+        "public_safety_boundaries": "说明公开模式不读取 Key、不调用真实模型、不写用户工作区。",
+    }
+    for field in audit.get("required_demo_contract", []):
+        lines.append(f"| {field} | {demo_purposes.get(field, 'Required public demo field.')} |")
+
+    lines.extend(
+        [
+            "",
+            "## Primary Office Standards",
+            "",
+            "| Standard | Required gates |",
+            "| --- | --- |",
+        ]
+    )
     for standard in audit.get("primary_standards", {}).values():
         lines.append(
             f"| {standard.get('label')} | {', '.join(standard.get('required_gates', []))} |"

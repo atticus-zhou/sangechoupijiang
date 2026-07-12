@@ -348,10 +348,18 @@ def list_office_creation_template() -> dict:
             "readme_documentation",
             "secret_scan",
         ],
+        "required_demo_contract": [
+            "viewer_path",
+            "proof_points",
+            "downloadable_deliverables",
+            "deliverable_reading_guide",
+            "interview_demo_script",
+            "public_safety_boundaries",
+        ],
         "minimum_artifact_contract": _default_artifact_contract(),
         "notes": [
             "New offices must reuse the OfficeProfile protocol instead of copying one-off routes.",
-            "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, failure recovery, and history traceability.",
+            "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, failure recovery, history traceability, and a visitor-readable demo contract.",
         ],
     }
 
@@ -600,6 +608,7 @@ def audit_office_extension_governance() -> dict:
         "primary_office_ids": sorted(PRIMARY_OFFICE_IDS),
         "required_profile_fields": required_profile_fields,
         "required_launch_gates": template["required_launch_gates"],
+        "required_demo_contract": template["required_demo_contract"],
         "primary_standards": PRIMARY_OFFICE_STANDARDS,
         "offices": office_audits,
         "errors": {
