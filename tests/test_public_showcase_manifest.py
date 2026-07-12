@@ -64,6 +64,19 @@ class PublicShowcaseManifestTests(unittest.TestCase):
                 for item in embed["sample_deliverables"]
             )
         )
+        interview_script = embed["interview_demo_script"]
+        self.assertEqual([item["order"] for item in interview_script], [1, 2, 3, 4])
+        for item in interview_script:
+            self.assertTrue(item["visitor_action"])
+            self.assertTrue(item["product_response"])
+            self.assertTrue(item["proof"])
+            self.assertTrue(item["boundary"])
+        script_text = "\n".join(
+            item["visitor_action"] + item["product_response"] + item["proof"] + item["boundary"]
+            for item in interview_script
+        )
+        self.assertIn("API Key", script_text)
+        self.assertIn("demo-only", script_text)
 
         public_deployment = payload["public_deployment"]
         self.assertEqual(public_deployment["mode"], "demo_only")

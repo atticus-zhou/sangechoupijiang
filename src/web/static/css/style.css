@@ -571,6 +571,62 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     line-height: 1.65;
 }
 
+.public-interview-script {
+    display: grid;
+    gap: 12px;
+}
+
+.public-interview-script article {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid rgba(88, 166, 255, 0.18);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.62);
+}
+
+.public-interview-script b {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: #8cc8ff;
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid rgba(88, 166, 255, 0.24);
+}
+
+.public-interview-script strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #e6edf3;
+}
+
+.public-interview-script p {
+    display: grid;
+    gap: 4px;
+    margin: 0 0 10px;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.public-interview-script p span {
+    color: #8cc8ff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.public-interview-script small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text3);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
 .public-reading-guide {
     display: grid;
     gap: 12px;

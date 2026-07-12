@@ -775,6 +775,43 @@ def _public_showcase_deliverable_reading_guide() -> list[dict]:
     ]
 
 
+def _public_showcase_interview_demo_script() -> list[dict]:
+    return [
+        {
+            "order": 1,
+            "title": "先打开公开展示页，不进入真实工作台",
+            "visitor_action": "点击首页「公开展示页」，先看产品定位、无 Key 标识和安全边界。",
+            "product_response": "页面读取 /api/demo/public-showcase，只展示固定样例、下载物和参观路径。",
+            "proof": "面试官能确认这是可公开展示的 demo-only 入口，不需要作者 API Key。",
+            "boundary": "不要在公开页面填写、上传或展示真实 config.yaml、Cookie、API Key 和用户工作区。",
+        },
+        {
+            "order": 2,
+            "title": "再进入 AI 漫剧制片办公室样例",
+            "visitor_action": "点击「看 AI 漫剧样例」，查看故事、资产、镜头、提示词、图片记录和交付文件。",
+            "product_response": "系统展示固定制片包，并提供 Word 制片画布和 handoff manifest 下载。",
+            "proof": "这个办公室的价值不是写一段故事，而是把故事拆成可交接的资产和镜头生产材料。",
+            "boundary": "公开样例不调用真实模型，也不代表当前在线版允许访客消耗作者模型额度。",
+        },
+        {
+            "order": 3,
+            "title": "下载交付物做文件级验证",
+            "visitor_action": "按阅读顺序下载 Word 制片画布、handoff manifest、研究报告和证据清单。",
+            "product_response": "每个下载链接都来自 /api/demo，并附带阅读重点和验收信号。",
+            "proof": "访客能离开页面检查文件内容，验证产品有真实交付物而不是纯 UI 演示。",
+            "boundary": "样例文件只证明公开演示路径，不包含作者本地历史、真实客户数据或运行产物。",
+        },
+        {
+            "order": 4,
+            "title": "最后看 GitHub 和本地复现路径",
+            "visitor_action": "打开 GitHub，按 README 先跑 doctor、public demo verifier 和 release readiness。",
+            "product_response": "仓库提供无 Key 自检、模型配置说明、办公室协议、上线门禁和敏感信息扫描。",
+            "proof": "开发者可以复现公开 demo，并清楚知道真实生产要在本地配置自己的模型 Key。",
+            "boundary": "当前公开形态不是多用户 SaaS；真实生产、账号权限、成本控制仍应留在本地或后续服务端方案。",
+        },
+    ]
+
+
 @app.get("/api/demo/public-showcase")
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
@@ -880,6 +917,7 @@ async def get_public_showcase_demo_api():
             ],
             "sample_deliverables": _public_showcase_sample_deliverables(featured_demos),
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
+            "interview_demo_script": _public_showcase_interview_demo_script(),
         },
         "public_deployment": {
             "mode": "demo_only",

@@ -4343,6 +4343,7 @@ function renderPublicShowcase(showcase) {
     const portfolio = showcase.portfolio_embed || {};
     const deliverables = Array.isArray(portfolio.sample_deliverables) ? portfolio.sample_deliverables : [];
     const readingGuide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
+    const interviewScript = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const deployment = showcase.public_deployment || {};
     return `
@@ -4386,6 +4387,28 @@ function renderPublicShowcase(showcase) {
                 `).join('')}
             </div>
         </section>
+        ${interviewScript.length ? `
+            <section class="demo-section">
+                <div class="demo-section-head">
+                    <h2>3 分钟演示脚本</h2>
+                    <span>${interviewScript.length} 步</span>
+                </div>
+                <div class="public-interview-script">
+                    ${interviewScript.map(item => `
+                        <article>
+                            <b>${escapeHtml(item.order || '')}</b>
+                            <div>
+                                <strong>${escapeHtml(item.title || '')}</strong>
+                                <p><span>访客动作</span>${escapeHtml(item.visitor_action || '')}</p>
+                                <p><span>产品反馈</span>${escapeHtml(item.product_response || '')}</p>
+                                <p><span>证明什么</span>${escapeHtml(item.proof || '')}</p>
+                                <small>${escapeHtml(item.boundary || '')}</small>
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
         <section class="demo-section">
             <div class="demo-section-head">
                 <h2>可体验的办公室</h2>
