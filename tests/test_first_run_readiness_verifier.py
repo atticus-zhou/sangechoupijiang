@@ -54,6 +54,23 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("user_data", safety)
         self.assertIn("output", safety)
 
+        failures = {item["id"]: item for item in payload["common_first_run_failures"]}
+        for failure_id in [
+            "missing_dependencies",
+            "missing_local_config",
+            "model_preflight_blocked",
+            "port_in_use",
+            "public_deploy_real_mode",
+        ]:
+            self.assertIn(failure_id, failures)
+            self.assertTrue(failures[failure_id]["symptom"])
+            self.assertTrue(failures[failure_id]["check_command"])
+            self.assertTrue(failures[failure_id]["recovery_action"])
+        self.assertFalse(failures["missing_dependencies"]["requires_api_key"])
+        self.assertTrue(failures["model_preflight_blocked"]["requires_api_key"])
+        self.assertIn("requirements.txt", failures["missing_dependencies"]["recovery_action"])
+        self.assertIn("/api/demo", failures["public_deploy_real_mode"]["recovery_action"])
+
     def test_markdown_is_readable_as_a_github_first_run_checklist(self):
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--format", "markdown"],
@@ -75,6 +92,11 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI 漫剧 Word 制片画布", result.stdout)
         self.assertIn("handoff manifest", result.stdout)
         self.assertIn("研究办公室证据清单", result.stdout)
+        self.assertIn("Common First-run Failures", result.stdout)
+        self.assertIn("missing_dependencies", result.stdout)
+        self.assertIn("python -m pip install -r requirements.txt", result.stdout)
+        self.assertIn("netstat -ano | findstr :8080", result.stdout)
+        self.assertIn("public_deploy_real_mode", result.stdout)
 
 
 if __name__ == "__main__":

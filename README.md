@@ -53,6 +53,8 @@ python scripts/verify_first_run_readiness.py --format markdown
 
 `verify_productization_status.py` 会把公开展示、无 Key 样例、本地复现、AI 漫剧制片交付、研究办公室边界、办公室扩展治理和安全扫描逐条映射到证据；`verify_release_readiness.py` 会把这些 no-key 门禁串起来；`verify_first_run_readiness.py` 会检查第一次运行路径。它们会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
 
+如果第一次运行卡住，先看 `verify_first_run_readiness.py` 输出里的 **Common First-run Failures**：它会把依赖未安装、`config.yaml` 缺失、模型预检失败、8080 端口占用、公开部署误开真实模式等常见问题列成“症状、检查命令、恢复动作”，并标明是否需要 API Key。
+
 同时，`doctor.py` 会展示 **Office launch gates（办公室上线门禁）**：无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追踪、schema gate、README 文档和密钥安全扫描是否已达标，并告诉你每个办公室距离公开展示、可复现和真实使用还差哪一步。
 
 ```powershell

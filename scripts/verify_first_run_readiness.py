@@ -53,6 +53,7 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
             "office_isolation": OFFICE_ISOLATION_COMMAND,
             "server": SERVER_COMMAND,
         },
+        "common_first_run_failures": _common_first_run_failures(),
         "safety_boundaries": [
             "Do not commit API Key values; use environment variables or local config.yaml only.",
             "Do not publish user_data, output, runtime_logs, browser profiles, cookies, or generated private deliverables.",
@@ -61,6 +62,51 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
         "doctor_status": doctor.get("status", ""),
         "product_readiness_status": product.get("status", ""),
     }
+
+
+def _common_first_run_failures() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "missing_dependencies",
+            "symptom": "命令启动后提示 ModuleNotFoundError、fastapi/docx/PIL 等模块不存在。",
+            "likely_cause": "第一次从 GitHub 下载后还没有安装 requirements.txt 里的 Python 依赖。",
+            "check_command": "python -m pip show fastapi python-docx pillow",
+            "recovery_action": "先运行 `python -m pip install -r requirements.txt`，再重新执行 first-run 或 doctor 检查。",
+            "requires_api_key": False,
+        },
+        {
+            "id": "missing_local_config",
+            "symptom": "本地真实模式无法保存模型，或者 doctor 提示配置文件缺失。",
+            "likely_cause": "还没有把 config.example.yaml 复制成本机私有的 config.yaml。",
+            "check_command": "Test-Path config.yaml",
+            "recovery_action": "运行 `Copy-Item config.example.yaml config.yaml`，只在本机 config.yaml 或环境变量里填写 Key。",
+            "requires_api_key": False,
+        },
+        {
+            "id": "model_preflight_blocked",
+            "symptom": "工作台能打开，但故事、资产、生图或视觉质检被启动检查拦住。",
+            "likely_cause": "对应部门缺少文本模型、图片生成模型或视觉理解模型配置，或者 Key/模型名填错。",
+            "check_command": "python scripts/doctor.py --format markdown",
+            "recovery_action": "到模型页面逐个点击测试按钮；文本部门先跑通最小流程，再补工部生图模型和刑部视觉模型。",
+            "requires_api_key": True,
+        },
+        {
+            "id": "port_in_use",
+            "symptom": "运行 python run.py --port 8080 后提示地址已占用，或浏览器打开的是旧页面。",
+            "likely_cause": "8080 端口已经有旧服务在运行，或者浏览器缓存仍指向旧进程。",
+            "check_command": "netstat -ano | findstr :8080",
+            "recovery_action": "关闭旧进程，或改用 `python run.py --port 8081` 后打开新的 localhost 地址。",
+            "requires_api_key": False,
+        },
+        {
+            "id": "public_deploy_real_mode",
+            "symptom": "准备放到 Vercel/个人网站时，不确定是否会暴露作者自己的 API Key。",
+            "likely_cause": "把本地真实模式当成公开 SaaS 部署，或者把 config.yaml/.env/运行产物带进公开构建。",
+            "check_command": "python scripts/check_no_secrets.py",
+            "recovery_action": "公开页面只使用 `/api/demo/public-showcase` 和 `/api/demo` 样例入口；真实生产继续由使用者本地填写自己的 Key。",
+            "requires_api_key": False,
+        },
+    ]
 
 
 def _public_demo_path() -> dict[str, Any]:
@@ -211,6 +257,20 @@ def format_markdown(payload: dict[str, Any]) -> str:
     lines.extend(["## Safety Boundaries", ""])
     for boundary in payload.get("safety_boundaries", []):
         lines.append(f"- {boundary}")
+    lines.extend(["", "## Common First-run Failures", ""])
+    for item in payload.get("common_first_run_failures", []):
+        lines.extend(
+            [
+                f"### {item.get('id')}",
+                "",
+                f"- Symptom: {item.get('symptom')}",
+                f"- Likely cause: {item.get('likely_cause')}",
+                f"- Check: `{item.get('check_command')}`",
+                f"- Recovery: {item.get('recovery_action')}",
+                f"- Requires API Key: `{item.get('requires_api_key')}`",
+                "",
+            ]
+        )
     lines.extend(["", "## Commands", ""])
     for label, command in payload.get("commands", {}).items():
         lines.append(f"- `{label}`: `{command}`")
