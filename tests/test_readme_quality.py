@@ -59,6 +59,10 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("config.yaml", text)
         self.assertIn("不会提交到 GitHub", text)
         self.assertIn("docs/DEPLOYMENT_MODES.md", text)
+        self.assertIn("docs/STATIC_SHOWCASE_DEPLOYMENT.md", text)
+        self.assertIn("python scripts/export_public_showcase.py", text)
+        self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", text)
+        self.assertIn("dist/public-showcase/index.html", text)
         self.assertIn("docs/MODEL_CONFIGURATION.md", text)
 
     def test_deployment_modes_doc_separates_demo_local_and_saas(self):
@@ -71,6 +75,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("未来 SaaS 模式", text)
         self.assertIn("不要把个人 API Key 写入前端", text)
         self.assertIn("Vercel", text)
+        self.assertIn("python scripts/export_public_showcase.py", text)
+        self.assertIn("STATIC_SHOWCASE_DEPLOYMENT.md", text)
 
     def test_deployment_modes_doc_gives_public_safety_decision_rules(self):
         text = Path("docs/DEPLOYMENT_MODES.md").read_text(encoding="utf-8")

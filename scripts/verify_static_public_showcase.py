@@ -1,0 +1,206 @@
+"""Build and verify the self-contained static public showcase."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.check_no_secrets import SECRET_PATTERNS
+from scripts.export_public_showcase import export_public_showcase
+
+
+REQUIRED_FILES = {
+    "index.html",
+    "style.css",
+    "app.js",
+    "data.js",
+    "showcase.json",
+    "export-manifest.json",
+    "assets/public-showcase-desktop.png",
+    "data/comic_production.json",
+    "data/research.json",
+}
+
+FORBIDDEN_NAMES = {
+    ".env",
+    "config.yaml",
+    "config.yml",
+    "cookies.json",
+    "user_data",
+    "browser_profiles",
+}
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _scan_text_files(root: Path) -> list[str]:
+    findings: list[str] = []
+    text_suffixes = {".html", ".css", ".js", ".json", ".md", ".txt"}
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in text_suffixes:
+            continue
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        for pattern in SECRET_PATTERNS:
+            if pattern.search(content):
+                findings.append(path.relative_to(root).as_posix())
+                break
+    return findings
+
+
+def verify_static_public_showcase() -> dict[str, Any]:
+    errors: list[str] = []
+    build_root = REPO_ROOT / "dist"
+    build_root.mkdir(parents=True, exist_ok=True)
+    temp_dir = Path(tempfile.mkdtemp(prefix=".verify-public-showcase-", dir=build_root))
+    try:
+        export_summary = export_public_showcase(temp_dir)
+        manifest = json.loads((temp_dir / "export-manifest.json").read_text(encoding="utf-8"))
+        showcase = json.loads((temp_dir / "showcase.json").read_text(encoding="utf-8"))
+        files = {path.relative_to(temp_dir).as_posix() for path in temp_dir.rglob("*") if path.is_file()}
+
+        missing_files = sorted(REQUIRED_FILES - files)
+        if missing_files:
+            errors.append("static showcase missing files: " + ", ".join(missing_files))
+
+        if manifest.get("requires_backend") is not False:
+            errors.append("static showcase must not require a backend")
+        if manifest.get("requires_api_key") is not False:
+            errors.append("static showcase must not require an API Key")
+        if manifest.get("calls_real_models") is not False:
+            errors.append("static showcase must not call real models")
+        if showcase.get("mode") != "public_no_key_static_showcase":
+            errors.append("static showcase has an unexpected mode")
+        if (showcase.get("static_export") or {}).get("requires_backend") is not False:
+            errors.append("showcase manifest does not declare the backend-free boundary")
+
+        downloads = manifest.get("downloads") or []
+        if len(downloads) < 4:
+            errors.append("static showcase must contain at least four downloadable deliverables")
+        for item in downloads:
+            local_uri = str(item.get("local_uri") or "")
+            path = temp_dir / local_uri
+            if not local_uri or local_uri.startswith("/") or not path.is_file():
+                errors.append(f"static download is missing or non-local: {local_uri}")
+                continue
+            if path.stat().st_size <= 20:
+                errors.append(f"static download is too small: {local_uri}")
+            if item.get("sha256") != _sha256(path):
+                errors.append(f"static download hash mismatch: {local_uri}")
+
+        portfolio = showcase.get("portfolio_embed") or {}
+        reading_guide = portfolio.get("deliverable_reading_guide") or []
+        ready_reading_items = 0
+        for item in reading_guide:
+            uri = str(item.get("uri") or "")
+            if uri and not uri.startswith("/") and (temp_dir / uri).is_file() and item.get("look_for") and item.get("proves"):
+                ready_reading_items += 1
+            else:
+                errors.append(f"static reading guide item is not locally usable: {item.get('title') or uri}")
+
+        demos = showcase.get("featured_demos") or []
+        for demo in demos:
+            if demo.get("demo_uri") != f"#office-{demo.get('office_id')}":
+                errors.append(f"featured demo does not use a local anchor: {demo.get('office_id')}")
+
+        screenshot = temp_dir / "assets" / "public-showcase-desktop.png"
+        screenshot_ready = screenshot.is_file() and screenshot.stat().st_size > 100_000
+        if not screenshot_ready:
+            errors.append("static showcase is missing the real product screenshot")
+
+        forbidden_paths = []
+        for path in temp_dir.rglob("*"):
+            relative_parts = {part.lower() for part in path.relative_to(temp_dir).parts}
+            if relative_parts & FORBIDDEN_NAMES:
+                forbidden_paths.append(path.relative_to(temp_dir).as_posix())
+        if forbidden_paths:
+            errors.append("static showcase contains forbidden local paths: " + ", ".join(sorted(forbidden_paths)))
+
+        secret_like_files = _scan_text_files(temp_dir)
+        if secret_like_files:
+            errors.append("static showcase contains secret-like values: " + ", ".join(secret_like_files))
+
+        index_text = (temp_dir / "index.html").read_text(encoding="utf-8")
+        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "交付物阅读顺序", "公开部署安全边界"):
+            if marker not in index_text and marker not in (temp_dir / "style.css").read_text(encoding="utf-8"):
+                errors.append(f"static showcase page is missing marker: {marker}")
+
+        return {
+            "status": "passed" if not errors else "failed",
+            "mode": "public_no_key_static_showcase_readiness",
+            "summary": (
+                "Static showcase is self-contained, backend-free, downloadable, and safe for public hosting."
+                if not errors
+                else "Static showcase readiness found gaps."
+            ),
+            "file_count": len(files),
+            "download_count": len(downloads),
+            "reading_guide_count": len(reading_guide),
+            "reading_guide_ready_count": ready_reading_items,
+            "featured_demo_count": len(demos),
+            "screenshot_ready": screenshot_ready,
+            "requires_backend": bool(manifest.get("requires_backend")),
+            "requires_api_key": bool(manifest.get("requires_api_key")),
+            "calls_real_models": bool(manifest.get("calls_real_models")),
+            "export_summary": export_summary,
+            "errors": errors,
+        }
+    finally:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+
+
+def format_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        "# Static Public Showcase Readiness",
+        "",
+        f"Status: `{payload.get('status')}`",
+        f"Mode: `{payload.get('mode')}`",
+        f"Summary: {payload.get('summary')}",
+        "",
+        f"- Files: {payload.get('file_count')}",
+        f"- Downloadable deliverables: {payload.get('download_count')}",
+        f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
+        f"- Featured demos: {payload.get('featured_demo_count')}",
+        f"- Real product screenshot: {payload.get('screenshot_ready')}",
+        f"- Requires backend: {payload.get('requires_backend')}",
+        f"- Requires API Key: {payload.get('requires_api_key')}",
+        f"- Calls real models: {payload.get('calls_real_models')}",
+    ]
+    if payload.get("errors"):
+        lines.extend(["", "## Errors", ""])
+        lines.extend(f"- {item}" for item in payload["errors"])
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    parser = argparse.ArgumentParser(description="Verify the backend-free public showcase export.")
+    parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
+    args = parser.parse_args()
+    payload = verify_static_public_showcase()
+    if args.format == "json":
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        print(format_markdown(payload))
+    return 0 if payload["status"] == "passed" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

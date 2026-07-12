@@ -36,6 +36,11 @@ class PublicDemoVerifierTests(unittest.TestCase):
             payload["showcase_manifest"]["interview_script_count"],
             payload["showcase_manifest"]["interview_script_ready_count"],
         )
+        self.assertEqual(
+            payload["showcase_manifest"]["static_export_command"],
+            "python scripts/export_public_showcase.py",
+        )
+        self.assertTrue(payload["showcase_manifest"]["static_export_backend_free"])
         self.assertIn("comic_production", payload["demos"])
         self.assertIn("research", payload["demos"])
         for demo in payload["demos"].values():

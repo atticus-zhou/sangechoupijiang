@@ -941,6 +941,13 @@ async def get_public_showcase_demo_api():
             "allows_real_model_calls": False,
             "allows_workspace_writes": False,
             "recommended_hosts": ["Vercel", "Netlify", "GitHub Pages"],
+            "static_export": {
+                "command": "python scripts/export_public_showcase.py",
+                "verification_command": "python scripts/verify_static_public_showcase.py --format markdown",
+                "entrypoint": "dist/public-showcase/index.html",
+                "requires_backend": False,
+                "requires_api_key": False,
+            },
             "forbidden_public_assets": [
                 "config.yaml",
                 ".env",
@@ -953,6 +960,7 @@ async def get_public_showcase_demo_api():
         },
         "verification_commands": [
             "python scripts/verify_public_demo_mode.py --format markdown",
+            "python scripts/verify_static_public_showcase.py --format markdown",
             "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
             "python scripts/verify_product_readiness.py --format markdown",
             "python scripts/check_no_secrets.py",

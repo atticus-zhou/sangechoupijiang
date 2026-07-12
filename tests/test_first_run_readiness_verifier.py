@@ -38,6 +38,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("/api/demo/comic-production/files/handoff_manifest.json", "\n".join(paths["public_demo"]["evidence"]))
         self.assertIn("/api/demo/research/files/evidence_manifest.json", "\n".join(paths["public_demo"]["evidence"]))
         self.assertIn("verify_comic_v2_downstream_handoff.py", "\n".join(paths["public_demo"]["steps"]))
+        self.assertIn("export_public_showcase.py", "\n".join(paths["public_demo"]["steps"]))
+        self.assertIn("dist/public-showcase/index.html", "\n".join(paths["public_demo"]["evidence"]))
         self.assertIn("docs/COMIC_DOWNSTREAM_HANDOFF.md", "\n".join(paths["public_demo"]["evidence"]))
         reading_guide = paths["public_demo"]["deliverable_reading_guide"]
         self.assertGreaterEqual(len(reading_guide), 4)
@@ -69,7 +71,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertFalse(failures["missing_dependencies"]["requires_api_key"])
         self.assertTrue(failures["model_preflight_blocked"]["requires_api_key"])
         self.assertIn("requirements.txt", failures["missing_dependencies"]["recovery_action"])
-        self.assertIn("/api/demo", failures["public_deploy_real_mode"]["recovery_action"])
+        self.assertIn("dist/public-showcase", failures["public_deploy_real_mode"]["recovery_action"])
 
     def test_markdown_is_readable_as_a_github_first_run_checklist(self):
         result = subprocess.run(
@@ -86,6 +88,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("developer_extension", result.stdout)
         self.assertIn("python run.py --port 8080", result.stdout)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", result.stdout)
+        self.assertIn("python scripts/export_public_showcase.py", result.stdout)
+        self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", result.stdout)
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", result.stdout)
         self.assertIn("python scripts/verify_office_isolation.py --format markdown", result.stdout)
         self.assertIn("Deliverable reading guide", result.stdout)

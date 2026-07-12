@@ -20,6 +20,8 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("handoff manifest", text)
         self.assertIn("研究办公室证据清单", text)
         self.assertIn("新开发者本地复现路径", text)
+        self.assertIn("dist/public-showcase", text)
+        self.assertIn("没有 FastAPI 后端", text)
 
     def test_public_release_handoff_doc_lists_required_release_gates(self):
         text = Path("docs/PUBLIC_RELEASE_HANDOFF.md").read_text(encoding="utf-8")
@@ -27,6 +29,8 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("python scripts/verify_productization_status.py --format markdown", text)
         self.assertIn("python scripts/verify_first_run_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
+        self.assertIn("python scripts/export_public_showcase.py", text)
+        self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", text)
         self.assertIn("python scripts/verify_research_office_readiness.py --format markdown", text)

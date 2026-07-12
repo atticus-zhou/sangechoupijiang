@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="三个臭皮匠无 Key 公开展示：办公室式多 Agent 协作、可审核流程和可下载交付物。">
+  <title>三个臭皮匠 | 无 Key 公开展示</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#showcase-main">跳到主要内容</a>
+  <header class="hero" aria-labelledby="showcase-title">
+    <div class="hero-shade" aria-hidden="true"></div>
+    <div class="hero-content">
+      <p class="eyebrow">PUBLIC NO-KEY SHOWCASE</p>
+      <h1 id="showcase-title">三个臭皮匠</h1>
+      <p id="showcase-tagline" class="hero-tagline">把复杂项目交给办公室，而不是只让模型聊一段话。</p>
+      <div class="hero-status" aria-label="公开演示状态">
+        <span>无 Key</span>
+        <span>不调用真实模型</span>
+        <span>交付物可下载</span>
+      </div>
+      <div class="hero-actions">
+        <a class="button primary" href="#offices">查看办公室样例</a>
+        <a id="repository-link" class="button secondary" href="https://github.com/atticus-zhou/sangechoupijiang" target="_blank" rel="noreferrer">查看 GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="showcase-main">
+    <section class="status-band" aria-labelledby="positioning-title">
+      <div class="section-inner status-layout">
+        <div>
+          <p class="section-kicker">这不是聊天框展示</p>
+          <h2 id="positioning-title">从复杂任务到可复核交付物</h2>
+        </div>
+        <p id="product-positioning" class="lead"></p>
+      </div>
+    </section>
+
+    <section class="content-section" aria-labelledby="audiences-title">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">参观路径</p>
+            <h2 id="audiences-title">不同访客，各自看懂一件事</h2>
+          </div>
+          <span id="audience-count" class="count-label"></span>
+        </div>
+        <div id="audience-grid" class="card-grid three"></div>
+      </div>
+    </section>
+
+    <section id="offices" class="content-section contrast" aria-labelledby="offices-title">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">办公室样例</p>
+            <h2 id="offices-title">看工作链，也看最后交付</h2>
+          </div>
+          <span id="office-count" class="count-label"></span>
+        </div>
+        <div id="office-grid" class="office-grid"></div>
+      </div>
+    </section>
+
+    <section class="content-section" aria-labelledby="visual-title">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">实际产品界面</p>
+            <h2 id="visual-title">公开展示页的真实运行画面</h2>
+          </div>
+          <span class="count-label">固定样例界面</span>
+        </div>
+        <figure class="product-visual">
+          <img src="assets/public-showcase-desktop.png" alt="三个臭皮匠公开展示页，包含访客路径、办公室样例、可下载交付物和安全边界。">
+          <figcaption>截图只包含固定样例，不含 API Key、Cookie、真实用户数据或本地工作区。</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="deliverables" class="content-section contrast" aria-labelledby="deliverables-title">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">交付物阅读顺序</p>
+            <h2 id="deliverables-title">下载后，按证据链逐项检查</h2>
+          </div>
+          <span id="deliverable-count" class="count-label"></span>
+        </div>
+        <ol id="reading-guide" class="reading-list"></ol>
+      </div>
+    </section>
+
+    <section class="content-section" aria-labelledby="script-title">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">3 分钟演示脚本</p>
+            <h2 id="script-title">面试现场可以这样讲</h2>
+          </div>
+          <span id="script-count" class="count-label"></span>
+        </div>
+        <ol id="interview-script" class="script-list"></ol>
+      </div>
+    </section>
+
+    <section class="safety-section" aria-labelledby="safety-title">
+      <div class="section-inner safety-layout">
+        <div>
+          <p class="section-kicker">DEMO ONLY</p>
+          <h2 id="safety-title">公开部署安全边界</h2>
+          <p>真实创作继续在本地运行，由使用者填写自己的模型配置。这个静态页面只负责展示固定样例。</p>
+        </div>
+        <ul id="safety-list" class="safety-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="section-inner footer-layout">
+      <span>三个臭皮匠 · 本地优先的多 Agent 协作工作台</span>
+      <span>静态公开演示 · 不需要后端</span>
+    </div>
+  </footer>
+
+  <noscript>这个展示页需要启用 JavaScript 来读取随页面一起导出的本地样例数据。</noscript>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

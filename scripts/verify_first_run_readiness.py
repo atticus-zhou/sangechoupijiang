@@ -17,6 +17,8 @@ from src.product_readiness import audit_comic_production_readiness
 
 
 PUBLIC_DEMO_COMMAND = "python scripts/verify_public_demo_mode.py --format markdown"
+STATIC_EXPORT_COMMAND = "python scripts/export_public_showcase.py"
+STATIC_SHOWCASE_COMMAND = "python scripts/verify_static_public_showcase.py --format markdown"
 DOWNSTREAM_HANDOFF_COMMAND = "python scripts/verify_comic_v2_downstream_handoff.py --format markdown"
 LOCAL_DOCTOR_COMMAND = "python scripts/doctor.py --format markdown"
 PRODUCT_READINESS_COMMAND = "python scripts/verify_product_readiness.py --format markdown"
@@ -47,6 +49,8 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
         "recommended_order": [item["id"] for item in paths],
         "commands": {
             "public_demo": PUBLIC_DEMO_COMMAND,
+            "static_showcase_export": STATIC_EXPORT_COMMAND,
+            "static_showcase_verify": STATIC_SHOWCASE_COMMAND,
             "comic_downstream_handoff": DOWNSTREAM_HANDOFF_COMMAND,
             "local_doctor": LOCAL_DOCTOR_COMMAND,
             "product_readiness": PRODUCT_READINESS_COMMAND,
@@ -103,7 +107,7 @@ def _common_first_run_failures() -> list[dict[str, Any]]:
             "symptom": "准备放到 Vercel/个人网站时，不确定是否会暴露作者自己的 API Key。",
             "likely_cause": "把本地真实模式当成公开 SaaS 部署，或者把 config.yaml/.env/运行产物带进公开构建。",
             "check_command": "python scripts/check_no_secrets.py",
-            "recovery_action": "公开页面只使用 `/api/demo/public-showcase` 和 `/api/demo` 样例入口；真实生产继续由使用者本地填写自己的 Key。",
+            "recovery_action": f"运行 `{STATIC_EXPORT_COMMAND}` 导出 `dist/public-showcase`，再用 `{STATIC_SHOWCASE_COMMAND}` 验证；公开部署只上传这个静态目录，真实生产继续由使用者本地填写自己的 Key。",
             "requires_api_key": False,
         },
     ]
@@ -116,9 +120,10 @@ def _public_demo_path() -> dict[str, Any]:
         "status": "ready",
         "requires_api_key": False,
         "who_it_is_for": "面试官、作品集访客、第一次看项目的人。",
-        "next_action": f"Run `{PUBLIC_DEMO_COMMAND}` or open the public showcase entry in the web app.",
+        "next_action": f"Run `{PUBLIC_DEMO_COMMAND}`, then export the backend-free site with `{STATIC_EXPORT_COMMAND}`.",
         "steps": [
             f"Run `{PUBLIC_DEMO_COMMAND}` to verify demo endpoints and downloads.",
+            f"Run `{STATIC_EXPORT_COMMAND}` and `{STATIC_SHOWCASE_COMMAND}` to build a deployable portfolio site.",
             f"Run `{DOWNSTREAM_HANDOFF_COMMAND}` to verify the AI comic sample can be handed to downstream video production.",
             f"Start the local app with `{SERVER_COMMAND}` if you want to browse the UI.",
             "Open the office hall and choose the no-key demo entry for AI comic production or research.",
@@ -156,6 +161,8 @@ def _public_demo_path() -> dict[str, Any]:
             "/api/demo/comic-production/files/handoff_manifest.json",
             "/api/demo/research/files/report.md",
             "/api/demo/research/files/evidence_manifest.json",
+            "dist/public-showcase/index.html",
+            "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
             "docs/COMIC_DOWNSTREAM_HANDOFF.md",
         ],
     }

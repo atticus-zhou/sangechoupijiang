@@ -32,6 +32,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "productization_status",
                 "model_guidance",
                 "public_demo",
+                "static_showcase",
                 "comic_delivery",
                 "comic_downstream_handoff",
                 "research_readiness",
@@ -47,6 +48,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("reading_guide=", public_demo["summary"])
         self.assertIn("interview_script=", public_demo["summary"])
+        static_showcase = next(item for item in payload["checks"] if item["id"] == "static_showcase")
+        self.assertIn("downloads=4", static_showcase["summary"])
+        self.assertIn("backend=False", static_showcase["summary"])
         research_readiness = next(item for item in payload["checks"] if item["id"] == "research_readiness")
         self.assertIn("reading_guide=2/2", research_readiness["summary"])
         office_governance = next(item for item in payload["checks"] if item["id"] == "office_governance")
@@ -71,11 +75,13 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Safe for public release", completed.stdout)
         self.assertIn("Productization objective coverage", completed.stdout)
         self.assertIn("Model configuration guidance", completed.stdout)
+        self.assertIn("Backend-free static showcase export", completed.stdout)
         self.assertIn("AI comic Word canvas delivery", completed.stdout)
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("Research office staged delivery", completed.stdout)
         self.assertIn("Secret and runtime artifact scan", completed.stdout)
         self.assertIn("interview_script=4/4", completed.stdout)
+        self.assertIn("downloads=4; reading_guide=4/4; backend=False", completed.stdout)
         self.assertIn("reading_guide=2/2", completed.stdout)
         self.assertIn("demo_contract=6", completed.stdout)
 

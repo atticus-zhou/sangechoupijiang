@@ -19,12 +19,15 @@ REQUIREMENTS: list[dict[str, Any]] = [
         "markers": [
             "个人网站和公开作品集",
             "python scripts/verify_public_demo_mode.py --format markdown",
+            "python scripts/verify_static_public_showcase.py --format markdown",
             "/api/demo/public-showcase",
-            "docs/DEPLOYMENT_MODES.md",
+            "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
         ],
         "files": [
             "scripts/verify_public_demo_mode.py",
-            "docs/DEPLOYMENT_MODES.md",
+            "scripts/verify_static_public_showcase.py",
+            "scripts/export_public_showcase.py",
+            "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
             "src/web/app.py",
         ],
     },

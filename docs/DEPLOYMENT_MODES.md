@@ -21,6 +21,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_office_isolation.py --format markdown
 python scripts/verify_office_extension_governance.py --format markdown
 python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_static_public_showcase.py --format markdown
 python scripts/verify_research_office_readiness.py --format markdown
 python scripts/verify_product_readiness.py --format markdown
 ```
@@ -35,9 +36,9 @@ python scripts/verify_product_readiness.py --format markdown
 - 可以提供样例 Word 画布、引用清单、截图和流程说明下载。
 - 不调用真实模型，不读取用户本地配置，也不消耗作者 API Key。
 - 不允许访问真实生产接口，不允许提交需要真实模型执行的任务。
-- 可以部署到 Vercel、Netlify、GitHub Pages 等静态或半静态环境。
+- 运行 `python scripts/export_public_showcase.py` 后，可以把 `dist/public-showcase` 部署到 Vercel、Netlify、GitHub Pages 等静态环境。FastAPI 项目根目录不能直接当成 GitHub Pages 静态站点。
 
-公开页面里可以放 GitHub 链接、产品说明、无 Key 演示入口和样例交付物。个人网站可以读取或复制 `/api/demo/public-showcase` 的公开展示清单，用同一份数据展示产品定位、参观路径、推荐 demo 和下载物。这个接口里的 `portfolio_embed` 可直接用于作品集区块，`public_deployment` 用来约束在线版只开放 demo-only 路径。不要把个人 API Key 写入前端，也不要把它放入 Vercel 前端环境变量。
+公开页面里可以放 GitHub 链接、产品说明、无 Key 演示入口和样例交付物。个人网站可以读取或复制 `/api/demo/public-showcase` 的公开展示清单，用同一份数据展示产品定位、参观路径、推荐 demo 和下载物。这个接口里的 `portfolio_embed` 可直接用于作品集区块，`public_deployment.static_export` 会给出静态导出命令和入口文件。完整步骤见 [STATIC_SHOWCASE_DEPLOYMENT.md](STATIC_SHOWCASE_DEPLOYMENT.md)。不要把个人 API Key 写入前端，也不要把它放入 Vercel 前端环境变量。
 
 ## 本地真实模式
 

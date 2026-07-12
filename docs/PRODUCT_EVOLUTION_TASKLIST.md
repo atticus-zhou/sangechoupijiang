@@ -36,6 +36,7 @@
 
 - [x] 个人网站展示产品定位、办公室大厅、主流程截图、样例交付物和 GitHub 链接。
 - [x] 在线公开版只开放无 Key 演示模式，不消耗作者额度。
+- [x] 无 Key 演示可以导出为不依赖 FastAPI 后端的静态站点，保留真实产品截图、四份下载物、阅读指南和安全边界。
 - [x] GitHub README 能让面试官、开发者和普通用户分别看懂怎么体验、怎么运行、怎么扩展。
 - [x] 所有公开展示都不暴露 API Key、Cookie、登录态、用户数据和运行产物。
 
@@ -91,7 +92,7 @@
 - [x] 新办公室公开演示必须满足 `required_demo_contract`，不能只提供一个能打开的接口。
 - [x] 新办公室扩展治理已补充离线验收：`python scripts/verify_office_extension_governance.py --format markdown` 会检查所有办公室是否复用 `OfficeProfile` 协议，并确认主力办公室必须满足可展示、可试用、可交付、可追溯四项标准。
 - [x] 研究办公室可靠性已补充离线验收：`python scripts/verify_research_office_readiness.py --format markdown` 会检查阶段报告、来源清单、数据表、竞品表、截图计划、schema gate 和公开演示下载；边界仍是人机协作补证据，不承诺不稳定的一键全自动抓取。
-- [x] 公开交付前总门禁已补充：`python scripts/verify_release_readiness.py --format markdown` 会串联 first-run、公开演示、AI 漫剧交付物、研究办公室、办公室扩展治理、产品 readiness 和敏感信息扫描。
+- [x] 公开交付前总门禁已补充：`python scripts/verify_release_readiness.py --format markdown` 会串联 first-run、公开演示、AI 漫剧交付物、研究办公室、办公室扩展治理、产品 readiness 和敏感信息扫描；其中公开演示同时覆盖动态无 Key 入口和后端无关的静态展示导出。
 - [x] 产品化目标覆盖表已补充：`python scripts/verify_productization_status.py --format markdown` 会把公开展示、无 Key 样例、本地复现、AI 漫剧交付、研究办公室边界、办公室扩展治理和安全扫描映射到可验证证据。
 - [x] 只有当一个办公室达到“可展示、可试用、可交付、可追溯”四项标准后，才允许标记为主力办公室。
 

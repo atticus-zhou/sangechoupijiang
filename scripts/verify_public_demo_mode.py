@@ -73,6 +73,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     featured_demos = payload.get("featured_demos") or []
     portfolio_embed = payload.get("portfolio_embed") or {}
     public_deployment = payload.get("public_deployment") or {}
+    static_export = public_deployment.get("static_export") or {}
     interview_script = portfolio_embed.get("interview_demo_script") or []
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
@@ -114,6 +115,12 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public deployment profile must forbid real model calls")
     if public_deployment.get("allows_workspace_writes") is not False:
         errors.append("public deployment profile must forbid workspace writes")
+    if static_export.get("command") != "python scripts/export_public_showcase.py":
+        errors.append("public deployment profile must expose the static export command")
+    if static_export.get("entrypoint") != "dist/public-showcase/index.html":
+        errors.append("public deployment profile must expose the static showcase entrypoint")
+    if static_export.get("requires_backend") is not False or static_export.get("requires_api_key") is not False:
+        errors.append("static showcase export must be backend-free and no-key")
 
     return {
         "status_code": response.status_code,
@@ -141,6 +148,9 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             if item.get("visitor_action") and item.get("product_response") and item.get("proof") and item.get("boundary")
         ),
         "public_deployment_mode": public_deployment.get("mode", ""),
+        "static_export_command": static_export.get("command", ""),
+        "static_export_entrypoint": static_export.get("entrypoint", ""),
+        "static_export_backend_free": static_export.get("requires_backend") is False,
     }
 
 

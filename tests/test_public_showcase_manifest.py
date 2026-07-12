@@ -83,7 +83,16 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertFalse(public_deployment["allows_real_model_calls"])
         self.assertFalse(public_deployment["allows_workspace_writes"])
         self.assertEqual(public_deployment["allowed_route_prefixes"], ["/api/demo"])
+        static_export = public_deployment["static_export"]
+        self.assertEqual(static_export["command"], "python scripts/export_public_showcase.py")
+        self.assertEqual(static_export["entrypoint"], "dist/public-showcase/index.html")
+        self.assertFalse(static_export["requires_backend"])
+        self.assertFalse(static_export["requires_api_key"])
         self.assertIn("config.yaml", " ".join(public_deployment["forbidden_public_assets"]))
+        self.assertIn(
+            "python scripts/verify_static_public_showcase.py --format markdown",
+            payload["verification_commands"],
+        )
         self.assertIn(
             "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
             payload["verification_commands"],

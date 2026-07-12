@@ -35,6 +35,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_public_demo_mode.py", "--format", "json"],
     },
     {
+        "id": "static_showcase",
+        "title": "Backend-free static showcase export",
+        "command": ["scripts/verify_static_public_showcase.py", "--format", "json"],
+    },
+    {
         "id": "comic_delivery",
         "title": "AI comic Word canvas delivery",
         "command": ["scripts/verify_comic_v2_delivery.py", "--format", "json"],
@@ -109,6 +114,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"reading_guide={showcase.get('reading_guide_ready_count')}/{showcase.get('reading_guide_count')}; "
                 f"interview_script={showcase.get('interview_script_ready_count')}/{showcase.get('interview_script_count')}; "
                 f"mode={parsed.get('mode')}"
+            )
+        if check_id == "static_showcase":
+            return (
+                f"files={parsed.get('file_count')}; "
+                f"downloads={parsed.get('download_count')}; "
+                f"reading_guide={parsed.get('reading_guide_ready_count')}/{parsed.get('reading_guide_count')}; "
+                f"backend={parsed.get('requires_backend')}"
             )
         if check_id == "comic_delivery":
             return (
