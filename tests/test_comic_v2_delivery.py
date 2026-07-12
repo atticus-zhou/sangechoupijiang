@@ -196,6 +196,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
             delivery = build_delivery_from_v2(bundle, manifest, package, result, root / "out")
             handoff = json.loads(delivery.handoff_manifest_path.read_text(encoding="utf-8"))
 
+            self.assertEqual(handoff["schema"], "comic_production_handoff_manifest_v2")
+            self.assertEqual(handoff["schema_version"], 2)
             self.assertEqual(handoff["story"]["story_id"], bundle.creative.story_id)
             self.assertEqual(handoff["story"]["story_version"], bundle.creative.story_version)
             self.assertEqual(handoff["style"]["style_id"], bundle.visual.style_id)
@@ -238,6 +240,19 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(reference_image["image_kind"], result.records[0].image_kind)
             self.assertTrue(reference_image["file"].endswith(".png"))
             self.assertEqual(handoff["shots"][0]["first_frame_reference_image"], reference_image)
+            director = handoff["shots"][0]["director_execution"]
+            self.assertEqual(director["contract_version"], 1)
+            self.assertEqual(director["style_id"], package.shots[0].style_id)
+            self.assertEqual(director["style_version"], bundle.visual.style_version)
+            self.assertEqual(director["first_frame_image_id"], reference_image["image_id"])
+            self.assertEqual(director["reference_asset_ids"], list(package.shots[0].reference_asset_ids))
+            self.assertEqual(director["action_chain"], list(package.shots[0].action_chain))
+            self.assertEqual(director["performance_intent"], package.shots[0].performance_intent)
+            self.assertEqual(director["framing"], package.shots[0].framing)
+            self.assertEqual(director["camera_movement"], package.shots[0].camera_movement)
+            self.assertEqual(director["lighting"], package.shots[0].lighting)
+            self.assertEqual(director["dialogue"], package.shots[0].dialogue)
+            self.assertEqual(director["sound"], package.shots[0].sound)
             reference_asset = handoff["shots"][0]["reference_asset_chain"][0]
             self.assertEqual(reference_asset["asset_id"], manifest.items[0].asset_id)
             self.assertEqual(reference_asset["name"], manifest.items[0].name)

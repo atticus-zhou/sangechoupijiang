@@ -134,7 +134,8 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"downstream_handoff_ready={parsed.get('downstream_handoff_ready')}; "
                 f"assets={parsed.get('asset_count')}; "
                 f"images={parsed.get('image_count')}; "
-                f"shots={parsed.get('shot_count')}"
+                f"shots={parsed.get('shot_count')}; "
+                f"structured_director_shots={parsed.get('structured_director_shots')}"
             )
         if check_id == "research_readiness":
             package = parsed.get("artifact_package") or {}

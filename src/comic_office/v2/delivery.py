@@ -185,6 +185,7 @@ def _write_handoff_manifest(
     for shot in prompt_package.shots:
         reference_images = _shot_reference_images(shot.reference_asset_ids, image_result.records)
         reference_asset_chain = _shot_reference_asset_chain(shot.reference_asset_ids, manifest, reference_images)
+        first_frame_reference = reference_images[0] if reference_images else {}
         shots.append({
             "shot_id": shot.shot_id,
             "scene_id": shot.scene_id,
@@ -192,9 +193,23 @@ def _write_handoff_manifest(
             "evidence_quote": shot.evidence_quote,
             "reference_asset_ids": list(shot.reference_asset_ids),
             "reference_images": reference_images,
-            "first_frame_reference_image": reference_images[0] if reference_images else {},
+            "first_frame_reference_image": first_frame_reference,
             "reference_asset_chain": reference_asset_chain,
             "action_chain": list(shot.action_chain),
+            "director_execution": {
+                "contract_version": 1,
+                "style_id": shot.style_id,
+                "style_version": bundle.visual.style_version,
+                "first_frame_image_id": first_frame_reference.get("image_id", ""),
+                "reference_asset_ids": list(shot.reference_asset_ids),
+                "action_chain": list(shot.action_chain),
+                "performance_intent": shot.performance_intent,
+                "framing": shot.framing,
+                "camera_movement": shot.camera_movement,
+                "lighting": shot.lighting,
+                "dialogue": shot.dialogue,
+                "sound": shot.sound,
+            },
             "generator_prompt": shot.generator_prompt,
             "negative_prompt": list(shot.negative_prompt),
             "video_prompt_block": shot.generator_prompt,
@@ -210,7 +225,8 @@ def _write_handoff_manifest(
             "platform_note": shot.platform_note,
         })
     payload = {
-        "schema": "comic_production_handoff_manifest_v1",
+        "schema": "comic_production_handoff_manifest_v2",
+        "schema_version": 2,
         "story": {
             "story_id": bundle.creative.story_id,
             "story_version": bundle.creative.story_version,

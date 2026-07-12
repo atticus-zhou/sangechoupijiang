@@ -22,6 +22,20 @@ DEFAULT_OUTPUT = REPO_ROOT / "output" / "comic_v2_downstream_handoff"
 CHARACTER_REQUIRED_IMAGES = {"three_view", "expression_sheet"}
 PROP_REQUIRED_IMAGES = {"turnaround"}
 SCENE_REQUIRED_IMAGES = {"wide", "top_down"}
+DIRECTOR_EXECUTION_REQUIRED_FIELDS = {
+    "contract_version",
+    "style_id",
+    "style_version",
+    "first_frame_image_id",
+    "reference_asset_ids",
+    "action_chain",
+    "performance_intent",
+    "framing",
+    "camera_movement",
+    "lighting",
+    "dialogue",
+    "sound",
+}
 
 
 def verify_downstream_handoff(
@@ -77,7 +91,8 @@ def verify_downstream_handoff(
         "character_identity_sets": _count_assets_with_images(assets, CHARACTER_REQUIRED_IMAGES, "character"),
         "prop_reference_sets": _count_assets_with_images(assets, PROP_REQUIRED_IMAGES, "prop"),
         "scene_spatial_sets": _count_assets_with_images(assets, SCENE_REQUIRED_IMAGES, "scene"),
-        "shot_video_packages": len(shots) - len(shot_failures),
+        "shot_video_packages": _count_ready_shots(shots, asset_ids, image_ids),
+        "structured_director_shots": _count_structured_director_shots(shots),
         "clean_asset_prompt_sets": prompt_quality.get("clean_asset_prompt_count", 0),
         "director_prompt_sets": prompt_quality.get("director_prompt_count", 0),
         "lineage_stage_count": len(manifest.get("production_lineage") or []),
@@ -147,7 +162,50 @@ def _shot_handoff_failures(
             failures.append(f"{shot_id}: missing acceptance criteria")
         if not shot.get("retry_strategy"):
             failures.append(f"{shot_id}: missing retry strategy")
+        failures.extend(_director_execution_failures(shot))
     return failures
+
+
+def _director_execution_failures(shot: dict[str, Any]) -> list[str]:
+    shot_id = shot.get("shot_id") or "<missing_shot_id>"
+    director = shot.get("director_execution") or {}
+    missing = sorted(
+        field
+        for field in DIRECTOR_EXECUTION_REQUIRED_FIELDS
+        if director.get(field) in (None, "", [])
+    )
+    failures = []
+    if missing:
+        failures.append(f"{shot_id}: structured director execution missing fields {missing}")
+        return failures
+    if director.get("contract_version") != 1:
+        failures.append(f"{shot_id}: unsupported director execution contract version")
+    if director.get("reference_asset_ids") != shot.get("reference_asset_ids"):
+        failures.append(f"{shot_id}: director execution reference assets do not match shot references")
+    if director.get("action_chain") != shot.get("action_chain"):
+        failures.append(f"{shot_id}: director execution action chain does not match shot action chain")
+    if len(director.get("action_chain") or []) < 2:
+        failures.append(f"{shot_id}: director execution action chain needs at least two ordered steps")
+    first_frame = shot.get("first_frame_reference_image") or {}
+    if director.get("first_frame_image_id") != first_frame.get("image_id"):
+        failures.append(f"{shot_id}: director execution first-frame identity does not match approved image")
+    return failures
+
+
+def _count_ready_shots(
+    shots: list[dict[str, Any]],
+    asset_ids: set[str],
+    image_ids: set[str],
+) -> int:
+    return sum(
+        1
+        for shot in shots
+        if not _shot_handoff_failures([shot], asset_ids, image_ids)
+    )
+
+
+def _count_structured_director_shots(shots: list[dict[str, Any]]) -> int:
+    return sum(1 for shot in shots if not _director_execution_failures(shot))
 
 
 def _lineage_failures(lineage: list[dict[str, Any]]) -> list[str]:
@@ -238,6 +296,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- Prop reference sets: {result.get('prop_reference_sets')}",
         f"- Scene spatial sets: {result.get('scene_spatial_sets')}",
         f"- Shot video packages: {result.get('shot_video_packages')}",
+        f"- Structured director shots: {result.get('structured_director_shots')}",
         f"- Clean asset prompt sets: {result.get('clean_asset_prompt_sets')}",
         f"- Director prompt sets: {result.get('director_prompt_sets')}",
     ]

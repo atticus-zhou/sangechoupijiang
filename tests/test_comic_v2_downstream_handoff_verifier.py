@@ -35,6 +35,7 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(result["prop_reference_sets"], 1)
         self.assertEqual(result["scene_spatial_sets"], 1)
         self.assertEqual(result["shot_video_packages"], 2)
+        self.assertEqual(result["structured_director_shots"], 2)
         self.assertEqual(result["clean_asset_prompt_sets"], 7)
         self.assertEqual(result["director_prompt_sets"], 2)
         self.assertGreaterEqual(result["lineage_stage_count"], 7)
@@ -91,6 +92,28 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertIn("Shot video packages", completed.stdout)
         self.assertIn("Clean asset prompt sets", completed.stdout)
         self.assertIn("Director prompt sets", completed.stdout)
+        self.assertIn("Structured director shots: 2", completed.stdout)
+
+    def test_missing_structured_director_fields_block_handoff(self):
+        module = self._module()
+        shot = {
+            "shot_id": "SHOT-01",
+            "reference_asset_ids": ["character_01", "scene_01"],
+            "first_frame_reference_image": {"image_id": "image_01"},
+            "video_prompt_block": "首帧参考、故事目的、动作链、表演意图、摄影、灯光。严格继承参考资产。",
+            "negative_prompt_block": "禁止资产身份漂移；禁止动作顺序混乱",
+            "execution_steps": ["绑定首帧", "粘贴提示词", "检查结果"],
+            "acceptance_criteria": ["资产一致", "动作正确", "镜头可用"],
+            "retry_strategy": "减少角色数量后重试",
+        }
+
+        failures = module._shot_handoff_failures(
+            [shot],
+            {"character_01", "scene_01"},
+            {"image_01"},
+        )
+
+        self.assertTrue(any("structured director execution missing fields" in item for item in failures))
 
 
 if __name__ == "__main__":
