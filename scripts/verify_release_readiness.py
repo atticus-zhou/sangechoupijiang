@@ -132,9 +132,11 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"downloads={parsed.get('demo_endpoint', {}).get('download_count')}"
             )
         if check_id == "office_governance":
+            demo_contract = parsed.get("required_demo_contract") or []
             return (
                 f"primary={','.join(parsed.get('primary_office_ids') or [])}; "
-                f"offices={len(parsed.get('offices') or [])}"
+                f"offices={len(parsed.get('offices') or [])}; "
+                f"demo_contract={len(demo_contract)}"
             )
         if check_id == "product_readiness":
             runtime = parsed.get("runtime_verification") or {}
