@@ -102,9 +102,12 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
     if parsed:
         if check_id == "public_demo":
             demos = parsed.get("demos") or {}
+            showcase = parsed.get("showcase_manifest") or {}
             return (
                 f"{len(demos)} demos; "
-                f"showcase={parsed.get('showcase_manifest', {}).get('status_code')}; "
+                f"showcase={showcase.get('status_code')}; "
+                f"reading_guide={showcase.get('reading_guide_ready_count')}/{showcase.get('reading_guide_count')}; "
+                f"interview_script={showcase.get('interview_script_ready_count')}/{showcase.get('interview_script_count')}; "
                 f"mode={parsed.get('mode')}"
             )
         if check_id == "comic_delivery":
