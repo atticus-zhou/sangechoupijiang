@@ -614,6 +614,16 @@ def _public_claim_report(report: dict) -> dict:
         "downstream_status": report.get("downstream_status", ""),
         "allowed_public_claims": list(report.get("allowed_public_claims") or []),
         "forbidden_public_claims": list(report.get("forbidden_public_claims") or []),
+        "claim_upgrade_checklist": [
+            {
+                "id": item.get("id", ""),
+                "title": item.get("title", ""),
+                "status": item.get("status", ""),
+                "required_evidence": list(item.get("required_evidence") or []),
+                "why_it_matters": item.get("why_it_matters", ""),
+            }
+            for item in (report.get("claim_upgrade_checklist") or [])
+        ],
         "next_action": report.get("next_action", ""),
         "evidence": {
             "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",

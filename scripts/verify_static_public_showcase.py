@@ -124,6 +124,14 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 errors.append("static claim report must not require an API Key")
             if "E:\\" in json.dumps(claim_payload, ensure_ascii=False):
                 errors.append("static claim report leaks a local Windows path")
+            claim_upgrade_checklist = claim_payload.get("claim_upgrade_checklist") or []
+            if len(claim_upgrade_checklist) < 3:
+                errors.append("static claim report must include a claim upgrade checklist")
+            for item in claim_upgrade_checklist:
+                if not item.get("id") or not item.get("status") or not item.get("required_evidence") or not item.get("why_it_matters"):
+                    errors.append(f"static claim upgrade checklist item is incomplete: {item.get('id') or item.get('title')}")
+        if not claim_payload:
+            claim_upgrade_checklist = []
 
         reading_guide = portfolio.get("deliverable_reading_guide") or []
         ready_reading_items = 0
@@ -219,6 +227,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 and claim_payload.get("can_claim_real_quality") is False
             ),
             "claim_report_uri": claim_uri,
+            "claim_upgrade_checklist_count": len(claim_upgrade_checklist),
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),
@@ -247,6 +256,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Featured demos: {payload.get('featured_demo_count')}",
         f"- Real product screenshot: {payload.get('screenshot_ready')}",
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
+        f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
         f"- Requires backend: {payload.get('requires_backend')}",
         f"- Requires API Key: {payload.get('requires_api_key')}",
         f"- Calls real models: {payload.get('calls_real_models')}",

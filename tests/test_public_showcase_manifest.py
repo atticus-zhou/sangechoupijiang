@@ -182,6 +182,8 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         claim = claim_response.json()
         self.assertEqual(claim["claim_level"], "demo_structure_only")
         self.assertFalse(claim["can_claim_real_quality"])
+        self.assertGreaterEqual(len(claim["claim_upgrade_checklist"]), 3)
+        self.assertTrue(any(item["id"] == "run_real_models" for item in claim["claim_upgrade_checklist"]))
         self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
 
     def test_favicon_request_does_not_create_browser_console_noise(self):

@@ -78,6 +78,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
         "required_markers": [
             "demo_structure_only",
             "production_quality_verified",
+            "claim_upgrade_checklist",
             "python scripts/verify_comic_real_production_claim.py --format markdown",
         ],
     },

@@ -20,6 +20,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 在机器可读结果里，`claim_level` 是对外声明等级，`production_quality_verified` 是能否宣称真实模型画质和生产质量已经通过验证的布尔证据。无 Key 固定样例必须保持 `production_quality_verified=False`；只有真实模型产物通过完整质量基准、视觉质检和下游交付审计后，才能变成 `production_quality_verified=True`。
 
+报告还会输出 `claim_upgrade_checklist`。它不是宣传文案，而是补证据清单：固定样例会列出还缺真实模型图片、视觉质检和重新写入质量基准；真实质量已验证的 manifest 会提示保留证据包，并在故事、资产、模型或提示词有重大改动后重新验证。
+
 ## 三种声明等级
 
 | 等级 | 能说什么 | 不能说什么 |

@@ -47,6 +47,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(claim_payload["can_claim_real_quality"])
         self.assertFalse(claim_payload["calls_real_models"])
         self.assertFalse(claim_payload["requires_api_key"])
+        self.assertGreaterEqual(len(claim_payload["claim_upgrade_checklist"]), 3)
+        self.assertTrue(all(item["required_evidence"] for item in claim_payload["claim_upgrade_checklist"]))
         self.assertNotIn("E:\\", json.dumps(claim_payload, ensure_ascii=False))
         script_text = "\n".join(
             item["product_response"] for item in showcase["portfolio_embed"]["interview_demo_script"]
@@ -100,6 +102,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Reproducibility checklist: 5 commands", completed.stdout)
         self.assertIn("Release badge: safe_public_demo", completed.stdout)
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
+        self.assertIn("Claim upgrade checklist: 3 items", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
 

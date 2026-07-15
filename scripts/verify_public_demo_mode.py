@@ -255,6 +255,12 @@ def verify_public_demo_mode() -> dict[str, Any]:
         errors.append("fixed public claim report must remain demo_structure_only")
     if claim_payload.get("can_claim_real_quality") is not False:
         errors.append("fixed public claim report must not claim real production quality")
+    claim_upgrade_checklist = claim_payload.get("claim_upgrade_checklist") or []
+    if len(claim_upgrade_checklist) < 3:
+        errors.append("fixed comic claim report must include a claim upgrade checklist")
+    for item in claim_upgrade_checklist:
+        if not item.get("id") or not item.get("status") or not item.get("required_evidence") or not item.get("why_it_matters"):
+            errors.append(f"claim upgrade checklist item is incomplete: {item.get('id') or item.get('title')}")
 
     for office_id, meta in DEMO_ENDPOINTS.items():
         response = client.get(meta["endpoint"])
@@ -355,6 +361,7 @@ def verify_public_demo_mode() -> dict[str, Any]:
             "quality_claim": claim_payload.get("quality_claim", ""),
             "can_claim_real_quality": claim_payload.get("can_claim_real_quality"),
             "downstream_status": claim_payload.get("downstream_status", ""),
+            "upgrade_checklist_count": len(claim_upgrade_checklist),
         },
         "demos": demos,
         "launch_gate_links": sorted(set(all_links)),
@@ -397,7 +404,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
     ]
     lines.insert(
         -1,
-        f"- AI comic claim report: {claim.get('claim_level')} / real_quality={claim.get('can_claim_real_quality')} / downstream={claim.get('downstream_status')}",
+        f"- AI comic claim report: {claim.get('claim_level')} / real_quality={claim.get('can_claim_real_quality')} / downstream={claim.get('downstream_status')} / upgrade_checklist={claim.get('upgrade_checklist_count')}",
     )
     for demo in payload["demos"].values():
         lines.extend([
