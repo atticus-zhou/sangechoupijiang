@@ -31,6 +31,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "first_run",
                 "productization_status",
                 "model_guidance",
+                "public_docs_readability",
                 "public_demo",
                 "static_showcase",
                 "comic_delivery",
@@ -55,6 +56,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         static_showcase = next(item for item in payload["checks"] if item["id"] == "static_showcase")
         self.assertIn("downloads=5", static_showcase["summary"])
         self.assertIn("backend=False", static_showcase["summary"])
+        public_docs = next(item for item in payload["checks"] if item["id"] == "public_docs_readability")
+        self.assertIn("docs=", public_docs["summary"])
+        self.assertIn("failures=0", public_docs["summary"])
         comic_handoff = next(item for item in payload["checks"] if item["id"] == "comic_downstream_handoff")
         self.assertIn("structured_director_shots=2", comic_handoff["summary"])
         comic_benchmark = next(item for item in payload["checks"] if item["id"] == "comic_production_benchmark")
@@ -95,6 +99,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Safe for public release", completed.stdout)
         self.assertIn("Productization objective coverage", completed.stdout)
         self.assertIn("Model configuration guidance", completed.stdout)
+        self.assertIn("Public docs readability", completed.stdout)
         self.assertIn("Backend-free static showcase export", completed.stdout)
         self.assertIn("AI comic Word canvas delivery", completed.stdout)
         self.assertIn("AI comic downstream handoff", completed.stdout)
@@ -106,6 +111,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Secret and runtime artifact scan", completed.stdout)
         self.assertIn("interview_script=4/4", completed.stdout)
         self.assertIn("downloads=5; reading_guide=5/5; backend=False", completed.stdout)
+        self.assertIn("failures=0; mode=public_docs_readability", completed.stdout)
         self.assertIn("structured_director_shots=2", completed.stdout)
         self.assertIn("claim=demo_structure_verified", completed.stdout)
         self.assertIn("claim_level=demo_structure_only", completed.stdout)

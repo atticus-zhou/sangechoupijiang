@@ -18,6 +18,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 这个脚本不调用模型，不读取密钥，只审计已经生成的交付物。
 
+在机器可读结果里，`claim_level` 是对外声明等级，`production_quality_verified` 是能否宣称真实模型画质和生产质量已经通过验证的布尔证据。无 Key 固定样例必须保持 `production_quality_verified=False`；只有真实模型产物通过完整质量基准、视觉质检和下游交付审计后，才能变成 `production_quality_verified=True`。
+
 ## 三种声明等级
 
 | 等级 | 能说什么 | 不能说什么 |
@@ -33,4 +35,3 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 - 面试官看到的是安全的固定样例，不会误以为作者把密钥开放给了访客。
 - 使用者跑真实模型后，有明确命令判断产物能不能展示。
 - 后续接入真实图像模型时，不会把占位图、旧版包或未质检图片包装成生产级成果。
-

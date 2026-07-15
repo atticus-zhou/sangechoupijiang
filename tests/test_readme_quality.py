@@ -23,6 +23,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("使用者填写自己的 Key", text)
         self.assertIn("python scripts/doctor.py", text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_public_docs_readability.py --format markdown", text)
         self.assertIn("python scripts/verify_model_configuration_guidance.py --format markdown", text)
         self.assertIn("python scripts/verify_first_run_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)

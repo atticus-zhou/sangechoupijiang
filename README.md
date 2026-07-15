@@ -239,6 +239,7 @@ python scripts/verify_development_checklist.py --format markdown --run-tests --r
 单项发布门禁：
 
 ```powershell
+python scripts/verify_public_docs_readability.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_model_configuration_guidance.py --format markdown
 python scripts/verify_office_isolation.py --format markdown
