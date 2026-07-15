@@ -572,7 +572,73 @@ def _recommended_recovery(issues: list[dict[str, Any]]) -> dict[str, Any]:
         **recovery,
         "reason_code": str(issue.get("code") or ""),
         "description": str(issue.get("message") or recovery.get("description") or ""),
+        "operator_steps": _operator_steps_for_recovery(str(recovery.get("action") or "")),
+        "expected_stage": _expected_stage_for_recovery(str(recovery.get("action") or "")),
+        "preserves": _preserved_artifacts_for_recovery(str(recovery.get("action") or "")),
+        "clears": _cleared_artifacts_for_recovery(str(recovery.get("action") or "")),
     }
+
+
+def _operator_steps_for_recovery(action: str) -> list[str]:
+    if action == "restart_story_review":
+        return [
+            "返回故事确认区，重新确认完整故事原文和故事版本。",
+            "重新生成故事合同、视觉母版和资产拆解，避免覆盖旧交付历史。",
+        ]
+    if action == "revise_assets":
+        return [
+            "打开资产审核区，按问题说明补充、删除或重命名人物、道具、场景。",
+            "确认新版资产拆解包后，再重新生成提示词、图片和 Word 画布。",
+        ]
+    if action == "regenerate_prompts":
+        return [
+            "保留已批准资产，回到提示词和镜头规划阶段。",
+            "重新生成资产提示词、镜头视频提示词和导演执行卡，再进入生图。",
+        ]
+    if action == "regenerate_images":
+        return [
+            "保留故事、资产和提示词包，回到图片生成阶段。",
+            "重新生成未达标图片并执行视觉质检，再重组 Word 画布。",
+        ]
+    if action == "rebuild_delivery":
+        return [
+            "保留图片生产记录，回到交付组装阶段。",
+            "重新生成 Word 制片画布、handoff manifest 和生产谱系审计。",
+        ]
+    return [
+        "打开工作台复核质量警告。",
+        "按责任部门处理阻塞项后重新运行交付审计。",
+    ]
+
+
+def _expected_stage_for_recovery(action: str) -> str:
+    return {
+        "restart_story_review": "story_confirmed",
+        "revise_assets": "asset_review",
+        "regenerate_prompts": "prompt_planning",
+        "regenerate_images": "image_generation",
+        "rebuild_delivery": "document_generation",
+    }.get(action, "manual_review")
+
+
+def _preserved_artifacts_for_recovery(action: str) -> list[str]:
+    return {
+        "restart_story_review": ["old_history", "old_word_canvas", "old_handoff_manifest"],
+        "revise_assets": ["story_contract", "visual_bible", "old_history"],
+        "regenerate_prompts": ["story_contract", "visual_bible", "asset_manifest"],
+        "regenerate_images": ["story_contract", "visual_bible", "asset_manifest", "prompt_package"],
+        "rebuild_delivery": ["story_contract", "visual_bible", "asset_manifest", "prompt_package", "image_production"],
+    }.get(action, ["available_history"])
+
+
+def _cleared_artifacts_for_recovery(action: str) -> list[str]:
+    return {
+        "restart_story_review": ["current_production_chain"],
+        "revise_assets": ["prompt_package", "image_production", "delivery"],
+        "regenerate_prompts": ["prompt_package", "image_production", "delivery"],
+        "regenerate_images": ["image_production", "delivery"],
+        "rebuild_delivery": ["delivery"],
+    }.get(action, ["blocked_delivery"])
 
 
 def _recovery_for_issue(code: str) -> dict[str, str]:

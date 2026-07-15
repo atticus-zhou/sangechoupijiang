@@ -185,8 +185,8 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"Public claim: {result.get('safe_public_claim')}",
         f"Next action: {result.get('next_action')}",
         "",
-        "| Claim | Score | Visual evidence | Title | Word | Recovery | Manifest |",
-        "| --- | ---: | --- | --- | --- | --- | --- |",
+        "| Claim | Score | Visual evidence | Title | Word | Recovery | Stage | Impact | Manifest |",
+        "| --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for item in result.get("manifests", []):
         recovery = item.get("recommended_recovery") or {}
@@ -194,7 +194,10 @@ def format_markdown(result: dict[str, Any]) -> str:
             f"| {item.get('quality_claim')} | {item.get('package_quality_score')}/100 | "
             f"{item.get('visual_evidence_level')} | {item.get('title')} | "
             f"{'yes' if item.get('word_canvas_exists') else 'missing'} | "
-            f"{recovery.get('label') or recovery.get('action') or ''} | `{item.get('path')}` |"
+            f"{recovery.get('label') or recovery.get('action') or ''} | "
+            f"{recovery.get('expected_stage') or ''} | "
+            f"preserve={','.join(recovery.get('preserves') or [])}; clear={','.join(recovery.get('clears') or [])} | "
+            f"`{item.get('path')}` |"
         )
     if result.get("skipped_roots"):
         lines.extend(["", "## Skipped Roots", ""])

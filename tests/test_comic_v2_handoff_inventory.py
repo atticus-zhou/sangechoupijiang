@@ -54,6 +54,10 @@ class ComicV2HandoffInventoryTests(unittest.TestCase):
         target = next(item for item in inventory["manifests"] if item["visual_evidence_level"] == "model_reviewed")
         self.assertEqual(target["quality_claim"], "needs_review")
         self.assertEqual(target["recommended_recovery"]["action"], "regenerate_images")
+        self.assertEqual(target["recommended_recovery"]["expected_stage"], "image_generation")
+        self.assertIn("prompt_package", target["recommended_recovery"]["preserves"])
+        self.assertIn("image_production", target["recommended_recovery"]["clears"])
+        self.assertGreaterEqual(len(target["recommended_recovery"]["operator_steps"]), 2)
         self.assertGreater(target["issue_count"], 0)
 
     def test_inventory_accepts_real_provider_with_seven_dimension_reviews(self):
@@ -72,10 +76,13 @@ class ComicV2HandoffInventoryTests(unittest.TestCase):
             _write_manifest(root, "real_verified_handoff_manifest.json", manifest)
 
             inventory = audit_handoff_inventory([root])
+            markdown = format_markdown(inventory)
 
         target = next(item for item in inventory["manifests"] if item["production_quality_verified"])
         self.assertEqual(target["quality_claim"], "production_quality_verified")
         self.assertEqual(inventory["production_verified_count"], 1)
+        self.assertIn("Stage", markdown)
+        self.assertIn("Impact", markdown)
         self.assertIn("真实质量通过", inventory["next_action"])
 
     def test_inventory_skips_non_comic_manifests_and_marks_legacy(self):

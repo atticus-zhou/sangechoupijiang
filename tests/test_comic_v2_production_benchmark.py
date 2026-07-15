@@ -138,6 +138,29 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertIn("visual.review_dimensions", issue_codes)
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_images")
 
+    def test_recommended_recovery_includes_operator_playbook(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = fixture_manifest(Path(tmp))
+        asset = manifest["assets"][0]
+        baseline_id = asset["identity_baseline_image_id"]
+        removable = next(
+            image
+            for image in manifest["images"]
+            if image.get("asset_id") == asset["asset_id"]
+            and image.get("image_id") != baseline_id
+        )
+        manifest["images"].remove(removable)
+
+        audit = audit_handoff_manifest(manifest)
+        recovery = audit["recommended_recovery"]
+
+        self.assertEqual(recovery["action"], "regenerate_images")
+        self.assertEqual(recovery["expected_stage"], "image_generation")
+        self.assertIn("prompt_package", recovery["preserves"])
+        self.assertIn("image_production", recovery["clears"])
+        self.assertGreaterEqual(len(recovery["operator_steps"]), 2)
+        self.assertTrue(all(step.strip() for step in recovery["operator_steps"]))
+
 
 if __name__ == "__main__":
     unittest.main()

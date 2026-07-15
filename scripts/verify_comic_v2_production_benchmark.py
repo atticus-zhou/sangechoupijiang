@@ -105,6 +105,14 @@ def format_markdown(result: dict[str, Any]) -> str:
         lines.append(
             f"- 恢复动作：{recovery.get('label') or recovery.get('action') or '人工复核'}"
         )
+        if recovery.get("expected_stage"):
+            lines.append(f"- 回到阶段：`{recovery.get('expected_stage')}`")
+        if recovery.get("preserves"):
+            lines.append(f"- 保留产物：{', '.join(recovery.get('preserves') or [])}")
+        if recovery.get("clears"):
+            lines.append(f"- 重新生成：{', '.join(recovery.get('clears') or [])}")
+        for step in recovery.get("operator_steps") or []:
+            lines.append(f"- 操作步骤：{step}")
     lines.append(str(result.get("next_action") or ""))
     return "\n".join(lines) + "\n"
 
