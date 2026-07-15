@@ -133,6 +133,14 @@ python scripts/verify_model_configuration_guidance.py --format markdown
 
 工作台也会做启动检查：缺少文本模型时会阻止故事/规划，缺少生图模型时会提示只能先生成提示词，缺少视觉模型时会提示可以生图但不能自动质检。
 
+开始真实 AI 漫剧生产前，可以先打开本地只读检查：
+
+```text
+GET /api/offices/comic_production/real-production-readiness
+```
+
+这个接口不会调用真实模型、不会读取或打印 API Key，也不会写入工作区。它会合并办公室模型预检、输出目录检查和本地 handoff 交付盘点，明确返回 `ready_for_real_run`、`limited_planning_only` 或 `blocked`。如果结果不是 `ready_for_real_run`，建议先按 `next_action` 补齐模型或权限，再消耗真实模型额度。
+
 AI 漫剧制片办公室推荐模型类型：
 
 | 部门 | 推荐能力 | 示例方向 |

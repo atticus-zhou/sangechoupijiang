@@ -17,6 +17,7 @@ class ComicProductionReadinessTests(unittest.TestCase):
             "workflow_state",
             "downloadable_delivery",
             "model_preflight",
+            "real_production_start_check",
             "local_doctor",
             "end_to_end_verifier",
             "history_trace",

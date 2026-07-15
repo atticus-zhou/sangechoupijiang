@@ -80,7 +80,7 @@ from src.image_generation import (
 from src.model_connectivity import AGENT_IDS, probe_model_connectivity
 from src.office_runtime import build_office_runtime_status
 from src.office_preflight import build_office_preflight
-from src.product_readiness import audit_comic_production_readiness
+from src.product_readiness import audit_comic_production_readiness, audit_comic_real_production_start_readiness
 from src.system_preflight import build_system_preflight
 from scripts.audit_comic_v2_handoffs import audit_handoff_inventory
 from src.browser_capture import (
@@ -384,6 +384,31 @@ async def get_office_readiness_api(office_id: str):
             "checks": [],
         }
     return audit_comic_production_readiness(APP_BASE_DIR)
+
+
+@app.get("/api/offices/{office_id}/real-production-readiness")
+async def get_office_real_production_readiness_api(office_id: str):
+    """Return the current local readiness to start a real production run."""
+    normalized = "comic_production" if office_id == "comic" else office_id
+    if normalized != "comic_production":
+        return {
+            "office_id": normalized,
+            "mode": "real_production_start_readiness",
+            "status": "not_applicable",
+            "summary": "当前只有 AI 漫剧制片办公室接入了真实生产前检查。",
+            "can_start_full_production": False,
+            "can_start_limited_planning": False,
+            "calls_real_models": False,
+            "requires_api_key_to_check": False,
+            "writes_workspace": False,
+            "required_capabilities": [],
+            "handoff_inventory": {},
+            "operator_checklist": [],
+        }
+    return audit_comic_real_production_start_readiness(
+        config_manager.get_model_config,
+        base_dir=APP_BASE_DIR,
+    )
 
 
 @app.get("/api/system/preflight")

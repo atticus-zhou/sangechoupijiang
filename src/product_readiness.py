@@ -3,9 +3,104 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
+
+from scripts.audit_comic_v2_handoffs import audit_handoff_inventory
+from src.llm.providers import ModelConfig
+from src.office_preflight import build_office_preflight
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def audit_comic_real_production_start_readiness(
+    get_model_config: Callable[[str, str], ModelConfig],
+    *,
+    base_dir: Path | str | None = None,
+) -> dict:
+    """Return the current no-key, no-call readiness to attempt a real comic production run."""
+    root = Path(base_dir) if base_dir is not None else REPO_ROOT
+    preflight = build_office_preflight("comic_production", get_model_config, base_dir=root)
+    inventory = audit_handoff_inventory([root / "output"])
+    capabilities = preflight.get("capabilities") or []
+    by_id = {item.get("id"): item for item in capabilities}
+    required_for_full_package = (
+        "story_planning",
+        "asset_planning",
+        "prompt_planning",
+        "image_generation",
+        "visual_review",
+        "local_output",
+    )
+    missing_full = [
+        item
+        for item in (by_id.get(check_id) for check_id in required_for_full_package)
+        if item and item.get("status") != "ok"
+    ]
+    blockers = [item for item in missing_full if item.get("status") == "blocked"]
+    missing_optional = [item for item in missing_full if item.get("status") != "blocked"]
+    if blockers:
+        status = "blocked"
+        can_start_full = False
+        can_start_limited = False
+        summary = "核心文本规划或本地输出能力未就绪，不建议开始真实漫剧生产。"
+        next_action = blockers[0].get("next_action") or preflight.get("next_action") or ""
+    elif missing_optional:
+        status = "limited_planning_only"
+        can_start_full = False
+        can_start_limited = True
+        summary = "可以先做故事、资产拆解和提示词规划，但还不能生成完整带图片与自动质检的制片包。"
+        next_action = missing_optional[0].get("next_action") or preflight.get("next_action") or ""
+    else:
+        status = "ready_for_real_run"
+        can_start_full = True
+        can_start_limited = True
+        summary = "当前模型配置和本地输出目录具备完整真实制片包生产条件。"
+        next_action = "可以开始真实生产；完成后运行交付盘点和质量基准，确认是否达到 production_quality_verified。"
+    return {
+        "office_id": "comic_production",
+        "mode": "real_production_start_readiness",
+        "status": status,
+        "summary": summary,
+        "can_start_full_production": can_start_full,
+        "can_start_limited_planning": can_start_limited,
+        "calls_real_models": False,
+        "requires_api_key_to_check": False,
+        "writes_workspace": False,
+        "next_action": next_action,
+        "preflight_status": preflight.get("status", ""),
+        "preflight_summary": preflight.get("summary", ""),
+        "blocking_reasons": preflight.get("blocking_reasons", []),
+        "required_capabilities": [
+            {
+                "id": item.get("id", ""),
+                "title": item.get("title", ""),
+                "status": item.get("status", ""),
+                "owner_label": item.get("owner_label", ""),
+                "model_kind": item.get("model_kind", ""),
+                "impact": item.get("impact", ""),
+                "next_action": item.get("next_action", ""),
+            }
+            for item in capabilities
+            if item.get("id") in required_for_full_package
+        ],
+        "handoff_inventory": {
+            "manifest_count": inventory.get("manifest_count", 0),
+            "production_verified_count": inventory.get("production_verified_count", 0),
+            "demo_only_count": inventory.get("demo_only_count", 0),
+            "needs_review_count": inventory.get("needs_review_count", 0),
+            "legacy_unverifiable_count": inventory.get("legacy_unverifiable_count", 0),
+            "safe_public_claim": inventory.get("safe_public_claim", ""),
+            "next_action": inventory.get("next_action", ""),
+        },
+        "operator_checklist": [
+            "先在模型页测试中书省、门下省、工部、兵部、刑部的配置。",
+            "确认工部是生图模型，刑部是视觉理解模型，文本部门不是误填成纯生图模型。",
+            "开始真实生产前确认 output 目录可写，且公开部署没有暴露个人 API Key。",
+            "真实生产完成后运行 python scripts/audit_comic_v2_handoffs.py --format markdown。",
+            "只有交付盘点和质量基准显示 production_quality_verified 时，才把该包说成真实质量已验证。",
+        ],
+    }
 
 
 def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict:
@@ -52,6 +147,24 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
             [
                 "src/office_preflight.py",
                 "tests/test_system_preflight.py",
+            ],
+        ),
+        _check(
+            "real_production_start_check",
+            "真实生产前检查",
+            [
+                _contains(root / "src/product_readiness.py", "audit_comic_real_production_start_readiness"),
+                _contains(root / "src/product_readiness.py", "ready_for_real_run"),
+                _contains(root / "src/product_readiness.py", "limited_planning_only"),
+                _contains(root / "src/web/app.py", "/api/offices/{office_id}/real-production-readiness"),
+                _contains(root / "tests/test_office_preflight.py", "test_comic_real_production_readiness_reports_full_ready_without_calling_models"),
+                _contains(root / "README.md", "/api/offices/comic_production/real-production-readiness"),
+            ],
+            [
+                "src/product_readiness.py:audit_comic_real_production_start_readiness",
+                "src/web/app.py:/api/offices/{office_id}/real-production-readiness",
+                "tests/test_office_preflight.py",
+                "README.md",
             ],
         ),
         _check(

@@ -111,6 +111,75 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertIn("downloadable_delivery", checks)
         self.assertIn("failure_handling", checks)
 
+    def test_comic_real_production_readiness_reports_full_ready_without_calling_models(self):
+        def fake_get_model_config(agent, office_id=""):
+            self.assertEqual(office_id, "comic_production")
+            if agent == "gongbu":
+                return image_config()
+            if agent == "xingbu":
+                return vision_config()
+            return text_config()
+
+        with patch("src.web.app.config_manager.get_model_config", side_effect=fake_get_model_config):
+            response = self.client.get("/api/offices/comic_production/real-production-readiness")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["mode"], "real_production_start_readiness")
+        self.assertEqual(payload["status"], "ready_for_real_run")
+        self.assertTrue(payload["can_start_full_production"])
+        self.assertTrue(payload["can_start_limited_planning"])
+        self.assertFalse(payload["calls_real_models"])
+        self.assertFalse(payload["requires_api_key_to_check"])
+        self.assertFalse(payload["writes_workspace"])
+        self.assertGreaterEqual(len(payload["operator_checklist"]), 5)
+        self.assertGreaterEqual(payload["handoff_inventory"]["manifest_count"], 1)
+        self.assertEqual(payload["handoff_inventory"]["production_verified_count"], 0)
+        self.assertNotIn("text-key", str(payload))
+        self.assertNotIn("image-key", str(payload))
+        self.assertNotIn("vision-key", str(payload))
+
+    def test_comic_real_production_readiness_allows_limited_planning_without_image_or_vision(self):
+        def fake_get_model_config(agent, office_id=""):
+            if agent == "gongbu":
+                return text_config()
+            if agent == "xingbu":
+                return missing_config()
+            return text_config()
+
+        with patch("src.web.app.config_manager.get_model_config", side_effect=fake_get_model_config):
+            response = self.client.get("/api/offices/comic_production/real-production-readiness")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "limited_planning_only")
+        self.assertFalse(payload["can_start_full_production"])
+        self.assertTrue(payload["can_start_limited_planning"])
+        self.assertIn("不能生成完整带图片", payload["summary"])
+        by_id = {item["id"]: item for item in payload["required_capabilities"]}
+        self.assertEqual(by_id["image_generation"]["status"], "missing")
+        self.assertEqual(by_id["visual_review"]["status"], "missing")
+
+    def test_comic_real_production_readiness_blocks_without_core_text_model(self):
+        def fake_get_model_config(agent, office_id=""):
+            if agent == "zhongshu":
+                return missing_config()
+            if agent == "gongbu":
+                return image_config()
+            if agent == "xingbu":
+                return vision_config()
+            return text_config()
+
+        with patch("src.web.app.config_manager.get_model_config", side_effect=fake_get_model_config):
+            response = self.client.get("/api/offices/comic_production/real-production-readiness")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "blocked")
+        self.assertFalse(payload["can_start_full_production"])
+        self.assertFalse(payload["can_start_limited_planning"])
+        self.assertIn("中书省文本模型", payload["blocking_reasons"])
+
     def test_office_protocol_api_declares_platform_contracts(self):
         response = self.client.get("/api/offices/protocols")
 
