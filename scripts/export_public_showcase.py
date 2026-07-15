@@ -58,6 +58,7 @@ def _rewrite_uris(value: Any, uri_map: dict[str, str]) -> Any:
 
 def _showcase_download_uris(showcase: dict[str, Any]) -> list[str]:
     uris: set[str] = set()
+    claim_report_uri = "/api/demo/comic-production/claim-report"
     for demo in showcase.get("featured_demos") or []:
         for item in demo.get("downloads") or []:
             uri = str(item.get("uri") or "")
@@ -67,7 +68,7 @@ def _showcase_download_uris(showcase: dict[str, Any]) -> list[str]:
     for group in ("sample_deliverables", "deliverable_reading_guide"):
         for item in portfolio.get(group) or []:
             uri = str(item.get("uri") or "")
-            if uri:
+            if uri and uri != claim_report_uri:
                 uris.add(uri)
     return sorted(uris)
 
@@ -167,7 +168,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "generated_by": "python scripts/export_public_showcase.py",
         }
         static_showcase["safety_boundaries"] = [
-            "静态展示只包含固定样例、实际产品截图和四份公开样例交付物。",
+            "静态展示只包含固定样例、实际产品截图和五份公开样例交付物，其中包括真实生产声明报告。",
             "页面运行时不连接 FastAPI，不读取 config.yaml、环境变量、Cookie、登录态或本地用户工作区。",
             "不要把个人 API Key、真实用户数据或运行产物复制进静态目录。",
             "真实生产继续走本地模式，由使用者填写自己的模型 Key。",
@@ -179,7 +180,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             )
         if len(interview_script) >= 3:
             interview_script[2]["product_response"] = (
-                "四份交付物已经随静态站点一起导出，每个链接都附带阅读重点和验收信号。"
+                "五份交付物已经随静态站点一起导出，每个链接都附带阅读重点和验收信号。"
             )
         deployment = static_showcase.setdefault("public_deployment", {})
         deployment["mode"] = "static_demo_only"

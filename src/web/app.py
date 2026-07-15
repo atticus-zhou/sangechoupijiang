@@ -849,6 +849,10 @@ def _public_showcase_deliverable_guidance(item_type: str) -> tuple[str, list[str
             "用于复核研究办公室到底有哪些来源、数据、截图计划和待人工确认事项。",
             ["来源清单可追踪", "截图计划可执行", "未验证信息不会伪装成已验证结论"],
         ),
+        "real_production_claim": (
+            "用于判断这份公开样例到底能对外说到什么程度，重点看 claim_level、production_quality_verified 和禁止宣传的内容。",
+            ["明确 demo-only 边界", "不宣称真实模型画质已验证", "给出下一步真实生产验证动作"],
+        ),
     }
     return guidance.get(
         item_type,
@@ -875,6 +879,22 @@ def _public_showcase_sample_deliverables(demos: list[dict]) -> list[dict]:
                 "acceptance_signals": acceptance_signals,
             })
     return deliverables
+
+
+def _public_showcase_claim_report_deliverable(claim: dict) -> dict:
+    reader_guidance, acceptance_signals = _public_showcase_deliverable_guidance("real_production_claim")
+    return {
+        "office_id": "comic_production",
+        "office_name": "AI 漫剧制片办公室",
+        "title": "AI 漫剧真实生产声明报告",
+        "type": "real_production_claim",
+        "uri": claim.get("uri", "/api/demo/comic-production/claim-report"),
+        "status": "downloadable",
+        "reader_guidance": reader_guidance,
+        "acceptance_signals": acceptance_signals,
+        "claim_level": claim.get("claim_level", ""),
+        "can_claim_real_quality": claim.get("can_claim_real_quality", False),
+    }
 
 
 def _public_showcase_deliverable_reading_guide() -> list[dict]:
@@ -975,6 +995,8 @@ async def get_public_showcase_demo_api():
             "证明同一套办公室框架也能组织报告、来源、数据点、竞品表和截图计划。",
         ),
     ]
+    sample_deliverables = _public_showcase_sample_deliverables(featured_demos)
+    sample_deliverables.append(_public_showcase_claim_report_deliverable(comic_claim))
     return {
         "mode": "public_no_key_showcase",
         "product_name": "三个臭皮匠",
@@ -1059,7 +1081,7 @@ async def get_public_showcase_demo_api():
                     "caption": "证明研究办公室也能输出来源、数据点、竞品和截图计划。",
                 },
             ],
-            "sample_deliverables": _public_showcase_sample_deliverables(featured_demos),
+            "sample_deliverables": sample_deliverables,
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "handoff_inventory": {

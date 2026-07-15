@@ -52,8 +52,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             item["product_response"] for item in showcase["portfolio_embed"]["interview_demo_script"]
         )
         self.assertIn("访客打开页面时只读取随包的 data.js", script_text)
-        self.assertIn("已经随静态站点一起导出", script_text)
-        self.assertIn("页面运行时不连接 FastAPI", "\n".join(showcase["safety_boundaries"]))
+        self.assertIn("五份交付物已经随静态站点一起导出", script_text)
+        safety_text = "\n".join(showcase["safety_boundaries"])
+        self.assertIn("页面运行时不连接 FastAPI", safety_text)
+        self.assertIn("真实生产声明报告", safety_text)
         self.assertGreater((self.output_dir / "assets" / "public-showcase-desktop.png").stat().st_size, 100_000)
         for item in manifest["downloads"]:
             self.assertFalse(item["local_uri"].startswith("/"))

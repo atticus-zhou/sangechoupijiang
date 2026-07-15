@@ -89,8 +89,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public showcase manifest needs at least 2 featured demos")
     if not portfolio_embed.get("repository_url"):
         errors.append("public showcase manifest must expose a repository URL for portfolio pages")
-    if len(portfolio_embed.get("sample_deliverables") or []) < 4:
-        errors.append("portfolio embed must expose at least 4 sample deliverables")
+    if len(portfolio_embed.get("sample_deliverables") or []) < 5:
+        errors.append("portfolio embed must expose at least 5 sample deliverables, including the real production claim report")
     for item in portfolio_embed.get("sample_deliverables") or []:
         if not item.get("reader_guidance"):
             errors.append(f"sample deliverable missing reader guidance: {item.get('title') or item.get('uri')}")
@@ -288,7 +288,7 @@ def verify_public_demo_mode() -> dict[str, Any]:
     return {
         "status": "passed" if not errors else "failed",
         "mode": "public_no_key_demo",
-        "summary": "公开展示清单、演示端点、样例下载和上线门禁链接可用" if not errors else "公开演示验证发现问题",
+        "summary": "公开展示清单、演示端点、样例下载、真实生产声明和上线门禁链接可用" if not errors else "公开演示验证发现问题",
         "showcase_manifest": showcase_manifest,
         "comic_handoff_inventory": {
             "status_code": inventory_response.status_code,

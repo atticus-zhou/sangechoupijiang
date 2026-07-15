@@ -53,8 +53,15 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("办公室大厅", embed["office_hall"]["title"])
         self.assertGreaterEqual(len(embed["workflow_showcase"]), 4)
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
-        self.assertGreaterEqual(len(embed["sample_deliverables"]), 4)
+        self.assertGreaterEqual(len(embed["sample_deliverables"]), 5)
         self.assertTrue(all(item["uri"].startswith("/api/demo/") for item in embed["sample_deliverables"]))
+        claim_deliverables = [
+            item for item in embed["sample_deliverables"] if item["type"] == "real_production_claim"
+        ]
+        self.assertEqual(len(claim_deliverables), 1)
+        self.assertEqual(claim_deliverables[0]["uri"], "/api/demo/comic-production/claim-report")
+        self.assertFalse(claim_deliverables[0]["can_claim_real_quality"])
+        self.assertIn("demo-only", claim_deliverables[0]["acceptance_signals"][0])
         self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 5)
         self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4, 5])
         for item in embed["deliverable_reading_guide"]:
