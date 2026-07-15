@@ -76,6 +76,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     static_export = public_deployment.get("static_export") or {}
     interview_script = portfolio_embed.get("interview_demo_script") or []
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
+    real_production_claim = portfolio_embed.get("real_production_claim") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
     if payload.get("requires_api_key") is not False:
@@ -111,6 +112,14 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public showcase must not claim real comic production verification from demo inventory")
     if not handoff_inventory.get("safe_public_claim"):
         errors.append("portfolio embed handoff inventory must include a safe public claim")
+    if real_production_claim.get("uri") != "/api/demo/comic-production/claim-report":
+        errors.append("portfolio embed must expose the comic real production claim report endpoint")
+    if real_production_claim.get("claim_level") != "demo_structure_only":
+        errors.append("public showcase fixed sample must remain demo_structure_only")
+    if real_production_claim.get("can_claim_real_quality") is not False:
+        errors.append("public showcase must not claim real production quality from the fixed sample")
+    if not real_production_claim.get("forbidden_public_claims"):
+        errors.append("real production claim report must include forbidden public claims")
     if len(interview_script) < 4:
         errors.append("portfolio embed must expose a 4-step interview demo script")
     for item in interview_script:
@@ -158,6 +167,9 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "handoff_inventory_manifest_count": handoff_inventory.get("manifest_count", 0),
         "handoff_inventory_production_verified_count": handoff_inventory.get("production_verified_count", 0),
         "handoff_inventory_safe_public_claim": handoff_inventory.get("safe_public_claim", ""),
+        "real_production_claim_uri": real_production_claim.get("uri", ""),
+        "real_production_claim_level": real_production_claim.get("claim_level", ""),
+        "real_production_can_claim_real_quality": real_production_claim.get("can_claim_real_quality"),
         "public_deployment_mode": public_deployment.get("mode", ""),
         "static_export_command": static_export.get("command", ""),
         "static_export_entrypoint": static_export.get("entrypoint", ""),
@@ -181,6 +193,18 @@ def verify_public_demo_mode() -> dict[str, Any]:
         errors.append("comic handoff inventory must not require API key")
     if inventory_payload.get("production_verified_count", 0) != 0:
         errors.append("fixed public inventory must not claim real production quality verification")
+    claim_response = client.get("/api/demo/comic-production/claim-report")
+    claim_payload = claim_response.json() if claim_response.status_code == 200 else {}
+    if claim_response.status_code != 200:
+        errors.append(f"comic claim report endpoint returned {claim_response.status_code}")
+    if claim_payload.get("calls_real_models") is not False:
+        errors.append("comic claim report must not call real models")
+    if claim_payload.get("requires_api_key") is not False:
+        errors.append("comic claim report must not require API key")
+    if claim_payload.get("claim_level") != "demo_structure_only":
+        errors.append("fixed public claim report must remain demo_structure_only")
+    if claim_payload.get("can_claim_real_quality") is not False:
+        errors.append("fixed public claim report must not claim real production quality")
 
     for office_id, meta in DEMO_ENDPOINTS.items():
         response = client.get(meta["endpoint"])
@@ -275,6 +299,13 @@ def verify_public_demo_mode() -> dict[str, Any]:
             "needs_review_count": inventory_payload.get("needs_review_count", 0),
             "safe_public_claim": inventory_payload.get("safe_public_claim", ""),
         },
+        "comic_real_production_claim": {
+            "status_code": claim_response.status_code,
+            "claim_level": claim_payload.get("claim_level", ""),
+            "quality_claim": claim_payload.get("quality_claim", ""),
+            "can_claim_real_quality": claim_payload.get("can_claim_real_quality"),
+            "downstream_status": claim_payload.get("downstream_status", ""),
+        },
         "demos": demos,
         "launch_gate_links": sorted(set(all_links)),
         "errors": errors,
@@ -284,6 +315,7 @@ def verify_public_demo_mode() -> dict[str, Any]:
 def format_markdown(payload: dict[str, Any]) -> str:
     manifest = payload.get("showcase_manifest") or {}
     inventory = payload.get("comic_handoff_inventory") or {}
+    claim = payload.get("comic_real_production_claim") or {}
     lines = [
         "# 公开演示模式验证",
         "",
@@ -310,6 +342,10 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]
+    lines.insert(
+        -1,
+        f"- AI comic claim report: {claim.get('claim_level')} / real_quality={claim.get('can_claim_real_quality')} / downstream={claim.get('downstream_status')}",
+    )
     for demo in payload["demos"].values():
         lines.extend([
             f"## {demo['name']}",

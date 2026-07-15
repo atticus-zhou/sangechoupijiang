@@ -37,6 +37,17 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         comic_benchmark = demos["comic_production"]["quality_benchmark"]
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
         self.assertFalse(comic_benchmark["production_quality_verified"])
+        claim = showcase["portfolio_embed"]["real_production_claim"]
+        self.assertEqual(claim["uri"], "data/comic_production_claim_report.json")
+        self.assertEqual(claim["claim_level"], "demo_structure_only")
+        self.assertFalse(claim["can_claim_real_quality"])
+        self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
+        claim_payload = json.loads((self.output_dir / claim["uri"]).read_text(encoding="utf-8"))
+        self.assertEqual(claim_payload["claim_level"], "demo_structure_only")
+        self.assertFalse(claim_payload["can_claim_real_quality"])
+        self.assertFalse(claim_payload["calls_real_models"])
+        self.assertFalse(claim_payload["requires_api_key"])
+        self.assertNotIn("E:\\", json.dumps(claim_payload, ensure_ascii=False))
         script_text = "\n".join(
             item["product_response"] for item in showcase["portfolio_embed"]["interview_demo_script"]
         )
@@ -66,6 +77,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Status: `passed`", completed.stdout)
         self.assertIn("Downloadable deliverables: 5", completed.stdout)
         self.assertIn("Reading guide: 5/5", completed.stdout)
+        self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
 

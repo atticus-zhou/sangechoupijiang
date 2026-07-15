@@ -83,6 +83,7 @@ from src.office_preflight import build_office_preflight
 from src.product_readiness import audit_comic_production_readiness, audit_comic_real_production_start_readiness
 from src.system_preflight import build_system_preflight
 from scripts.audit_comic_v2_handoffs import audit_handoff_inventory
+from scripts.verify_comic_real_production_claim import build_claim_report
 from src.browser_capture import (
     BrowserCaptureError,
     capture_feigua_plan,
@@ -587,6 +588,43 @@ async def get_comic_production_handoff_inventory_demo_api():
     }
 
 
+@app.get("/api/demo/comic-production/claim-report")
+async def get_comic_production_claim_report_demo_api():
+    """Return the public-safe claim boundary for the fixed comic demo package."""
+    delivery = _ensure_comic_production_demo_delivery()
+    report = build_claim_report(delivery["handoff_manifest"])
+    return _public_claim_report(report)
+
+
+def _public_claim_report(report: dict) -> dict:
+    evidence = report.get("evidence") or {}
+    return {
+        "mode": "no_key_demo_claim_report",
+        "office_id": "comic_production",
+        "uri": "/api/demo/comic-production/claim-report",
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "writes_workspace": False,
+        "status": report.get("status", ""),
+        "claim_level": report.get("claim_level", ""),
+        "quality_claim": report.get("quality_claim", ""),
+        "can_publicly_show": bool(report.get("can_publicly_show")),
+        "can_claim_real_quality": bool(report.get("can_claim_real_quality")),
+        "downstream_status": report.get("downstream_status", ""),
+        "allowed_public_claims": list(report.get("allowed_public_claims") or []),
+        "forbidden_public_claims": list(report.get("forbidden_public_claims") or []),
+        "next_action": report.get("next_action", ""),
+        "evidence": {
+            "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            "word_canvas_uri": "/api/demo/comic-production/files/word_canvas.docx",
+            "package_quality_score": evidence.get("package_quality_score"),
+            "visual_evidence_level": evidence.get("visual_evidence_level", ""),
+            "stored_benchmark_matches": bool(evidence.get("stored_benchmark_matches")),
+            "production_quality_verified": bool(evidence.get("production_quality_verified")),
+        },
+    }
+
+
 def _ensure_comic_production_demo_delivery() -> dict[str, Path]:
     """Build deterministic demo delivery files under output/demo without workspace writes."""
     output_root = APP_BASE_DIR / "output" / "demo" / "comic-production"
@@ -921,6 +959,7 @@ async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
     comic_demo = await get_comic_production_demo_api()
     comic_inventory = await get_comic_production_handoff_inventory_demo_api()
+    comic_claim = await get_comic_production_claim_report_demo_api()
     research_demo = await get_research_demo_api()
     featured_demos = [
         _public_showcase_demo(
@@ -1033,6 +1072,18 @@ async def get_public_showcase_demo_api():
                 "legacy_unverifiable_count": comic_inventory.get("legacy_unverifiable_count", 0),
                 "safe_public_claim": comic_inventory.get("safe_public_claim", ""),
                 "next_action": comic_inventory.get("next_action", ""),
+            },
+            "real_production_claim": {
+                "uri": comic_claim.get("uri", "/api/demo/comic-production/claim-report"),
+                "claim_level": comic_claim.get("claim_level", ""),
+                "quality_claim": comic_claim.get("quality_claim", ""),
+                "can_publicly_show": comic_claim.get("can_publicly_show", False),
+                "can_claim_real_quality": comic_claim.get("can_claim_real_quality", False),
+                "downstream_status": comic_claim.get("downstream_status", ""),
+                "allowed_public_claims": comic_claim.get("allowed_public_claims", [])[:3],
+                "forbidden_public_claims": comic_claim.get("forbidden_public_claims", [])[:3],
+                "next_action": comic_claim.get("next_action", ""),
+                "evidence": comic_claim.get("evidence", {}),
             },
         },
         "public_deployment": {

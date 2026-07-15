@@ -104,6 +104,44 @@
     });
   }
 
+  function renderClaimBoundary() {
+    const portfolio = showcase.portfolio_embed || {};
+    const claim = portfolio.real_production_claim || {};
+    const grid = document.getElementById('claim-grid');
+    const level = document.getElementById('claim-level');
+    if (!grid || !level) return;
+    level.textContent = text(claim.claim_level || 'demo_structure_only');
+
+    function claimCard(title, items, fallback) {
+      const card = element('article', 'card claim-card');
+      card.appendChild(element('h3', '', title));
+      const list = element('ul', 'proof-list');
+      const values = Array.isArray(items) && items.length ? items : [fallback];
+      values.forEach(function (item) {
+        list.appendChild(element('li', '', item));
+      });
+      card.appendChild(list);
+      return card;
+    }
+
+    grid.appendChild(claimCard('可以公开说明', claim.allowed_public_claims, '固定样例验证了结构、下载和证据链。'));
+    grid.appendChild(claimCard('不能公开宣称', claim.forbidden_public_claims, '不能宣称真实模型画质已验证。'));
+
+    const status = element('article', 'card claim-card');
+    status.appendChild(element('h3', '', '下一步'));
+    addTextRow(status, '质量声明', claim.quality_claim);
+    addTextRow(status, '下游状态', claim.downstream_status);
+    addTextRow(status, '真实画质', claim.can_claim_real_quality ? '已验证' : '未验证');
+    const next = element('p', '', text(claim.next_action || '需要真实模型跑通后再更新生产质量声明。'));
+    status.appendChild(next);
+    if (claim.uri) {
+      const link = element('a', 'button secondary', '查看声明数据');
+      link.href = text(claim.uri);
+      status.appendChild(link);
+    }
+    grid.appendChild(status);
+  }
+
   function renderReadingGuide() {
     const portfolio = showcase.portfolio_embed || {};
     const guide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
@@ -153,6 +191,7 @@
   if (repository) document.getElementById('repository-link').href = repository;
 
   renderAudiencePaths();
+  renderClaimBoundary();
   renderOffices();
   renderReadingGuide();
   renderInterviewScript();

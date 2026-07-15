@@ -28,6 +28,7 @@ REQUIRED_FILES = {
     "export-manifest.json",
     "assets/public-showcase-desktop.png",
     "data/comic_production.json",
+    "data/comic_production_claim_report.json",
     "data/research.json",
 }
 
@@ -104,6 +105,25 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 errors.append(f"static download hash mismatch: {local_uri}")
 
         portfolio = showcase.get("portfolio_embed") or {}
+        real_production_claim = portfolio.get("real_production_claim") or {}
+        claim_uri = str(real_production_claim.get("uri") or "")
+        claim_path = temp_dir / claim_uri
+        claim_payload = {}
+        if claim_uri != "data/comic_production_claim_report.json" or not claim_path.is_file():
+            errors.append("static showcase must expose a local comic production claim report")
+        else:
+            claim_payload = json.loads(claim_path.read_text(encoding="utf-8"))
+            if claim_payload.get("claim_level") != "demo_structure_only":
+                errors.append("static claim report must remain demo_structure_only")
+            if claim_payload.get("can_claim_real_quality") is not False:
+                errors.append("static claim report must not claim real production quality")
+            if claim_payload.get("calls_real_models") is not False:
+                errors.append("static claim report must not call real models")
+            if claim_payload.get("requires_api_key") is not False:
+                errors.append("static claim report must not require an API Key")
+            if "E:\\" in json.dumps(claim_payload, ensure_ascii=False):
+                errors.append("static claim report leaks a local Windows path")
+
         reading_guide = portfolio.get("deliverable_reading_guide") or []
         ready_reading_items = 0
         for item in reading_guide:
@@ -154,6 +174,11 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "reading_guide_ready_count": ready_reading_items,
             "featured_demo_count": len(demos),
             "screenshot_ready": screenshot_ready,
+            "claim_report_ready": bool(
+                claim_payload.get("claim_level") == "demo_structure_only"
+                and claim_payload.get("can_claim_real_quality") is False
+            ),
+            "claim_report_uri": claim_uri,
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),
@@ -178,6 +203,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- Featured demos: {payload.get('featured_demo_count')}",
         f"- Real product screenshot: {payload.get('screenshot_ready')}",
+        f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
         f"- Requires backend: {payload.get('requires_backend')}",
         f"- Requires API Key: {payload.get('requires_api_key')}",
         f"- Calls real models: {payload.get('calls_real_models')}",

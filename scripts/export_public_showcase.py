@@ -146,6 +146,14 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             uri_map[demo_uri] = f"#office-{office_id}"
             demo_payloads[office_id] = _rewrite_uris(demo_response.json(), uri_map)
 
+        claim_report_uri = "/api/demo/comic-production/claim-report"
+        claim_response = client.get(claim_report_uri)
+        if claim_response.status_code != 200:
+            raise RuntimeError(f"Comic production claim report returned {claim_response.status_code}.")
+        claim_report = _rewrite_uris(claim_response.json(), uri_map)
+        claim_report_path = "data/comic_production_claim_report.json"
+        uri_map[claim_report_uri] = claim_report_path
+
         static_showcase = _rewrite_uris(showcase, uri_map)
         source_mode = static_showcase.get("mode")
         static_showcase["mode"] = "public_no_key_static_showcase"
@@ -182,6 +190,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
         _write_json(staging / "showcase.json", static_showcase)
         for office_id, payload in demo_payloads.items():
             _write_json(staging / "data" / f"{office_id}.json", payload)
+        _write_json(staging / claim_report_path, _rewrite_uris(claim_report, uri_map))
         data_json = json.dumps(static_showcase, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
         (staging / "data.js").write_text(
             f"window.__PUBLIC_SHOWCASE__ = {data_json};\n",

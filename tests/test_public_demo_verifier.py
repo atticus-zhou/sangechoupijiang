@@ -43,6 +43,12 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertEqual(payload["showcase_manifest"]["handoff_inventory_production_verified_count"], 0)
         self.assertIn("真实模型质量", payload["showcase_manifest"]["handoff_inventory_safe_public_claim"])
         self.assertEqual(
+            payload["showcase_manifest"]["real_production_claim_uri"],
+            "/api/demo/comic-production/claim-report",
+        )
+        self.assertEqual(payload["showcase_manifest"]["real_production_claim_level"], "demo_structure_only")
+        self.assertFalse(payload["showcase_manifest"]["real_production_can_claim_real_quality"])
+        self.assertEqual(
             payload["showcase_manifest"]["static_export_command"],
             "python scripts/export_public_showcase.py",
         )
@@ -50,6 +56,10 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["manifest_count"], 1)
         self.assertEqual(payload["comic_handoff_inventory"]["production_verified_count"], 0)
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["demo_only_count"], 1)
+        self.assertEqual(payload["comic_real_production_claim"]["status_code"], 200)
+        self.assertEqual(payload["comic_real_production_claim"]["claim_level"], "demo_structure_only")
+        self.assertFalse(payload["comic_real_production_claim"]["can_claim_real_quality"])
+        self.assertEqual(payload["comic_real_production_claim"]["downstream_status"], "structure_demo_only")
         self.assertTrue(payload["showcase_manifest"]["static_export_backend_free"])
         self.assertIn("comic_production", payload["demos"])
         self.assertIn("research", payload["demos"])
@@ -97,6 +107,8 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("面试演示脚本", result.stdout)
         self.assertIn("漫剧交付盘点", result.stdout)
         self.assertIn("不调用真实模型", result.stdout)
+        self.assertIn("claim report", result.stdout)
+        self.assertIn("demo_structure_only", result.stdout)
         self.assertIn("demo_structure_verified", result.stdout)
         self.assertIn("已验证真实模型画质：False", result.stdout)
 

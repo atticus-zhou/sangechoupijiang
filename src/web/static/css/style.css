@@ -503,6 +503,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .public-showcase-actions a.ghost,
 .public-workflow-grid a,
+.public-claim-grid a,
 .demo-artifact-grid a.ghost {
     display: inline-flex;
     align-items: center;
@@ -520,6 +521,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .public-showcase-actions a.ghost:hover,
 .public-workflow-grid a:hover,
+.public-claim-grid a:hover,
 .demo-artifact-grid a.ghost:hover {
     border-color: rgba(88, 166, 255, 0.52);
     background: rgba(88, 166, 255, 0.14);
@@ -527,6 +529,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .public-audience-grid,
 .public-demo-grid,
+.public-claim-grid,
 .public-workflow-grid,
 .public-safety-grid {
     display: grid;
@@ -536,6 +539,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .public-audience-grid article,
 .public-demo-grid article,
+.public-claim-grid article,
 .public-workflow-grid article,
 .public-safety-grid article {
     border: 1px solid rgba(139, 148, 158, 0.16);
@@ -546,6 +550,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .public-audience-grid strong,
 .public-demo-grid strong,
+.public-claim-grid strong,
 .public-workflow-grid strong,
 .public-safety-grid strong {
     display: block;
@@ -555,6 +560,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .public-audience-grid p,
 .public-demo-grid p,
+.public-claim-grid p,
 .public-workflow-grid p,
 .public-safety-grid p {
     color: var(--text2);

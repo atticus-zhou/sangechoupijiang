@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 from fastapi.testclient import TestClient
@@ -69,6 +70,16 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertGreaterEqual(inventory["manifest_count"], 1)
         self.assertEqual(inventory["production_verified_count"], 0)
         self.assertIn("真实模型质量", inventory["safe_public_claim"])
+        claim = embed["real_production_claim"]
+        self.assertEqual(claim["uri"], "/api/demo/comic-production/claim-report")
+        self.assertEqual(claim["claim_level"], "demo_structure_only")
+        self.assertEqual(claim["quality_claim"], "demo_structure_verified")
+        self.assertTrue(claim["can_publicly_show"])
+        self.assertFalse(claim["can_claim_real_quality"])
+        self.assertEqual(claim["downstream_status"], "structure_demo_only")
+        self.assertIn("不能宣称真实模型画质已验证", "\n".join(claim["forbidden_public_claims"]))
+        self.assertEqual(claim["evidence"]["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
+        self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
         handoff_guide = next(
             item for item in embed["deliverable_reading_guide"] if "handoff manifest" in item["title"]
         )
@@ -126,6 +137,13 @@ class PublicShowcaseManifestTests(unittest.TestCase):
                 response = client.get(item["uri"])
                 self.assertEqual(response.status_code, 200)
                 self.assertGreater(len(response.content), 20)
+
+        claim_response = client.get(payload["portfolio_embed"]["real_production_claim"]["uri"])
+        self.assertEqual(claim_response.status_code, 200)
+        claim = claim_response.json()
+        self.assertEqual(claim["claim_level"], "demo_structure_only")
+        self.assertFalse(claim["can_claim_real_quality"])
+        self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
 
     def test_favicon_request_does_not_create_browser_console_noise(self):
         client = TestClient(app)

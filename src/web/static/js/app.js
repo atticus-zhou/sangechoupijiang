@@ -4483,6 +4483,7 @@ function renderPublicShowcase(showcase) {
     const interviewScript = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
+    const realProductionClaim = portfolio.real_production_claim || {};
     const deployment = showcase.public_deployment || {};
     return `
         <section class="demo-hero public-showcase-hero">
@@ -4508,6 +4509,30 @@ function renderPublicShowcase(showcase) {
             </div>
             <p>${escapeHtml(showcase.positioning || '')}</p>
         </section>
+        ${realProductionClaim.claim_level ? `
+            <section class="demo-section public-claim-section">
+                <div class="demo-section-head">
+                    <h2>真实生产声明边界</h2>
+                    <span>${escapeHtml(realProductionClaim.claim_level || '')}</span>
+                </div>
+                <div class="public-claim-grid">
+                    <article>
+                        <strong>当前能说</strong>
+                        ${(realProductionClaim.allowed_public_claims || []).map(item => `<p>${escapeHtml(item)}</p>`).join('')}
+                    </article>
+                    <article>
+                        <strong>当前不能说</strong>
+                        ${(realProductionClaim.forbidden_public_claims || []).map(item => `<p>${escapeHtml(item)}</p>`).join('')}
+                    </article>
+                    <article>
+                        <strong>下一步</strong>
+                        <p>${escapeHtml(realProductionClaim.next_action || '')}</p>
+                        <small>real_quality=${realProductionClaim.can_claim_real_quality ? 'true' : 'false'} · downstream=${escapeHtml(realProductionClaim.downstream_status || '')}</small>
+                        ${realProductionClaim.uri ? `<a class="ghost btn-sm" href="${escapeHtml(realProductionClaim.uri)}" target="_blank">打开 claim report</a>` : ''}
+                    </article>
+                </div>
+            </section>
+        ` : ''}
         <section class="demo-section">
             <div class="demo-section-head">
                 <h2>建议访客这样看</h2>

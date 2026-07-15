@@ -235,6 +235,12 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.claim-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
 .card,
 .office-card,
 .reading-item,
@@ -247,6 +253,14 @@ h3 {
 .card {
   min-height: 260px;
   padding: 24px;
+}
+
+.claim-card {
+  min-height: 240px;
+}
+
+.claim-card .button {
+  margin-top: 18px;
 }
 
 .card p,
@@ -422,6 +436,7 @@ noscript {
   .status-layout,
   .safety-layout,
   .card-grid.three,
+  .claim-grid,
   .office-grid,
   .script-list {
     grid-template-columns: 1fr;
