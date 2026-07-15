@@ -54,15 +54,21 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
         self.assertGreaterEqual(len(embed["sample_deliverables"]), 4)
         self.assertTrue(all(item["uri"].startswith("/api/demo/") for item in embed["sample_deliverables"]))
-        self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 4)
-        self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4])
+        self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 5)
+        self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4, 5])
         for item in embed["deliverable_reading_guide"]:
             self.assertTrue(item["uri"].startswith("/api/demo/"))
             self.assertTrue(item["look_for"])
             self.assertTrue(item["proves"])
         self.assertTrue(any("Word 制片画布" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("handoff manifest" in item["title"] for item in embed["deliverable_reading_guide"]))
+        self.assertTrue(any("交付盘点" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("证据清单" in item["title"] for item in embed["deliverable_reading_guide"]))
+        inventory = embed["handoff_inventory"]
+        self.assertEqual(inventory["uri"], "/api/demo/comic-production/handoff-inventory")
+        self.assertGreaterEqual(inventory["manifest_count"], 1)
+        self.assertEqual(inventory["production_verified_count"], 0)
+        self.assertIn("真实模型质量", inventory["safe_public_claim"])
         handoff_guide = next(
             item for item in embed["deliverable_reading_guide"] if "handoff manifest" in item["title"]
         )

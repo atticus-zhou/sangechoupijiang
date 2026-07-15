@@ -36,6 +36,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_delivery",
                 "comic_downstream_handoff",
                 "comic_production_benchmark",
+                "comic_handoff_inventory",
                 "research_readiness",
                 "office_governance",
                 "product_readiness",
@@ -50,7 +51,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("reading_guide=", public_demo["summary"])
         self.assertIn("interview_script=", public_demo["summary"])
         static_showcase = next(item for item in payload["checks"] if item["id"] == "static_showcase")
-        self.assertIn("downloads=4", static_showcase["summary"])
+        self.assertIn("downloads=5", static_showcase["summary"])
         self.assertIn("backend=False", static_showcase["summary"])
         comic_handoff = next(item for item in payload["checks"] if item["id"] == "comic_downstream_handoff")
         self.assertIn("structured_director_shots=2", comic_handoff["summary"])
@@ -58,6 +59,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("score=100", comic_benchmark["summary"])
         self.assertIn("claim=demo_structure_verified", comic_benchmark["summary"])
         self.assertIn("real_quality_verified=False", comic_benchmark["summary"])
+        comic_inventory = next(item for item in payload["checks"] if item["id"] == "comic_handoff_inventory")
+        self.assertIn("production_verified=0", comic_inventory["summary"])
+        self.assertIn("demo_only=", comic_inventory["summary"])
         research_readiness = next(item for item in payload["checks"] if item["id"] == "research_readiness")
         self.assertIn("reading_guide=2/2", research_readiness["summary"])
         office_governance = next(item for item in payload["checks"] if item["id"] == "office_governance")
@@ -86,12 +90,14 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI comic Word canvas delivery", completed.stdout)
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("AI comic production quality benchmark", completed.stdout)
+        self.assertIn("AI comic handoff inventory", completed.stdout)
         self.assertIn("Research office staged delivery", completed.stdout)
         self.assertIn("Secret and runtime artifact scan", completed.stdout)
         self.assertIn("interview_script=4/4", completed.stdout)
-        self.assertIn("downloads=4; reading_guide=4/4; backend=False", completed.stdout)
+        self.assertIn("downloads=5; reading_guide=5/5; backend=False", completed.stdout)
         self.assertIn("structured_director_shots=2", completed.stdout)
         self.assertIn("claim=demo_structure_verified", completed.stdout)
+        self.assertIn("production_verified=0", completed.stdout)
         self.assertIn("reading_guide=2/2", completed.stdout)
         self.assertIn("demo_contract=6", completed.stdout)
 

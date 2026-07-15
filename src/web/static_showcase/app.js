@@ -74,6 +74,19 @@
           benchmark.production_quality_verified ? '真实画质已验证' : '未宣称真实画质'
         ));
       }
+      const inventory = (showcase.portfolio_embed || {}).handoff_inventory || {};
+      if (demo.office_id === 'comic_production' && inventory.uri) {
+        meta.appendChild(element(
+          'span',
+          'status-pill',
+          '交付盘点 ' + text(inventory.manifest_count || 0) + ' 份'
+        ));
+        meta.appendChild(element(
+          'span',
+          'status-pill',
+          '真实通过 ' + text(inventory.production_verified_count || 0) + ' 份'
+        ));
+      }
       card.appendChild(meta);
 
       const proof = element('ul', 'proof-list');

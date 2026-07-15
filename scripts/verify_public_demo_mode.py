@@ -75,6 +75,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     public_deployment = payload.get("public_deployment") or {}
     static_export = public_deployment.get("static_export") or {}
     interview_script = portfolio_embed.get("interview_demo_script") or []
+    handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
     if payload.get("requires_api_key") is not False:
@@ -104,6 +105,12 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append(f"reading guide item missing look_for/proves: {item.get('title') or item.get('uri')}")
     if not any((item.get("kind") == "screenshot_target") for item in portfolio_embed.get("workflow_showcase") or []):
         errors.append("portfolio embed must include screenshot targets for the main workflow")
+    if handoff_inventory.get("uri") != "/api/demo/comic-production/handoff-inventory":
+        errors.append("portfolio embed must expose the comic handoff inventory endpoint")
+    if handoff_inventory.get("production_verified_count") not in (0, None):
+        errors.append("public showcase must not claim real comic production verification from demo inventory")
+    if not handoff_inventory.get("safe_public_claim"):
+        errors.append("portfolio embed handoff inventory must include a safe public claim")
     if len(interview_script) < 4:
         errors.append("portfolio embed must expose a 4-step interview demo script")
     for item in interview_script:
@@ -147,6 +154,10 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             for item in interview_script
             if item.get("visitor_action") and item.get("product_response") and item.get("proof") and item.get("boundary")
         ),
+        "handoff_inventory_uri": handoff_inventory.get("uri", ""),
+        "handoff_inventory_manifest_count": handoff_inventory.get("manifest_count", 0),
+        "handoff_inventory_production_verified_count": handoff_inventory.get("production_verified_count", 0),
+        "handoff_inventory_safe_public_claim": handoff_inventory.get("safe_public_claim", ""),
         "public_deployment_mode": public_deployment.get("mode", ""),
         "static_export_command": static_export.get("command", ""),
         "static_export_entrypoint": static_export.get("entrypoint", ""),
@@ -160,6 +171,16 @@ def verify_public_demo_mode() -> dict[str, Any]:
     all_links: list[str] = []
     errors: list[str] = []
     showcase_manifest = _verify_showcase_manifest(client, errors)
+    inventory_response = client.get("/api/demo/comic-production/handoff-inventory")
+    inventory_payload = inventory_response.json() if inventory_response.status_code == 200 else {}
+    if inventory_response.status_code != 200:
+        errors.append(f"comic handoff inventory endpoint returned {inventory_response.status_code}")
+    if inventory_payload.get("calls_real_models") is not False:
+        errors.append("comic handoff inventory must not call real models")
+    if inventory_payload.get("requires_api_key") is not False:
+        errors.append("comic handoff inventory must not require API key")
+    if inventory_payload.get("production_verified_count", 0) != 0:
+        errors.append("fixed public inventory must not claim real production quality verification")
 
     for office_id, meta in DEMO_ENDPOINTS.items():
         response = client.get(meta["endpoint"])
@@ -245,6 +266,15 @@ def verify_public_demo_mode() -> dict[str, Any]:
         "mode": "public_no_key_demo",
         "summary": "公开展示清单、演示端点、样例下载和上线门禁链接可用" if not errors else "公开演示验证发现问题",
         "showcase_manifest": showcase_manifest,
+        "comic_handoff_inventory": {
+            "status_code": inventory_response.status_code,
+            "status": inventory_payload.get("status", ""),
+            "manifest_count": inventory_payload.get("manifest_count", 0),
+            "production_verified_count": inventory_payload.get("production_verified_count", 0),
+            "demo_only_count": inventory_payload.get("demo_only_count", 0),
+            "needs_review_count": inventory_payload.get("needs_review_count", 0),
+            "safe_public_claim": inventory_payload.get("safe_public_claim", ""),
+        },
         "demos": demos,
         "launch_gate_links": sorted(set(all_links)),
         "errors": errors,
@@ -253,6 +283,7 @@ def verify_public_demo_mode() -> dict[str, Any]:
 
 def format_markdown(payload: dict[str, Any]) -> str:
     manifest = payload.get("showcase_manifest") or {}
+    inventory = payload.get("comic_handoff_inventory") or {}
     lines = [
         "# 公开演示模式验证",
         "",
@@ -274,6 +305,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 带阅读说明的样例交付物：{manifest.get('deliverables_with_reader_guidance')} 个",
         f"- 交付物阅读顺序：{manifest.get('reading_guide_count')} 步，其中 {manifest.get('reading_guide_ready_count')} 步可复核",
         f"- 面试演示脚本：{manifest.get('interview_script_count')} 步，其中 {manifest.get('interview_script_ready_count')} 步可复用",
+        f"- 漫剧交付盘点：{inventory.get('manifest_count')} 份，真实质量通过 {inventory.get('production_verified_count')} 份，结构样例 {inventory.get('demo_only_count')} 份",
+        f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]

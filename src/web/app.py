@@ -82,6 +82,7 @@ from src.office_runtime import build_office_runtime_status
 from src.office_preflight import build_office_preflight
 from src.product_readiness import audit_comic_production_readiness
 from src.system_preflight import build_system_preflight
+from scripts.audit_comic_v2_handoffs import audit_handoff_inventory
 from src.browser_capture import (
     BrowserCaptureError,
     capture_feigua_plan,
@@ -523,6 +524,44 @@ async def get_comic_production_demo_api():
     }
 
 
+@app.get("/api/demo/comic-production/handoff-inventory")
+async def get_comic_production_handoff_inventory_demo_api():
+    """Return a no-key inventory of generated comic V2 handoff manifests."""
+    inventory = audit_handoff_inventory([APP_BASE_DIR / "output"])
+    public_items = []
+    for item in inventory.get("manifests", []):
+        public_items.append({
+            "title": item.get("title", ""),
+            "schema_version": item.get("schema_version", 0),
+            "quality_claim": item.get("quality_claim", ""),
+            "package_quality_score": item.get("package_quality_score", 0),
+            "production_quality_verified": item.get("production_quality_verified", False),
+            "visual_evidence_level": item.get("visual_evidence_level", ""),
+            "word_canvas_exists": item.get("word_canvas_exists", False),
+            "asset_count": item.get("asset_count", 0),
+            "image_count": item.get("image_count", 0),
+            "shot_count": item.get("shot_count", 0),
+            "recommended_recovery": item.get("recommended_recovery", {}),
+            "next_action": item.get("next_action", ""),
+        })
+    return {
+        "mode": "no_key_demo_handoff_inventory",
+        "office_id": "comic_production",
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "writes_workspace": False,
+        "status": inventory.get("status", ""),
+        "manifest_count": inventory.get("manifest_count", 0),
+        "production_verified_count": inventory.get("production_verified_count", 0),
+        "demo_only_count": inventory.get("demo_only_count", 0),
+        "needs_review_count": inventory.get("needs_review_count", 0),
+        "legacy_unverifiable_count": inventory.get("legacy_unverifiable_count", 0),
+        "safe_public_claim": inventory.get("safe_public_claim", ""),
+        "next_action": inventory.get("next_action", ""),
+        "items": public_items[:20],
+    }
+
+
 def _ensure_comic_production_demo_delivery() -> dict[str, Path]:
     """Build deterministic demo delivery files under output/demo without workspace writes."""
     output_root = APP_BASE_DIR / "output" / "demo" / "comic-production"
@@ -793,13 +832,20 @@ def _public_showcase_deliverable_reading_guide() -> list[dict]:
         },
         {
             "order": 3,
+            "title": "再看 AI 漫剧交付盘点",
+            "uri": "/api/demo/comic-production/handoff-inventory",
+            "look_for": "production_verified_count、demo_only_count、needs_review_count 和 safe_public_claim 是否说明真实质量证据边界。",
+            "proves": "公开展示不会把本地样例或历史产物误标成真实模型质量通过；多份制片包可以被统一盘点和分类。",
+        },
+        {
+            "order": 4,
             "title": "再看研究办公室阶段报告",
             "uri": "/api/demo/research/files/report.md",
             "look_for": "报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现。",
             "proves": "研究办公室展示的是 staged delivery，不把未确认信息包装成完整自动化采集结果。",
         },
         {
-            "order": 4,
+            "order": 5,
             "title": "最后看研究办公室证据清单",
             "uri": "/api/demo/research/files/evidence_manifest.json",
             "look_for": "来源、数据、截图计划、缺口和人工确认项是否可追踪。",
@@ -849,6 +895,7 @@ def _public_showcase_interview_demo_script() -> list[dict]:
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
     comic_demo = await get_comic_production_demo_api()
+    comic_inventory = await get_comic_production_handoff_inventory_demo_api()
     research_demo = await get_research_demo_api()
     featured_demos = [
         _public_showcase_demo(
@@ -951,6 +998,17 @@ async def get_public_showcase_demo_api():
             "sample_deliverables": _public_showcase_sample_deliverables(featured_demos),
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
+            "handoff_inventory": {
+                "uri": "/api/demo/comic-production/handoff-inventory",
+                "status": comic_inventory.get("status", ""),
+                "manifest_count": comic_inventory.get("manifest_count", 0),
+                "production_verified_count": comic_inventory.get("production_verified_count", 0),
+                "demo_only_count": comic_inventory.get("demo_only_count", 0),
+                "needs_review_count": comic_inventory.get("needs_review_count", 0),
+                "legacy_unverifiable_count": comic_inventory.get("legacy_unverifiable_count", 0),
+                "safe_public_claim": comic_inventory.get("safe_public_claim", ""),
+                "next_action": comic_inventory.get("next_action", ""),
+            },
         },
         "public_deployment": {
             "mode": "demo_only",

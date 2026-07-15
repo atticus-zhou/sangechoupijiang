@@ -4429,6 +4429,7 @@ function renderPublicShowcase(showcase) {
     const readingGuide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
     const interviewScript = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
+    const handoffInventory = portfolio.handoff_inventory || {};
     const deployment = showcase.public_deployment || {};
     return `
         <section class="demo-hero public-showcase-hero">
@@ -4507,6 +4508,10 @@ function renderPublicShowcase(showcase) {
                             <div class="showcase-badges">
                                 <span>固定样例质量基准 ${escapeHtml(demo.quality_benchmark.package_quality_score || 0)}/100</span>
                                 <span>${demo.quality_benchmark.production_quality_verified ? '真实画质已验证' : '仅结构验证，未验证真实画质'}</span>
+                                ${demo.office_id === 'comic_production' && handoffInventory.uri ? `
+                                    <span>交付盘点 ${escapeHtml(handoffInventory.manifest_count || 0)} 份</span>
+                                    <span>真实通过 ${escapeHtml(handoffInventory.production_verified_count || 0)} 份</span>
+                                ` : ''}
                             </div>
                         ` : ''}
                         <div class="demo-proof-points">

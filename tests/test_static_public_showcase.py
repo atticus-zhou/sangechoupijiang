@@ -25,7 +25,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(summary["requires_backend"])
         self.assertFalse(summary["requires_api_key"])
         self.assertFalse(summary["calls_real_models"])
-        self.assertEqual(summary["download_count"], 4)
+        self.assertEqual(summary["download_count"], 5)
 
         manifest = json.loads((self.output_dir / "export-manifest.json").read_text(encoding="utf-8"))
         showcase = json.loads((self.output_dir / "showcase.json").read_text(encoding="utf-8"))
@@ -51,6 +51,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             self.assertTrue((self.output_dir / item["uri"]).is_file())
         static_script = (self.output_dir / "app.js").read_text(encoding="utf-8")
         self.assertIn("未宣称真实画质", static_script)
+        self.assertIn("handoff_inventory", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
 
     def test_static_readiness_verifier_is_public_operator_readable(self):
         completed = subprocess.run(
@@ -63,8 +64,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
 
         self.assertIn("Static Public Showcase Readiness", completed.stdout)
         self.assertIn("Status: `passed`", completed.stdout)
-        self.assertIn("Downloadable deliverables: 4", completed.stdout)
-        self.assertIn("Reading guide: 4/4", completed.stdout)
+        self.assertIn("Downloadable deliverables: 5", completed.stdout)
+        self.assertIn("Reading guide: 5/5", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
 
