@@ -303,6 +303,42 @@ h3 {
   margin-top: 18px;
 }
 
+.claim-upgrade-card {
+  grid-column: 1 / -1;
+  min-height: auto;
+}
+
+.claim-upgrade-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.claim-upgrade-item:first-of-type {
+  margin-top: 14px;
+}
+
+.claim-upgrade-item strong {
+  color: #e8eef7;
+}
+
+.claim-upgrade-item span {
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid rgba(239, 184, 78, 0.32);
+  border-radius: 999px;
+  color: #f3d38a;
+  font-size: 12px;
+}
+
+.claim-upgrade-item p,
+.claim-upgrade-item small {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .card p,
 .office-card p,
 .reading-item p,

@@ -1272,6 +1272,7 @@ async def get_public_showcase_demo_api():
                 "downstream_status": comic_claim.get("downstream_status", ""),
                 "allowed_public_claims": comic_claim.get("allowed_public_claims", [])[:3],
                 "forbidden_public_claims": comic_claim.get("forbidden_public_claims", [])[:3],
+                "claim_upgrade_checklist": comic_claim.get("claim_upgrade_checklist", [])[:3],
                 "next_action": comic_claim.get("next_action", ""),
                 "evidence": comic_claim.get("evidence", {}),
             },

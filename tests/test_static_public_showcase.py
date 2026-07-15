@@ -80,6 +80,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             self.assertTrue((self.output_dir / item["uri"]).is_file())
         static_script = (self.output_dir / "app.js").read_text(encoding="utf-8")
         self.assertIn("未宣称真实画质", static_script)
+        self.assertIn("claim.claim_upgrade_checklist", static_script)
+        self.assertIn("claim-upgrade-card", static_script)
         self.assertIn("renderReleaseBadge", static_script)
         self.assertIn("renderDownstreamQuickStart", static_script)
         self.assertIn("renderReproducibilityChecklist", static_script)

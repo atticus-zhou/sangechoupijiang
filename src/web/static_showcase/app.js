@@ -140,6 +140,22 @@
       status.appendChild(link);
     }
     grid.appendChild(status);
+
+    const upgrade = Array.isArray(claim.claim_upgrade_checklist) ? claim.claim_upgrade_checklist : [];
+    if (upgrade.length) {
+      const upgradeCard = element('article', 'card claim-card claim-upgrade-card');
+      upgradeCard.appendChild(element('h3', '', '\u771f\u5b9e\u8d28\u91cf\u5347\u7ea7\u8bc1\u636e'));
+      upgrade.forEach(function (item) {
+        const block = element('div', 'claim-upgrade-item');
+        block.appendChild(element('strong', '', text(item.title || item.id)));
+        block.appendChild(element('span', '', text(item.status || '\u5f85\u8865\u9f50')));
+        const evidence = Array.isArray(item.required_evidence) ? item.required_evidence.join('\u3001') : '';
+        if (evidence) block.appendChild(element('p', '', '\u9700\u8981\uff1a' + evidence));
+        if (item.why_it_matters) block.appendChild(element('small', '', text(item.why_it_matters)));
+        upgradeCard.appendChild(block);
+      });
+      grid.appendChild(upgradeCard);
+    }
   }
 
   function renderReleaseBadge() {

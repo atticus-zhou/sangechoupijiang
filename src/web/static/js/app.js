@@ -4580,6 +4580,7 @@ function renderPublicShowcase(showcase) {
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
     const realProductionClaim = portfolio.real_production_claim || {};
+    const claimUpgradeChecklist = Array.isArray(realProductionClaim.claim_upgrade_checklist) ? realProductionClaim.claim_upgrade_checklist : [];
     const releaseBadge = portfolio.release_badge || {};
     const deployment = showcase.public_deployment || {};
     return `
@@ -4643,6 +4644,21 @@ function renderPublicShowcase(showcase) {
                         ${realProductionClaim.uri ? `<a class="ghost btn-sm" href="${escapeHtml(realProductionClaim.uri)}" target="_blank">打开 claim report</a>` : ''}
                     </article>
                 </div>
+                ${claimUpgradeChecklist.length ? `
+                    <div class="public-claim-upgrade">
+                        <strong>\u771f\u5b9e\u8d28\u91cf\u5347\u7ea7\u8bc1\u636e</strong>
+                        <div>
+                            ${claimUpgradeChecklist.map(item => `
+                                <article>
+                                    <span>${escapeHtml(item.status || '\u5f85\u8865\u9f50')}</span>
+                                    <b>${escapeHtml(item.title || item.id || '')}</b>
+                                    <p>\u9700\u8981\uff1a${escapeHtml((item.required_evidence || []).join('\u3001'))}</p>
+                                    <small>${escapeHtml(item.why_it_matters || '')}</small>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             </section>
         ` : ''}
         <section class="demo-section">

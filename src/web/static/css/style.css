@@ -628,6 +628,56 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     line-height: 1.65;
 }
 
+.public-claim-upgrade {
+    margin-top: 14px;
+    padding: 16px;
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    border-radius: 14px;
+    background: rgba(88, 166, 255, 0.06);
+}
+
+.public-claim-upgrade > strong {
+    display: block;
+    color: #e6edf3;
+    margin-bottom: 12px;
+}
+
+.public-claim-upgrade > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.public-claim-upgrade article {
+    display: grid;
+    gap: 7px;
+    padding: 12px;
+    border: 1px solid rgba(139, 148, 158, 0.16);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.public-claim-upgrade span {
+    width: fit-content;
+    padding: 3px 8px;
+    border: 1px solid rgba(239, 184, 78, 0.32);
+    border-radius: 999px;
+    color: #f3d38a;
+    font-size: 12px;
+}
+
+.public-claim-upgrade b {
+    color: #f0f6fc;
+}
+
+.public-claim-upgrade p,
+.public-claim-upgrade small {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0;
+}
+
 .public-interview-script {
     display: grid;
     gap: 12px;
