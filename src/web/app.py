@@ -5812,6 +5812,7 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         prompt_quality = audit_prompt_package(prompt_payload)
     quality_benchmark = handoff_meta.get("quality_benchmark") or word_meta.get("quality_benchmark") or {}
     claim_level = claim_level_from_benchmark(quality_benchmark) if quality_benchmark else ""
+    image_production_evidence = _comic_v2_image_production_evidence(image_assets, quality_benchmark)
     return {
         "story_id": word_meta.get("story_id", ""),
         "story_version": word_meta.get("story_version", 0),
@@ -5830,6 +5831,7 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),
         "prompt_quality": prompt_quality,
         "prompt_quality_status": prompt_quality.get("status", ""),
+        "image_production_evidence": image_production_evidence,
         "image_assets": image_assets,
         "image_asset_count": len(image_assets),
         "visual_review": {
@@ -5840,6 +5842,77 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         },
         "delivery_audit": word_meta.get("audit") or {},
     }
+
+
+def _comic_v2_image_production_evidence(image_assets: list[dict], quality_benchmark: dict | None = None) -> dict:
+    """Summarize whether history images can support real production-quality claims."""
+    benchmark = quality_benchmark or {}
+    total = len(image_assets)
+    providers = sorted({str(item.get("provider") or "").strip() for item in image_assets if item.get("provider")})
+    models = sorted({str(item.get("model") or "").strip() for item in image_assets if item.get("model")})
+    uses_fixture = "fixture" in {provider.lower() for provider in providers}
+    real_model_images = [
+        item for item in image_assets
+        if str(item.get("provider") or "").strip()
+        and str(item.get("provider") or "").strip().lower() != "fixture"
+    ]
+    reviewed = [
+        item for item in image_assets
+        if item.get("review_status") or item.get("review_handoff_ready")
+    ]
+    passed = [
+        item for item in image_assets
+        if item.get("review_status") == "pass" and item.get("review_handoff_ready")
+    ]
+    failed = [
+        item for item in reviewed
+        if item.get("review_status") and item.get("review_status") != "pass"
+        or (item.get("review_status") and not item.get("review_handoff_ready"))
+    ]
+    if not total:
+        evidence_level = "missing_images"
+        summary = "历史记录里没有可审计的图片资产。"
+    elif total and uses_fixture and len(real_model_images) == 0:
+        evidence_level = "fixture_only"
+        summary = "图片来自固定样例，只能证明结构，不能证明真实模型画质。"
+    elif len(real_model_images) == total and len(passed) == total:
+        evidence_level = "model_reviewed"
+        summary = "所有图片都有真实模型来源并通过视觉质检。"
+    elif real_model_images:
+        evidence_level = "model_partial"
+        summary = "已有真实模型图片记录，但视觉质检或来源记录还没有完全闭环。"
+    else:
+        evidence_level = "mixed_or_unknown"
+        summary = "图片来源混合或缺少 provider/model，不能支撑真实质量声明。"
+    benchmark_verified = bool(benchmark.get("production_quality_verified"))
+    return {
+        "total_images": total,
+        "providers": providers,
+        "models": models,
+        "uses_fixture": uses_fixture,
+        "real_model_image_count": len(real_model_images),
+        "reviewed_image_count": len(reviewed),
+        "review_passed_image_count": len(passed),
+        "review_failed_image_count": len(failed),
+        "evidence_level": evidence_level,
+        "supports_real_quality_claim": evidence_level == "model_reviewed" and benchmark_verified,
+        "summary": summary,
+        "next_action": _comic_v2_image_production_next_action(evidence_level, benchmark_verified),
+    }
+
+
+def _comic_v2_image_production_next_action(evidence_level: str, benchmark_verified: bool) -> str:
+    if evidence_level == "missing_images":
+        return "先生成图片资产，再进入刑部视觉质检。"
+    if evidence_level == "fixture_only":
+        return "用真实模型重新生成图片，并保留 provider、model、image_id 和质检记录。"
+    if evidence_level == "model_reviewed" and benchmark_verified:
+        return "保留当前 manifest、图片记录和质量基准，作为真实质量声明证据。"
+    if evidence_level == "model_reviewed":
+        return "图片证据已足够，继续重跑质量基准并写入 handoff manifest。"
+    if evidence_level == "model_partial":
+        return "补齐失败图片的重试、视觉质检或 provider/model 记录。"
+    return "复核图片来源，清理 fixture/未知来源后重新生成质量基准。"
 
 
 def _comic_v2_history_image_asset(artifact: dict) -> dict:

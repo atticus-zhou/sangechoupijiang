@@ -4327,6 +4327,7 @@ function renderComicV2HistoryTrace(trace) {
     const audit = trace.delivery_audit || {};
     const quality = trace.prompt_quality || {};
     const benchmark = trace.quality_benchmark || {};
+    const productionEvidence = trace.image_production_evidence || {};
     const imageAssets = Array.isArray(trace.image_assets) ? trace.image_assets : [];
     const claimUpgradeChecklist = Array.isArray(trace.claim_upgrade_checklist) ? trace.claim_upgrade_checklist : [];
     const promptQualityLabel = {
@@ -4373,6 +4374,22 @@ function renderComicV2HistoryTrace(trace) {
                         `).join('')}
                     </ul>
                 ` : ''}
+            </div>
+        ` : ''}
+        ${productionEvidence.summary ? `
+            <div class="history-production-evidence">
+                <div>
+                    <strong>\u56fe\u7247\u751f\u4ea7\u8bc1\u636e</strong>
+                    <span>${escapeHtml(productionEvidence.supports_real_quality_claim ? '\u53ef\u652f\u6491\u771f\u5b9e\u8d28\u91cf\u58f0\u660e' : '\u4e0d\u8db3\u4ee5\u652f\u6491\u771f\u5b9e\u8d28\u91cf\u58f0\u660e')}</span>
+                </div>
+                <p>${escapeHtml(productionEvidence.summary)}</p>
+                <div class="v2-prompt-quality-grid">
+                    <span>provider ${escapeHtml((productionEvidence.providers || []).join('\u3001') || 'unknown')}</span>
+                    <span>model ${escapeHtml((productionEvidence.models || []).join('\u3001') || 'unknown')}</span>
+                    <span>\u901a\u8fc7 ${escapeHtml(productionEvidence.review_passed_image_count || 0)} / ${escapeHtml(productionEvidence.total_images || 0)}</span>
+                    <span>fixture ${productionEvidence.uses_fixture ? 'yes' : 'no'}</span>
+                </div>
+                <small>${escapeHtml(productionEvidence.next_action || '')}</small>
             </div>
         ` : ''}
         ${benchmark.summary ? `
