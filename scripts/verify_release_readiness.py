@@ -138,6 +138,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"showcase={showcase.get('status_code')}; "
                 f"reading_guide={showcase.get('reading_guide_ready_count')}/{showcase.get('reading_guide_count')}; "
                 f"interview_script={showcase.get('interview_script_ready_count')}/{showcase.get('interview_script_count')}; "
+                f"reproducibility={showcase.get('reproducibility_ready_count')}/{showcase.get('reproducibility_count')}; "
                 f"mode={parsed.get('mode')}"
             )
         if check_id == "static_showcase":
@@ -190,7 +191,8 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             return (
                 f"quality={quality.get('status')}:{quality.get('score')}; "
                 f"downloads={demo.get('download_count')}; "
-                f"reading_guide={demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}"
+                f"reading_guide={demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}; "
+                f"handoff={demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}"
             )
         if check_id == "office_governance":
             demo_contract = parsed.get("required_demo_contract") or []
