@@ -65,6 +65,15 @@
       const meta = element('div', 'office-meta');
       meta.appendChild(element('span', 'status-pill', '无 Key 固定样例'));
       meta.appendChild(element('span', 'status-pill', (demo.downloads || []).length + ' 个下载物'));
+      const benchmark = demo.quality_benchmark || {};
+      if (benchmark.status) {
+        meta.appendChild(element('span', 'status-pill', '结构质量 ' + text(benchmark.package_quality_score || 0) + '/100'));
+        meta.appendChild(element(
+          'span',
+          'status-pill',
+          benchmark.production_quality_verified ? '真实画质已验证' : '未宣称真实画质'
+        ));
+      }
       card.appendChild(meta);
 
       const proof = element('ul', 'proof-list');

@@ -27,6 +27,7 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertFalse(audit["production_quality_verified"])
         self.assertEqual(audit["visual_evidence_level"], "fixture_only")
         self.assertIn("不证明真实模型", audit["limitations"][0])
+        self.assertEqual(audit["recommended_recovery"], {})
 
     def test_story_tampering_blocks_handoff_quality(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -41,6 +42,45 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertIn("story.source_hash", issue_codes)
         self.assertIn("story.asset_evidence", issue_codes)
         self.assertIn("story.shot_evidence", issue_codes)
+        self.assertEqual(audit["recommended_recovery"]["action"], "restart_story_review")
+        self.assertIn("内阁", audit["recommended_recovery"]["department"])
+
+    def test_story_evidence_issues_return_to_the_earliest_responsible_stage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            asset_manifest = fixture_manifest(Path(tmp))
+        asset_manifest["assets"][0]["evidence_quote"] = "故事里不存在的资产依据"
+
+        asset_audit = audit_handoff_manifest(asset_manifest)
+
+        self.assertEqual(asset_audit["recommended_recovery"]["reason_code"], "story.asset_evidence")
+        self.assertEqual(asset_audit["recommended_recovery"]["action"], "revise_assets")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            shot_manifest = fixture_manifest(Path(tmp))
+        shot_manifest["shots"][0]["evidence_quote"] = "故事里不存在的镜头依据"
+
+        shot_audit = audit_handoff_manifest(shot_manifest)
+
+        self.assertEqual(shot_audit["recommended_recovery"]["reason_code"], "story.shot_evidence")
+        self.assertEqual(shot_audit["recommended_recovery"]["action"], "regenerate_prompts")
+
+    def test_missing_planned_image_returns_to_image_generation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = fixture_manifest(Path(tmp))
+        asset = manifest["assets"][0]
+        baseline_id = asset["identity_baseline_image_id"]
+        removable = next(
+            image
+            for image in manifest["images"]
+            if image.get("asset_id") == asset["asset_id"]
+            and image.get("image_id") != baseline_id
+        )
+        manifest["images"].remove(removable)
+
+        audit = audit_handoff_manifest(manifest)
+
+        self.assertEqual(audit["recommended_recovery"]["reason_code"], "asset.image_coverage")
+        self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_images")
 
     def test_cross_asset_template_copy_is_detected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -76,6 +116,7 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         issue_codes = {item["code"] for item in audit["issues"]}
         self.assertEqual(audit["status"], "needs_review")
         self.assertIn("prompt.cross_asset_uniqueness", issue_codes)
+        self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_prompts")
 
     def test_real_provider_requires_seven_dimension_visual_review(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -95,6 +136,7 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(audit["visual_evidence_level"], "model_reviewed")
         self.assertFalse(audit["production_quality_verified"])
         self.assertIn("visual.review_dimensions", issue_codes)
+        self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_images")
 
 
 if __name__ == "__main__":

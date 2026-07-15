@@ -198,7 +198,14 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertIn("downloadable_delivery", gate_ids)
         self.assertIn("reference_chain", gate_ids)
         self.assertIn("downstream_handoff", gate_ids)
+        self.assertIn("honest_quality_claim", gate_ids)
         self.assertTrue(all(item["status"] == "passed" for item in payload["quality_gates"]))
+        benchmark = payload["quality_benchmark"]
+        self.assertEqual(benchmark["status"], "demo_structure_verified")
+        self.assertEqual(benchmark["package_quality_score"], 100)
+        self.assertTrue(benchmark["package_quality_ready"])
+        self.assertFalse(benchmark["production_quality_verified"])
+        self.assertEqual(benchmark["recommended_recovery"], {})
         artifact_uris = {item["type"]: item.get("uri", "") for item in payload["artifacts"]}
         self.assertIn("/api/demo/comic-production/files/", artifact_uris["word_canvas"])
         self.assertIn("/api/demo/comic-production/files/", artifact_uris["handoff_manifest"])

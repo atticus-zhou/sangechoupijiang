@@ -79,6 +79,7 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertEqual(status["downloadable_artifacts"][0]["title"], "提示词包")
         self.assertTrue(any(item["id"] == "asset_review" for item in status["human_checkpoints"]))
         self.assertTrue(any(item["stage"] == "document_generation" for item in status["recovery_actions"]))
+        self.assertTrue(any(item["stage"] == "quality_review" for item in status["recovery_actions"]))
 
     def test_runtime_status_api_exposes_same_workspace_view(self):
         workspace_id = "ws_runtime_api"

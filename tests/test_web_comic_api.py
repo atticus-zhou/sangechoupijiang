@@ -10,8 +10,10 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from src.llm.providers import LLMResponse, LiteLLMProvider, ModelConfig
+from src.comic_office.v2.pipeline import not_started_state
 from src.web.app import (
     _comic_image_specs,
+    _history_delivery_summary,
     _comic_v2_handoff_production_lineage,
     _comic_v2_handoff_quality_benchmark,
     app,
@@ -32,6 +34,9 @@ class WebComicApiTests(unittest.TestCase):
             conn.execute("DELETE FROM artifacts WHERE workspace_id=?", (workspace_id,))
             conn.execute("DELETE FROM workspaces WHERE workspace_id=?", (workspace_id,))
             conn.execute("DELETE FROM config_store WHERE key=?", (f"comic_cabinet_session:{workspace_id}",))
+            conn.execute("DELETE FROM config_store WHERE key=?", (f"comic_v2_state:{workspace_id}",))
+            conn.execute("DELETE FROM task_events WHERE task_id=?", (f"comic_v2_{workspace_id}",))
+            conn.execute("DELETE FROM task_runs WHERE task_id=?", (f"comic_v2_{workspace_id}",))
         conn.commit()
         conn.close()
         for workspace_id in self.created_workspaces:
@@ -81,6 +86,15 @@ class WebComicApiTests(unittest.TestCase):
                         {"id": "story_grounding", "label": "故事贴合度", "status": "passed", "score": 100, "internal": "drop"}
                     ],
                     "limitations": [],
+                    "recommended_recovery": {
+                        "department": "工部 / 刑部",
+                        "action": "regenerate_images",
+                        "focus": "images",
+                        "label": "重新生成并质检图片",
+                        "reason_code": "visual.review_dimensions",
+                        "description": "重新生成图片。",
+                        "internal": "drop",
+                    },
                     "next_action": "进入下游生产。",
                     "raw_model_output": "drop",
                 }
@@ -91,8 +105,189 @@ class WebComicApiTests(unittest.TestCase):
         self.assertEqual(summary["package_quality_score"], 94)
         self.assertTrue(summary["production_quality_verified"])
         self.assertEqual(summary["dimensions"][0]["label"], "故事贴合度")
+        self.assertEqual(summary["recommended_recovery"]["action"], "regenerate_images")
+        self.assertNotIn("internal", summary["recommended_recovery"])
         self.assertNotIn("raw_model_output", summary)
         self.assertNotIn("internal", summary["dimensions"][0])
+
+    def test_history_quality_recovery_posts_stage_reset_with_action_body(self):
+        summary = _history_delivery_summary({
+            "workspace_id": "ws_quality_recovery",
+            "office_id": "comic_production",
+            "word_canvas_uri": "/word.docx",
+            "handoff_manifest_uri": "/handoff.json",
+            "artifacts": [],
+            "comic_v2_trace": {
+                "delivery_audit": {"handoff_ready": True, "asset_count": 2, "shot_count": 3},
+                "visual_review": {"production_ready": True, "failure_count": 0},
+                "quality_benchmark": {
+                    "status": "needs_review",
+                    "package_quality_ready": False,
+                    "package_quality_score": 76,
+                    "summary": "提示词高度雷同。",
+                    "next_action": "重新生成提示词。",
+                    "recommended_recovery": {
+                        "department": "工部 / 兵部 / 刑部",
+                        "action": "regenerate_prompts",
+                        "focus": "prompts",
+                        "label": "重新生成提示词和镜头卡",
+                    },
+                },
+            },
+        })
+
+        self.assertEqual(summary["status"], "needs_review")
+        self.assertIn("制片包质量基准", summary["missing_items"])
+        action = summary["recovery_actions"][0]
+        self.assertEqual(action["path"], "/api/workspaces/ws_quality_recovery/comic/v2/quality/recover")
+        self.assertEqual(action["body"], {"action": "regenerate_prompts"})
+        self.assertEqual(action["focus"], "prompts")
+
+    def test_history_can_rebuild_an_early_v2_package_missing_quality_benchmark(self):
+        summary = _history_delivery_summary({
+            "workspace_id": "ws_missing_benchmark",
+            "office_id": "comic_production",
+            "word_canvas_uri": "/word.docx",
+            "handoff_manifest_uri": "/handoff.json",
+            "artifacts": [{"artifact_type": "comic_v2_word_canvas"}],
+            "comic_v2_trace": {
+                "delivery_audit": {"handoff_ready": True, "asset_count": 2, "shot_count": 3},
+                "visual_review": {"production_ready": True, "failure_count": 0},
+            },
+        })
+
+        self.assertEqual(summary["status"], "needs_review")
+        self.assertIn("制片包质量基准", summary["missing_items"])
+        self.assertEqual(len(summary["recovery_actions"]), 1)
+        action = summary["recovery_actions"][0]
+        self.assertEqual(action["label"], "补齐 V3 引用与质量清单")
+        self.assertEqual(action["path"], "/api/workspaces/ws_missing_benchmark/comic/v2/quality/recover")
+        self.assertEqual(action["body"], {"action": "rebuild_delivery"})
+
+    def test_quality_recovery_api_reopens_prompt_planning_without_losing_assets(self):
+        workspace_id = f"ws_quality_recover_{uuid.uuid4().hex[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="质量恢复测试",
+        )
+        state = not_started_state(workspace_id)
+        state.update({
+            "status": "waiting_for_human",
+            "stage": "ready_for_handoff",
+            "story_id": "story_quality",
+            "story_version": 1,
+            "style_id": "style_quality",
+            "style_version": 1,
+            "contract": {"status": "visual_bible_approved"},
+            "completed": 7,
+            "total": 7,
+            "assets_status": "approved",
+            "shots_status": "ready",
+            "document_status": "needs_review",
+            "asset_manifest": {
+                "manifest_id": "manifest_quality",
+                "version": 2,
+                "items": [{"asset_id": "character_1"}],
+            },
+            "prompt_package": {
+                "package_id": "prompts_quality",
+                "prompts": [{"object_id": "character_1"}],
+            },
+            "image_production": {
+                "production_ready": True,
+                "records": [{"image_id": "image_1"}],
+            },
+            "delivery": {
+                "path": "C:/delivery/canvas.docx",
+                "quality_benchmark": {
+                    "status": "needs_review",
+                    "package_quality_ready": False,
+                    "recommended_recovery": {
+                        "department": "工部 / 兵部 / 刑部",
+                        "action": "regenerate_prompts",
+                        "focus": "prompts",
+                        "label": "重新生成提示词和镜头卡",
+                        "reason_code": "prompt.cross_asset_uniqueness",
+                    },
+                },
+            },
+        })
+        config_manager.set_kv(f"comic_v2_state:{workspace_id}", json.dumps(state, ensure_ascii=False))
+
+        blocked = self.client.post(
+            f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            json={"action": "regenerate_images"},
+        )
+        self.assertEqual(blocked.status_code, 409)
+        self.assertIn("与质量基准建议", blocked.json()["detail"]["reason"])
+        unchanged = json.loads(config_manager.get_kv(f"comic_v2_state:{workspace_id}"))
+        self.assertEqual(unchanged["stage"], "ready_for_handoff")
+        self.assertTrue(unchanged["delivery"])
+
+        response = self.client.post(
+            f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            json={"action": "regenerate_prompts"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["stage"], "prompt_planning")
+        self.assertEqual(payload["assets_status"], "approved")
+        self.assertEqual(payload["asset_manifest"]["manifest_id"], "manifest_quality")
+        self.assertFalse(payload["prompt_package"])
+        self.assertFalse(payload["image_production"])
+        self.assertFalse(payload["delivery"])
+
+    def test_history_marks_legacy_word_canvas_as_downloadable_but_unverifiable(self):
+        task_id = f"hist_legacy_{uuid.uuid4().hex[:8]}"
+        workspace_id = f"ws_legacy_{uuid.uuid4().hex[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="旧版制片包",
+        )
+        config_manager.save_task_record(
+            task_id,
+            "旧版制片包",
+            "",
+            "completed",
+            {"final_report": "legacy package"},
+        )
+        config_manager.create_task_run(task_id, "旧版制片包", "")
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_word",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="word_canvas",
+            title="旧版 Word 制片画布",
+            uri=f"/api/workspaces/{workspace_id}/files/delivery/legacy.docx",
+            content="legacy",
+            metadata={"office_id": "comic_production"},
+            created_by="libu",
+        )
+        try:
+            response = self.client.get("/api/tasks/history?limit=30")
+            self.assertEqual(response.status_code, 200)
+            row = next(item for item in response.json()["history"] if item["task_id"] == task_id)
+            summary = row["delivery_summary"]
+            self.assertTrue(row["legacy_comic_package"])
+            self.assertEqual(summary["status"], "partial")
+            self.assertTrue(summary["legacy_package"])
+            self.assertEqual(summary["package_quality_claim"], "legacy_unverifiable")
+            self.assertFalse(summary["package_quality_ready"])
+            self.assertIn("V3 引用与质量清单", summary["missing_items"])
+            self.assertIn("旧版制片包", summary["next_action"])
+            self.assertEqual(summary["recovery_actions"], [])
+        finally:
+            conn = sqlite3.connect("user_data/config.db")
+            conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_runs WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_events WHERE task_id=?", (task_id,))
+            conn.commit()
+            conn.close()
 
     def test_task_detail_exposes_recovery_plan_for_failed_run(self):
         task_id = f"task_recover_{uuid.uuid4().hex[:8]}"

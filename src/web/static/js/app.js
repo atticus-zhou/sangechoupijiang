@@ -495,9 +495,10 @@ async function retryTaskRecoveryAction(encodedAction) {
     }
     try {
         const method = String(action.method || 'POST').toUpperCase();
+        const body = action.body && typeof action.body === 'object' ? action.body : {};
         if (method === 'GET') await API.get(action.path);
-        else if (method === 'PUT') await API.put(action.path, {});
-        else await API.post(action.path, {});
+        else if (method === 'PUT') await API.put(action.path, body);
+        else await API.post(action.path, body);
         toast(action.label ? `${action.label} 已提交` : '恢复动作已提交', 'success');
         if (action.office_id === 'comic_production' && action.workspace_id) {
             await recoverComicWorkspaceFromHistory(action);
@@ -561,6 +562,7 @@ function eventLabel(type) {
         comic_image_item_completed: '图片生成完成',
         comic_image_item_failed: '图片生成失败',
         comic_artifacts_created: '漫剧制片包已生成',
+        comic_v2_quality_recovery_started: '按质量基准退回处理',
         artifact_packaging_started: '开始整理产物',
         artifacts_created: '产物已生成',
         artifacts_recovered: '产物已恢复',
@@ -1603,7 +1605,11 @@ function renderComicPackageBoard(artifacts) {
         || (currentComicV2Status && currentComicV2Status.pipeline_version === 2 && currentComicV2Status.status !== 'not_started');
     if (hasV2Status) {
         score.textContent = `${Number(currentComicV2Status.completed || 0)}/${Number(currentComicV2Status.total || 0)}`;
-        score.className = currentComicV2Status.stage === 'ready_for_handoff' ? 'badge badge-ok' : 'badge badge-info';
+        const benchmark = currentComicV2Status.delivery?.quality_benchmark || {};
+        const packageReady = currentComicV2Status.stage === 'ready_for_handoff'
+            && currentComicV2Status.status === 'completed'
+            && (benchmark.package_quality_ready !== false);
+        score.className = packageReady ? 'badge badge-ok' : 'badge badge-info';
         board.className = 'package-board';
         board.innerHTML = renderComicV2ProductionFlow();
         return;
@@ -2112,12 +2118,31 @@ function renderComicV2StageActions(status) {
         return '<button class="btn-sm" onclick="buildComicV2Delivery(this)">生成 Word 制片画布</button>';
     }
     if (stage === 'ready_for_handoff' && deliveryUri) {
+        const recoveryButton = renderComicV2QualityRecoveryButton(status);
         return [
+            recoveryButton,
             `<a class="btn-sm" href="${escapeHtml(deliveryUri)}" target="_blank">下载 Word 制片画布</a>`,
             handoffManifestUri ? `<a class="ghost btn-sm" href="${escapeHtml(handoffManifestUri)}" target="_blank">下载引用清单</a>` : '',
         ].join('');
     }
     return '';
+}
+
+function renderComicV2QualityRecoveryButton(status) {
+    const benchmark = status?.delivery?.quality_benchmark || {};
+    const recovery = benchmark.recommended_recovery || {};
+    const action = String(recovery.action || '');
+    if (benchmark.package_quality_ready !== false || !action) return '';
+    const supported = new Set([
+        'restart_story_review',
+        'revise_assets',
+        'regenerate_prompts',
+        'regenerate_images',
+        'rebuild_delivery',
+    ]);
+    if (!supported.has(action)) return '';
+    const label = recovery.label || '按质量问题退回处理';
+    return `<button class="btn-sm" onclick='recoverComicV2Quality(${JSON.stringify(action)}, this)'>${escapeHtml(label)}</button>`;
 }
 
 function renderComicDepartmentStep(dept) {
@@ -2650,6 +2675,27 @@ async function buildComicV2Delivery(button) {
     return runComicV2Action(button, '生成 Word 制片画布', () =>
         API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/delivery/build`, {})
     );
+}
+
+async function recoverComicV2Quality(action, button) {
+    if (action === 'restart_story_review') {
+        unconfirmComicScript();
+        document.getElementById('comic-idea')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        toast('旧交付已保留。请重新确认故事后创建新生产版本。', 'success');
+        return null;
+    }
+    const recovered = await runComicV2Action(button, '按质量基准退回', () =>
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/quality/recover`, { action })
+    );
+    if (!recovered) return null;
+    if (action === 'regenerate_prompts') return planComicV2Prompts(null);
+    if (action === 'regenerate_images') return generateComicV2Images(null);
+    if (action === 'rebuild_delivery') return buildComicV2Delivery(null);
+    if (action === 'revise_assets') {
+        focusComicAssetReview();
+        toast('已退回资产审核。写清修改意见后点击“按意见重新拆解”。', 'success');
+    }
+    return recovered;
 }
 
 async function submitComicTask(options = {}) {
@@ -4135,6 +4181,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
         production_quality_verified: '真实质量已验证',
         demo_structure_verified: '结构演示已验证',
         needs_review: '需复核',
+        legacy_unverifiable: '旧版不可审计',
     }[summary.package_quality_claim] || summary.package_quality_claim || '待生成';
     return `
         <div class="history-delivery-summary ${compact ? 'compact' : ''} ${escapeHtml(summary.status)}">
@@ -4148,7 +4195,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 <span>提示词 ${escapeHtml(summary.prompt_count || 0)}</span>
                 <span>提示词门禁 ${escapeHtml(promptQualityLabel)}</span>
                 <span>质检 ${escapeHtml(summary.visual_review_status || 'unknown')}</span>
-                <span>制片包 ${escapeHtml(summary.package_quality_score || 0)}/100</span>
+                <span>制片包 ${summary.legacy_package ? '旧版不可审计' : `${escapeHtml(summary.package_quality_score || 0)}/100`}</span>
             </div>
             ${compact ? '' : `
                 ${actions.length ? `
@@ -4191,6 +4238,7 @@ function renderComicV2HistoryTrace(trace) {
         production_quality_verified: '真实质量已验证',
         demo_structure_verified: '结构演示已验证',
         needs_review: '需复核',
+        legacy_unverifiable: '旧版不可审计',
     }[benchmark.status] || benchmark.status || '待生成';
     return `
         <h4>制片追溯</h4>
@@ -4455,6 +4503,12 @@ function renderPublicShowcase(showcase) {
                     <article>
                         <strong>${escapeHtml(demo.title || demo.office_name || '')}</strong>
                         <p>${escapeHtml(demo.summary || demo.why_it_matters || '')}</p>
+                        ${demo.quality_benchmark?.status ? `
+                            <div class="showcase-badges">
+                                <span>固定样例质量基准 ${escapeHtml(demo.quality_benchmark.package_quality_score || 0)}/100</span>
+                                <span>${demo.quality_benchmark.production_quality_verified ? '真实画质已验证' : '仅结构验证，未验证真实画质'}</span>
+                            </div>
+                        ` : ''}
                         <div class="demo-proof-points">
                             ${(demo.proof_points || []).slice(0, 4).map(point => `<span>${escapeHtml(point)}</span>`).join('')}
                         </div>
@@ -4872,6 +4926,7 @@ function exposeInlineHandlers() {
     window.generateComicV2Images = generateComicV2Images;
     window.overrideComicV2VisualReview = overrideComicV2VisualReview;
     window.buildComicV2Delivery = buildComicV2Delivery;
+    window.recoverComicV2Quality = recoverComicV2Quality;
     window.filterComicAssets = filterComicAssets;
     window.selectComicArtifact = selectComicArtifact;
     window.regenerateComicImage = regenerateComicImage;

@@ -55,18 +55,22 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         _visual_evidence(style, images, lineage, visual_evidence),
     ]
     score = round(sum(item["score"] * item["weight"] for item in dimensions) / 100)
-    issues = [
-        {
-            "code": check["code"],
-            "dimension": dimension["id"],
-            "severity": check["severity"],
-            "message": check["message"],
-            "evidence": check["evidence"],
-        }
-        for dimension in dimensions
-        for check in dimension["checks"]
-        if check["status"] != "passed"
-    ]
+    issues = []
+    for dimension in dimensions:
+        for check in dimension["checks"]:
+            if check["status"] == "passed":
+                continue
+            recovery = _recovery_for_issue(check["code"])
+            issues.append({
+                "code": check["code"],
+                "dimension": dimension["id"],
+                "severity": check["severity"],
+                "message": check["message"],
+                "evidence": check["evidence"],
+                "department": recovery["department"],
+                "recovery_action": recovery["action"],
+                "recovery_focus": recovery["focus"],
+            })
     blockers = [item for item in issues if item["severity"] == "blocker"]
     package_quality_ready = score >= READY_SCORE and not blockers
     production_quality_verified = (
@@ -80,6 +84,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         claim = "production_quality_verified"
     else:
         claim = "demo_structure_verified"
+    recommended_recovery = _recommended_recovery(issues)
 
     limitations = []
     if visual_evidence == "fixture_only":
@@ -103,7 +108,8 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         "blocker_count": len(blockers),
         "issues": issues,
         "limitations": limitations,
-        "next_action": _next_action(claim, issues),
+        "recommended_recovery": recommended_recovery,
+        "next_action": _next_action(claim, recommended_recovery),
     }
 
 
@@ -546,13 +552,83 @@ def _summary(claim: str, score: int) -> str:
     return f"制片包质量需要复核（{score}/100），请先处理阻塞项再交给下游生产。"
 
 
-def _next_action(claim: str, issues: list[dict[str, Any]]) -> str:
+def _next_action(claim: str, recovery: dict[str, Any]) -> str:
     if claim == "production_quality_verified":
         return "可以按镜头导演执行合同进入下游图生视频或剪辑流程。"
     if claim == "demo_structure_verified":
         return "公开展示时保留无 Key 样例声明；真实创作时再运行同一基准检查真实模型产物。"
-    first = next((item for item in issues if item["severity"] == "blocker"), None)
-    return first["message"] if first else "请复核质量警告后再继续生产。"
+    return str(recovery.get("description") or "请复核质量警告后再继续生产。")
+
+
+def _recommended_recovery(issues: list[dict[str, Any]]) -> dict[str, Any]:
+    issue = next((item for item in issues if item.get("severity") == "blocker"), None)
+    issue = issue or (issues[0] if issues else None)
+    if not issue:
+        return {}
+    recovery = _recovery_for_issue(str(issue.get("code") or ""))
+    return {
+        **recovery,
+        "reason_code": str(issue.get("code") or ""),
+        "description": str(issue.get("message") or recovery.get("description") or ""),
+    }
+
+
+def _recovery_for_issue(code: str) -> dict[str, str]:
+    if code in {"story.source_present", "story.source_hash"}:
+        return {
+            "department": "内阁 / 中书省 / 门下省",
+            "action": "restart_story_review",
+            "focus": "story",
+            "label": "返回故事确认",
+            "description": "故事版本或原文证据不一致，请返回故事确认并重新建立生产合同。",
+        }
+    if code == "story.asset_evidence" or code in {"asset.identity_card", "asset.required_views"}:
+        return {
+            "department": "中书省 / 门下省",
+            "action": "revise_assets",
+            "focus": "assets",
+            "label": "退回资产拆解",
+            "description": "退回资产审核，修正故事依据、资产身份证或计划图组。",
+        }
+    if code == "story.shot_evidence" or code.startswith("prompt.") or code.startswith("director."):
+        return {
+            "department": "工部 / 兵部 / 刑部",
+            "action": "regenerate_prompts",
+            "focus": "prompts",
+            "label": "重新生成提示词和镜头卡",
+            "description": "保留已批准资产，退回提示词与镜头规划并重新生成专属内容。",
+        }
+    if code in {"asset.image_coverage", "asset.identity_baseline", "asset.version_binding"}:
+        return {
+            "department": "工部 / 刑部",
+            "action": "regenerate_images",
+            "focus": "images",
+            "label": "重新生成并质检图片",
+            "description": "保留已批准资产和提示词，补齐身份基准图、计划图组和版本绑定后重新质检。",
+        }
+    if code == "visual.lineage":
+        return {
+            "department": "礼部 / 刑部",
+            "action": "rebuild_delivery",
+            "focus": "delivery",
+            "label": "重新组装交付物",
+            "description": "重新组装 Word 与引用清单，补齐生产谱系和交付审计。",
+        }
+    if code.startswith("visual."):
+        return {
+            "department": "工部 / 刑部",
+            "action": "regenerate_images",
+            "focus": "images",
+            "label": "重新生成并质检图片",
+            "description": "保留故事、资产和提示词，重新生成未通过图片并执行七维视觉质检。",
+        }
+    return {
+        "department": "尚书省 / 刑部",
+        "action": "review_package",
+        "focus": "delivery",
+        "label": "复核制片包",
+        "description": "返回工作台复核制片包质量问题。",
+    }
 
 
 def _as_int(value: Any) -> int:

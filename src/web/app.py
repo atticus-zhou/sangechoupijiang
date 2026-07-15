@@ -268,6 +268,10 @@ class ComicV2VisualOverrideRequest(BaseModel):
     reason: str
 
 
+class ComicV2QualityRecoveryRequest(BaseModel):
+    action: str = ""
+
+
 class BrowserStartRequest(BaseModel):
     url: str = "https://dy3.feigua.cn/"
 
@@ -397,6 +401,7 @@ async def get_comic_production_demo_api():
     shots = payload.get("shots") or []
     planner = payload.get("planner_payload") or {}
     demo_delivery = _ensure_comic_production_demo_delivery()
+    quality_benchmark = _comic_v2_handoff_quality_benchmark(demo_delivery["handoff_manifest"])
     return {
         "mode": "no_key_demo",
         "office_id": "comic_production",
@@ -420,8 +425,8 @@ async def get_comic_production_demo_api():
             },
             {
                 "title": "最后下载 Word 画布和引用清单",
-                "body": "交付物可以下载，适合交给下游图片、视频或剪辑平台继续生产，也方便开发者复核结构。",
-                "focus": "Word 制片画布、handoff manifest",
+                "body": "交付物可以下载；引用清单同时展示五维质量分数，并明确固定样例只验证结构、不冒充真实模型画质。",
+                "focus": "Word 制片画布、handoff manifest、质量基准",
             },
         ],
         "proof_points": [
@@ -429,7 +434,9 @@ async def get_comic_production_demo_api():
             "Word 制片画布和引用清单可以直接下载。",
             "资产、镜头、提示词和交付物之间保留引用链路。",
             "下游视频平台接手前所需的人物三视图、场景空间图、镜头视频包和失败重试策略都有独立验证命令覆盖。",
+            "质量基准明确区分 demo_structure_verified 和 production_quality_verified，不把占位图冒充真实画质。",
         ],
+        "quality_benchmark": quality_benchmark,
         "source_story_preview": story[:360],
         "asset_count": len(assets),
         "shot_count": len(shots),
@@ -464,6 +471,15 @@ async def get_comic_production_demo_api():
                 "title": "下游交接门禁",
                 "status": "passed",
                 "evidence": "verify_comic_v2_downstream_handoff.py 检查人物三视图、道具参考图、场景广角/俯视图、镜头视频包、验收标准和失败重试策略。",
+            },
+            {
+                "id": "honest_quality_claim",
+                "title": "诚实的质量声明",
+                "status": "passed" if quality_benchmark.get("status") == "demo_structure_verified" else "failed",
+                "evidence": (
+                    f"固定样例质量分 {quality_benchmark.get('package_quality_score', 0)}/100；"
+                    "production_quality_verified=False，只证明流程与引用结构。"
+                ),
             },
         ],
         "assets": [
@@ -708,6 +724,7 @@ def _public_showcase_demo(demo: dict, demo_uri: str, office_label: str, why_it_m
         "proof_points": demo.get("proof_points", []),
         "downloads": _public_showcase_downloads(demo),
         "quality_gates": demo.get("quality_gates", []),
+        "quality_benchmark": demo.get("quality_benchmark", {}),
         "why_it_matters": why_it_matters,
     }
 
@@ -719,8 +736,8 @@ def _public_showcase_deliverable_guidance(item_type: str) -> tuple[str, list[str
             ["包含可交给下游平台的画布结构", "能看到资产 ID、镜头 ID 和引用关系", "不是一次性聊天文本"],
         ),
         "handoff_manifest": (
-            "用于开发者或下游工具复核每个资产、镜头、图片和 Word 文件来自哪一版生产链路。",
-            ["保留故事版本和视觉母版版本", "列出资产、镜头和图片记录", "支持失败后追溯和重试"],
+            "用于开发者或下游工具复核每个资产、镜头、图片和 Word 文件来自哪一版生产链路，并查看质量基准与恢复动作。",
+            ["保留故事版本和视觉母版版本", "列出资产、镜头和图片记录", "区分结构演示与真实质量验证", "支持失败后追溯和重试"],
         ),
         "report_markdown": (
             "打开后重点看调研结论、数据点、竞品表和截图计划是否分开呈现，而不是混成一段泛泛文字。",
@@ -771,8 +788,8 @@ def _public_showcase_deliverable_reading_guide() -> list[dict]:
             "order": 2,
             "title": "再看 AI 漫剧 handoff manifest",
             "uri": "/api/demo/comic-production/files/handoff_manifest.json",
-            "look_for": "story_version、style_version、asset_id、image_id、shot_id、首帧参考和 production_lineage 是否完整。",
-            "proves": "故事、资产、图片、镜头、提示词和 Word 文件之间有引用链路，失败后可以追溯和恢复。",
+            "look_for": "story_version、style_version、asset_id、image_id、shot_id、首帧参考、production_lineage 和 quality_benchmark 是否完整。",
+            "proves": "故事、资产、图片、镜头、提示词和 Word 文件之间有引用链路；固定样例只声明结构演示通过，失败后能按责任部门追溯和恢复。",
         },
         {
             "order": 3,
@@ -2439,6 +2456,87 @@ async def build_comic_v2_delivery_api(workspace_id: str):
     return _comic_v2_state_response(ready)
 
 
+@app.post("/api/workspaces/{workspace_id}/comic/v2/quality/recover")
+async def recover_comic_v2_quality_api(workspace_id: str, req: ComicV2QualityRecoveryRequest):
+    """Return a generated handoff to the department that can fix its quality blocker."""
+    workspace = _comic_v2_workspace(workspace_id)
+    raw = _load_comic_v2_state(workspace_id)
+    if not raw:
+        raise _comic_v2_http_error(
+            409,
+            department="尚书省 / 刑部",
+            reason="当前项目没有可恢复的 V2 制片状态。",
+            impact="无法判断应该退回故事、资产、提示词、图片还是交付阶段。",
+            next_action="先完成一次 V2 制片流程，或从历史下载旧版交付物留档。",
+            stage="not_started",
+        )
+    state = ComicProductionV2.from_dict(raw)
+    benchmark = (state.delivery or {}).get("quality_benchmark") or {}
+    recommended = benchmark.get("recommended_recovery") or {}
+    requested_action = str(req.action or "").strip()
+    recommended_action = str(recommended.get("action") or "").strip()
+    if benchmark.get("package_quality_ready") is True:
+        raise _comic_v2_http_error(
+            409,
+            department="尚书省 / 刑部",
+            reason="当前制片包已经通过质量基准，没有需要执行的质量退回动作。",
+            impact="继续退回会重复消耗模型额度，并使已经验收的下游产物失效。",
+            next_action="直接下载 Word 制片画布和引用清单，或在新项目中发起新的生产版本。",
+            stage=state.stage,
+            agent=state.current_agent,
+        )
+    if recommended_action and requested_action and requested_action != recommended_action:
+        raise _comic_v2_http_error(
+            409,
+            department=str(recommended.get("department") or "尚书省 / 刑部"),
+            reason=f"请求的恢复动作 {requested_action} 与质量基准建议 {recommended_action} 不一致。",
+            impact="跳过责任阶段可能保留真正的阻塞问题，并生成一份看似更新但仍不可生产的交付包。",
+            next_action=str(recommended.get("description") or "按质量基准给出的恢复动作重新提交。"),
+            stage=state.stage,
+            agent=state.current_agent,
+        )
+    action = recommended_action or requested_action
+    if not action:
+        raise _comic_v2_http_error(
+            409,
+            department="礼部 / 刑部",
+            reason="当前交付包没有可执行的质量恢复建议。",
+            impact="系统无法安全判断应该保留哪些上游产物。",
+            next_action="如果这是早期 V2 包，请从历史入口选择“补齐 V3 引用与质量清单”。",
+            stage=state.stage,
+            agent=state.current_agent,
+        )
+    try:
+        recovered = ComicProductionV2.reopen_for_quality_recovery(state, action)
+    except ValueError as exc:
+        raise _comic_v2_http_error(
+            409,
+            department=str(recommended.get("department") or "尚书省 / 刑部"),
+            reason=f"质量恢复无法执行：{exc}",
+            impact="现有交付文件会保留在历史中，但当前项目不会被错误地回退或覆盖。",
+            next_action=str(recommended.get("description") or "回到工作台检查制片包质量基准和项目阶段。"),
+            stage=state.stage,
+            agent=state.current_agent,
+        ) from exc
+    _save_comic_v2_state(workspace_id, recovered.to_dict())
+    _ensure_comic_v2_task_run(workspace, "按质量基准退回处理")
+    _append_comic_v2_event(
+        workspace_id,
+        event_type="comic_v2_quality_recovery_started",
+        status="running" if recovered.status == "active" else recovered.status,
+        summary=f"制片包按质量基准退回：{recommended.get('label') or action}",
+        payload={
+            "office_id": "comic_production",
+            "department": recommended.get("department") or recovered.current_agent,
+            "stage": recovered.stage,
+            "action": action,
+            "reason_code": recommended.get("reason_code", ""),
+            "next_action": recovered.next_action,
+        },
+    )
+    return _comic_v2_state_response(recovered)
+
+
 @app.post("/api/comic/brief")
 async def create_comic_brief_api(req: ComicBriefRequest):
     """Create the comic office's first-turn creative brief and questions."""
@@ -2713,6 +2811,15 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
             "status": str(item.get("status") or ""),
             "score": int(item.get("score") or 0),
         })
+    raw_recovery = benchmark.get("recommended_recovery") or {}
+    recovery = {
+        "department": str(raw_recovery.get("department") or ""),
+        "action": str(raw_recovery.get("action") or ""),
+        "focus": str(raw_recovery.get("focus") or ""),
+        "label": str(raw_recovery.get("label") or ""),
+        "reason_code": str(raw_recovery.get("reason_code") or ""),
+        "description": str(raw_recovery.get("description") or ""),
+    } if isinstance(raw_recovery, dict) and raw_recovery else {}
     return {
         "benchmark_version": int(benchmark.get("benchmark_version") or 0),
         "status": str(benchmark.get("status") or ""),
@@ -2725,6 +2832,7 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
         "blocker_count": int(benchmark.get("blocker_count") or 0),
         "dimensions": dimensions,
         "limitations": [str(item) for item in (benchmark.get("limitations") or []) if str(item).strip()],
+        "recommended_recovery": recovery,
         "next_action": str(benchmark.get("next_action") or ""),
     }
 
@@ -5403,6 +5511,7 @@ def _history_delivery_summary(enriched: dict) -> dict:
         for artifact in enriched.get("artifacts") or []
         if artifact.get("artifact_type")
     }
+    legacy_package = bool(enriched.get("legacy_comic_package"))
     downloadable_files = []
     if enriched.get("workspace_export_uri"):
         downloadable_files.append("完整归档包")
@@ -5412,6 +5521,8 @@ def _history_delivery_summary(enriched: dict) -> dict:
         downloadable_files.append("引用清单")
     if "comic_v2_prompt_package" in artifact_types:
         downloadable_files.append("提示词包")
+    elif "prompt_package" in artifact_types:
+        downloadable_files.append("旧版提示词包")
     if {"comic_v2_generated_image", "generated_image"} & artifact_types:
         downloadable_files.append("图片资产")
     if enriched.get("comic_v2_trace_uri"):
@@ -5426,6 +5537,9 @@ def _history_delivery_summary(enriched: dict) -> dict:
     prompt_quality_issue_count = int(prompt_quality.get("issue_count") or 0)
     visual_review = trace.get("visual_review") or {}
     quality_benchmark = trace.get("quality_benchmark") or {}
+    requires_quality_benchmark = bool(trace) or bool(
+        {"comic_v2_word_canvas", "comic_v2_handoff_manifest"} & artifact_types
+    )
     benchmark_ready = bool(quality_benchmark.get("package_quality_ready")) if quality_benchmark else True
     production_ready = bool(visual_review.get("production_ready") or audit.get("handoff_ready")) and benchmark_ready
     failure_count = int(visual_review.get("failure_count") or 0)
@@ -5433,7 +5547,7 @@ def _history_delivery_summary(enriched: dict) -> dict:
     missing_items = []
     if not word_uri:
         missing_items.append("Word 制片画布")
-    if not handoff_uri and enriched.get("office_id") == "comic_production":
+    if not legacy_package and not handoff_uri and enriched.get("office_id") == "comic_production":
         missing_items.append("引用清单")
     if asset_count <= 0 and trace:
         missing_items.append("资产统计")
@@ -5441,12 +5555,19 @@ def _history_delivery_summary(enriched: dict) -> dict:
         missing_items.append("镜头卡")
     if prompt_quality_status == "needs_review":
         missing_items.append("提示词质量门禁")
-    if quality_benchmark and not benchmark_ready:
+    if not legacy_package and requires_quality_benchmark and not quality_benchmark:
         missing_items.append("制片包质量基准")
+    elif quality_benchmark and not benchmark_ready:
+        missing_items.append("制片包质量基准")
+    if legacy_package:
+        missing_items.append("V3 引用与质量清单")
     if failure_count > 0:
         missing_items.append("视觉质检问题")
 
-    if missing_items:
+    if legacy_package:
+        status = "partial"
+        next_action = "这是旧版制片包：Word 和旧材料仍可下载，但无法证明故事、资产、图片、镜头和质检属于同一版本。继续生产时建议用当前 V2 流程重新生成。"
+    elif missing_items:
         status = "needs_review"
         if "制片包质量基准" in missing_items:
             next_action = quality_benchmark.get("next_action") or "先处理制片包质量基准中的阻塞项，再重新生成交付物。"
@@ -5465,7 +5586,34 @@ def _history_delivery_summary(enriched: dict) -> dict:
         next_action = "等待生成可下载交付物。"
 
     recovery_actions = []
-    if workspace_id and ("Word 制片画布" in missing_items or "引用清单" in missing_items):
+    benchmark_recovery = quality_benchmark.get("recommended_recovery") or {}
+    benchmark_action = str(benchmark_recovery.get("action") or "")
+    if workspace_id and not legacy_package and not benchmark_ready and benchmark_action in {
+        "revise_assets",
+        "regenerate_prompts",
+        "regenerate_images",
+        "rebuild_delivery",
+    }:
+        recovery_actions.append({
+            "label": benchmark_recovery.get("label") or "按质量问题退回处理",
+            "method": "POST",
+            "path": f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            "body": {"action": benchmark_action},
+            "workspace_id": workspace_id,
+            "office_id": enriched.get("office_id") or "",
+            "focus": benchmark_recovery.get("focus") or "workspace",
+        })
+    elif workspace_id and not legacy_package and "制片包质量基准" in missing_items and not quality_benchmark:
+        recovery_actions.append({
+            "label": "补齐 V3 引用与质量清单",
+            "method": "POST",
+            "path": f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            "body": {"action": "rebuild_delivery"},
+            "workspace_id": workspace_id,
+            "office_id": enriched.get("office_id") or "comic_production",
+            "focus": "delivery",
+        })
+    if workspace_id and not legacy_package and ("Word 制片画布" in missing_items or "引用清单" in missing_items):
         recovery_actions.append({
             "label": "重新生成 Word 制片画布",
             "method": "POST",
@@ -5474,7 +5622,7 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "office_id": enriched.get("office_id") or "",
             "focus": "delivery",
         })
-    if workspace_id and "视觉质检问题" in missing_items:
+    if workspace_id and not legacy_package and "视觉质检问题" in missing_items and not benchmark_action:
         recovery_actions.append({
             "label": "重新生成并质检基础资产图",
             "method": "POST",
@@ -5483,7 +5631,7 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "office_id": enriched.get("office_id") or "",
             "focus": "images",
         })
-    if workspace_id and "提示词质量门禁" in missing_items:
+    if workspace_id and not legacy_package and "提示词质量门禁" in missing_items and not benchmark_action:
         recovery_actions.append({
             "label": "重新生成提示词",
             "method": "POST",
@@ -5498,10 +5646,9 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "method": "GET",
             "path": f"/api/workspaces/{workspace_id}",
             "workspace_id": workspace_id,
-            "office_id": enriched.get("office_id") or "",
+            "office_id": "comic_production",
             "focus": "workspace",
         })
-
     return {
         "status": status,
         "asset_count": asset_count,
@@ -5511,10 +5658,15 @@ def _history_delivery_summary(enriched: dict) -> dict:
         "prompt_quality_issue_count": prompt_quality_issue_count,
         "prompt_quality_summary": prompt_quality.get("summary", ""),
         "package_quality_score": int(quality_benchmark.get("package_quality_score") or 0),
-        "package_quality_claim": quality_benchmark.get("status", ""),
-        "package_quality_ready": benchmark_ready,
+        "package_quality_claim": "legacy_unverifiable" if legacy_package else quality_benchmark.get("status", ""),
+        "package_quality_ready": False if legacy_package else benchmark_ready,
         "production_quality_verified": bool(quality_benchmark.get("production_quality_verified")),
-        "package_quality_summary": quality_benchmark.get("summary", ""),
+        "package_quality_summary": (
+            "旧版制片包没有 V3 引用与质量清单，只能下载留档，不能证明跨产物一致性。"
+            if legacy_package
+            else quality_benchmark.get("summary", "")
+        ),
+        "legacy_package": legacy_package,
         "visual_review_status": "passed" if production_ready and failure_count == 0 else "needs_review",
         "downloadable_files": downloadable_files,
         "missing_items": missing_items,
@@ -5550,6 +5702,11 @@ def _enrich_history_item(item: dict) -> dict:
     final_report = result.get("final_report") or ""
     enriched = dict(item)
     trace = _comic_v2_history_trace(artifacts, word_canvas)
+    legacy_comic_package = bool(
+        word_canvas
+        and word_canvas.get("artifact_type") == "word_canvas"
+        and workspace.get("office_id") in {"comic", "comic_production"}
+    )
     enriched.update({
         "workspace_id": workspace_id,
         "workspace_title": workspace.get("title", ""),
@@ -5566,6 +5723,7 @@ def _enrich_history_item(item: dict) -> dict:
         "completed_at": run_record.get("completed_at", ""),
         "final_report_preview": final_report[:1200],
         "comic_v2_trace": trace,
+        "legacy_comic_package": legacy_comic_package,
         "comic_v2_trace_uri": f"/api/tasks/{task_id}/comic-v2-trace.json" if trace else "",
     })
     enriched["delivery_summary"] = _history_delivery_summary(enriched)

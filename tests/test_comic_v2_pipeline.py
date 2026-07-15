@@ -252,6 +252,52 @@ class ComicV2PipelineTests(unittest.TestCase):
         self.assertEqual(reviewed.next_action, "重新生成专属提示词。")
         self.assertFalse(reviewed.delivery["quality_benchmark"]["package_quality_ready"])
 
+    def test_quality_recovery_reopens_the_correct_production_stage(self):
+        state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
+        state = state.with_status(
+            stage="document_generation",
+            assets_status="approved",
+            asset_manifest={"manifest_id": "manifest_1", "version": 2, "items": [{"asset_id": "character_1"}]},
+            prompt_package={"package_id": "prompts_1", "prompts": [{"object_id": "character_1"}]},
+            image_production={"production_ready": True, "records": [{"image_id": "image_1"}]},
+        )
+        audit = DocumentAudit(
+            embedded_images=2,
+            asset_count=1,
+            shot_count=1,
+            missing_image_asset_ids=(),
+            structural_errors=(),
+            max_table_columns=2,
+            handoff_ready=True,
+        )
+        ready = ComicProductionV2.attach_delivery(state, "C:/delivery/canvas.docx", audit)
+
+        cases = {
+            "revise_assets": ("asset_review", "awaiting_user_review"),
+            "regenerate_prompts": ("prompt_planning", "approved"),
+            "regenerate_images": ("image_generation", "approved"),
+            "rebuild_delivery": ("document_generation", "approved"),
+        }
+        for action, (stage, assets_status) in cases.items():
+            with self.subTest(action=action):
+                recovered = ComicProductionV2.reopen_for_quality_recovery(ready, action)
+                self.assertEqual(recovered.stage, stage)
+                self.assertEqual(recovered.assets_status, assets_status)
+                self.assertFalse(recovered.delivery)
+                self.assertEqual(recovered.document_status, "stale")
+
+        prompt_recovery = ComicProductionV2.reopen_for_quality_recovery(ready, "regenerate_prompts")
+        self.assertFalse(prompt_recovery.prompt_package)
+        self.assertFalse(prompt_recovery.image_production)
+        image_recovery = ComicProductionV2.reopen_for_quality_recovery(ready, "regenerate_images")
+        self.assertTrue(image_recovery.prompt_package)
+        self.assertFalse(image_recovery.image_production)
+        delivery_recovery = ComicProductionV2.reopen_for_quality_recovery(ready, "rebuild_delivery")
+        self.assertTrue(delivery_recovery.image_production)
+
+        with self.assertRaisesRegex(ValueError, "重新建立项目"):
+            ComicProductionV2.reopen_for_quality_recovery(ready, "restart_story_review")
+
     def test_old_state_payload_can_be_loaded_before_prompt_and_image_fields_exist(self):
         state = ComicProductionV2.start(STORY, planner_payload(), workspace_id="ws_test")
         payload = state.to_dict()

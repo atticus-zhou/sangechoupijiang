@@ -33,6 +33,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(showcase["mode"], "public_no_key_static_showcase")
         self.assertIn('<link rel="icon" href="data:,">', index_text)
         self.assertFalse(showcase["static_export"]["requires_backend"])
+        demos = {item["office_id"]: item for item in showcase["featured_demos"]}
+        comic_benchmark = demos["comic_production"]["quality_benchmark"]
+        self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
+        self.assertFalse(comic_benchmark["production_quality_verified"])
         script_text = "\n".join(
             item["product_response"] for item in showcase["portfolio_embed"]["interview_demo_script"]
         )
@@ -45,6 +49,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             self.assertGreater((self.output_dir / item["local_uri"]).stat().st_size, 20)
         for item in showcase["portfolio_embed"]["deliverable_reading_guide"]:
             self.assertTrue((self.output_dir / item["uri"]).is_file())
+        static_script = (self.output_dir / "app.js").read_text(encoding="utf-8")
+        self.assertIn("未宣称真实画质", static_script)
 
     def test_static_readiness_verifier_is_public_operator_readable(self):
         completed = subprocess.run(

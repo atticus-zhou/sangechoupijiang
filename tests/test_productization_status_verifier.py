@@ -29,6 +29,9 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         comic_quality = next(item for item in module.REQUIREMENTS if item["id"] == "P10")
         self.assertIn("python scripts/verify_comic_v2_production_benchmark.py --format markdown", comic_quality["markers"])
         self.assertIn("tests/test_comic_v2_production_benchmark_verifier.py", comic_quality["files"])
+        comic_recovery = next(item for item in module.REQUIREMENTS if item["id"] == "P5")
+        self.assertIn("部门级恢复路由", comic_recovery["markers"])
+        self.assertIn("旧版不可审计标记", comic_recovery["markers"])
 
     def test_markdown_output_is_readable(self):
         result = subprocess.run(

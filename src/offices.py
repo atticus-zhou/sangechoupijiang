@@ -282,6 +282,13 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
         {"stage": "image_generation", "label": "重新生成并质检基础资产图", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/images/generate"},
         {"stage": "visual_review", "label": "重新生成并质检基础资产图", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/images/generate"},
         {"stage": "document_generation", "label": "重新生成 Word 制片画布", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/delivery/build"},
+        {
+            "stage": "quality_review",
+            "label": "按制片包质量基准退回责任部门",
+            "method": "POST",
+            "path_template": "/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            "body_contract": {"action": "quality_benchmark.recommended_recovery.action"},
+        },
     ],
     acceptance_criteria=[
         "本办公室必须使用独立的 office_id，不能和旧 AI 漫剧办公室混用底层配置。",

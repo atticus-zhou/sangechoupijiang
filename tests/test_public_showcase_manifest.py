@@ -31,6 +31,14 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(set(demos), {"comic_production", "research"})
         self.assertEqual(demos["comic_production"]["demo_uri"], "/api/demo/comic-production")
         self.assertEqual(demos["research"]["demo_uri"], "/api/demo/research")
+        comic_benchmark = demos["comic_production"]["quality_benchmark"]
+        self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
+        self.assertEqual(comic_benchmark["package_quality_score"], 100)
+        self.assertFalse(comic_benchmark["production_quality_verified"])
+        self.assertIn(
+            "honest_quality_claim",
+            {item["id"] for item in demos["comic_production"]["quality_gates"]},
+        )
         for demo in demos.values():
             self.assertGreaterEqual(len(demo["viewer_path"]), 3)
             self.assertGreaterEqual(len(demo["proof_points"]), 3)
@@ -55,6 +63,11 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any("Word 制片画布" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("handoff manifest" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("证据清单" in item["title"] for item in embed["deliverable_reading_guide"]))
+        handoff_guide = next(
+            item for item in embed["deliverable_reading_guide"] if "handoff manifest" in item["title"]
+        )
+        self.assertIn("quality_benchmark", handoff_guide["look_for"])
+        self.assertIn("结构演示", handoff_guide["proves"])
         for item in embed["sample_deliverables"]:
             self.assertTrue(item["reader_guidance"])
             self.assertGreaterEqual(len(item["acceptance_signals"]), 3)

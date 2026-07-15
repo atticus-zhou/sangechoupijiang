@@ -256,6 +256,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("function renderPublicShowcase", js)
         self.assertIn("showcase.audience_paths", js)
         self.assertIn("showcase.featured_demos", js)
+        self.assertIn("demo.quality_benchmark?.status", js)
+        self.assertIn("仅结构验证，未验证真实画质", js)
         self.assertIn("portfolio.sample_deliverables", js)
         self.assertIn("portfolio.deliverable_reading_guide", js)
         self.assertIn("portfolio.interview_demo_script", js)
@@ -676,6 +678,23 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("const benchmark = trace.quality_benchmark || {}", trace_fn)
         self.assertIn("制片包质量基准", trace_fn)
         self.assertIn("benchmark.production_quality_verified", trace_fn)
+        self.assertIn("legacy_unverifiable", summary_fn)
+        self.assertIn("summary.legacy_package", summary_fn)
+
+    def test_quality_recovery_button_routes_to_the_responsible_stage(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        actions = js[js.index("function renderComicV2StageActions"):js.index("function renderComicDepartmentStep")]
+        recovery = js[js.index("async function recoverComicV2Quality"):js.index("async function submitComicTask")]
+        task_recovery = js[js.index("async function retryTaskRecoveryAction"):js.index("async function recoverComicWorkspaceFromHistory")]
+
+        self.assertIn("renderComicV2QualityRecoveryButton(status)", actions)
+        self.assertIn("recommended_recovery", actions)
+        self.assertIn("recoverComicV2Quality", actions)
+        self.assertIn("/comic/v2/quality/recover", recovery)
+        self.assertIn("regenerate_prompts", recovery)
+        self.assertIn("regenerate_images", recovery)
+        self.assertIn("rebuild_delivery", recovery)
+        self.assertIn("action.body", task_recovery)
 
     def test_v2_stage_board_renders_department_flow(self):
         js = APP_JS.read_text(encoding="utf-8")

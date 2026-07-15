@@ -155,6 +155,12 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("shot_cards", schema_ids)
         self.assertIn("image_review_result", schema_ids)
         self.assertTrue(any(item["stage"] == "document_generation" for item in office.recovery_actions))
+        quality_recovery = next(item for item in office.recovery_actions if item["stage"] == "quality_review")
+        self.assertTrue(quality_recovery["path_template"].endswith("/comic/v2/quality/recover"))
+        self.assertEqual(
+            quality_recovery["body_contract"]["action"],
+            "quality_benchmark.recommended_recovery.action",
+        )
         self.assertIn("zhongshu", office.agent_duties)
         self.assertTrue(any("独立的 office_id" in item for item in office.acceptance_criteria))
 

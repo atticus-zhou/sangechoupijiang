@@ -365,6 +365,91 @@ class ComicProductionV2:
             },
         )
 
+    @staticmethod
+    def reopen_for_quality_recovery(
+        state: ComicProductionV2State,
+        action: str,
+    ) -> ComicProductionV2State:
+        """Return a completed handoff to the earliest safe stage that can fix a quality issue."""
+        if state.stage != "ready_for_handoff" or not state.delivery:
+            raise ValueError("当前没有可退回修正的制片交付包")
+        action = str(action or "").strip()
+        if action == "revise_assets":
+            manifest = copy.deepcopy(state.asset_manifest)
+            if not manifest:
+                raise ValueError("资产清单缺失，无法退回资产审核")
+            manifest["review_status"] = "awaiting_user_review"
+            return state.with_status(
+                status="waiting_for_human",
+                stage="asset_review",
+                current_agent="门下省",
+                current_object=f"质量退回的资产拆解包 v{manifest.get('version', '')}",
+                completed=3,
+                blocking_reason="制片包质量基准发现资产身份证、计划图组或版本绑定问题。",
+                next_action="写明要补充、删除或修改的资产，然后按意见重新拆解。",
+                can_generate_images=False,
+                assets_status="awaiting_user_review",
+                shots_status="stale",
+                document_status="stale",
+                asset_manifest=manifest,
+                prompt_package={},
+                image_production={},
+                delivery={},
+            )
+        if action == "regenerate_prompts":
+            if not state.asset_manifest:
+                raise ValueError("资产清单缺失，无法重新生成提示词")
+            return state.with_status(
+                status="active",
+                stage="prompt_planning",
+                current_agent="工部 / 兵部 / 刑部",
+                current_object="质量退回的专属提示词与镜头执行卡",
+                completed=4,
+                blocking_reason="",
+                next_action="重新生成逐项资产提示词和镜头执行卡，并再次通过质量门禁。",
+                can_generate_images=False,
+                assets_status="approved",
+                shots_status="stale",
+                document_status="stale",
+                prompt_package={},
+                image_production={},
+                delivery={},
+            )
+        if action == "regenerate_images":
+            if not state.prompt_package:
+                raise ValueError("提示词包缺失，无法重新生成图片")
+            return state.with_status(
+                status="active",
+                stage="image_generation",
+                current_agent="工部 / 刑部",
+                current_object="质量退回的基础资产图片",
+                completed=5,
+                blocking_reason="",
+                next_action="重新生成基础资产图，并执行七维视觉质检。",
+                can_generate_images=True,
+                document_status="stale",
+                image_production={},
+                delivery={},
+            )
+        if action == "rebuild_delivery":
+            if not state.image_production:
+                raise ValueError("图片生产记录缺失，无法重新组装交付物")
+            return state.with_status(
+                status="active",
+                stage="document_generation",
+                current_agent="礼部 / 刑部",
+                current_object="质量退回的 Word 与引用清单",
+                completed=6,
+                blocking_reason="",
+                next_action="重新组装 Word、handoff manifest 和生产谱系。",
+                can_generate_images=False,
+                document_status="stale",
+                delivery={},
+            )
+        if action == "restart_story_review":
+            raise ValueError("故事版本或原文证据已不一致，请从故事确认区重新建立项目，避免覆盖现有历史")
+        raise ValueError(f"不支持的质量恢复动作：{action or '未填写'}")
+
 
 def not_started_state(workspace_id: str) -> dict[str, Any]:
     return {

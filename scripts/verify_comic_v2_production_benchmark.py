@@ -35,11 +35,19 @@ def verify_production_benchmark(
     manifest = json.loads(path.read_text(encoding="utf-8"))
     audit = audit_handoff_manifest(manifest)
     stored = manifest.get("quality_benchmark") or {}
-    stored_matches = (
-        stored.get("benchmark_version") == audit.get("benchmark_version")
-        and stored.get("status") == audit.get("status")
-        and stored.get("package_quality_score") == audit.get("package_quality_score")
-        and stored.get("blocker_count") == audit.get("blocker_count")
+    stored_matches = all(
+        stored.get(field) == audit.get(field)
+        for field in (
+            "benchmark_version",
+            "status",
+            "package_quality_score",
+            "package_quality_ready",
+            "production_quality_verified",
+            "visual_evidence_level",
+            "issue_count",
+            "blocker_count",
+            "recommended_recovery",
+        )
     )
     passed = bool(audit.get("package_quality_ready")) and stored_matches
     return {
@@ -81,13 +89,23 @@ def format_markdown(result: dict[str, Any]) -> str:
         lines.extend(["", "## Issues", ""])
         for issue in result["issues"]:
             lines.append(
-                f"- [{issue.get('severity')}] {issue.get('dimension')}/{issue.get('code')}: "
+                f"- [{issue.get('severity')}] {issue.get('department') or '待分配'} · "
+                f"{issue.get('dimension')}/{issue.get('code')}: "
                 f"{issue.get('message')} ({issue.get('evidence')})"
             )
     if result.get("limitations"):
         lines.extend(["", "## Honest Limitations", ""])
         lines.extend(f"- {item}" for item in result["limitations"])
-    lines.extend(["", "## Next Action", "", str(result.get("next_action") or "")])
+    recovery = result.get("recommended_recovery") or {}
+    lines.extend(["", "## Next Action", ""])
+    if recovery:
+        lines.append(
+            f"- 责任部门：{recovery.get('department') or '待分配'}"
+        )
+        lines.append(
+            f"- 恢复动作：{recovery.get('label') or recovery.get('action') or '人工复核'}"
+        )
+    lines.append(str(result.get("next_action") or ""))
     return "\n".join(lines) + "\n"
 
 

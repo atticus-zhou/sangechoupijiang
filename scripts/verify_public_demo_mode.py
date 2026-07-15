@@ -166,8 +166,33 @@ def verify_public_demo_mode() -> dict[str, Any]:
         available = response.status_code == 200
         payload = response.json() if available else {}
         downloads: list[dict[str, Any]] = []
+        quality_benchmark: dict[str, Any] = {}
+        honest_quality_gate: dict[str, Any] = {}
         if not available:
             errors.append(f"{office_id} demo endpoint returned {response.status_code}")
+
+        if office_id == "comic_production" and available:
+            quality_benchmark = payload.get("quality_benchmark") or {}
+            honest_quality_gate = next(
+                (
+                    item
+                    for item in payload.get("quality_gates") or []
+                    if item.get("id") == "honest_quality_claim"
+                ),
+                {},
+            )
+            if quality_benchmark.get("status") != "demo_structure_verified":
+                errors.append("comic production demo must claim demo_structure_verified")
+            if quality_benchmark.get("package_quality_score") != 100:
+                errors.append("comic production fixed demo must score 100/100 on the structural benchmark")
+            if quality_benchmark.get("package_quality_ready") is not True:
+                errors.append("comic production fixed demo must pass the structural package gate")
+            if quality_benchmark.get("production_quality_verified") is not False:
+                errors.append("comic production fixed demo must not claim real production image quality")
+            if quality_benchmark.get("recommended_recovery"):
+                errors.append("comic production passing demo must not expose a recovery action")
+            if honest_quality_gate.get("status") != "passed":
+                errors.append("comic production demo honest quality gate must pass")
 
         for item in _download_items(payload):
             file_response = client.get(item["uri"])
@@ -201,6 +226,8 @@ def verify_public_demo_mode() -> dict[str, Any]:
             "read_only": True,
             "downloads": downloads,
             "launch_gate_links": gate_links,
+            "quality_benchmark": quality_benchmark,
+            "honest_quality_gate": honest_quality_gate,
         }
 
     required_links = {
@@ -265,6 +292,13 @@ def format_markdown(payload: dict[str, Any]) -> str:
             lines.append(
                 f"  - `{item['uri']}`：HTTP {item['status_code']}，{item['bytes']} bytes"
             )
+        benchmark = demo.get("quality_benchmark") or {}
+        if benchmark:
+            lines.extend([
+                f"- 固定样例质量基准：{benchmark.get('package_quality_score', 0)}/100",
+                f"- 质量声明：`{benchmark.get('status', '')}`",
+                f"- 已验证真实模型画质：{benchmark.get('production_quality_verified')}",
+            ])
         lines.append("")
     if payload.get("errors"):
         lines.append("## 问题")

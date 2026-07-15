@@ -86,6 +86,8 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "失败恢复",
             "python scripts/verify_product_readiness.py --format markdown --run-e2e",
             "python scripts/verify_comic_v2_production_benchmark.py --format markdown",
+            "部门级恢复路由",
+            "旧版不可审计标记",
         ],
         "files": [
             "scripts/verify_product_readiness.py",
@@ -93,6 +95,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "tests/test_comic_production_chain.py",
             "scripts/verify_comic_v2_production_benchmark.py",
             "src/comic_office/v2/production_benchmark.py",
+            "tests/test_web_comic_api.py",
         ],
     },
     {

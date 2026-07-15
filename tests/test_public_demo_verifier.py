@@ -43,6 +43,14 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertTrue(payload["showcase_manifest"]["static_export_backend_free"])
         self.assertIn("comic_production", payload["demos"])
         self.assertIn("research", payload["demos"])
+        comic_benchmark = payload["demos"]["comic_production"]["quality_benchmark"]
+        self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
+        self.assertEqual(comic_benchmark["package_quality_score"], 100)
+        self.assertFalse(comic_benchmark["production_quality_verified"])
+        self.assertEqual(
+            payload["demos"]["comic_production"]["honest_quality_gate"]["status"],
+            "passed",
+        )
         for demo in payload["demos"].values():
             self.assertTrue(demo["available"] )
             self.assertFalse(demo["requires_api_key"] )
@@ -78,6 +86,8 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("交付物阅读顺序", result.stdout)
         self.assertIn("面试演示脚本", result.stdout)
         self.assertIn("不调用真实模型", result.stdout)
+        self.assertIn("demo_structure_verified", result.stdout)
+        self.assertIn("已验证真实模型画质：False", result.stdout)
 
 
 if __name__ == "__main__":
