@@ -181,6 +181,44 @@ class WebComicApiTests(unittest.TestCase):
         self.assertEqual(action["path"], "/api/workspaces/ws_missing_benchmark/comic/v2/quality/recover")
         self.assertEqual(action["body"], {"action": "rebuild_delivery"})
 
+    def test_history_can_upgrade_fixture_images_to_real_model_evidence(self):
+        summary = _history_delivery_summary({
+            "workspace_id": "ws_fixture_images",
+            "office_id": "comic_production",
+            "word_canvas_uri": "/word.docx",
+            "handoff_manifest_uri": "/handoff.json",
+            "artifacts": [
+                {"artifact_type": "comic_v2_word_canvas"},
+                {"artifact_type": "comic_v2_prompt_package"},
+                {"artifact_type": "comic_v2_generated_image"},
+            ],
+            "comic_v2_trace": {
+                "asset_prompt_count": 3,
+                "shot_prompt_count": 2,
+                "delivery_audit": {"handoff_ready": True, "asset_count": 3, "shot_count": 2},
+                "visual_review": {"production_ready": True, "failure_count": 0},
+                "quality_benchmark": {
+                    "status": "demo_structure_verified",
+                    "package_quality_ready": True,
+                    "production_quality_verified": False,
+                },
+                "image_production_evidence": {
+                    "evidence_level": "fixture_only",
+                    "supports_real_quality_claim": False,
+                    "next_action": "用真实模型重新生成图片。",
+                },
+            },
+        })
+
+        self.assertEqual(summary["status"], "needs_review")
+        self.assertIn("图片生产证据", summary["missing_items"])
+        action = summary["recovery_actions"][0]
+        self.assertEqual(action["body"], {"action": "regenerate_images"})
+        self.assertEqual(action["focus"], "images")
+        self.assertEqual(action["expected_stage"], "image_generation")
+        self.assertIn("prompt_package", action["preserves"])
+        self.assertIn("image_production", action["clears"])
+
     def test_quality_recovery_api_reopens_prompt_planning_without_losing_assets(self):
         workspace_id = f"ws_quality_recover_{uuid.uuid4().hex[:8]}"
         self.created_workspaces.append(workspace_id)
@@ -256,6 +294,65 @@ class WebComicApiTests(unittest.TestCase):
         self.assertFalse(payload["prompt_package"])
         self.assertFalse(payload["image_production"])
         self.assertFalse(payload["delivery"])
+
+    def test_quality_recovery_can_upgrade_demo_structure_images(self):
+        workspace_id = f"ws_quality_upgrade_{uuid.uuid4().hex[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="真实图片证据升级测试",
+        )
+        state = not_started_state(workspace_id)
+        state.update({
+            "status": "waiting_for_human",
+            "stage": "ready_for_handoff",
+            "story_id": "story_upgrade",
+            "story_version": 1,
+            "style_id": "style_upgrade",
+            "style_version": 1,
+            "contract": {"status": "visual_bible_approved"},
+            "completed": 7,
+            "total": 7,
+            "assets_status": "approved",
+            "shots_status": "ready",
+            "document_status": "ready",
+            "asset_manifest": {
+                "manifest_id": "manifest_upgrade",
+                "version": 2,
+                "items": [{"asset_id": "character_1"}],
+            },
+            "prompt_package": {
+                "package_id": "prompts_upgrade",
+                "prompts": [{"object_id": "character_1"}],
+            },
+            "image_production": {
+                "production_ready": True,
+                "records": [{"image_id": "fixture_image", "provider": "fixture"}],
+            },
+            "delivery": {
+                "path": "C:/delivery/canvas.docx",
+                "quality_benchmark": {
+                    "status": "demo_structure_verified",
+                    "package_quality_ready": True,
+                    "production_quality_verified": False,
+                },
+            },
+        })
+        config_manager.set_kv(f"comic_v2_state:{workspace_id}", json.dumps(state, ensure_ascii=False))
+
+        response = self.client.post(
+            f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            json={"action": "regenerate_images"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["stage"], "image_generation")
+        self.assertTrue(payload["prompt_package"])
+        self.assertFalse(payload["image_production"])
+        self.assertFalse(payload["delivery"])
+        self.assertTrue(payload["can_generate_images"])
 
     def test_history_marks_legacy_word_canvas_as_downloadable_but_unverifiable(self):
         task_id = f"hist_legacy_{uuid.uuid4().hex[:8]}"

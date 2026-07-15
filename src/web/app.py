@@ -2801,7 +2801,11 @@ async def recover_comic_v2_quality_api(workspace_id: str, req: ComicV2QualityRec
     recommended = benchmark.get("recommended_recovery") or {}
     requested_action = str(req.action or "").strip()
     recommended_action = str(recommended.get("action") or "").strip()
-    if benchmark.get("package_quality_ready") is True:
+    real_quality_upgrade = (
+        requested_action == "regenerate_images"
+        and benchmark.get("production_quality_verified") is not True
+    )
+    if benchmark.get("package_quality_ready") is True and not real_quality_upgrade:
         raise _comic_v2_http_error(
             409,
             department="尚书省 / 刑部",
@@ -5942,6 +5946,42 @@ def _comic_v2_history_image_asset(artifact: dict) -> dict:
     }
 
 
+def _comic_v2_image_evidence_recovery_action(image_evidence: dict, prompt_count: int = 0) -> dict:
+    """Return the safest recovery action for incomplete image-production evidence."""
+    if not image_evidence or image_evidence.get("supports_real_quality_claim"):
+        return {}
+    evidence_level = str(image_evidence.get("evidence_level") or "")
+    if evidence_level not in {"missing_images", "fixture_only", "model_partial", "mixed_or_unknown"}:
+        return {}
+    if evidence_level == "missing_images" and prompt_count <= 0:
+        return {
+            "label": "先补提示词包再生成图片",
+            "action": "regenerate_prompts",
+            "focus": "prompts",
+            "expected_stage": "prompt_planning",
+            "preserves": ["confirmed_story", "asset_manifest"],
+            "clears": ["prompt_package", "image_production", "delivery"],
+            "operator_steps": ["回到提示词规划", "生成资产和镜头提示词", "再进入图片生产"],
+            "description": "历史记录没有图片，也没有可复用的提示词数量，先退回提示词阶段更安全。",
+        }
+    label = {
+        "missing_images": "生成缺失的图片证据",
+        "fixture_only": "用真实模型重做图片证据",
+        "model_partial": "补齐失败或未质检的图片",
+        "mixed_or_unknown": "重做来源不明的图片证据",
+    }.get(evidence_level, "重做图片证据")
+    return {
+        "label": label,
+        "action": "regenerate_images",
+        "focus": "images",
+        "expected_stage": "image_generation",
+        "preserves": ["confirmed_story", "asset_manifest", "prompt_package"],
+        "clears": ["image_production", "delivery"],
+        "operator_steps": ["保留故事、资产和提示词", "用真实模型重新生成基础资产图", "重跑刑部视觉质检和质量基准"],
+        "description": image_evidence.get("next_action") or "当前图片证据不足以支撑真实质量声明，需要回到图片生产阶段补齐。",
+    }
+
+
 def _history_delivery_summary(enriched: dict) -> dict:
     trace = enriched.get("comic_v2_trace") or {}
     workspace_id = enriched.get("workspace_id") or ""
@@ -5978,6 +6018,7 @@ def _history_delivery_summary(enriched: dict) -> dict:
     prompt_quality_issue_count = int(prompt_quality.get("issue_count") or 0)
     visual_review = trace.get("visual_review") or {}
     quality_benchmark = trace.get("quality_benchmark") or {}
+    image_evidence = trace.get("image_production_evidence") or {}
     requires_quality_benchmark = bool(trace) or bool(
         {"comic_v2_word_canvas", "comic_v2_handoff_manifest"} & artifact_types
     )
@@ -6000,6 +6041,9 @@ def _history_delivery_summary(enriched: dict) -> dict:
         missing_items.append("制片包质量基准")
     elif quality_benchmark and not benchmark_ready:
         missing_items.append("制片包质量基准")
+    if image_evidence and not image_evidence.get("supports_real_quality_claim"):
+        if image_evidence.get("evidence_level") in {"missing_images", "fixture_only", "model_partial", "mixed_or_unknown"}:
+            missing_items.append("图片生产证据")
     if legacy_package:
         missing_items.append("V3 引用与质量清单")
     if failure_count > 0:
@@ -6029,6 +6073,22 @@ def _history_delivery_summary(enriched: dict) -> dict:
     recovery_actions = []
     benchmark_recovery = quality_benchmark.get("recommended_recovery") or {}
     benchmark_action = str(benchmark_recovery.get("action") or "")
+    image_evidence_recovery = _comic_v2_image_evidence_recovery_action(image_evidence, prompt_count)
+    if workspace_id and not legacy_package and not benchmark_action and image_evidence_recovery:
+        recovery_actions.append({
+            "label": image_evidence_recovery["label"],
+            "method": "POST",
+            "path": f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            "body": {"action": image_evidence_recovery["action"]},
+            "workspace_id": workspace_id,
+            "office_id": enriched.get("office_id") or "comic_production",
+            "focus": image_evidence_recovery["focus"],
+            "expected_stage": image_evidence_recovery["expected_stage"],
+            "preserves": image_evidence_recovery["preserves"],
+            "clears": image_evidence_recovery["clears"],
+            "operator_steps": image_evidence_recovery["operator_steps"],
+            "description": image_evidence_recovery["description"],
+        })
     if workspace_id and not legacy_package and not benchmark_ready and benchmark_action in {
         "revise_assets",
         "regenerate_prompts",
