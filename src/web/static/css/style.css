@@ -2888,6 +2888,73 @@ tr:hover td { background: var(--bg); }
     margin-top: 10px;
 }
 
+.history-delivery-action-card,
+.v2-quality-recovery-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.history-delivery-action-card {
+    width: min(100%, 520px);
+}
+
+.recovery-playbook {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid rgba(88, 166, 255, 0.18);
+    border-radius: var(--r-sm);
+    background: rgba(88, 166, 255, 0.06);
+}
+
+.recovery-playbook-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.recovery-playbook-head strong,
+.recovery-playbook b {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.recovery-playbook-head span,
+.recovery-playbook p,
+.recovery-playbook small,
+.recovery-playbook li {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.recovery-playbook p {
+    margin: 0 0 8px;
+}
+
+.recovery-playbook-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.recovery-playbook-grid div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border-radius: var(--r-sm);
+    background: rgba(12, 18, 32, 0.44);
+}
+
+.recovery-playbook ol {
+    margin: 10px 0 0 18px;
+    padding: 0;
+}
+
 .history-artifact-links {
     display: flex;
     flex-wrap: wrap;

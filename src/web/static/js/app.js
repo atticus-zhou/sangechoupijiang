@@ -2142,7 +2142,50 @@ function renderComicV2QualityRecoveryButton(status) {
     ]);
     if (!supported.has(action)) return '';
     const label = recovery.label || '按质量问题退回处理';
-    return `<button class="btn-sm" onclick='recoverComicV2Quality(${JSON.stringify(action)}, this)'>${escapeHtml(label)}</button>`;
+    return `
+        <div class="v2-quality-recovery-panel">
+            ${renderRecoveryPlaybook(recovery)}
+            <button class="btn-sm" onclick='recoverComicV2Quality(${JSON.stringify(action)}, this)'>${escapeHtml(label)}</button>
+        </div>
+    `;
+}
+
+function renderRecoveryPlaybook(recovery) {
+    if (!recovery || typeof recovery !== 'object') return '';
+    const steps = Array.isArray(recovery.operator_steps) ? recovery.operator_steps.filter(Boolean) : [];
+    const preserves = Array.isArray(recovery.preserves) ? recovery.preserves.filter(Boolean) : [];
+    const clears = Array.isArray(recovery.clears) ? recovery.clears.filter(Boolean) : [];
+    const expectedStage = recovery.expected_stage || '';
+    const description = recovery.description || '';
+    if (!steps.length && !preserves.length && !clears.length && !expectedStage && !description) return '';
+    return `
+        <div class="recovery-playbook">
+            <div class="recovery-playbook-head">
+                <strong>恢复说明</strong>
+                ${expectedStage ? `<span>预计退回：${escapeHtml(expectedStage)}</span>` : ''}
+            </div>
+            ${description ? `<p>${escapeHtml(description)}</p>` : ''}
+            <div class="recovery-playbook-grid">
+                ${preserves.length ? `
+                    <div>
+                        <b>会保留</b>
+                        <small>${escapeHtml(preserves.join('、'))}</small>
+                    </div>
+                ` : ''}
+                ${clears.length ? `
+                    <div>
+                        <b>会清除</b>
+                        <small>${escapeHtml(clears.join('、'))}</small>
+                    </div>
+                ` : ''}
+            </div>
+            ${steps.length ? `
+                <ol>
+                    ${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+                </ol>
+            ` : ''}
+        </div>
+    `;
 }
 
 function renderComicDepartmentStep(dept) {
@@ -4254,9 +4297,12 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 ${actions.length ? `
                     <div class="history-delivery-actions">
                         ${actions.map(action => `
-                            <button class="ghost btn-sm" onclick="runHistoryRecoveryAction('${escapeJsAttr(action)}')">
-                                ${escapeHtml(action.label || '继续处理')}
-                            </button>
+                            <div class="history-delivery-action-card">
+                                ${renderRecoveryPlaybook(action)}
+                                <button class="ghost btn-sm" onclick="runHistoryRecoveryAction('${escapeJsAttr(action)}')">
+                                    ${escapeHtml(action.label || '继续处理')}
+                                </button>
+                            </div>
                         `).join('')}
                     </div>
                 ` : ''}
@@ -4340,6 +4386,7 @@ function renderComicV2HistoryTrace(trace) {
                     <span>真实质量 ${benchmark.production_quality_verified ? '已验证' : '未验证'}</span>
                     <span>视觉证据 ${escapeHtml(benchmark.visual_evidence_level || 'unknown')}</span>
                 </div>
+                ${renderRecoveryPlaybook(benchmark.recommended_recovery)}
                 ${(benchmark.limitations || []).length ? `<small>${escapeHtml(benchmark.limitations[0])}</small>` : ''}
             </div>
         ` : ''}

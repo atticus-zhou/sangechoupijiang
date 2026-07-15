@@ -2975,6 +2975,10 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
         "label": str(raw_recovery.get("label") or ""),
         "reason_code": str(raw_recovery.get("reason_code") or ""),
         "description": str(raw_recovery.get("description") or ""),
+        "expected_stage": str(raw_recovery.get("expected_stage") or ""),
+        "preserves": [str(item) for item in (raw_recovery.get("preserves") or []) if str(item).strip()],
+        "clears": [str(item) for item in (raw_recovery.get("clears") or []) if str(item).strip()],
+        "operator_steps": [str(item) for item in (raw_recovery.get("operator_steps") or []) if str(item).strip()],
     } if isinstance(raw_recovery, dict) and raw_recovery else {}
     return {
         "benchmark_version": int(benchmark.get("benchmark_version") or 0),
@@ -5792,6 +5796,11 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "workspace_id": workspace_id,
             "office_id": enriched.get("office_id") or "",
             "focus": benchmark_recovery.get("focus") or "workspace",
+            "expected_stage": benchmark_recovery.get("expected_stage") or "",
+            "preserves": benchmark_recovery.get("preserves") or [],
+            "clears": benchmark_recovery.get("clears") or [],
+            "operator_steps": benchmark_recovery.get("operator_steps") or [],
+            "description": benchmark_recovery.get("description") or "",
         })
     elif workspace_id and not legacy_package and "制片包质量基准" in missing_items and not quality_benchmark:
         recovery_actions.append({

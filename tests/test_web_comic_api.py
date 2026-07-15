@@ -93,6 +93,10 @@ class WebComicApiTests(unittest.TestCase):
                         "label": "重新生成并质检图片",
                         "reason_code": "visual.review_dimensions",
                         "description": "重新生成图片。",
+                        "expected_stage": "image_generation",
+                        "preserves": ["confirmed_story", "prompt_package"],
+                        "clears": ["image_production"],
+                        "operator_steps": ["退回到图片生成阶段", "重新生成失败图片"],
                         "internal": "drop",
                     },
                     "next_action": "进入下游生产。",
@@ -106,6 +110,10 @@ class WebComicApiTests(unittest.TestCase):
         self.assertTrue(summary["production_quality_verified"])
         self.assertEqual(summary["dimensions"][0]["label"], "故事贴合度")
         self.assertEqual(summary["recommended_recovery"]["action"], "regenerate_images")
+        self.assertEqual(summary["recommended_recovery"]["expected_stage"], "image_generation")
+        self.assertIn("prompt_package", summary["recommended_recovery"]["preserves"])
+        self.assertIn("image_production", summary["recommended_recovery"]["clears"])
+        self.assertEqual(len(summary["recommended_recovery"]["operator_steps"]), 2)
         self.assertNotIn("internal", summary["recommended_recovery"])
         self.assertNotIn("raw_model_output", summary)
         self.assertNotIn("internal", summary["dimensions"][0])
@@ -131,6 +139,11 @@ class WebComicApiTests(unittest.TestCase):
                         "action": "regenerate_prompts",
                         "focus": "prompts",
                         "label": "重新生成提示词和镜头卡",
+                        "description": "保留故事和资产，退回提示词导演阶段。",
+                        "expected_stage": "prompt_planning",
+                        "preserves": ["confirmed_story", "asset_manifest"],
+                        "clears": ["prompt_package", "image_production"],
+                        "operator_steps": ["回到提示词规划", "重新生成导演型镜头提示词", "重新质检制片包"],
                     },
                 },
             },
@@ -142,6 +155,10 @@ class WebComicApiTests(unittest.TestCase):
         self.assertEqual(action["path"], "/api/workspaces/ws_quality_recovery/comic/v2/quality/recover")
         self.assertEqual(action["body"], {"action": "regenerate_prompts"})
         self.assertEqual(action["focus"], "prompts")
+        self.assertEqual(action["expected_stage"], "prompt_planning")
+        self.assertIn("asset_manifest", action["preserves"])
+        self.assertIn("image_production", action["clears"])
+        self.assertEqual(action["operator_steps"][0], "回到提示词规划")
 
     def test_history_can_rebuild_an_early_v2_package_missing_quality_benchmark(self):
         summary = _history_delivery_summary({
