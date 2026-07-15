@@ -157,6 +157,8 @@ def fixture_image_production(
                     "revision_prompt": "",
                     "summary": "本地验证模式自动通过，用于测试流程与文档结构。",
                 },
+                production_role=prompt.production_role,
+                clean_background_required=prompt.clean_background_required,
             )
             records.append(record)
             approved_by_asset.setdefault(asset.asset_id, []).append(record.image_id)

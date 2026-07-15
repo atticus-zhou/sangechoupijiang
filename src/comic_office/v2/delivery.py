@@ -184,8 +184,12 @@ def _write_handoff_manifest(
             "manifest_version": record.manifest_version,
             "prompt_hash": record.prompt_hash,
             "prompt_purpose": prompt.purpose if prompt else "",
-            "production_role": prompt.production_role if prompt else "",
-            "clean_background_required": bool(prompt.clean_background_required) if prompt else False,
+            "production_role": record.production_role or (prompt.production_role if prompt else ""),
+            "clean_background_required": (
+                record.clean_background_required
+                if record.production_role
+                else (bool(prompt.clean_background_required) if prompt else False)
+            ),
             "generator_prompt": prompt.generator_prompt if prompt else "",
             "negative_prompt": list(prompt.negative_prompt) if prompt else [],
             "review": dict(record.review or {}),

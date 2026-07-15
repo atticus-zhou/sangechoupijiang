@@ -673,6 +673,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("summary.prompt_quality_summary", summary_fn)
         self.assertIn("提示词门禁", summary_fn)
         self.assertIn("const quality = trace.prompt_quality || {}", trace_fn)
+        self.assertIn("const imageAssets = Array.isArray(trace.image_assets)", trace_fn)
+        self.assertIn("renderComicV2HistoryImageAssets(imageAssets)", trace_fn)
         self.assertIn("提示词质量门禁", trace_fn)
         self.assertIn("quality.clean_asset_prompt_count", trace_fn)
         self.assertIn("quality.director_prompt_count", trace_fn)
@@ -682,6 +684,9 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("const benchmark = trace.quality_benchmark || {}", trace_fn)
         self.assertIn("制片包质量基准", trace_fn)
         self.assertIn("benchmark.production_quality_verified", trace_fn)
+        self.assertIn("function renderComicV2HistoryImageAssets", js)
+        self.assertIn("production_role", js)
+        self.assertIn("clean_background_required", js)
         self.assertIn("legacy_unverifiable", summary_fn)
         self.assertIn("summary.legacy_package", summary_fn)
 

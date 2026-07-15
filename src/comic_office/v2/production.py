@@ -67,6 +67,8 @@ class ImageRecord:
     style_version: int
     manifest_version: int
     review: dict[str, Any]
+    production_role: str = ""
+    clean_background_required: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -162,6 +164,8 @@ def image_production_result_from_dict(payload: dict[str, Any]) -> ImageProductio
             style_version=int(item.get("style_version") or 0),
             manifest_version=int(item.get("manifest_version") or 0),
             review=dict(item.get("review") or {}),
+            production_role=str(item.get("production_role") or ""),
+            clean_background_required=bool(item.get("clean_background_required", False)),
         )
         for item in (payload.get("records") or [])
     )
@@ -389,6 +393,8 @@ async def produce_asset_images(
                 style_version=prompt_package.style_version,
                 manifest_version=prompt_package.manifest_version,
                 review=asdict(final_review),
+                production_role=plan.production_role,
+                clean_background_required=plan.clean_background_required,
             )
             records.append(record)
             if status == "approved":

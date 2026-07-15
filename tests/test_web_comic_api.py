@@ -979,6 +979,8 @@ class WebComicApiTests(unittest.TestCase):
                     {
                         "object_id": "character_001",
                         "image_kind": "three_view",
+                        "production_role": "clean_character_identity_three_view",
+                        "clean_background_required": True,
                         "generator_prompt": "资产ID character_001，风格身份 ink wash fantasy，林昭人物三视图，纯白或近白色干净背景。",
                         "negative_prompt": ["禁止剧情动作", "禁止剧情场景", "禁止文字水印"],
                     }
@@ -1024,8 +1026,19 @@ class WebComicApiTests(unittest.TestCase):
             content=json.dumps({"image_id": "img_char_001_three_view", "asset_id": "char_001"}, ensure_ascii=False),
             metadata={
                 "office_id": "comic_production",
+                "image_id": "img_char_001_three_view",
                 "asset_id": "char_001",
                 "image_kind": "three_view",
+                "production_role": "clean_character_identity_three_view",
+                "clean_background_required": True,
+                "status": "approved",
+                "attempts": 2,
+                "provider": "doubao",
+                "model": "seedream",
+                "prompt_hash": "hash-three-view",
+                "is_identity_baseline": True,
+                "reference_image_ids": [],
+                "review": {"status": "pass", "handoff_ready": True},
                 "path": f"output/workspaces/{workspace_id}/generated/{task_id}/char_001_three_view.png",
             },
             created_by="gongbu",
@@ -1059,6 +1072,11 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["prompt_quality"]["status"], "ready")
             self.assertEqual(trace["prompt_quality"]["clean_asset_prompt_count"], 1)
             self.assertEqual(trace["prompt_quality"]["director_prompt_count"], 1)
+            self.assertEqual(trace["image_asset_count"], 1)
+            self.assertEqual(trace["image_assets"][0]["production_role"], "clean_character_identity_three_view")
+            self.assertTrue(trace["image_assets"][0]["clean_background_required"])
+            self.assertEqual(trace["image_assets"][0]["attempts"], 2)
+            self.assertEqual(trace["image_assets"][0]["review_status"], "pass")
             self.assertEqual(trace["shots"][0]["shot_id"], "shot_001")
             self.assertEqual(trace["shots"][0]["first_frame_reference_image"]["file"], "char_001_three_view.png")
             self.assertEqual(trace["shots"][0]["reference_asset_chain"][0]["name"], "林昭")

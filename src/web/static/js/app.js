@@ -4281,6 +4281,7 @@ function renderComicV2HistoryTrace(trace) {
     const audit = trace.delivery_audit || {};
     const quality = trace.prompt_quality || {};
     const benchmark = trace.quality_benchmark || {};
+    const imageAssets = Array.isArray(trace.image_assets) ? trace.image_assets : [];
     const promptQualityLabel = {
         ready: '通过',
         needs_review: '需复核',
@@ -4342,8 +4343,38 @@ function renderComicV2HistoryTrace(trace) {
                 ${(benchmark.limitations || []).length ? `<small>${escapeHtml(benchmark.limitations[0])}</small>` : ''}
             </div>
         ` : ''}
+        ${renderComicV2HistoryImageAssets(imageAssets)}
         ${renderComicV2HistoryShotPackages(trace.shots)}
         ${renderComicV2LineageTimeline(trace.production_lineage)}
+    `;
+}
+
+function renderComicV2HistoryImageAssets(images) {
+    const items = Array.isArray(images) ? images.filter(image => image && image.image_id) : [];
+    if (!items.length) return '';
+    const visible = items.slice(0, 8);
+    const hiddenCount = Math.max(0, items.length - visible.length);
+    return `
+        <section class="v2-shot-prompt-cards">
+            <div class="v2-shot-prompt-head">
+                <div>
+                    <strong>图片资产追溯</strong>
+                    <span>每张基础图保留生产角色、白底要求、质检状态和重试次数。</span>
+                </div>
+                <span>${items.length} 张图片</span>
+            </div>
+            <div class="v2-shot-card-grid">
+                ${visible.map(image => `
+                    <article class="v2-shot-card">
+                        <h5>${escapeHtml(image.asset_id || image.image_id)}</h5>
+                        <p>${escapeHtml(image.image_kind || '')} · ${escapeHtml(image.production_role || '未标记生产角色')}</p>
+                        <p>状态 ${escapeHtml(image.status || 'unknown')} · 重试 ${escapeHtml(image.attempts || 0)} · ${image.clean_background_required ? '要求干净白底' : '不要求白底'}</p>
+                        <p>质检 ${escapeHtml(image.review_status || 'unknown')} · 模型 ${escapeHtml(image.model || image.provider || '')}</p>
+                    </article>
+                `).join('')}
+            </div>
+            ${hiddenCount ? `<small>另有 ${hiddenCount} 张图片在追溯 JSON 中。</small>` : ''}
+        </section>
     `;
 }
 

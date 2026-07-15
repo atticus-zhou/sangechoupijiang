@@ -5602,6 +5602,11 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
     handoff_meta = handoff_manifest.get("metadata") or {}
     prompt_meta = prompt_package.get("metadata") or {}
     review_meta = visual_review.get("metadata") or {}
+    image_assets = [
+        _comic_v2_history_image_asset(a)
+        for a in artifacts
+        if a.get("artifact_type") == "comic_v2_generated_image"
+    ]
     prompt_quality: dict = {}
     if prompt_package:
         try:
@@ -5625,6 +5630,8 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),
         "prompt_quality": prompt_quality,
         "prompt_quality_status": prompt_quality.get("status", ""),
+        "image_assets": image_assets,
+        "image_asset_count": len(image_assets),
         "visual_review": {
             "title": visual_review.get("title", ""),
             "production_ready": bool(review_meta.get("production_ready")),
@@ -5632,6 +5639,30 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
             "failure_count": review_meta.get("failure_count", 0),
         },
         "delivery_audit": word_meta.get("audit") or {},
+    }
+
+
+def _comic_v2_history_image_asset(artifact: dict) -> dict:
+    metadata = artifact.get("metadata") or {}
+    review = metadata.get("review") or {}
+    return {
+        "artifact_id": artifact.get("artifact_id", ""),
+        "title": artifact.get("title", ""),
+        "uri": artifact.get("uri", ""),
+        "image_id": metadata.get("image_id", ""),
+        "asset_id": metadata.get("asset_id", ""),
+        "image_kind": metadata.get("image_kind", ""),
+        "production_role": metadata.get("production_role", ""),
+        "clean_background_required": bool(metadata.get("clean_background_required", False)),
+        "status": metadata.get("status", ""),
+        "attempts": int(metadata.get("attempts") or 0),
+        "provider": metadata.get("provider", ""),
+        "model": metadata.get("model", ""),
+        "prompt_hash": metadata.get("prompt_hash", ""),
+        "is_identity_baseline": bool(metadata.get("is_identity_baseline")),
+        "reference_image_ids": list(metadata.get("reference_image_ids") or []),
+        "review_status": review.get("status", ""),
+        "review_handoff_ready": bool(review.get("handoff_ready", False)),
     }
 
 

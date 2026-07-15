@@ -71,6 +71,8 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
                     "fixture": True,
                     "summary": "无 Key 固定样例，仅验证流程、引用和交付结构。",
                 },
+                production_role=prompt.production_role,
+                clean_background_required=prompt.clean_background_required,
             ))
     prompt_package = PromptPackage(
         package_id="prompts_fixture",

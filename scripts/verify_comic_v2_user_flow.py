@@ -142,6 +142,8 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
                     style_version=prompt_package.style_version,
                     manifest_version=prompt_package.manifest_version,
                     review={"status": "pass", "fixture": True},
+                    production_role=prompt.production_role,
+                    clean_background_required=prompt.clean_background_required,
                 ))
                 if index == 0:
                     baseline_id = image_id

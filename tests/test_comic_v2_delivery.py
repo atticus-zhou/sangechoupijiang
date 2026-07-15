@@ -127,6 +127,8 @@ def parts(image_dir: Path):
             style_version=bundle.visual.style_version,
             manifest_version=manifest.version,
             review={"status": "pass"},
+            production_role=prompts[index].production_role,
+            clean_background_required=prompts[index].clean_background_required,
         ))
     result = ImageProductionResult(
         status="ready_for_delivery",
@@ -191,6 +193,9 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("镜头验收标准", text)
             self.assertIn("平台执行备注", text)
             self.assertEqual(image_production_result_from_dict(result.to_dict()), result)
+            restored = image_production_result_from_dict(result.to_dict())
+            self.assertEqual(restored.records[0].production_role, "clean_character_identity_three_view")
+            self.assertTrue(restored.records[0].clean_background_required)
 
     def test_delivery_writes_machine_readable_handoff_manifest(self):
         from src.comic_office.v2.delivery import build_delivery_from_v2
