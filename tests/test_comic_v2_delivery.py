@@ -307,6 +307,17 @@ class ComicV2DeliveryTests(unittest.TestCase):
                 self.assertTrue(stage["human_checkpoint"])
                 self.assertTrue(stage["handoff_to"])
                 self.assertTrue(stage["acceptance_criteria"])
+            quick_start = handoff["downstream_quick_start"]
+            self.assertEqual([step["step"] for step in quick_start], [1, 2, 3, 4, 5])
+            self.assertEqual(quick_start[0]["input_refs"], [delivery.path.name])
+            self.assertIn("制片画布", quick_start[0]["title"])
+            self.assertIn(result.records[0].image_id, quick_start[1]["input_refs"])
+            self.assertIn(package.shots[0].shot_id, quick_start[2]["input_refs"])
+            for step in quick_start:
+                self.assertTrue(step["owner"])
+                self.assertTrue(step["action"])
+                self.assertTrue(step["output"])
+                self.assertTrue(step["acceptance"])
             self.assertTrue(handoff["audit"]["handoff_ready"])
             benchmark = handoff["quality_benchmark"]
             self.assertEqual(benchmark["benchmark"], "comic_production_package_quality")

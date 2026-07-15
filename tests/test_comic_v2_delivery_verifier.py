@@ -36,6 +36,8 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertTrue(result["handoff_manifest_shot_execution_notes"])
         self.assertTrue(result["handoff_manifest_production_lineage"])
         self.assertTrue(result["handoff_manifest_lineage_handoff_fields"])
+        self.assertTrue(result["handoff_manifest_downstream_quick_start"])
+        self.assertEqual(result["handoff_manifest_downstream_quick_start_steps"], 5)
         self.assertTrue(result["word_canvas_agent_handoff"])
         self.assertTrue(result["word_canvas_asset_file_references"])
         self.assertLessEqual(result["max_table_columns"], 2)
@@ -68,6 +70,8 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertEqual(payload["embedded_images"], 7)
         self.assertTrue(payload["handoff_manifest_shot_production_package"])
         self.assertTrue(payload["handoff_manifest_image_production_roles"])
+        self.assertTrue(payload["handoff_manifest_downstream_quick_start"])
+        self.assertEqual(payload["handoff_manifest_downstream_quick_start_steps"], 5)
         self.assertTrue(payload["word_canvas_asset_file_references"])
 
     def test_cli_markdown_is_portfolio_readable(self):
@@ -92,6 +96,8 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertIn("Comic V2 Delivery Audit", completed.stdout)
         self.assertIn("Delivery Counts", completed.stdout)
         self.assertIn("Quality Gates", completed.stdout)
+        self.assertIn("Downstream quick-start steps: 5", completed.stdout)
+        self.assertIn("Downstream quick-start playbook", completed.stdout)
         self.assertIn("Word canvas agent handoff checklist", completed.stdout)
 
 

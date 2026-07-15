@@ -95,6 +95,8 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertTrue(runtime["delivery"]["handoff_manifest_shot_production_package"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_production_lineage"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_lineage_handoff_fields"])
+        self.assertTrue(runtime["delivery"]["handoff_manifest_downstream_quick_start"])
+        self.assertEqual(runtime["delivery"]["handoff_manifest_downstream_quick_start_steps"], 5)
         self.assertTrue(runtime["delivery"]["word_canvas_agent_handoff"])
         self.assertTrue(runtime["delivery"]["word_canvas_asset_file_references"])
         self.assertEqual(runtime["user_flow"]["status"], "passed")
@@ -135,6 +137,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertIn("阶段 B 产品闭环", result.stdout)
         self.assertIn("ready_for_handoff", result.stdout)
         self.assertIn("shot_package=True", result.stdout)
+        self.assertIn("quick_start=5", result.stdout)
 
 
 if __name__ == "__main__":

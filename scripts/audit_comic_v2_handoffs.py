@@ -68,7 +68,10 @@ def _candidate_manifest_paths(root: Path) -> list[Path]:
     patterns = ("*handoff_manifest*.json", "*v2_handoff*.json")
     paths: set[Path] = set()
     for pattern in patterns:
-        paths.update(root.rglob(pattern))
+        try:
+            paths.update(root.rglob(pattern))
+        except OSError:
+            continue
     return sorted(path for path in paths if path.is_file())
 
 

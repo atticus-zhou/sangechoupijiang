@@ -296,6 +296,13 @@ def _write_handoff_manifest(
             image_result,
             audit,
         ),
+        "downstream_quick_start": _downstream_quick_start(
+            word_path,
+            assets,
+            images,
+            shots,
+            audit,
+        ),
         "assets": assets,
         "images": images,
         "shots": shots,
@@ -305,6 +312,69 @@ def _write_handoff_manifest(
     path = word_path.with_name(f"{word_path.stem}_handoff_manifest.json")
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
+
+
+def _downstream_quick_start(
+    word_path: Path,
+    assets: list[dict],
+    images: list[dict],
+    shots: list[dict],
+    audit,
+) -> list[dict[str, object]]:
+    """Give downstream video/editing tools a stable, ordered handoff playbook."""
+    asset_baseline_images = [
+        image["image_id"]
+        for image in images
+        if image.get("is_identity_baseline")
+    ]
+    shot_ids = [shot["shot_id"] for shot in shots if shot.get("shot_id")]
+    return [
+        {
+            "step": 1,
+            "title": "确认制片画布",
+            "owner": "礼部 / 下游制片",
+            "input_refs": [word_path.name],
+            "action": "先阅读 Word 制片画布，确认故事、视觉母版、资产清单和镜头执行卡属于同一版交付。",
+            "output": "可继续生产的人工阅读基准。",
+            "acceptance": "Word 画布文件存在，且与 handoff manifest 的故事、资产和镜头数量一致。",
+        },
+        {
+            "step": 2,
+            "title": "锁定基础资产",
+            "owner": "工部 / 下游图片工具",
+            "input_refs": asset_baseline_images,
+            "action": "优先使用人物三视图、道具多角度和场景广角/俯视图作为后续图生视频或镜头生成的参考图。",
+            "output": "每个核心资产都有可复用的身份基准图。",
+            "acceptance": f"可引用资产 {len(assets)} 个，身份基准图 {len(asset_baseline_images)} 张。",
+        },
+        {
+            "step": 3,
+            "title": "逐镜头生成视频",
+            "owner": "兵部 / 下游视频工具",
+            "input_refs": shot_ids,
+            "action": "按镜头顺序读取 first_frame_reference_image、video_prompt_block、negative_prompt_block 和 director_execution，不重新改写资产身份。",
+            "output": "与故事节点对应的视频片段或首帧扩展片段。",
+            "acceptance": f"镜头包 {len(shots)} 个，每个镜头必须保留参考资产、首帧图片和动作链。",
+        },
+        {
+            "step": 4,
+            "title": "执行质量复核",
+            "owner": "刑部 / 下游质检",
+            "input_refs": ["quality_benchmark", "image.review", "shot.acceptance_criteria"],
+            "action": "逐项检查人物脸型、服装、道具、场景时代、动作顺序、运镜和文字水印风险。",
+            "output": "可通过、需重试或需人工修复的镜头清单。",
+            "acceptance": "所有镜头满足 acceptance_criteria；失败镜头按 retry_strategy 重试，不覆盖旧结果。",
+        },
+        {
+            "step": 5,
+            "title": "归档交付证据",
+            "owner": "礼部 / 刑部",
+            "input_refs": ["production_lineage", "audit", "quality_benchmark"],
+            "action": "把生成结果、复核结论、失败重试和最终可用片段回写到交付记录，保留原始 Word 与 manifest。",
+            "output": "可复核的下游生产记录。",
+            "acceptance": f"handoff_ready={bool(getattr(audit, 'handoff_ready', False))}，后续版本不得伪造真实模型质量声明。",
+        },
+    ]
 
 
 def _production_lineage(

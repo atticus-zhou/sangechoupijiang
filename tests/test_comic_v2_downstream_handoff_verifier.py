@@ -39,6 +39,7 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(result["clean_asset_prompt_sets"], 7)
         self.assertEqual(result["director_prompt_sets"], 2)
         self.assertGreaterEqual(result["lineage_stage_count"], 7)
+        self.assertEqual(result["quick_start_step_count"], 5)
 
     def test_cli_json_exposes_downstream_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -64,6 +65,7 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(payload["status"], "passed")
         self.assertTrue(payload["downstream_handoff_ready"])
         self.assertIn("handoff_manifest", payload)
+        self.assertEqual(payload["quick_start_step_count"], 5)
         self.assertEqual(payload["errors"], [])
 
     def test_cli_markdown_is_readable_for_reviewers(self):
@@ -93,6 +95,7 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertIn("Clean asset prompt sets", completed.stdout)
         self.assertIn("Director prompt sets", completed.stdout)
         self.assertIn("Structured director shots: 2", completed.stdout)
+        self.assertIn("Quick-start playbook: 5 steps", completed.stdout)
 
     def test_missing_structured_director_fields_block_handoff(self):
         module = self._module()
@@ -114,6 +117,26 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         )
 
         self.assertTrue(any("structured director execution missing fields" in item for item in failures))
+
+    def test_missing_quick_start_steps_block_handoff(self):
+        module = self._module()
+
+        failures = module._quick_start_failures(
+            [
+                {
+                    "step": 1,
+                    "title": "确认制片画布",
+                    "owner": "礼部",
+                    "input_refs": ["canvas.docx"],
+                    "action": "看 Word",
+                    "output": "阅读基准",
+                    "acceptance": "文件存在",
+                }
+            ],
+            [{"shot_id": "shot_001"}],
+        )
+
+        self.assertTrue(any("at least five" in item for item in failures))
 
 
 if __name__ == "__main__":

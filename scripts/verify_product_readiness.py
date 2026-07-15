@@ -51,6 +51,8 @@ def run_runtime_verification(root: Path) -> dict:
         "handoff_manifest_shot_production_package": bool(delivery.get("handoff_manifest_shot_production_package")),
         "handoff_manifest_production_lineage": bool(delivery.get("handoff_manifest_production_lineage")),
         "handoff_manifest_lineage_handoff_fields": bool(delivery.get("handoff_manifest_lineage_handoff_fields")),
+        "handoff_manifest_downstream_quick_start": bool(delivery.get("handoff_manifest_downstream_quick_start")),
+        "handoff_manifest_downstream_quick_start_steps": delivery.get("handoff_manifest_downstream_quick_start_steps", 0),
         "word_canvas_agent_handoff": bool(delivery.get("word_canvas_agent_handoff")),
         "word_canvas_asset_file_references": bool(delivery.get("word_canvas_asset_file_references")),
         "missing_image_asset_ids": delivery.get("missing_image_asset_ids", []),
@@ -102,6 +104,7 @@ def _stage_b_product_loop(root: Path, delivery: dict, user_flow: dict) -> dict:
                 and delivery.get("handoff_manifest_image_prompts")
                 and delivery.get("handoff_manifest_image_production_roles")
                 and delivery.get("handoff_manifest_shot_production_package")
+                and delivery.get("handoff_manifest_downstream_quick_start")
                 and delivery.get("word_canvas_agent_handoff")
             ),
             "evidence": ["scripts/verify_comic_v2_delivery.py", "scripts/verify_comic_v2_user_flow.py"],
@@ -119,6 +122,7 @@ def _stage_b_product_loop(root: Path, delivery: dict, user_flow: dict) -> dict:
                 delivery.get("handoff_ready")
                 and delivery.get("word_canvas_asset_file_references")
                 and delivery.get("handoff_manifest_shot_reference_images")
+                and delivery.get("handoff_manifest_downstream_quick_start")
                 and user_flow.get("final_stage") == "ready_for_handoff"
                 and int(user_flow.get("download_bytes") or 0) > 1000
             ),

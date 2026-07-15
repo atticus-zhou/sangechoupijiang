@@ -633,6 +633,7 @@ def format_readiness_markdown(audit: dict) -> str:
                 f"shot_package={delivery.get('handoff_manifest_shot_production_package', False)}; "
                 f"lineage={delivery.get('handoff_manifest_production_lineage', False)}; "
                 f"lineage_handoff={delivery.get('handoff_manifest_lineage_handoff_fields', False)}; "
+                f"quick_start={delivery.get('handoff_manifest_downstream_quick_start_steps', 0)}; "
                 f"word_asset_files={delivery.get('word_canvas_asset_file_references', False)}; "
                 f"word_handoff={delivery.get('word_canvas_agent_handoff', False)} |"
             )

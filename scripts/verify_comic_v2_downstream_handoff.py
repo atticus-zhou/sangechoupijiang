@@ -65,6 +65,7 @@ def verify_downstream_handoff(
     asset_failures = _asset_handoff_failures(assets, image_ids)
     shot_failures = _shot_handoff_failures(shots, asset_ids, image_ids)
     lineage_failures = _lineage_failures(manifest.get("production_lineage") or [])
+    quick_start_failures = _quick_start_failures(manifest.get("downstream_quick_start") or [], shots)
     prompt_quality = _prompt_quality_audit(images, shots)
     prompt_quality_failures = [
         f"{item.get('id', '<unknown>')}: {item.get('message', '')}"
@@ -74,6 +75,7 @@ def verify_downstream_handoff(
     errors.extend(asset_failures)
     errors.extend(shot_failures)
     errors.extend(lineage_failures)
+    errors.extend(quick_start_failures)
     errors.extend(prompt_quality_failures)
 
     result = {
@@ -96,6 +98,7 @@ def verify_downstream_handoff(
         "clean_asset_prompt_sets": prompt_quality.get("clean_asset_prompt_count", 0),
         "director_prompt_sets": prompt_quality.get("director_prompt_count", 0),
         "lineage_stage_count": len(manifest.get("production_lineage") or []),
+        "quick_start_step_count": len(manifest.get("downstream_quick_start") or []),
         "errors": errors,
         "downstream_handoff_ready": not errors and bool(delivery.get("handoff_ready")),
     }
@@ -229,6 +232,29 @@ def _lineage_failures(lineage: list[dict[str, Any]]) -> list[str]:
     return failures
 
 
+def _quick_start_failures(steps: list[dict[str, Any]], shots: list[dict[str, Any]]) -> list[str]:
+    failures: list[str] = []
+    if len(steps) < 5:
+        failures.append("downstream_quick_start needs at least five ordered steps")
+        return failures
+    expected_order = list(range(1, len(steps) + 1))
+    actual_order = [step.get("step") for step in steps]
+    if actual_order != expected_order:
+        failures.append(f"downstream_quick_start has non-sequential steps: {actual_order}")
+    for step in steps:
+        label = f"downstream_quick_start.{step.get('step', '<unknown>')}"
+        for field in ("title", "owner", "action", "output", "acceptance"):
+            if not str(step.get(field) or "").strip():
+                failures.append(f"{label}: missing {field}")
+        if not step.get("input_refs"):
+            failures.append(f"{label}: missing input_refs")
+    shot_ids = {shot.get("shot_id") for shot in shots if shot.get("shot_id")}
+    shot_step = next((step for step in steps if "镜头" in str(step.get("title") or "")), {})
+    if not shot_ids.issubset(set(shot_step.get("input_refs") or [])):
+        failures.append("downstream_quick_start video step must reference every shot id")
+    return failures
+
+
 def _prompt_quality_audit(
     images: list[dict[str, Any]],
     shots: list[dict[str, Any]],
@@ -291,6 +317,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- Images: {result.get('image_count')}",
         f"- Shots: {result.get('shot_count')}",
         f"- Lineage stages: {result.get('lineage_stage_count')}",
+        f"- Downstream quick-start steps: {result.get('quick_start_step_count')}",
         "",
         "## Downstream Readiness",
         "",
@@ -299,6 +326,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- Scene spatial sets: {result.get('scene_spatial_sets')}",
         f"- Shot video packages: {result.get('shot_video_packages')}",
         f"- Structured director shots: {result.get('structured_director_shots')}",
+        f"- Quick-start playbook: {result.get('quick_start_step_count')} steps",
         f"- Clean asset prompt sets: {result.get('clean_asset_prompt_sets')}",
         f"- Director prompt sets: {result.get('director_prompt_sets')}",
     ]

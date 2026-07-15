@@ -154,7 +154,8 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"handoff_ready={parsed.get('handoff_ready')}; "
                 f"assets={parsed.get('asset_count')}; "
                 f"shots={parsed.get('shot_count')}; "
-                f"embedded_images={parsed.get('embedded_images')}"
+                f"embedded_images={parsed.get('embedded_images')}; "
+                f"quick_start={parsed.get('handoff_manifest_downstream_quick_start_steps')}"
             )
         if check_id == "comic_downstream_handoff":
             return (
@@ -162,7 +163,8 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"assets={parsed.get('asset_count')}; "
                 f"images={parsed.get('image_count')}; "
                 f"shots={parsed.get('shot_count')}; "
-                f"structured_director_shots={parsed.get('structured_director_shots')}"
+                f"structured_director_shots={parsed.get('structured_director_shots')}; "
+                f"quick_start={parsed.get('quick_start_step_count')}"
             )
         if check_id == "comic_production_benchmark":
             return (

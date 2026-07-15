@@ -240,6 +240,36 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not lineage_ready:
         raise AssertionError("handoff manifest is missing production lineage")
+    quick_start = handoff_manifest.get("downstream_quick_start") or []
+    shot_ids = {
+        shot.get("shot_id")
+        for shot in (handoff_manifest.get("shots") or [])
+        if shot.get("shot_id")
+    }
+    quick_start_ready = (
+        isinstance(quick_start, list)
+        and len(quick_start) >= 5
+        and [item.get("step") for item in quick_start] == list(range(1, len(quick_start) + 1))
+        and all(
+            item.get("title")
+            and item.get("owner")
+            and item.get("input_refs")
+            and item.get("action")
+            and item.get("output")
+            and item.get("acceptance")
+            for item in quick_start
+        )
+        and shot_ids.issubset(set(next(
+            (
+                item.get("input_refs") or []
+                for item in quick_start
+                if "镜头" in str(item.get("title") or "")
+            ),
+            [],
+        )))
+    )
+    if not quick_start_ready:
+        raise AssertionError("handoff manifest is missing the downstream quick-start playbook")
     audit = build.audit
     result = {
         "path": str(build.path),
@@ -257,6 +287,8 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_shot_production_package": shot_production_package_ready,
         "handoff_manifest_production_lineage": lineage_ready,
         "handoff_manifest_lineage_handoff_fields": lineage_handoff_ready,
+        "handoff_manifest_downstream_quick_start": quick_start_ready,
+        "handoff_manifest_downstream_quick_start_steps": len(quick_start),
         "word_canvas_agent_handoff": word_canvas_agent_handoff,
         "word_canvas_asset_file_references": word_canvas_asset_file_references,
         "handoff_ready": audit.handoff_ready,
@@ -301,6 +333,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- Handoff assets: {result.get('handoff_manifest_assets')}",
         f"- Handoff images: {result.get('handoff_manifest_images')}",
         f"- Handoff shots: {result.get('handoff_manifest_shots')}",
+        f"- Downstream quick-start steps: {result.get('handoff_manifest_downstream_quick_start_steps')}",
         "",
         "## Quality Gates",
         "",
@@ -319,6 +352,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         ("handoff_manifest_shot_production_package", "Shot production package"),
         ("handoff_manifest_production_lineage", "Production lineage"),
         ("handoff_manifest_lineage_handoff_fields", "Lineage handoff fields"),
+        ("handoff_manifest_downstream_quick_start", "Downstream quick-start playbook"),
         ("word_canvas_agent_handoff", "Word canvas agent handoff checklist"),
         ("word_canvas_asset_file_references", "Word canvas approved image file references"),
     ]

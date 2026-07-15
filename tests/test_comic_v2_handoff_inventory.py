@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts.audit_comic_v2_handoffs import audit_handoff_inventory, format_markdown
 from scripts.verify_comic_v2_delivery import verify_delivery
@@ -104,6 +105,17 @@ class ComicV2HandoffInventoryTests(unittest.TestCase):
         self.assertIn("legacy_unverifiable", {item["quality_claim"] for item in inventory["manifests"]})
         self.assertNotIn("not comic", markdown)
         self.assertIn("AI Comic V2 Handoff Inventory", markdown)
+
+    def test_inventory_tolerates_disappearing_output_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            with mock.patch.object(Path, "rglob", side_effect=FileNotFoundError("gone")):
+                inventory = audit_handoff_inventory([root])
+
+        self.assertEqual(inventory["status"], "warning")
+        self.assertEqual(inventory["manifest_count"], 0)
+        self.assertEqual(inventory["skipped_roots"], [])
 
 
 if __name__ == "__main__":
