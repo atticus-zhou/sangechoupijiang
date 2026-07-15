@@ -55,6 +55,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_v2_production_benchmark.py", "--format", "json"],
     },
     {
+        "id": "comic_real_production_claim",
+        "title": "AI comic real production claim boundary",
+        "command": ["scripts/verify_comic_real_production_claim.py", "--format", "json"],
+    },
+    {
         "id": "comic_handoff_inventory",
         "title": "AI comic handoff inventory",
         "command": ["scripts/audit_comic_v2_handoffs.py", "--root", "output/comic_v2_production_benchmark", "--format", "json"],
@@ -153,6 +158,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"claim={parsed.get('quality_claim')}; "
                 f"visual_evidence={parsed.get('visual_evidence_level')}; "
                 f"real_quality_verified={parsed.get('production_quality_verified')}"
+            )
+        if check_id == "comic_real_production_claim":
+            return (
+                f"claim_level={parsed.get('claim_level')}; "
+                f"public_show={parsed.get('can_publicly_show')}; "
+                f"real_quality={parsed.get('can_claim_real_quality')}; "
+                f"downstream={parsed.get('downstream_status')}"
             )
         if check_id == "comic_handoff_inventory":
             return (

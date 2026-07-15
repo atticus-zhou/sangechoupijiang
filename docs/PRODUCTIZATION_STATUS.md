@@ -13,6 +13,8 @@ python scripts/verify_productization_status.py --format markdown
 python scripts/verify_model_configuration_guidance.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
+python scripts/verify_comic_real_production_claim.py --format markdown
+docs/REAL_PRODUCTION_CLAIMS.md
 ```
 
 `verify_productization_status.py` 负责检查这份产品化状态表是否覆盖关键目标；`verify_model_configuration_guidance.py` 负责检查模型配置说明、示例配置、前端模型页和 preflight 是否一致；`verify_release_readiness.py` 负责串联 no-key 运行门禁；`check_no_secrets.py` 负责确认仓库没有误提交密钥、日志、数据库和运行产物。

@@ -374,3 +374,18 @@ The comic-production V2 pipeline now declares model-output gates in
 `src/comic_office/v2/planner.py`, `src/comic_office/v2/asset_planner.py`, and
 `src/comic_office/v2/production.py` must validate model JSON through those gates
 before the production chain continues.
+
+## Real Production Claim Check
+
+After a real AI comic run, do not describe a generated package as production
+quality until its handoff manifest has passed the claim check:
+
+```powershell
+python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
+```
+
+Without `--manifest`, the command audits the fixed no-key sample and should
+report `demo_structure_only`. That means the sample can prove workflow,
+lineage, Word canvas, and downstream handoff structure, but it must not be
+described as verified real-model visual quality. See
+[docs/REAL_PRODUCTION_CLAIMS.md](docs/REAL_PRODUCTION_CLAIMS.md).
