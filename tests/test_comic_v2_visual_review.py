@@ -123,6 +123,21 @@ class ComicV2VisualReviewTests(unittest.TestCase):
         self.assertTrue(result.handoff_ready)
         self.assertNotIn("缺少批准参考图", result.issues)
 
+    def test_review_request_carries_production_role_and_background_policy(self):
+        request = build_visual_review_request(
+            "current.png",
+            ["identity.png"],
+            visual_bible_summary="ancient fantasy style",
+            acceptance_criteria=["same character", "clean background"],
+            production_role="clean_character_identity_three_view",
+            clean_background_required=True,
+        )
+
+        self.assertEqual(request.production_role, "clean_character_identity_three_view")
+        self.assertTrue(request.clean_background_required)
+        self.assertIn("production_role: clean_character_identity_three_view", request.instruction)
+        self.assertIn("clean_background_required: True", request.instruction)
+
 
 if __name__ == "__main__":
     unittest.main()

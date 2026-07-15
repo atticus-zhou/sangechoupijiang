@@ -314,6 +314,8 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.records[1].reference_image_ids, (result.records[0].image_id,))
         self.assertEqual(review_requests[0][0].reference_images, ())
         self.assertEqual(review_requests[1][0].reference_images, (result.records[0].path,))
+        self.assertEqual(review_requests[0][0].production_role, "clean_character_identity_three_view")
+        self.assertTrue(review_requests[0][0].clean_background_required)
 
     async def test_failed_review_retries_with_revision_but_keeps_asset_binding(self):
         from src.comic_office.v2.production import direct_asset_prompts, produce_asset_images

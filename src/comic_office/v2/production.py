@@ -355,6 +355,8 @@ async def produce_asset_images(
                     previous_accepted_image=previous,
                     visual_bible_summary=_visual_summary(visual),
                     acceptance_criteria=_acceptance_criteria(asset, image_kind),
+                    production_role=plan.production_role,
+                    clean_background_required=plan.clean_background_required,
                 )
                 try:
                     final_review = _schema_gate_visual_review(

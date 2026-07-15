@@ -27,6 +27,8 @@ class VisualReviewRequest:
     image_paths: tuple[str, ...]
     image_roles: tuple[str, ...]
     instruction: str
+    production_role: str = ""
+    clean_background_required: bool = False
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,8 @@ def build_visual_review_request(
     previous_accepted_image: str = "",
     visual_bible_summary: str = "",
     acceptance_criteria: list[str] | tuple[str, ...] = (),
+    production_role: str = "",
+    clean_background_required: bool = False,
 ) -> VisualReviewRequest:
     """Label every image so the vision model knows what it must compare."""
     current = (current_image or "").strip()
@@ -67,9 +71,17 @@ def build_visual_review_request(
     )
     if previous:
         image_guide.append(f"图{len(paths)}：上一张合格图，用于检查相邻镜头连续性。")
+    production_role = (production_role or "").strip()
+    background_rule = (
+        "必须是纯白或近白色干净背景，不能有剧情场景"
+        if clean_background_required
+        else "不强制白底；如果是场景图，应保留空间结构和环境层次"
+    )
     instruction = "\n".join([
         "你是AI漫剧办公室的视觉总监和一致性质检员。",
         *image_guide,
+        f"production_role: {production_role or 'unlabeled'}",
+        f"clean_background_required: {bool(clean_background_required)}；{background_rule}",
         f"视觉母版：{visual_bible_summary or '未提供'}",
         f"验收标准：{'；'.join(criteria) if criteria else '按七个质量维度执行'}",
         "必须分别给出 identity_consistency、style_consistency、era_media、spatial_structure、asset_purity、anatomy、purpose_fit 的0-100分。",
@@ -85,6 +97,8 @@ def build_visual_review_request(
         image_paths=paths,
         image_roles=roles,
         instruction=instruction,
+        production_role=production_role,
+        clean_background_required=bool(clean_background_required),
     )
 
 
