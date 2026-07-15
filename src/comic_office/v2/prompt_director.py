@@ -19,6 +19,8 @@ class PromptPlan:
     generator_prompt: str
     negative_prompt: tuple[str, ...]
     style_id: str
+    production_role: str = ""
+    clean_background_required: bool = False
 
     def render(self) -> str:
         negative = "；".join(self.negative_prompt)
@@ -68,6 +70,8 @@ def build_asset_prompt_plan(
         raise ValueError(f"{image_kind} is not planned for {asset.asset_id}")
 
     style = _style_clause(visual)
+    production_role = _asset_production_role(asset.asset_type, image_kind)
+    clean_background_required = asset.asset_type in {"character", "prop"}
     locks = "；".join(asset.visual_locks)
     allowed = "、".join(asset.allowed_changes)
     identity = f"资产ID：{asset.asset_id}；资产名称：{asset.name}"
@@ -142,6 +146,8 @@ def build_asset_prompt_plan(
         generator_prompt=prompt,
         negative_prompt=_unique(negative),
         style_id=visual.style_id,
+        production_role=production_role,
+        clean_background_required=clean_background_required,
     )
 
 
@@ -264,6 +270,8 @@ def parse_prompt_director_response(text: str) -> PromptDirectorResult:
                 generator_prompt=_normalize_generator_language(generator_prompt),
                 negative_prompt=_unique(tuple(_prohibition(value) for value in negative)),
                 style_id=str(item.get("style_id") or "").strip(),
+                production_role=str(item.get("production_role") or _infer_production_role(item)).strip(),
+                clean_background_required=_infer_clean_background_required(item),
             ))
     except ValueError as exc:
         return PromptDirectorResult(
@@ -285,6 +293,42 @@ def _style_clause(visual: VisualBible) -> str:
         f"画面比例 {visual.aspect_ratio}，主色 {','.join(visual.palette)}，"
         f"光线 {visual.lighting}，镜头语言 {visual.camera_language}"
     )
+
+
+def _asset_production_role(asset_type: str, image_kind: str) -> str:
+    roles = {
+        ("character", "three_view"): "clean_character_identity_three_view",
+        ("character", "expression_sheet"): "clean_character_expression_library",
+        ("prop", "turnaround"): "clean_prop_turnaround_reference",
+        ("prop", "state_sheet"): "clean_prop_state_reference",
+        ("scene", "wide"): "scene_spatial_wide_reference",
+        ("scene", "top_down"): "scene_spatial_top_down_reference",
+        ("scene", "camera_angles"): "scene_camera_angle_reference",
+    }
+    if (asset_type, image_kind) in roles:
+        return roles[(asset_type, image_kind)]
+    if asset_type in {"character", "prop"}:
+        return f"clean_{asset_type}_{image_kind}_reference"
+    return f"{asset_type}_{image_kind}_reference"
+
+
+def _infer_production_role(item: dict[str, Any]) -> str:
+    object_id = str(item.get("object_id") or "")
+    image_kind = str(item.get("image_kind") or "model_generated")
+    if object_id.startswith("character_"):
+        return _asset_production_role("character", image_kind)
+    if object_id.startswith("prop_"):
+        return _asset_production_role("prop", image_kind)
+    if object_id.startswith("scene_"):
+        return _asset_production_role("scene", image_kind)
+    return "model_directed_asset_reference"
+
+
+def _infer_clean_background_required(item: dict[str, Any]) -> bool:
+    if "clean_background_required" in item:
+        return bool(item.get("clean_background_required"))
+    object_id = str(item.get("object_id") or "")
+    return object_id.startswith("character_") or object_id.startswith("prop_")
 
 
 def _prohibition(value: str) -> str:

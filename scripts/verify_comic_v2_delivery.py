@@ -139,6 +139,13 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not image_prompt_ready:
         raise AssertionError("handoff manifest image records are missing executable prompts")
+    image_production_roles_ready = all(
+        bool(image.get("production_role"))
+        and isinstance(image.get("clean_background_required"), bool)
+        for image in (handoff_manifest.get("images") or [])
+    )
+    if not image_production_roles_ready:
+        raise AssertionError("handoff manifest image records are missing production roles")
     asset_identity_ready = all(
         asset.get("type_label")
         and isinstance(asset.get("visual_locks"), list)
@@ -240,6 +247,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_images": len(handoff_manifest.get("images") or []),
         "handoff_manifest_shots": len(handoff_manifest.get("shots") or []),
         "handoff_manifest_image_prompts": image_prompt_ready,
+        "handoff_manifest_image_production_roles": image_production_roles_ready,
         "handoff_manifest_asset_identity_fields": asset_identity_ready,
         "handoff_manifest_asset_baseline_chain": asset_baseline_chain_ready,
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
@@ -301,6 +309,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         ("handoff_ready", "Overall handoff ready"),
         ("handoff_manifest_exists", "Machine-readable handoff manifest"),
         ("handoff_manifest_image_prompts", "Executable image prompts"),
+        ("handoff_manifest_image_production_roles", "Image production roles"),
         ("handoff_manifest_asset_identity_fields", "Asset identity fields"),
         ("handoff_manifest_asset_baseline_chain", "Asset baseline reference chain"),
         ("handoff_manifest_shot_reference_images", "Shot reference images"),

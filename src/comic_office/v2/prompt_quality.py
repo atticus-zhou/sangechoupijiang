@@ -71,6 +71,8 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
         negative_items = [str(item) for item in (prompt.get("negative_prompt") or [])]
         negative_text = "；".join(negative_items)
         combined = f"{generator}；{negative_text}"
+        production_role = str(prompt.get("production_role") or "")
+        clean_background_required = prompt.get("clean_background_required")
         label = f"{object_id}:{image_kind}" if image_kind else object_id or "asset_prompt"
 
         def add(message: str) -> None:
@@ -84,8 +86,14 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
             add("负面提示词每一项都应该用“禁止”开头。")
         if "资产ID" not in generator or "风格身份" not in generator:
             add("缺少资产 ID 或风格身份，后续一致性追溯会变弱。")
+        if not production_role:
+            add("缺少 production_role，系统无法判断这张基础图是身份照、状态图还是空间参考。")
 
         if object_id.startswith("character_"):
+            if clean_background_required is not True:
+                add("人物资产必须标记 clean_background_required=true。")
+            if production_role and not production_role.startswith("clean_character_"):
+                add("人物资产 production_role 必须是 clean_character_*。")
             if "纯白或近白色干净背景" not in generator:
                 add("人物资产必须要求纯白或近白色干净背景。")
             if image_kind == "three_view" and "三视图" not in generator:
@@ -96,6 +104,10 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 add("人物资产负面提示词必须禁止剧情动作和剧情场景。")
 
         if object_id.startswith("prop_"):
+            if clean_background_required is not True:
+                add("道具资产必须标记 clean_background_required=true。")
+            if production_role and not production_role.startswith("clean_prop_"):
+                add("道具资产 production_role 必须是 clean_prop_*。")
             if "纯白或近白色干净背景" not in generator:
                 add("道具资产必须要求纯白或近白色干净背景。")
             if image_kind == "turnaround" and not any(token in generator for token in ("多角度", "转面")):
@@ -104,6 +116,10 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 add("道具资产负面提示词必须禁止人物入镜和剧情现场。")
 
         if object_id.startswith("scene_"):
+            if clean_background_required is not False:
+                add("场景资产必须标记 clean_background_required=false，避免被误做成白底静物图。")
+            if production_role and not production_role.startswith("scene_"):
+                add("场景资产 production_role 必须是 scene_*。")
             if image_kind == "wide" and "广角空间图" not in generator:
                 add("场景 wide 必须明确广角空间图。")
             if image_kind == "top_down" and "俯视" not in generator:

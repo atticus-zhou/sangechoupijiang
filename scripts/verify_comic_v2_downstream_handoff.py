@@ -238,6 +238,8 @@ def _prompt_quality_audit(
             {
                 "object_id": image.get("asset_id", ""),
                 "image_kind": image.get("image_kind", ""),
+                "production_role": image.get("production_role", ""),
+                "clean_background_required": image.get("clean_background_required"),
                 "generator_prompt": image.get("generator_prompt", ""),
                 "negative_prompt": image.get("negative_prompt") or [],
             }

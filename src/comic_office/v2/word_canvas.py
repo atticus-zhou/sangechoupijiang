@@ -327,6 +327,8 @@ def _add_asset_page(
         ("固定项", "；".join(asset.visual_locks)),
         ("允许变化", "；".join(asset.allowed_changes)),
         ("本页图种", image_kind or "基础身份图"),
+        ("生产角色", prompt.production_role if prompt else ""),
+        ("干净背景要求", "是" if prompt and prompt.clean_background_required else "否"),
         ("批准图片文件", image_path.name if image_path else "未绑定"),
         ("计划图片", "、".join(asset.planned_images)),
     ], compact=True)

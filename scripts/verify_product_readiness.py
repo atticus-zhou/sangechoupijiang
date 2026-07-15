@@ -43,6 +43,7 @@ def run_runtime_verification(root: Path) -> dict:
         "handoff_manifest_images": delivery.get("handoff_manifest_images", 0),
         "handoff_manifest_shots": delivery.get("handoff_manifest_shots", 0),
         "handoff_manifest_image_prompts": bool(delivery.get("handoff_manifest_image_prompts")),
+        "handoff_manifest_image_production_roles": bool(delivery.get("handoff_manifest_image_production_roles")),
         "handoff_manifest_asset_identity_fields": bool(delivery.get("handoff_manifest_asset_identity_fields")),
         "handoff_manifest_asset_baseline_chain": bool(delivery.get("handoff_manifest_asset_baseline_chain")),
         "handoff_manifest_shot_reference_images": bool(delivery.get("handoff_manifest_shot_reference_images")),
@@ -99,6 +100,7 @@ def _stage_b_product_loop(root: Path, delivery: dict, user_flow: dict) -> dict:
             "passed": bool(
                 delivery.get("handoff_manifest_exists")
                 and delivery.get("handoff_manifest_image_prompts")
+                and delivery.get("handoff_manifest_image_production_roles")
                 and delivery.get("handoff_manifest_shot_production_package")
                 and delivery.get("word_canvas_agent_handoff")
             ),

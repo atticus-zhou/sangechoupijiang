@@ -29,6 +29,7 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertEqual(result["handoff_manifest_images"], 7)
         self.assertEqual(result["handoff_manifest_shots"], 2)
         self.assertTrue(result["handoff_manifest_image_prompts"])
+        self.assertTrue(result["handoff_manifest_image_production_roles"])
         self.assertTrue(result["handoff_manifest_asset_identity_fields"])
         self.assertTrue(result["handoff_manifest_asset_baseline_chain"])
         self.assertTrue(result["handoff_manifest_shot_reference_images"])
@@ -66,6 +67,7 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
         self.assertEqual(payload["shot_count"], 2)
         self.assertEqual(payload["embedded_images"], 7)
         self.assertTrue(payload["handoff_manifest_shot_production_package"])
+        self.assertTrue(payload["handoff_manifest_image_production_roles"])
         self.assertTrue(payload["word_canvas_asset_file_references"])
 
     def test_cli_markdown_is_portfolio_readable(self):

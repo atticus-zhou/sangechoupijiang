@@ -95,6 +95,8 @@ def prompt_package_from_dict(payload: dict[str, Any]) -> PromptPackage:
             generator_prompt=str(item.get("generator_prompt") or ""),
             negative_prompt=tuple(item.get("negative_prompt") or ()),
             style_id=str(item.get("style_id") or ""),
+            production_role=str(item.get("production_role") or ""),
+            clean_background_required=bool(item.get("clean_background_required", False)),
         )
         for item in (payload.get("prompts") or [])
     )

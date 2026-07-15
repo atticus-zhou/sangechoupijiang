@@ -229,6 +229,8 @@ def _prompt_specificity(
             {
                 "object_id": item.get("asset_id", ""),
                 "image_kind": item.get("image_kind", ""),
+                "production_role": item.get("production_role", ""),
+                "clean_background_required": item.get("clean_background_required"),
                 "generator_prompt": item.get("generator_prompt", ""),
                 "negative_prompt": item.get("negative_prompt") or [],
             }

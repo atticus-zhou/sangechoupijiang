@@ -87,6 +87,7 @@ class ProductReadinessScriptTests(unittest.TestCase):
         self.assertEqual(runtime["delivery"]["handoff_manifest_images"], runtime["delivery"]["embedded_images"])
         self.assertEqual(runtime["delivery"]["handoff_manifest_shots"], runtime["delivery"]["shot_count"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_image_prompts"])
+        self.assertTrue(runtime["delivery"]["handoff_manifest_image_production_roles"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_asset_identity_fields"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_asset_baseline_chain"])
         self.assertTrue(runtime["delivery"]["handoff_manifest_shot_reference_images"])

@@ -61,6 +61,12 @@ def parts(image_dir: Path):
             generator_prompt=f"林昭 {kind}，靛青长袍，纯白干净背景",
             negative_prompt=("禁止文字水印", "禁止现代服装"),
             style_id=bundle.visual.style_id,
+            production_role=(
+                "clean_character_identity_three_view"
+                if kind == "three_view"
+                else "clean_character_expression_library"
+            ),
+            clean_background_required=True,
         )
         for kind in asset.planned_images
     )
@@ -232,6 +238,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("林昭 three_view", first_image["generator_prompt"])
             self.assertIn("禁止文字水印", first_image["negative_prompt"])
             self.assertIn("禁止现代服装", first_image["negative_prompt"])
+            self.assertEqual(first_image["production_role"], "clean_character_identity_three_view")
+            self.assertTrue(first_image["clean_background_required"])
             self.assertEqual(first_image["story_id"], bundle.creative.story_id)
             self.assertEqual(first_image["style_id"], bundle.visual.style_id)
             self.assertEqual(first_image["manifest_version"], manifest.version)
