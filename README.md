@@ -236,6 +236,14 @@ python scripts/verify_comic_v2_production_benchmark.py --format markdown
 
 这个基准会给出故事贴合度、资产身份证、提示词专属性、导演执行力、视觉质检与追溯五项评分。无 Key 样例只会声明“结构演示已验证”，不会冒充真实模型画质已经通过生产验证；也可以用 `--manifest` 检查任意真实生成的 `*_handoff_manifest.json`。
 
+如果要盘点本地已经生成过的多份制片包，确认哪些是真实质量通过、哪些只是结构样例、哪些需要退回修复，运行：
+
+```powershell
+python scripts/audit_comic_v2_handoffs.py --format markdown
+```
+
+这个盘点脚本默认只扫描 `output` 下的 AI 漫剧 V2 handoff manifest，不调用模型、不读取 API Key，也不会把浏览器插件的普通 `manifest.json` 当成交付物。它会按 `production_quality_verified`、`demo_structure_verified`、`needs_review` 和 `legacy_unverifiable` 分类，并显示 Word 画布是否还存在、责任部门和下一步恢复动作。
+
 基准发现问题时，工作台会显示责任部门和恢复按钮：可把项目退回资产审核、提示词与镜头规划、图片生成与七维质检，或重新组装 Word 与引用清单。后端只执行当前质量基准推荐的恢复动作，避免跳过真正的阻塞阶段。旧版只有 Word、没有 handoff manifest v3 的历史项目会显示“旧版不可审计”，文件仍可下载，但不会被误标成生产质量已验证；早期 V2 包则可从历史补齐 V3 引用与质量清单。
 
 还可以运行完整用户式 V2 流程验证：

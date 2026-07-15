@@ -55,6 +55,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_v2_production_benchmark.py", "--format", "json"],
     },
     {
+        "id": "comic_handoff_inventory",
+        "title": "AI comic handoff inventory",
+        "command": ["scripts/audit_comic_v2_handoffs.py", "--root", "output/comic_v2_production_benchmark", "--format", "json"],
+    },
+    {
         "id": "research_readiness",
         "title": "Research office staged delivery",
         "command": ["scripts/verify_research_office_readiness.py", "--format", "json"],
@@ -148,6 +153,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"claim={parsed.get('quality_claim')}; "
                 f"visual_evidence={parsed.get('visual_evidence_level')}; "
                 f"real_quality_verified={parsed.get('production_quality_verified')}"
+            )
+        if check_id == "comic_handoff_inventory":
+            return (
+                f"manifests={parsed.get('manifest_count')}; "
+                f"production_verified={parsed.get('production_verified_count')}; "
+                f"demo_only={parsed.get('demo_only_count')}; "
+                f"needs_review={parsed.get('needs_review_count')}"
             )
         if check_id == "research_readiness":
             package = parsed.get("artifact_package") or {}

@@ -66,9 +66,10 @@
 ```powershell
 python scripts/verify_comic_v2_downstream_handoff.py --format markdown
 python scripts/verify_comic_v2_production_benchmark.py --format markdown
+python scripts/audit_comic_v2_handoffs.py --format markdown
 ```
 
-这个命令会复用确定性样例生成 Word 和 manifest，然后检查：
+前两条命令会复用确定性样例生成 Word 和 manifest，然后检查：
 
 - story、style、manifest 和 word_canvas 元数据完整。
 - 人物三视图、人物表情表、道具参考图、场景广角图和俯视图存在。
@@ -80,6 +81,8 @@ python scripts/verify_comic_v2_production_benchmark.py --format markdown
 - production_lineage 覆盖故事、视觉、资产、提示词、图片、质检和交付阶段。
 
 第二条命令进一步检查内容质量：完整故事有没有被替换，资产和镜头能不能回指原文，不同资产是否复制同一提示词模板，每条图片提示词是否落实专属视觉锁定，镜头导演参数是否随剧情变化，以及真实图片是否保留七维视觉质检证据。
+
+第三条命令用于盘点已经生成过的本地交付物。它默认扫描 `output` 下的 AI 漫剧 V2 handoff manifest，不调用模型、不读取 API Key，并把结果分成 `production_quality_verified`、`demo_structure_verified`、`needs_review` 和 `legacy_unverifiable`。当本地有多次实验产物时，先看这份盘点，再决定展示哪一份、修复哪一份、丢弃哪一份。
 
 无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、且其他维度全部通过时，才会得到 `production_quality_verified`。
 
