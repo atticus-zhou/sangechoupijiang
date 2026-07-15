@@ -1108,6 +1108,11 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["shots"][0]["reference_asset_chain"][0]["name"], "林昭")
             self.assertEqual(trace["quality_benchmark"]["package_quality_score"], 96)
             self.assertTrue(trace["quality_benchmark"]["production_quality_verified"])
+            self.assertEqual(trace["claim_level"], "real_quality_verified")
+            self.assertEqual(
+                [item["id"] for item in trace["claim_upgrade_checklist"]],
+                ["keep_evidence_bundle", "repeat_after_major_edit"],
+            )
             self.assertIn("首帧参考林昭", trace["shots"][0]["video_prompt_block"])
             self.assertEqual(trace["visual_review"]["record_count"], 7)
             self.assertEqual(
@@ -1139,6 +1144,7 @@ class WebComicApiTests(unittest.TestCase):
             trace_response = self.client.get(row["comic_v2_trace_uri"])
             self.assertEqual(trace_response.status_code, 200)
             self.assertEqual(trace_response.json()["story_id"], "story_123")
+            self.assertEqual(trace_response.json()["claim_level"], "real_quality_verified")
             self.assertEqual(trace_response.json()["prompt_quality_status"], "ready")
             self.assertEqual(trace_response.json()["shots"][0]["shot_id"], "shot_001")
         finally:

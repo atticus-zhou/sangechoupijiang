@@ -3283,6 +3283,40 @@ code { font-family: var(--mono); font-size: 13px; }
     font-size: 12px;
     line-height: 1.5;
 }
+.history-claim-upgrade {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border-radius: var(--r-sm);
+    border: 1px solid rgba(88, 166, 255, 0.18);
+    background: rgba(88, 166, 255, 0.07);
+}
+.history-claim-upgrade strong {
+    color: var(--text);
+    font-size: 13px;
+}
+.history-claim-upgrade ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.history-claim-upgrade li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.history-claim-upgrade span {
+    color: var(--text);
+    font-size: 12px;
+}
+.history-claim-upgrade small {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.45;
+}
 .v2-prompt-quality-actions {
     flex-shrink: 0;
     justify-content: flex-end;

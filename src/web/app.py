@@ -52,6 +52,7 @@ from src.comic_office.v2.fixture_flow import (
 )
 from src.comic_office.v2.planner import PlannerError, plan_contract, revise_visual_bible
 from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
+from src.comic_office.v2.claim_report import claim_level_from_benchmark, claim_upgrade_checklist
 from src.comic_office.v2.production import (
     ProductionError,
     direct_asset_prompts,
@@ -5808,6 +5809,8 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         except (TypeError, json.JSONDecodeError):
             prompt_payload = {}
         prompt_quality = audit_prompt_package(prompt_payload)
+    quality_benchmark = handoff_meta.get("quality_benchmark") or word_meta.get("quality_benchmark") or {}
+    claim_level = claim_level_from_benchmark(quality_benchmark) if quality_benchmark else ""
     return {
         "story_id": word_meta.get("story_id", ""),
         "story_version": word_meta.get("story_version", 0),
@@ -5818,7 +5821,9 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "handoff_manifest_title": handoff_manifest.get("title", ""),
         "production_lineage": handoff_meta.get("production_lineage") or [],
         "shots": handoff_meta.get("shots") or [],
-        "quality_benchmark": handoff_meta.get("quality_benchmark") or word_meta.get("quality_benchmark") or {},
+        "quality_benchmark": quality_benchmark,
+        "claim_level": claim_level,
+        "claim_upgrade_checklist": claim_upgrade_checklist(claim_level, quality_benchmark) if quality_benchmark else [],
         "prompt_package_title": prompt_package.get("title", ""),
         "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),

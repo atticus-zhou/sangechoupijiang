@@ -4328,6 +4328,7 @@ function renderComicV2HistoryTrace(trace) {
     const quality = trace.prompt_quality || {};
     const benchmark = trace.quality_benchmark || {};
     const imageAssets = Array.isArray(trace.image_assets) ? trace.image_assets : [];
+    const claimUpgradeChecklist = Array.isArray(trace.claim_upgrade_checklist) ? trace.claim_upgrade_checklist : [];
     const promptQualityLabel = {
         ready: '通过',
         needs_review: '需复核',
@@ -4385,8 +4386,22 @@ function renderComicV2HistoryTrace(trace) {
                     <span>综合分 ${escapeHtml(benchmark.package_quality_score || 0)} / 100</span>
                     <span>真实质量 ${benchmark.production_quality_verified ? '已验证' : '未验证'}</span>
                     <span>视觉证据 ${escapeHtml(benchmark.visual_evidence_level || 'unknown')}</span>
+                    <span>声明等级 ${escapeHtml(trace.claim_level || 'unknown')}</span>
                 </div>
                 ${renderRecoveryPlaybook(benchmark.recommended_recovery)}
+                ${claimUpgradeChecklist.length ? `
+                    <div class="history-claim-upgrade">
+                        <strong>真实质量声明升级清单</strong>
+                        <ul>
+                            ${claimUpgradeChecklist.slice(0, 3).map(item => `
+                                <li>
+                                    <span>${escapeHtml(item.title || item.id || '补证据')}</span>
+                                    <small>${escapeHtml(item.status || '')} · ${escapeHtml((item.required_evidence || []).join('、'))}</small>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
                 ${(benchmark.limitations || []).length ? `<small>${escapeHtml(benchmark.limitations[0])}</small>` : ''}
             </div>
         ` : ''}
