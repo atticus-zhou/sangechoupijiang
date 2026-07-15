@@ -32,7 +32,8 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
     product = audit_comic_production_readiness(root)
     system_status = str(doctor.get("system", {}).get("status") or "blocked")
     office_status = str(doctor.get("office", {}).get("status") or "blocked")
-    local_ready = system_status == "ready" and office_status == "ready"
+    real_status = str((doctor.get("real_production") or {}).get("status") or "blocked")
+    local_ready = system_status == "ready" and office_status == "ready" and real_status == "ready_for_real_run"
 
     paths = [
         _public_demo_path(),
@@ -171,6 +172,9 @@ def _public_demo_path() -> dict[str, Any]:
 def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str, Any]:
     blocking = list(doctor.get("system", {}).get("blocking_reasons") or [])
     blocking.extend(doctor.get("office", {}).get("blocking_reasons") or [])
+    real = doctor.get("real_production") or {}
+    if real.get("status") not in {"ready_for_real_run", ""}:
+        blocking.append(f"real_production={real.get('status')}")
     return {
         "id": "local_real_use",
         "title": "本地真实使用",
@@ -182,12 +186,15 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
             "Copy config.example.yaml to config.yaml if config.yaml does not exist.",
             "Put API Key values in environment variables or local config.yaml, never in committed files.",
             f"Run `{LOCAL_DOCTOR_COMMAND}` and fix every blocked item it reports.",
+            "Check the doctor section `真实生产前检查`; only start full AI comic production when it says `ready_for_real_run`.",
             f"Start the app with `{SERVER_COMMAND}` and test each department from the model page.",
         ],
         "evidence": [
             f"doctor.status={doctor.get('status', '')}",
             f"system.status={doctor.get('system', {}).get('status', '')}",
             f"comic_production.status={doctor.get('office', {}).get('status', '')}",
+            f"real_production.status={real.get('status', '')}",
+            f"real_production.full={real.get('can_start_full_production')}",
         ],
         "blocking_reasons": blocking,
     }

@@ -49,6 +49,9 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertTrue(any("证据清单" in item["file"] for item in reading_guide))
         self.assertTrue(paths["local_real_use"]["requires_api_key"])
         self.assertIn("config.yaml", "\n".join(paths["local_real_use"]["steps"]))
+        self.assertIn("真实生产前检查", "\n".join(paths["local_real_use"]["steps"]))
+        self.assertIn("real_production.status=", "\n".join(paths["local_real_use"]["evidence"]))
+        self.assertIn("real_production.full=", "\n".join(paths["local_real_use"]["evidence"]))
         self.assertIn("verify_office_isolation.py", "\n".join(paths["developer_extension"]["steps"]))
 
         safety = "\n".join(payload["safety_boundaries"])
@@ -85,6 +88,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("# First Run Readiness", result.stdout)
         self.assertIn("public_demo", result.stdout)
         self.assertIn("local_real_use", result.stdout)
+        self.assertIn("real_production.status=", result.stdout)
         self.assertIn("developer_extension", result.stdout)
         self.assertIn("python run.py --port 8080", result.stdout)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", result.stdout)

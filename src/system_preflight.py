@@ -194,7 +194,7 @@ def _safe_main_office_preflight(config_manager: Any, base_dir: Path) -> dict[str
             "office_id": "comic_production",
             "status": "blocked",
             "summary": str(exc),
-            "next_action": "打开模型页面，检查 AI 漫剧制片办公室各部门供应商、模型名和 API Key。",
+            "next_action": "打开模型页面，检查 AI 漫剧制片办公室各部门供应商、模型名和模型密钥。",
             "blocking_reasons": ["model_configuration"],
             "capabilities": [],
         }
@@ -239,7 +239,7 @@ def _available_modes(checks: list[SystemCheck], office: dict[str, Any]) -> list[
             "id": "no_key_demo",
             "label": "无 Key 演示模式",
             "status": "available",
-            "description": "可以直接查看固定样例、下载样例交付物，不读取也不消耗 API Key。",
+            "description": "可以直接查看固定样例、下载样例交付物，不读取也不消耗模型密钥。",
         }
     ]
     if _has_blocking_runtime(checks):

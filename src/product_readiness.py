@@ -96,7 +96,7 @@ def audit_comic_real_production_start_readiness(
         "operator_checklist": [
             "先在模型页测试中书省、门下省、工部、兵部、刑部的配置。",
             "确认工部是生图模型，刑部是视觉理解模型，文本部门不是误填成纯生图模型。",
-            "开始真实生产前确认 output 目录可写，且公开部署没有暴露个人 API Key。",
+            "开始真实生产前确认 output 目录可写，且公开部署没有暴露个人密钥。",
             "真实生产完成后运行 python scripts/audit_comic_v2_handoffs.py --format markdown。",
             "只有交付盘点和质量基准显示 production_quality_verified 时，才把该包说成真实质量已验证。",
         ],
@@ -572,7 +572,7 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
         "mode": "real_product_with_no_key_demo",
         "status": "needs_work" if failed else "ready_with_demo",
         "summary": (
-            "AI 漫剧制片办公室真实产品条件已具备，并提供不消耗 API Key 的固定样例演示入口。"
+            "AI 漫剧制片办公室真实产品条件已具备，并提供不消耗模型密钥的固定样例演示入口。"
             if not failed else
             "AI 漫剧制片办公室仍有真实产品条件缺口。"
         ),

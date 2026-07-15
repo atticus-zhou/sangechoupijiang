@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 from src.config_manager import ConfigManager
 from src.offices import audit_office_launch_gates, get_office
 from src.office_preflight import build_office_preflight
+from src.product_readiness import audit_comic_real_production_start_readiness
 from src.system_preflight import build_system_preflight
 
 
@@ -28,6 +29,12 @@ def build_doctor_report(base_dir: Path | str = REPO_ROOT) -> dict:
         manager.get_model_config,
         base_dir=root,
     )
+    real_production = _doctor_safe_real_production(
+        audit_comic_real_production_start_readiness(
+            manager.get_model_config,
+            base_dir=root,
+        )
+    )
     offices = _build_office_availability(manager, root)
     status = _overall_status(system.get("status", "blocked"), office.get("status", "blocked"))
     return {
@@ -38,6 +45,7 @@ def build_doctor_report(base_dir: Path | str = REPO_ROOT) -> dict:
         "next_action": _next_action(system, office),
         "system": system,
         "office": office,
+        "real_production": real_production,
         "offices": offices,
     }
 
@@ -90,6 +98,29 @@ def format_doctor_markdown(report: dict) -> str:
         model_kind = item.get("model_kind", "")
         responsible = f"{owner}{model_kind}"
         lines.append(_row(item.get("title"), item.get("status"), responsible, item.get("impact"), item.get("next_action")))
+    real = report.get("real_production") or {}
+    inventory = real.get("handoff_inventory") or {}
+    lines.extend([
+        "",
+        "## 真实生产前检查",
+        "",
+        f"- 状态：{real.get('status', '')}",
+        f"- 摘要：{real.get('summary', '')}",
+        f"- 下一步：{real.get('next_action', '')}",
+        f"- 完整制片包：{'可以开始' if real.get('can_start_full_production') else '暂不可开始'}",
+        f"- 故事/资产/提示词：{'可以先做' if real.get('can_start_limited_planning') else '暂不可开始'}",
+        f"- 交付盘点：{inventory.get('manifest_count', 0)} 份；真实质量通过 {inventory.get('production_verified_count', 0)} 份；结构样例 {inventory.get('demo_only_count', 0)} 份",
+        "",
+        "| 检查项 | 状态 | 负责 | 下一步 |",
+        "| --- | --- | --- | --- |",
+    ])
+    for item in real.get("required_capabilities", []):
+        responsible = " / ".join(part for part in (item.get("owner_label", ""), item.get("model_kind", "")) if part)
+        lines.append(_row(item.get("title"), item.get("status"), responsible, item.get("next_action") or item.get("impact")))
+    checklist = real.get("operator_checklist") or []
+    if checklist:
+        lines.extend(["", "开工前清单："])
+        lines.extend(f"- {item}" for item in checklist)
     return "\n".join(lines)
 
 
@@ -120,6 +151,14 @@ def _build_office_availability(manager: ConfigManager, root: Path) -> list[dict]
             "launch_gate_next_action": launch_gate_next,
         })
     return offices
+
+
+def _doctor_safe_real_production(payload: dict) -> dict:
+    """Keep doctor output user-safe without changing the public API contract."""
+    safe = dict(payload)
+    if "requires_api_key_to_check" in safe:
+        safe["requires_model_key_to_check"] = safe.pop("requires_api_key_to_check")
+    return safe
 
 
 def _overall_status(system_status: str, office_status: str) -> str:

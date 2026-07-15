@@ -23,6 +23,9 @@ class DoctorScriptTests(unittest.TestCase):
         self.assertIn("办公室可用性", result.stdout)
         self.assertIn("Office launch gates", result.stdout)
         self.assertIn("AI 漫剧制片办公室能力", result.stdout)
+        self.assertIn("真实生产前检查", result.stdout)
+        self.assertIn("交付盘点", result.stdout)
+        self.assertIn("开工前清单", result.stdout)
         self.assertIn("下一步", result.stdout)
         self.assertNotIn("api_key", result.stdout.lower())
         self.assertNotIn("LiteLLM", result.stdout + result.stderr)
@@ -65,8 +68,16 @@ class DoctorScriptTests(unittest.TestCase):
         self.assertIn(payload["status"], {"ready", "partial", "blocked"})
         self.assertIn("system", payload)
         self.assertIn("office", payload)
+        self.assertIn("real_production", payload)
         self.assertIn("offices", payload)
         self.assertEqual(payload["office"]["office_id"], "comic_production")
+        self.assertEqual(payload["real_production"]["mode"], "real_production_start_readiness")
+        self.assertIn(
+            payload["real_production"]["status"],
+            {"ready_for_real_run", "limited_planning_only", "blocked"},
+        )
+        self.assertFalse(payload["real_production"]["calls_real_models"])
+        self.assertIn("handoff_inventory", payload["real_production"])
         office_ids = {office["office_id"] for office in payload["offices"]}
         self.assertIn("research", office_ids)
         self.assertIn("comic_production", office_ids)
