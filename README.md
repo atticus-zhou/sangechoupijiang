@@ -51,7 +51,7 @@ python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_first_run_readiness.py --format markdown
 ```
 
-`verify_productization_status.py` 会把公开展示、无 Key 样例、本地复现、AI 漫剧制片交付、研究办公室边界、办公室扩展治理和安全扫描逐条映射到证据；`verify_release_readiness.py` 会把这些 no-key 门禁串起来；`verify_first_run_readiness.py` 会检查第一次运行路径。它们会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
+`verify_productization_status.py` 会把公开展示、无 Key 样例、本地复现、AI 漫剧制片交付、研究办公室边界、办公室隔离、办公室扩展治理和安全扫描逐条映射到证据；`verify_release_readiness.py` 会把这些 no-key 门禁串起来，并在发布前自动检查不同办公室的模型配置、工作区、历史和产物不会串线；`verify_first_run_readiness.py` 会检查第一次运行路径。它们会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
 
 只想放到个人网站或 Vercel 展示时，不需要部署完整 FastAPI 后端。运行下面两条命令会生成一个包含固定样例、真实产品截图和四份下载物的自包含静态站点：
 

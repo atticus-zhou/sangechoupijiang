@@ -40,6 +40,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_handoff_inventory",
                 "research_readiness",
                 "office_governance",
+                "office_isolation",
                 "product_readiness",
                 "secret_scan",
             },
@@ -71,6 +72,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("reading_guide=2/2", research_readiness["summary"])
         office_governance = next(item for item in payload["checks"] if item["id"] == "office_governance")
         self.assertIn("demo_contract=", office_governance["summary"])
+        office_isolation = next(item for item in payload["checks"] if item["id"] == "office_isolation")
+        self.assertIn("checks=5", office_isolation["summary"])
+        self.assertIn("failures=0", office_isolation["summary"])
         self.assertNotIn("sk-", completed.stdout.lower())
 
     def test_markdown_is_release_operator_readable(self):
@@ -98,6 +102,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI comic real production claim boundary", completed.stdout)
         self.assertIn("AI comic handoff inventory", completed.stdout)
         self.assertIn("Research office staged delivery", completed.stdout)
+        self.assertIn("Office isolation", completed.stdout)
         self.assertIn("Secret and runtime artifact scan", completed.stdout)
         self.assertIn("interview_script=4/4", completed.stdout)
         self.assertIn("downloads=5; reading_guide=5/5; backend=False", completed.stdout)
@@ -107,6 +112,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("production_verified=0", completed.stdout)
         self.assertIn("reading_guide=2/2", completed.stdout)
         self.assertIn("demo_contract=6", completed.stdout)
+        self.assertIn("checks=5; failures=0", completed.stdout)
 
 
 if __name__ == "__main__":

@@ -75,6 +75,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_office_extension_governance.py", "--format", "json"],
     },
     {
+        "id": "office_isolation",
+        "title": "Office isolation",
+        "command": ["scripts/verify_office_isolation.py", "--format", "json"],
+    },
+    {
         "id": "product_readiness",
         "title": "Product readiness with deterministic E2E",
         "command": ["scripts/verify_product_readiness.py", "--format", "json", "--run-e2e"],
@@ -189,6 +194,11 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"offices={len(parsed.get('offices') or [])}; "
                 f"demo_contract={len(demo_contract)}"
             )
+        if check_id == "office_isolation":
+            checks = parsed.get("checks") or []
+            failed = [item for item in checks if item.get("status") != "passed"]
+            offices = ",".join(parsed.get("offices") or [])
+            return f"offices={offices}; checks={len(checks)}; failures={len(failed)}"
         if check_id == "product_readiness":
             runtime = parsed.get("runtime_verification") or {}
             stage_b = runtime.get("stage_b_product_loop") or {}
