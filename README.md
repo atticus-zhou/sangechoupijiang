@@ -389,3 +389,17 @@ report `demo_structure_only`. That means the sample can prove workflow,
 lineage, Word canvas, and downstream handoff structure, but it must not be
 described as verified real-model visual quality. See
 [docs/REAL_PRODUCTION_CLAIMS.md](docs/REAL_PRODUCTION_CLAIMS.md).
+
+## Development Checklist
+
+After code or documentation changes, run the repository checklist:
+
+```powershell
+python scripts/verify_development_checklist.py --format markdown
+```
+
+Before public handoff or broad refactors, run the stricter version:
+
+```powershell
+python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean
+```

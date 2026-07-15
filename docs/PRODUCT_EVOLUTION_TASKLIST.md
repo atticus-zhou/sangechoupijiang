@@ -403,6 +403,7 @@
 发布前：
 
 - [ ] `python -m unittest discover -s tests -q`
+- [x] `python scripts/verify_development_checklist.py --format markdown`
 - [ ] `git diff --check`
 - [ ] 敏感信息扫描。
 - [ ] README 与实际功能一致。

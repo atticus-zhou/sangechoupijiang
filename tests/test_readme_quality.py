@@ -56,6 +56,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("输入类型", text)
         self.assertIn("人工审核节点", text)
         self.assertIn("python -m unittest tests.test_sample_project_fixtures -q", text)
+        self.assertIn("python scripts/verify_development_checklist.py --format markdown", text)
+        self.assertIn("python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean", text)
         self.assertIn("config.yaml", text)
         self.assertIn("不会提交到 GitHub", text)
         self.assertIn("docs/DEPLOYMENT_MODES.md", text)

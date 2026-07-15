@@ -105,5 +105,13 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("阶段 B 产品闭环", text)
 
 
+    def test_development_checklist_verifier_is_part_of_required_loop(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("python scripts/verify_development_checklist.py --format markdown", text)
+        self.assertIn("python -m unittest discover -s tests -q", text)
+        self.assertIn("git diff --check", text)
+
+
 if __name__ == "__main__":
     unittest.main()
