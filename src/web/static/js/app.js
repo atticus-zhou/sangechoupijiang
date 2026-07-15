@@ -4951,6 +4951,7 @@ function renderResearchDemo(demo) {
     const competitors = Array.isArray(demo.competitors) ? demo.competitors : [];
     const artifacts = Array.isArray(demo.artifacts) ? demo.artifacts : [];
     const readingGuide = Array.isArray(demo.deliverable_reading_guide) ? demo.deliverable_reading_guide : [];
+    const evidenceHandoff = Array.isArray(demo.evidence_handoff) ? demo.evidence_handoff : [];
     return `
         <section class="demo-hero">
             <span class="showcase-kicker">Research no-key demo</span>
@@ -4987,6 +4988,24 @@ function renderResearchDemo(demo) {
             </div>
         </section>
         ${renderDemoQualityGates(demo.quality_gates)}
+        ${evidenceHandoff.length ? `
+            <section class="demo-section">
+                <div class="demo-section-head">
+                    <h2>待补证据交接表</h2>
+                    <span>${evidenceHandoff.length} 个待补项</span>
+                </div>
+                <div class="research-handoff-grid">
+                    ${evidenceHandoff.map(item => `
+                        <article>
+                            <strong>${escapeHtml(item.title || item.id || '')}</strong>
+                            <span>${escapeHtml(item.owner || '')}</span>
+                            <p>${escapeHtml(item.target_evidence || '')}</p>
+                            <small>补完后升级：${escapeHtml((item.upgrades || []).join('、') || item.why_needed || '')}</small>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
         ${readingGuide.length ? `
             <section class="demo-section">
                 <div class="demo-section-head">

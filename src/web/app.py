@@ -682,6 +682,7 @@ async def get_research_demo_api():
     data_points = _research_demo_data_points(results)
     competitors = _research_demo_competitors(results)
     chart_suggestions = _research_demo_chart_suggestions(results)
+    evidence_handoff = _research_demo_evidence_handoff()
     return {
         "mode": "no_key_demo",
         "office_id": "research",
@@ -729,6 +730,7 @@ async def get_research_demo_api():
             ],
             "public_demo_boundary": "公开演示只展示固定样例和证据缺口，不读取账号、不登录第三方平台、不宣称全自动会员级采集。",
         },
+        "evidence_handoff": evidence_handoff,
         "deliverable_reading_guide": [
             {
                 "order": 1,
@@ -975,6 +977,38 @@ def _public_showcase_interview_demo_script() -> list[dict]:
     ]
 
 
+def _research_demo_evidence_handoff() -> list[dict]:
+    return [
+        {
+            "id": "platform_price_band",
+            "title": "补齐平台价格带截图",
+            "owner": "人类操作者 / 兵部",
+            "target_evidence": "电商或内容平台商品榜单、商品详情页、价格区间截图。",
+            "why_needed": "把“主流消费级价格带=待核验”升级成可引用的价格带判断。",
+            "upgrades": ["数据表", "价格带图表", "开品建议"],
+            "status": "pending_human_account",
+        },
+        {
+            "id": "competitor_ranking",
+            "title": "补齐 TOP 竞品和销量信号",
+            "owner": "人类操作者 / 户部",
+            "target_evidence": "飞瓜、抖音、电商后台或公开榜单中的 TOP 商品、品牌、销量/热度截图。",
+            "why_needed": "把样例竞品从结构占位升级成可对比的竞品矩阵。",
+            "upgrades": ["竞品表", "机会地图", "老板摘要"],
+            "status": "pending_human_account",
+        },
+        {
+            "id": "review_pain_points",
+            "title": "补齐评论痛点截图",
+            "owner": "人类操作者 / 刑部",
+            "target_evidence": "商品评论、达人内容评论区、售后反馈或测评页面截图。",
+            "why_needed": "验证续航、炸机、售后、图传稳定性是否真的是近期高频痛点。",
+            "upgrades": ["评论痛点表", "差异化机会", "风险提示"],
+            "status": "pending_human_account",
+        },
+    ]
+
+
 def _public_showcase_reproducibility_checklist() -> list[dict]:
     return [
         {
@@ -1208,6 +1242,7 @@ def _ensure_research_demo_delivery() -> dict[str, Path]:
         "data_points": _research_demo_data_points(fixture.get("results") or []),
         "competitors": _research_demo_competitors(fixture.get("results") or []),
         "chart_suggestions": _research_demo_chart_suggestions(fixture.get("results") or []),
+        "evidence_handoff": _research_demo_evidence_handoff(),
         "screenshot_plan": (by_type.get("screenshot_plan") or {}).get("content", ""),
         "artifacts": [
             {

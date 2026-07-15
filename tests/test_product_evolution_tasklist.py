@@ -45,6 +45,7 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
 
         self.assertIn("python scripts/verify_research_office_readiness.py --format markdown", text)
         self.assertIn("阶段报告、来源清单、数据表、竞品表、截图计划", text)
+        self.assertIn("待补证据交接表", text)
         self.assertIn("人机协作补证据", text)
 
     def test_release_readiness_verifier_is_part_of_platform_protocol(self):

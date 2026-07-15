@@ -38,7 +38,7 @@
 - AI 漫剧 Word 制片画布：确认故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单处在同一套制片包里。
 - AI 漫剧 handoff manifest：确认 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考和 `production_lineage` 能追踪每个素材和镜头的来源。
 - 研究办公室阶段报告：确认结论、来源、数据表、截图计划和证据缺口分开呈现。
-- 研究办公室证据清单：确认来源、数据、截图计划、缺口和人工确认项没有被伪装成已完成采集。
+- 研究办公室证据清单：确认来源、数据、截图计划、缺口、待补证据交接表和人工确认项没有被伪装成已完成采集。
 
 这份检查也会由 `python scripts/verify_first_run_readiness.py --format markdown` 输出，作为第一次从 GitHub 下载项目后的交付物阅读指南。
 
@@ -71,7 +71,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_comic_v2_delivery.py --format markdown` 能证明 AI 漫剧 Word 画布结构、资产 ID、镜头 ID、图片记录和交付审计可用。
 - `python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 能证明人物三视图、表情、道具、场景广角/俯视图、镜头视频包、首帧参考图和失败重试策略可交接。
 - `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 能证明故事、资产、提示词、镜头、视觉质检和谱系已经交叉校验，并明确区分无 Key 结构样例与真实模型质量证据。
-- `python scripts/verify_research_office_readiness.py --format markdown` 能证明研究办公室只公开阶段性样例和证据边界，不伪装成全自动平台采集。
+- `python scripts/verify_research_office_readiness.py --format markdown` 能证明研究办公室只公开阶段性样例、证据边界和待补证据交接表，不伪装成全自动平台采集。
 - `python scripts/verify_release_readiness.py --format markdown` 能串联全部 no-key 发布门禁。
 - `python scripts/check_no_secrets.py` 能证明仓库没有误提交敏感信息或运行产物。
 

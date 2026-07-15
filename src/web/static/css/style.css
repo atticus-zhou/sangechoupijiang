@@ -330,7 +330,8 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .demo-stage-grid,
 .demo-artifact-grid,
-.demo-quality-grid {
+.demo-quality-grid,
+.research-handoff-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
@@ -346,6 +347,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .demo-artifact-grid article,
 .demo-quality-grid article,
 .demo-viewer-grid article,
+.research-handoff-grid article,
 .demo-list article {
     border: 1px solid rgba(139, 148, 158, 0.16);
     border-radius: 14px;
@@ -368,6 +370,7 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .demo-artifact-grid strong,
 .demo-quality-grid strong,
 .demo-viewer-grid strong,
+.research-handoff-grid strong,
 .demo-list strong {
     display: block;
     color: #e6edf3;
@@ -376,15 +379,18 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 
 .demo-stage-card span,
 .demo-artifact-grid span,
+.research-handoff-grid span,
 .demo-list span,
 .demo-stage-card small,
-.demo-artifact-grid small {
+.demo-artifact-grid small,
+.research-handoff-grid small {
     display: block;
     color: var(--text2);
     font-size: 13px;
 }
 
-.demo-artifact-grid p {
+.demo-artifact-grid p,
+.research-handoff-grid p {
     margin: 10px 0 0;
     color: var(--text2);
     font-size: 13px;

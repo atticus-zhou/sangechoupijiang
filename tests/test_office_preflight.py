@@ -331,6 +331,8 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertGreaterEqual(len(payload["evidence_boundaries"]["covered_in_demo"]), 4)
         self.assertGreaterEqual(len(payload["evidence_boundaries"]["requires_human_or_account"]), 3)
         self.assertIn("不宣称全自动", payload["evidence_boundaries"]["public_demo_boundary"])
+        self.assertGreaterEqual(len(payload["evidence_handoff"]), 3)
+        self.assertTrue(all(item["owner"] and item["target_evidence"] and item["upgrades"] for item in payload["evidence_handoff"]))
         self.assertIn("先看目标", payload["viewer_path"][0]["title"])
         self.assertIn("证据", " ".join(payload["proof_points"]))
         self.assertGreaterEqual(len(payload["deliverable_reading_guide"]), 2)
@@ -363,6 +365,8 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertIn("application/json", manifest.headers.get("content-type", ""))
         self.assertIn("sources", manifest.json())
         self.assertIn("screenshot_plan", manifest.json())
+        self.assertIn("evidence_handoff", manifest.json())
+        self.assertGreaterEqual(len(manifest.json()["evidence_handoff"]), 3)
 
 
 if __name__ == "__main__":

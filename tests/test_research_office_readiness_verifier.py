@@ -46,6 +46,8 @@ class ResearchOfficeReadinessVerifierTests(unittest.TestCase):
         self.assertIn("不宣称全自动", demo["public_demo_boundary"])
         self.assertGreaterEqual(demo["reading_guide_count"], 2)
         self.assertEqual(demo["reading_guide_count"], demo["reading_guide_ready_count"])
+        self.assertGreaterEqual(demo["evidence_handoff_count"], 3)
+        self.assertEqual(demo["evidence_handoff_count"], demo["evidence_handoff_ready_count"])
 
     def test_markdown_is_operator_readable(self):
         completed = subprocess.run(
@@ -67,6 +69,7 @@ class ResearchOfficeReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Public Demo", completed.stdout)
         self.assertIn("Evidence boundaries", completed.stdout)
         self.assertIn("Reading guide", completed.stdout)
+        self.assertIn("Evidence handoff", completed.stdout)
         self.assertIn("/api/demo/research/files/report.md", completed.stdout)
 
 
