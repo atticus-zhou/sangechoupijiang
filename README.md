@@ -1,6 +1,6 @@
 # 三个臭皮匠
 
-三个臭皮匠是一个本地优先的多 Agent 协作工作台。它把复杂任务拆成不同“办公室”，再由一组分工明确的 Agent 协同完成，让用户拿到可审核、可追踪、可下载的交付物，而不是只拿到一段聊天回复。
+三个臭皮匠是一个本地优先的多 Agent 协作工作台。它把复杂任务拆成不同“办公室”，再由一组分工明确的 Agent 协同完成，让用户拿到可审核、可追溯、可下载的交付物，而不是只拿到一段聊天回复。
 
 > 当前状态：早期产品原型。适合本地体验、作品展示和继续二次开发，还不是可以直接托管给陌生用户使用的 SaaS。
 
@@ -8,7 +8,7 @@
 
 - 办公室式产品形态：不同业务进入不同办公室，避免一个入口里堆满所有功能。
 - 多 Agent 分工：用“三省六部”的协作框架拆分规划、审核、生产、质检和交付。
-- 办公室隔离：研究办公室、AI 漫剧制片办公室等场景拥有独立的模型配置、代码链路、产物和历史记录。
+- 办公室隔离：研究办公室、AI 漫剧制片办公室等场景拥有独立的模型配置、工作区、产物和历史记录。
 - 可交付产物：目标不是生成聊天文本，而是生成报告、截图证据、提示词包、制片画布和 Word 文档。
 - 本地优先：配置、历史和生成文件默认留在本机，避免把用户 API Key 或运行产物提交到仓库。
 
@@ -16,7 +16,9 @@
 
 ### 研究办公室
 
-面向市场调研、竞品分析、数据证据、截图归档和报告交付。它适合把“我要调研某个产品/行业”拆成资料收集、证据整理、图表建议和老板可读报告。
+面向市场调研、竞品分析、数据证据、截图归档和报告交付。它适合把“我要调研某个产品或行业”拆成资料收集、证据整理、图表建议和老板可读报告。
+
+当前公开展示边界是阶段性交付：研究办公室演示提供阶段调研报告、来源、数据、截图计划清单，但不伪装成全自动飞瓜会员级抓取。
 
 ### AI 漫剧制片办公室
 
@@ -28,22 +30,28 @@
 4. 中书省和门下省拆解人物、道具、场景，并用原文证据约束，防止凭空增加资产。
 5. 用户审核资产拆解，必要时按意见重拆。
 6. 生成专属资产提示词和镜头提示词。
-7. 生成基础资产图，并进行跨图一致性质检。
+7. 生成基础资产图，并进行跨图一致性和视觉质检。
 8. 输出页面式 Word 制片画布，交给下游视频生成或剪辑平台使用。
 
-V2 的目标交付不是一部成片，而是一份可生产的制片包：人物图、道具图、场景图、镜头提示词、视频提示词、资产引用链路和 Word 画布。生成 Word 时会同时生成一份 `*_handoff_manifest.json`，用于追踪故事版本、视觉母版、资产 ID、图片记录、镜头引用和 Word 文件之间的对应关系。
+V2 的目标交付不是一部成片，而是一份可生产的制片包：人物图、道具图、场景图、镜头提示词、视频提示词、资产引用链路和 Word 画布。生成 Word 时会同时生成 `*_handoff_manifest.json`，用于追踪故事版本、视觉母版、资产 ID、图片记录、镜头引用和 Word 文件之间的对应关系。
 
-生成完成后，历史页可以下载 Word 画布，也可以查看制片追溯：故事版本、风格版本、资产版本、提示词数量、视觉质检结果和交付审计。这样后续修改时能知道这份画布来自哪一版故事、哪一版资产拆解和哪一次图片质检。
+历史页可以下载 Word 画布，也可以查看制片追溯：故事版本、风格版本、资产版本、提示词数量、视觉质检结果和交付审计。
+
+## 三类读者怎么体验
+
+- 面试官：先看首页的无 Key 演示入口和样例交付物。重点看 AI 漫剧制片办公室如何把故事、资产、提示词、图片记录和 Word 画布连成一份可追溯交付包；这条路径不需要 API Key，也不会调用真实模型。
+- 开发者：先跑 `python scripts/verify_first_run_readiness.py --format markdown` 和 `python scripts/doctor.py`，再按 README 配置本地环境。需要扩展新办公室时，先看 `/api/offices/protocols`、上线门禁和隔离验证，不要复制一套临时代码。
+- 普通用户：先通过固定样例确认产品能交付什么；真正创作或调研时，再进入本地真实模式，填写自己的 Key 并在本机运行。不要在公开页面、个人网站或 Vercel 展示页上传自己的 API Key、Cookie、登录态、用户数据或运行产物。
 
 ## 快速开始
 
-建议第一次下载后先跑本地自检，它不会调用真实模型，也不会打印 API Key：
+第一次下载后先跑本地自检，它不会调用真实模型，也不会打印 API Key：
 
 ```powershell
 python scripts/doctor.py
 ```
 
-第一次从 GitHub 下载项目时，也建议先跑复现清单。它会把公开演示、本地真实使用和开发者扩展三条路径分开说明：
+再跑第一次运行清单。它会把公开演示、本地真实使用和开发者扩展三条路径分开说明：
 
 ```powershell
 python scripts/verify_productization_status.py --format markdown
@@ -51,20 +59,18 @@ python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_first_run_readiness.py --format markdown
 ```
 
-`verify_productization_status.py` 会把公开展示、无 Key 样例、本地复现、AI 漫剧制片交付、研究办公室边界、办公室隔离、办公室扩展治理和安全扫描逐条映射到证据；`verify_release_readiness.py` 会把这些 no-key 门禁串起来，并在发布前自动检查不同办公室的模型配置、工作区、历史和产物不会串线；`verify_first_run_readiness.py` 会检查第一次运行路径。它们会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力，告诉你下一步该补什么。
+这些命令会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力。
 
-只想放到个人网站或 Vercel 展示时，不需要部署完整 FastAPI 后端。运行下面两条命令会生成一个包含固定样例、真实产品截图和四份下载物的自包含静态站点：
+如果只想放到个人网站或 Vercel 展示，不需要启动真实 FastAPI 后端。可以导出一个不调用真实模型的静态展示包：
 
 ```powershell
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
 ```
 
-入口是 `dist/public-showcase/index.html`，部署和个人网站接入步骤见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
+输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
 
-如果第一次运行卡住，先看 `verify_first_run_readiness.py` 输出里的 **Common First-run Failures**：它会把依赖未安装、`config.yaml` 缺失、模型预检失败、8080 端口占用、公开部署误开真实模式等常见问题列成“症状、检查命令、恢复动作”，并标明是否需要 API Key。
-
-同时，`doctor.py` 会展示 **Office launch gates（办公室上线门禁）**：无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追踪、schema gate、README 文档和密钥安全扫描是否已达标，并告诉你每个办公室距离公开展示、可复现和真实使用还差哪一步。
+本地真实使用路径：
 
 ```powershell
 python -m venv .venv
@@ -80,77 +86,54 @@ python run.py --port 8080
 http://127.0.0.1:8080/
 ```
 
-## 三类读者怎么体验
+如果第一次运行卡住，先看 `verify_first_run_readiness.py` 输出里的 **Common First-run Failures**。常见问题包括依赖未安装、`config.yaml` 缺失、模型预检失败、8080 端口占用、误把公开演示当成本地真实模式等。
 
-- 面试官：先看首页的无 Key 演示入口和样例交付物。重点观察 AI 漫剧制片办公室如何把故事、资产、提示词、图片记录和 Word 画布串成一个可追溯交付包；这一条路径不需要 API Key，也不会调用真实模型。
-- 开发者：先跑 `python scripts/verify_first_run_readiness.py --format markdown` 和 `python scripts/doctor.py`，再按 README 配置本地环境。需要扩展新办公室时，先看 `/api/offices/protocols`、上线门禁和隔离验证，不要复制一套临时代码。
-- 普通用户：先体验固定样例，确认产品能交付什么；真正创作时再进入本地真实模式，用自己的 API Key 和资料运行。公开页面、个人网站或 Vercel 展示页不要上传自己的 API Key、Cookie、登录态、用户数据或运行产物。
+`doctor.py` 还会展示 **Office launch gates（办公室上线门禁）**，说明无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、schema gate、README 文档和 secret scan 是否已经达标。
 
 ## 第一次使用应该怎么走
 
-建议按下面顺序来，不要一开始就把所有模型都填满：
+推荐顺序：
 
-1. 先跑无 Key 演示：打开首页的演示入口，查看 AI 漫剧制片办公室和研究办公室的固定样例、流程状态、样例 Word 和引用清单。这个阶段不需要 API Key，也不会调用真实模型。
-2. 再进入本地真实模式：复制 `config.example.yaml` 为 `config.yaml`，启动 `python run.py --port 8080`，确认系统检查和模型页面能正常打开。
-3. 先补最小可跑配置：为文本规划部门配置一个可用文本模型，让内阁、中书省、门下省、尚书省、户部、兵部、礼部先能完成故事、资产、提示词和交付规划。
-4. 再补完整制片配置：为刑部补视觉理解模型，为工部补图片生成模型。这样才能做图片一致性质检、基础资产图和更完整的 Word 制片画布。
-5. 每个部门先点测试按钮：模型页面里每个部门都有测试按钮，先测试通过再进入工作台，避免做到一半才发现某个部门不可用。
-
-最小可跑配置适合验证流程：文本模型可用时，系统可以完成故事对齐、资产拆解和提示词规划，但生图和视觉质检可能会被阻塞。
-
-完整制片配置适合真实交付：文本模型、视觉理解模型和图片生成模型都通过测试后，再开始生成 AI 漫剧制片包。
+1. 先跑无 Key 演示，确认固定样例、流程状态、下载物和公开安全边界。
+2. 再进入本地真实模式，复制 `config.example.yaml` 为 `config.yaml`。
+3. 在模型页面为每个部门先点测试按钮。
+4. 从最小可跑配置开始：文本模型可以让故事、资产拆解、提示词和 Word 画布先跑起来。
+5. 再补完整制片配置：文本模型、图片生成模型、视觉理解模型。
+6. 生成后去历史页下载 Word、图片、清单、提示词包和追溯记录。
 
 ### 样例交付物怎么看
 
-无 Key 演示不是让访客只看页面好不好看，而是让他们下载样例交付物后验证产品是否真的能形成可交接材料：
-
-- AI 漫剧 Word 制片画布：看故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单是否在同一份画布里串起来。
-- AI 漫剧 `handoff_manifest.json`：看 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考和 `production_lineage` 是否能说明每个资产从哪里来、交给谁用。
-- 研究办公室阶段报告：看报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现，避免把未确认信息伪装成完整调研。
-- 研究办公室证据清单：看来源、数据、截图计划、缺口和后续人工确认项是否可追踪。
-
-同一套阅读指南也会出现在 `python scripts/verify_first_run_readiness.py --format markdown` 的 `Deliverable reading guide` 中，方便新开发者和面试官按文件逐项检查。
+- AI 漫剧 Word 制片画布：给人看的主交付物。
+- `handoff_manifest.json`：给系统看的引用清单，记录 story、asset、prompt、image、shot 和 Word 的版本关系。
+- 研究办公室阶段报告：用于展示人机协作调研如何保留证据缺口，而不是假装全自动。
+- Deliverable reading guide：告诉面试官或新开发者应该从哪几份文件理解产品价值。
 
 ## 模型配置
 
-复制 `config.example.yaml` 为 `config.yaml` 后，再填写自己的模型服务。推荐用环境变量保存密钥：
+详细说明见 [docs/MODEL_CONFIGURATION.md](docs/MODEL_CONFIGURATION.md)。
 
-```powershell
-$env:DEEPSEEK_API_KEY="your-key"
-$env:DASHSCOPE_API_KEY="your-key"
-$env:ARK_API_KEY="your-key"
-```
+核心原则：
 
-也可以只在本地 `config.yaml` 里填写。`config.yaml` 已被 `.gitignore` 忽略，不会提交到 GitHub。
+- `office_models` 会覆盖全局 `models`。
+- 没配置的部门会继续使用全局 `models` 里的同名部门。
+- 不同办公室的模型配置、工作区、历史和产物必须隔离。
+- 文本模型、生图模型和视觉理解模型是不同能力，不要混填。
 
-打开网页后，模型页面会显示每个部门需要的模型类型、职责、缺失影响和下一步建议。每个部门都有测试按钮，建议先测试通过再进入工作台，避免做到一半才发现某个部门无法调用模型。
+### AI 漫剧制片办公室推荐能力
 
-更完整的部门能力表、最小可跑配置、完整制片配置、办公室隔离规则和常见模型组合见 [docs/MODEL_CONFIGURATION.md](docs/MODEL_CONFIGURATION.md)。如果要确认这部分说明和代码没有漂移，可以运行：
-
-```powershell
-python scripts/verify_model_configuration_guidance.py --format markdown
-```
-
-工作台也会做启动检查：缺少文本模型时会阻止故事/规划，缺少生图模型时会提示只能先生成提示词，缺少视觉模型时会提示可以生图但不能自动质检。
-
-开始真实 AI 漫剧生产前，可以先打开本地只读检查：
-
-```text
-GET /api/offices/comic_production/real-production-readiness
-```
-
-这个接口不会调用真实模型、不会读取或打印 API Key，也不会写入工作区。它会合并办公室模型预检、输出目录检查和本地 handoff 交付盘点，明确返回 `ready_for_real_run`、`limited_planning_only` 或 `blocked`。如果结果不是 `ready_for_real_run`，建议先按 `next_action` 补齐模型或权限，再消耗真实模型额度。
-
-AI 漫剧制片办公室推荐模型类型：
-
-| 部门 | 推荐能力 | 示例方向 |
+| 部门 | 需要的能力 | 说明 |
 | --- | --- | --- |
-| 内阁 / 中书省 / 门下省 / 尚书省 / 吏部 / 户部 / 礼部 | 文本规划与结构化输出 | DeepSeek、Qwen、GPT |
-| 兵部 | 文本镜头 / 视频提示词 | DeepSeek、Qwen、GPT |
-| 刑部 | 图片理解 / 视觉质检，也就是视觉理解模型 | Qwen VL、GPT 多模态、Gemini 多模态 |
-| 工部 | 生图 + 文本组装，也就是图片生成模型加文本模型 | 豆包 Seedream、MiniMax Image、Qwen Image |
+| 中书省 | 文本规划 | 故事合同、视觉母版、资产拆解 |
+| 门下省 | 文本审核 | 检查故事、资产、镜头和交付是否遗漏或跑偏 |
+| 尚书省 | 文本调度 | 阶段调度、状态记录、下一步判断 |
+| 吏部 | 文本连续性 | 人物、道具、场景身份稳定 |
+| 户部 | 文本结构化 | 资产台账和资源引用 |
+| 礼部 | 文本交付 | 面向人的交付说明和阅读指南 |
+| 兵部 | 文本镜头 / 视频提示词 | 镜头、动作链、视频提示词和执行计划 |
+| 刑部 | 文本质检 + 视觉理解 | 结构质检、视觉质检和风险说明 |
+| 工部 | 生图 + 文本组装，也就是图片生成模型加文本模型 | 基础资产图生成、Word 制片画布组装 |
 
-办公室之间的模型配置按 `office_models` 隔离，例如：
+最小示例：
 
 ```yaml
 office_models:
@@ -166,155 +149,68 @@ office_models:
     gongbu:
       provider: doubao
       model: doubao-seedream-5
-      api_key: ${ARK_API_KEY}
+      api_key: ${DOUBAO_API_KEY}
     xingbu:
-      provider: dashscope
-      model: qwen-vl-plus
+      provider: qwen
+      model: qwen-vl-max
       api_key: ${DASHSCOPE_API_KEY}
 ```
 
-office_models 会覆盖全局 models。换句话说，如果某个办公室里单独配置了 `comic_production.gongbu`，AI 漫剧制片办公室的工部就会使用这份配置；没配置的部门会继续使用全局 models 里的同名部门。这样可以先用全局文本模型跑通最小流程，再只为 AI 漫剧制片办公室覆盖工部生图模型和刑部视觉理解模型。
-
 ## 办公室协议
 
-每个办公室都必须声明自己的产品协议，避免后续新增办公室时变成临时拼出来的半成品入口。协议来源在 `src/offices.py`，也可以通过接口读取：
+办公室协议集中在 `src/offices.py`，并通过 `/api/offices/protocols` 暴露。协议 API 会返回 `creation_template`，新办公室必须补齐：
 
-```text
-GET /api/offices/protocols
-```
+- 输入类型和输出类型。
+- Agent 分工。
+- 人工审核节点。
+- artifact contract。
+- schema gate。
+- recovery_actions。
+- 验收标准。
+- `required_demo_contract`，包括 `viewer_path`、proof points、下载物、阅读指南、`interview_demo_script` 和公开安全边界。
 
-工作空间运行时状态可以通过下面接口读取：
+新办公室进入公开展示前，还必须满足 `creation_template.required_launch_gates` 中的上线门槛：`no_key_demo`、`model_preflight`、`end_to_end_test`、`sample_delivery`、`failure_recovery`、`history_trace`、`schema_gate`、`readme_documentation` 和 `secret_scan`。
 
-```text
-GET /api/workspaces/{workspace_id}/runtime-status
-```
-
-它会返回当前阶段、最近任务、产物完成度、缺失产物、人工审核节点和可恢复动作。AI 漫剧制片办公室的工作台会把这部分显示为“当前状态”面板，用来回答三个问题：现在谁在干活、还缺什么、失败后从哪里继续。
-
-协议包含：
-
-- 输入类型：例如灵感、完整剧本、已有角色设定、第三方平台截图或已有资料。
-- 输出类型：例如 Word 制片画布、提示词包、资产身份证、阶段调研报告、来源清单和截图计划。
-- 模型需求：说明每个部门需要文本模型、视觉模型还是生图模型，以及缺失后会影响哪一步。
-- 人工审核节点：说明哪些阶段必须让用户确认，例如故事确认、视觉母版审核、资产拆解审核和交付审核。
-- 产物规则：所有关键产物都要有 `artifact_id`，并在 metadata 中保留来源、版本、责任 Agent 和引用链路。
-- Schema gates：声明哪些关键 Agent 输出必须通过结构化 schema 校验，例如故事合同、资产拆解、提示词包、镜头卡、视觉质检、标准调研报告、来源清单、数据表和竞品表。
-- 失败恢复：每个办公室要声明 `recovery_actions`，让 UI 能告诉用户卡在哪一步、可以重试哪个动作。
-- 新办公室模板：接口同时返回 `creation_template`，用于约束后续办公室必须补齐哪些字段和上线门槛。
-
-这个协议是后续扩展新办公室的硬门槛。一个办公室只有同时具备输入、输出、模型需求、人工审核节点、产物规则、验收标准和可读的公开演示契约，才应该进入公开演示或真实使用链路。产物写入 SQLite 前会执行运行时校验：缺少 `artifact_id` 会被拒绝，缺少来源、版本、责任 Agent 或引用链路时会按工作区和任务上下文补齐后再保存。
-
-新办公室进入公开展示前，还必须满足 `creation_template.required_launch_gates` 中的上线门槛：`no_key_demo`、`model_preflight`、`end_to_end_test`、`sample_delivery`、`failure_recovery`、`history_trace`、`schema_gate`、`readme_documentation` 和 `secret_scan`。这条规则的目的不是增加形式，而是确保每个办公室都能被陌生用户试用、被开发者复现、在失败时恢复，并且不会把模型配置或历史产物串到其他办公室。
-
-同时，`creation_template.required_demo_contract` 要求新办公室的无 Key 演示必须包含 `viewer_path`、`proof_points`、`downloadable_deliverables`、`deliverable_reading_guide`、`interview_demo_script` 和 `public_safety_boundaries`。换句话说，新办公室不能只给一个能打开的接口，还要告诉访客先看什么、下载什么、每个交付物证明什么，以及公开模式不会读取 Key、调用真实模型或写入用户工作区。
-
-开发新办公室时，先用下面的接口查看它是否已经具备公开展示和真实使用的最低条件：
+查看单个办公室的上线门禁：
 
 ```text
 GET /api/offices/{office_id}/launch-gates
 ```
 
-这个接口会逐项返回无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追踪、schema gate、README 文档和密钥安全扫描的状态、证据和下一步动作。状态不是 `ready` 的办公室，不应该进入公开展示或真实生产链路。
+查看工作空间运行时状态：
 
-其中 `evidence_links` 会暴露可点击的证据链接；例如样例交付物下载链接会指向固定的 Word 制片画布、引用清单、阶段调研报告或证据清单，方便个人网站、办公室大厅和外部自检工具直接复用。
-
-## 固定验证
-
-不配置任何真实 API Key，也可以运行确定性 V2 交付验证：
-
-```powershell
-python scripts/verify_comic_v2_delivery.py --format markdown
+```text
+GET /api/workspaces/{workspace_id}/runtime-status
 ```
 
-这个脚本验证 Word 制片画布的结构、资产 ID、镜头 ID、图片嵌入和交付审计。
+它会展示当前阶段、最近任务、产物完成度、缺失产物、人工审核节点和恢复动作。
 
-如果要站在下游视频平台或剪辑流程的角度检查制片包是否能接手，运行：
+开始真实 AI 漫剧生产前，可以先检查主力办公室是否具备完整生产条件：
 
-```powershell
-python scripts/verify_comic_v2_downstream_handoff.py --format markdown
+```text
+GET /api/offices/comic_production/real-production-readiness
 ```
 
-这个脚本会检查人物三视图、表情表、道具参考图、场景广角/俯视图、镜头视频包、首帧参考图、验收标准和失败重试策略是否齐全。对应说明见 `docs/COMIC_DOWNSTREAM_HANDOFF.md`。
+这个接口会说明当前配置是否达到 `ready_for_real_run`，或只能进入 `limited_planning_only`。
 
-如果要检查内容是否真的贴合故事、提示词是否只是复制模板，以及真实图片是否具有足够的视觉质检证据，运行：
+## 公开演示和部署边界
 
-```powershell
-python scripts/verify_comic_v2_production_benchmark.py --format markdown
-```
+公开展示推荐只开放无 Key 演示模式：
 
-这个基准会给出故事贴合度、资产身份证、提示词专属性、导演执行力、视觉质检与追溯五项评分。无 Key 样例只会声明“结构演示已验证”，不会冒充真实模型画质已经通过生产验证；也可以用 `--manifest` 检查任意真实生成的 `*_handoff_manifest.json`。
+- 不读取 `config.yaml`。
+- 不调用真实模型。
+- 不写入用户本地工作区。
+- 不暴露个人 API Key。
+- 不让访客提交真实生产任务。
 
-如果要盘点本地已经生成过的多份制片包，确认哪些是真实质量通过、哪些只是结构样例、哪些需要退回修复，运行：
+部署边界见：
 
-```powershell
-python scripts/audit_comic_v2_handoffs.py --format markdown
-```
+- [docs/DEPLOYMENT_MODES.md](docs/DEPLOYMENT_MODES.md)
+- [docs/PUBLIC_RELEASE_HANDOFF.md](docs/PUBLIC_RELEASE_HANDOFF.md)
+- [docs/PRODUCTIZATION_STATUS.md](docs/PRODUCTIZATION_STATUS.md)
+- [docs/REAL_PRODUCTION_CLAIMS.md](docs/REAL_PRODUCTION_CLAIMS.md)
 
-这个盘点脚本默认只扫描 `output` 下的 AI 漫剧 V2 handoff manifest，不调用模型、不读取 API Key，也不会把浏览器插件的普通 `manifest.json` 当成交付物。它会按 `production_quality_verified`、`demo_structure_verified`、`needs_review` 和 `legacy_unverifiable` 分类，并显示 Word 画布是否还存在、责任部门和下一步恢复动作。
-
-基准发现问题时，工作台会显示责任部门和恢复按钮：可把项目退回资产审核、提示词与镜头规划、图片生成与七维质检，或重新组装 Word 与引用清单。后端只执行当前质量基准推荐的恢复动作，避免跳过真正的阻塞阶段。旧版只有 Word、没有 handoff manifest v3 的历史项目会显示“旧版不可审计”，文件仍可下载，但不会被误标成生产质量已验证；早期 V2 包则可从历史补齐 V3 引用与质量清单。
-
-还可以运行完整用户式 V2 流程验证：
-
-```powershell
-python scripts/verify_comic_v2_user_flow.py
-```
-
-这个脚本会通过真实 FastAPI 端点模拟用户链路：确认故事、退回视觉母版、审核资产、退回资产、生成提示词、生成图片、构建 Word、下载交付文件。它使用确定性假模型和占位图片，不消耗真实 API Key。
-
-如果要检查当前真实本地产品是否具备主力办公室的基础上线条件，可以运行：
-
-```powershell
-python scripts/verify_product_readiness.py --format markdown
-```
-
-这个脚本不会调用模型，只会审计仓库内的证据：完整工作流状态、可下载交付物、模型预检、端到端验证、历史追溯、无 Key 演示入口、办公室协议、产物协议运行时校验、任务失败恢复计划、办公室运行状态、长任务可观测、schema gate、README 和失败处理策略。
-
-如果要验证公开展示入口是否能在无 Key 情况下独立工作，可以运行：
-
-```powershell
-python scripts/verify_public_demo_mode.py --format markdown
-python scripts/verify_research_office_readiness.py --format markdown
-```
-
-这个公开演示模式验证会检查 `/api/demo/public-showcase` 公开展示清单、AI 漫剧制片办公室和研究办公室的 `/api/demo` 入口、样例交付物下载链接和上线门禁证据链接；它不读取个人配置，不调用真实模型，也不消耗 API Key。公开展示清单会把产品定位、面试官/开发者/普通用户参观路径、推荐 demo、下载文件和安全边界打包给个人网站或作品集页面复用。
-
-`/api/demo/public-showcase` 还提供 `portfolio_embed` 和 `public_deployment`：前者给个人网站直接展示产品定位、办公室大厅摘要、3 分钟演示脚本、主流程截图目标、样例交付物和 GitHub 链接；后者声明公开在线版只能使用 demo-only 模式，只允许 `/api/demo`，不允许真实模型调用或写入用户工作区。
-
-首页的“公开展示页”按钮会直接读取同一份 `/api/demo/public-showcase` 清单，把访客路径、可体验办公室、样例交付物、作品集截图目标和公开部署安全边界渲染成可给面试官查看的页面。
-
-如果要验证新增办公室不会串模型、串工作区、串历史或串产物，可以运行：
-
-```powershell
-python scripts/verify_office_isolation.py --format markdown
-```
-
-Before adding or promoting another office, run the shared extension-governance audit:
-
-```powershell
-python scripts/verify_office_extension_governance.py --format markdown
-```
-
-This gate checks that every office uses the shared `OfficeProfile` protocol and that any primary office satisfies the four promotion standards: showcaseable, trial-ready, deliverable, and traceable.
-
-这个隔离验证会在临时目录里创建研究办公室和 AI 漫剧制片办公室的独立模型配置、工作区、产物、任务事件和输出目录，不调用真实模型，不读取真实 `user_data`，也不会打印 API Key。它会特别检查历史追踪是否只按 `payload.workspace_id` 精确归属，避免一个办公室的任务因为备注里提到另一个工作区 ID 而出现在错误历史里。
-
-任务失败或后台中断时，任务详情和办公室时间线会展示恢复计划：失败阶段、责任部门、影响、下一步建议，以及可用时的继续处理按钮。
-
-如果要做更深一层的真实产品验收，可以加上运行时验证：
-
-```powershell
-python scripts/verify_product_readiness.py --format markdown --run-e2e
-```
-
-这会额外跑一遍确定性的 Word 交付链路和模拟用户操作链路，确认流程能到达 `ready_for_handoff`，能生成图片记录，并且能下载 Word 制片画布。它仍然使用假模型和占位图片，不消耗真实 API Key。
-
-仓库保留两套稳定样例：
-
-- `tests/fixtures/comic_v2_sample.json`：AI 漫剧制片办公室样例，可用于验证资产、图片、镜头提示词和 Word 画布。
-- `tests/fixtures/research_sample.json`：研究办公室阶段性报告样例，可用于验证报告、来源、截图清单、数据表和竞品表。
-
-启动本地服务后，首页的无 Key 演示入口会加载固定样例，不会读取或消耗真实 API Key。AI 漫剧制片办公室演示提供样例 Word 制片画布和资产引用清单下载；研究办公室演示提供阶段调研报告和来源、数据、截图计划清单下载。
+## 验证命令
 
 样例项目验证：
 
@@ -322,15 +218,50 @@ python scripts/verify_product_readiness.py --format markdown --run-e2e
 python -m unittest tests.test_sample_project_fixtures -q
 ```
 
-运行完整测试：
+本地全量测试：
 
 ```powershell
 python -m unittest discover -s tests -q
 ```
 
+每次开发改动后的统一检查：
+
+```powershell
+python scripts/verify_development_checklist.py --format markdown
+```
+
+公开交接或大范围重构前，再跑更严格版本：
+
+```powershell
+python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean
+```
+
+单项发布门禁：
+
+```powershell
+python scripts/verify_release_readiness.py --format markdown
+python scripts/verify_model_configuration_guidance.py --format markdown
+python scripts/verify_office_isolation.py --format markdown
+python scripts/verify_office_extension_governance.py --format markdown
+python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_research_office_readiness.py --format markdown
+python scripts/verify_product_readiness.py --format markdown --run-e2e
+python scripts/check_no_secrets.py
+```
+
+AI 漫剧交付验证：
+
+```powershell
+python scripts/verify_comic_v2_delivery.py --format markdown
+python scripts/verify_comic_v2_user_flow.py
+python scripts/verify_comic_v2_downstream_handoff.py --format markdown
+python scripts/verify_comic_v2_production_benchmark.py --format markdown
+python scripts/verify_comic_real_production_claim.py --format markdown
+```
+
 ## 安全说明
 
-这个仓库不应该包含真实 API Key、登录 Cookie、浏览器 Profile、运行历史和生成文件。
+公开仓库不应包含真实 API Key、登录 Cookie、浏览器 Profile、运行历史或生成文件。
 
 默认忽略：
 
@@ -343,63 +274,42 @@ python -m unittest discover -s tests -q
 - `*.sqlite3`
 - `*.docx`
 
-提交或公开仓库前可以运行：
+提交或公开仓库前务必运行：
 
 ```powershell
 python scripts/check_no_secrets.py
 ```
 
-如果要公开部署，不要把自己的 API Key 暴露给访问者。当前推荐方式是公开页面只开放固定样例演示模式；真实生产继续走本地模式，由使用者填写自己的 Key 后再调用对应供应商模型。
+如果要公开部署，不要把自己的 API Key 暴露给访问者。当前推荐方式是公开页面只开放固定样例演示模式；真实生产留在本地模式，让使用者填写自己的 Key 后再调用对应模型。
 
-更完整的公开展示、本地真实模式和未来 SaaS 模式边界见 [docs/DEPLOYMENT_MODES.md](docs/DEPLOYMENT_MODES.md)。公开发布给面试官、访客或新开发者前的交接说明见 [docs/PUBLIC_RELEASE_HANDOFF.md](docs/PUBLIC_RELEASE_HANDOFF.md)。当前产品化目标、证据表和仍未宣称完成的事项见 [docs/PRODUCTIZATION_STATUS.md](docs/PRODUCTIZATION_STATUS.md)。
+## 真实生产声明
 
-## 当前限制
-
-- 这是本地优先原型，长期任务队列、权限、计费、多用户账号体系还没有完整 SaaS 化。
-- 自动截图和第三方平台操作依赖本地浏览器状态、账号权限和页面变化。
-- AI 漫剧制片包已经能导出结构化 Word 画布，但图片一致性、镜头质量和平台适配仍需要继续打磨。
-- 所有 AI 产物都建议人工复核后再交付。
-
-## 项目愿景
-
-三个臭皮匠希望成为一个“办公室式”的 AI 协作平台：用户不需要面对一堆模型参数，而是进入某个办公室，提交目标，和一组有分工的 Agent 一起把事情做完。
-
-## Agent Output Schema Gate
-
-The comic-production V2 pipeline now declares model-output gates in
-`src/comic_office/v2/output_schemas.py`. The enforced gates currently include
-`comic_contract`, `visual_revision`, `asset_manifest`, and
-`asset_manifest_revision`, `asset_prompt_set`, `shot_cards`, and
-`image_review_result`;
-`src/comic_office/v2/planner.py`, `src/comic_office/v2/asset_planner.py`, and
-`src/comic_office/v2/production.py` must validate model JSON through those gates
-before the production chain continues.
-
-## Real Production Claim Check
-
-After a real AI comic run, do not describe a generated package as production
-quality until its handoff manifest has passed the claim check:
+真实 AI 漫剧跑完后，不要直接把生成包描述为生产级质量。先检查 handoff manifest：
 
 ```powershell
 python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
 ```
 
-Without `--manifest`, the command audits the fixed no-key sample and should
-report `demo_structure_only`. That means the sample can prove workflow,
-lineage, Word canvas, and downstream handoff structure, but it must not be
-described as verified real-model visual quality. See
-[docs/REAL_PRODUCTION_CLAIMS.md](docs/REAL_PRODUCTION_CLAIMS.md).
+不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
 
-## Development Checklist
+## 当前边界
 
-After code or documentation changes, run the repository checklist:
+可以公开展示：
 
-```powershell
-python scripts/verify_development_checklist.py --format markdown
-```
+- 办公室大厅和产品定位。
+- AI 漫剧制片办公室固定样例流程。
+- 研究办公室固定样例流程。
+- 样例 Word 制片画布、handoff manifest、研究样例报告和截图目标说明。
+- GitHub README、部署边界、安全说明和 release readiness 结果。
+- `dist/public-showcase` 静态展示包。
 
-Before public handoff or broad refactors, run the stricter version:
+不要宣称已经完成：
 
-```powershell
-python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean
-```
+- 真正多租户 SaaS。
+- 陌生用户在线真实调用模型。
+- 飞瓜等第三方平台的一键全自动会员级截图采集。
+- 新办公室批量上线。
+
+## 当前方向
+
+三个臭皮匠希望成为一个“办公室式”的 AI 协作平台：用户不需要面对一堆模型参数，而是进入某个办公室，提交目标，和一组有分工的 Agent 一起把事情做完。
