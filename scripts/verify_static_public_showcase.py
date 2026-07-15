@@ -105,6 +105,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 errors.append(f"static download hash mismatch: {local_uri}")
 
         portfolio = showcase.get("portfolio_embed") or {}
+        release_badge = portfolio.get("release_badge") or {}
         real_production_claim = portfolio.get("real_production_claim") or {}
         claim_uri = str(real_production_claim.get("uri") or "")
         claim_path = temp_dir / claim_uri
@@ -141,6 +142,16 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 errors.append(f"static reproducibility item is incomplete: {item.get('title')}")
         if not any("verify_release_readiness.py" in str(item.get("command") or "") for item in reproducibility):
             errors.append("static reproducibility checklist must include the release readiness gate")
+        if release_badge.get("status") != "safe_public_demo":
+            errors.append("static showcase must include a safe_public_demo release badge")
+        if release_badge.get("mode") != "demo_only":
+            errors.append("static release badge must stay demo_only")
+        if release_badge.get("can_claim_real_quality") is not False:
+            errors.append("static release badge must not claim real visual quality")
+        if "verify_release_readiness.py" not in str(release_badge.get("primary_gate") or ""):
+            errors.append("static release badge must link to release readiness")
+        if len(release_badge.get("signals") or []) < 5:
+            errors.append("static release badge must include at least five signals")
 
         demos = showcase.get("featured_demos") or []
         for demo in demos:
@@ -165,7 +176,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static showcase contains secret-like values: " + ", ".join(secret_like_files))
 
         index_text = (temp_dir / "index.html").read_text(encoding="utf-8")
-        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "交付物阅读顺序", "复现与验收清单", "公开部署安全边界"):
+        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "复现与验收清单", "公开部署安全边界"):
             if marker not in index_text and marker not in (temp_dir / "style.css").read_text(encoding="utf-8"):
                 errors.append(f"static showcase page is missing marker: {marker}")
 
@@ -182,6 +193,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "reading_guide_count": len(reading_guide),
             "reading_guide_ready_count": ready_reading_items,
             "reproducibility_count": len(reproducibility),
+            "release_badge_status": release_badge.get("status", ""),
+            "release_badge_signal_count": len(release_badge.get("signals") or []),
             "featured_demo_count": len(demos),
             "screenshot_ready": screenshot_ready,
             "claim_report_ready": bool(
@@ -212,6 +225,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Downloadable deliverables: {payload.get('download_count')}",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- Reproducibility checklist: {payload.get('reproducibility_count')} commands",
+        f"- Release badge: {payload.get('release_badge_status')} / signals={payload.get('release_badge_signal_count')}",
         f"- Featured demos: {payload.get('featured_demo_count')}",
         f"- Real product screenshot: {payload.get('screenshot_ready')}",
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",

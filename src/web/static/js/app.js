@@ -4564,6 +4564,7 @@ function renderPublicShowcase(showcase) {
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
     const realProductionClaim = portfolio.real_production_claim || {};
+    const releaseBadge = portfolio.release_badge || {};
     const deployment = showcase.public_deployment || {};
     return `
         <section class="demo-hero public-showcase-hero">
@@ -4576,6 +4577,21 @@ function renderPublicShowcase(showcase) {
                 <span>不写入用户工作区</span>
                 <span>样例交付物可下载</span>
             </div>
+            ${releaseBadge.status ? `
+                <div class="public-release-badge">
+                    <div>
+                        <strong>${escapeHtml(releaseBadge.label || '可公开展示')}</strong>
+                        <span>${escapeHtml(releaseBadge.mode || 'demo_only')} · ${escapeHtml(releaseBadge.status || '')}</span>
+                    </div>
+                    <p>${escapeHtml(releaseBadge.summary || '')}</p>
+                    <div class="public-release-signals">
+                        ${(releaseBadge.signals || []).map(item => `
+                            <span class="${escapeHtml(item.status || 'passed')}">${escapeHtml(item.label || '')}：${escapeHtml(item.value || '')}</span>
+                        `).join('')}
+                    </div>
+                    <small>总门禁：${escapeHtml(releaseBadge.primary_gate || '')}</small>
+                </div>
+            ` : ''}
             <div class="public-showcase-actions">
                 <button onclick="navigate('demo_comic')">看 AI 漫剧样例</button>
                 <button class="ghost" onclick="navigate('demo_research')">看研究样例</button>

@@ -76,6 +76,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     static_export = public_deployment.get("static_export") or {}
     interview_script = portfolio_embed.get("interview_demo_script") or []
     reproducibility = portfolio_embed.get("reproducibility_checklist") or []
+    release_badge = portfolio_embed.get("release_badge") or {}
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
     if payload.get("mode") != "public_no_key_showcase":
@@ -112,6 +113,16 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append(f"reproducibility checklist item missing command/expected/if_fails: {item.get('title')}")
     if not any("verify_release_readiness.py" in str(item.get("command") or "") for item in reproducibility):
         errors.append("reproducibility checklist must include the release readiness gate")
+    if release_badge.get("status") != "safe_public_demo":
+        errors.append("portfolio embed must expose a safe_public_demo release badge")
+    if release_badge.get("mode") != "demo_only":
+        errors.append("release badge must clearly state demo_only mode")
+    if release_badge.get("can_claim_real_quality") is not False:
+        errors.append("release badge must not claim real model visual quality")
+    if "verify_release_readiness.py" not in str(release_badge.get("primary_gate") or ""):
+        errors.append("release badge must point to the release readiness gate")
+    if len(release_badge.get("signals") or []) < 5:
+        errors.append("release badge must include at least five public safety signals")
     if not any((item.get("kind") == "screenshot_target") for item in portfolio_embed.get("workflow_showcase") or []):
         errors.append("portfolio embed must include screenshot targets for the main workflow")
     if handoff_inventory.get("uri") != "/api/demo/comic-production/handoff-inventory":
@@ -177,6 +188,9 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             for item in reproducibility
             if item.get("command") and item.get("expected") and item.get("if_fails")
         ),
+        "release_badge_status": release_badge.get("status", ""),
+        "release_badge_signal_count": len(release_badge.get("signals") or []),
+        "release_badge_claim_real_quality": release_badge.get("can_claim_real_quality"),
         "handoff_inventory_uri": handoff_inventory.get("uri", ""),
         "handoff_inventory_manifest_count": handoff_inventory.get("manifest_count", 0),
         "handoff_inventory_production_verified_count": handoff_inventory.get("production_verified_count", 0),
@@ -352,6 +366,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 交付物阅读顺序：{manifest.get('reading_guide_count')} 步，其中 {manifest.get('reading_guide_ready_count')} 步可复核",
         f"- 面试演示脚本：{manifest.get('interview_script_count')} 步，其中 {manifest.get('interview_script_ready_count')} 步可复用",
         f"- 复现与验收清单：{manifest.get('reproducibility_count')} 步，其中 {manifest.get('reproducibility_ready_count')} 步可执行",
+        f"- 发布状态铭牌：{manifest.get('release_badge_status')}，信号 {manifest.get('release_badge_signal_count')} 条，真实画质声明 {manifest.get('release_badge_claim_real_quality')}",
         f"- 漫剧交付盘点：{inventory.get('manifest_count')} 份，真实质量通过 {inventory.get('production_verified_count')} 份，结构样例 {inventory.get('demo_only_count')} 份",
         f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",

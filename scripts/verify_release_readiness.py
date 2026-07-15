@@ -139,6 +139,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"reading_guide={showcase.get('reading_guide_ready_count')}/{showcase.get('reading_guide_count')}; "
                 f"interview_script={showcase.get('interview_script_ready_count')}/{showcase.get('interview_script_count')}; "
                 f"reproducibility={showcase.get('reproducibility_ready_count')}/{showcase.get('reproducibility_count')}; "
+                f"badge={showcase.get('release_badge_status')}; "
                 f"mode={parsed.get('mode')}"
             )
         if check_id == "static_showcase":

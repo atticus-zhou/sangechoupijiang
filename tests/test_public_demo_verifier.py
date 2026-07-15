@@ -41,6 +41,9 @@ class PublicDemoVerifierTests(unittest.TestCase):
             payload["showcase_manifest"]["reproducibility_count"],
             payload["showcase_manifest"]["reproducibility_ready_count"],
         )
+        self.assertEqual(payload["showcase_manifest"]["release_badge_status"], "safe_public_demo")
+        self.assertGreaterEqual(payload["showcase_manifest"]["release_badge_signal_count"], 5)
+        self.assertFalse(payload["showcase_manifest"]["release_badge_claim_real_quality"])
         self.assertEqual(
             payload["showcase_manifest"]["handoff_inventory_uri"],
             "/api/demo/comic-production/handoff-inventory",
@@ -111,6 +114,8 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("交付物阅读顺序", result.stdout)
         self.assertIn("面试演示脚本", result.stdout)
         self.assertIn("复现与验收清单", result.stdout)
+        self.assertIn("发布状态铭牌", result.stdout)
+        self.assertIn("safe_public_demo", result.stdout)
         self.assertIn("漫剧交付盘点", result.stdout)
         self.assertIn("不调用真实模型", result.stdout)
         self.assertIn("claim report", result.stdout)

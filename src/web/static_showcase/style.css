@@ -119,6 +119,46 @@ a {
   font-size: 13px;
 }
 
+.release-badge {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(99, 167, 255, 0.28);
+  border-radius: 12px;
+  background: rgba(19, 25, 34, 0.72);
+}
+
+.release-badge:empty {
+  display: none;
+}
+
+.release-badge-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.release-badge-head strong {
+  font-size: 18px;
+}
+
+.release-badge-head span,
+.release-badge p {
+  color: var(--muted);
+}
+
+.release-badge-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.release-badge-signals .status-pill.bounded {
+  border-color: rgba(239, 184, 78, 0.35);
+  color: #f3d38a;
+}
+
 .hero-actions,
 .download-row {
   display: flex;

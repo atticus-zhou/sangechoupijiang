@@ -142,6 +142,28 @@
     grid.appendChild(status);
   }
 
+  function renderReleaseBadge() {
+    const portfolio = showcase.portfolio_embed || {};
+    const badge = portfolio.release_badge || {};
+    const target = document.getElementById('release-badge');
+    if (!target || !badge.status) return;
+    const head = element('div', 'release-badge-head');
+    head.appendChild(element('strong', '', badge.label || '可公开展示'));
+    head.appendChild(element('span', '', text(badge.mode || 'demo_only') + ' · ' + text(badge.status)));
+    target.appendChild(head);
+    target.appendChild(element('p', '', badge.summary || '固定样例可以公开展示，真实生产仍需本地配置自己的模型 Key。'));
+    const signals = element('div', 'release-badge-signals');
+    (badge.signals || []).forEach(function (item) {
+      signals.appendChild(element(
+        'span',
+        'status-pill ' + text(item.status || 'passed'),
+        text(item.label) + '：' + text(item.value)
+      ));
+    });
+    target.appendChild(signals);
+    addTextRow(target, '总门禁', badge.primary_gate);
+  }
+
   function renderReadingGuide() {
     const portfolio = showcase.portfolio_embed || {};
     const guide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
@@ -209,6 +231,7 @@
   if (repository) document.getElementById('repository-link').href = repository;
 
   renderAudiencePaths();
+  renderReleaseBadge();
   renderClaimBoundary();
   renderOffices();
   renderReadingGuide();

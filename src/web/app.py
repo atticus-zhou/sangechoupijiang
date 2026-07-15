@@ -1049,6 +1049,35 @@ def _public_showcase_reproducibility_checklist() -> list[dict]:
     ]
 
 
+def _public_showcase_release_badge(comic_inventory: dict, comic_claim: dict) -> dict:
+    return {
+        "status": "safe_public_demo",
+        "label": "可公开展示",
+        "mode": "demo_only",
+        "summary": "固定样例、下载物和发布门禁可公开展示；真实生产仍需使用者在本地填写自己的模型 Key。",
+        "signals": [
+            {"label": "API Key", "value": "不需要", "status": "passed"},
+            {"label": "真实模型调用", "value": "不调用", "status": "passed"},
+            {"label": "静态托管", "value": "支持", "status": "passed"},
+            {"label": "真实画质声明", "value": "未验证", "status": "bounded"},
+            {
+                "label": "交付盘点",
+                "value": f"{comic_inventory.get('manifest_count', 0)} 份结构样例",
+                "status": "passed",
+            },
+        ],
+        "safe_public_claim": comic_inventory.get("safe_public_claim", ""),
+        "claim_level": comic_claim.get("claim_level", "demo_structure_only"),
+        "can_claim_real_quality": comic_claim.get("can_claim_real_quality", False),
+        "primary_gate": "python scripts/verify_release_readiness.py --format markdown",
+        "proof_commands": [
+            "python scripts/verify_public_demo_mode.py --format markdown",
+            "python scripts/verify_static_public_showcase.py --format markdown",
+            "python scripts/check_no_secrets.py",
+        ],
+    }
+
+
 @app.get("/api/demo/public-showcase")
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
@@ -1157,6 +1186,7 @@ async def get_public_showcase_demo_api():
                 },
             ],
             "sample_deliverables": sample_deliverables,
+            "release_badge": _public_showcase_release_badge(comic_inventory, comic_claim),
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),

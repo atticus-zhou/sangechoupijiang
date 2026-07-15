@@ -51,6 +51,14 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         embed = payload["portfolio_embed"]
         self.assertEqual(embed["repository_url"], "https://github.com/atticus-zhou/sangechoupijiang")
         self.assertIn("办公室大厅", embed["office_hall"]["title"])
+        release_badge = embed["release_badge"]
+        self.assertEqual(release_badge["status"], "safe_public_demo")
+        self.assertEqual(release_badge["mode"], "demo_only")
+        self.assertIn("可公开展示", release_badge["label"])
+        self.assertFalse(release_badge["can_claim_real_quality"])
+        self.assertIn("verify_release_readiness.py", release_badge["primary_gate"])
+        self.assertGreaterEqual(len(release_badge["signals"]), 5)
+        self.assertTrue(any(item["label"] == "真实画质声明" for item in release_badge["signals"]))
         self.assertGreaterEqual(len(embed["workflow_showcase"]), 4)
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
         self.assertGreaterEqual(len(embed["sample_deliverables"]), 5)

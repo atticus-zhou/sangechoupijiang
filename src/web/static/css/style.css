@@ -276,6 +276,51 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 12px;
 }
 
+.public-release-badge {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid rgba(111, 191, 255, 0.24);
+    border-radius: 12px;
+    background: rgba(12, 24, 38, 0.72);
+}
+
+.public-release-badge > div:first-child {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.public-release-badge strong {
+    color: #eaf4ff;
+    font-size: 18px;
+}
+
+.public-release-badge small,
+.public-release-badge span {
+    color: var(--text2);
+}
+
+.public-release-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.public-release-signals span {
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid rgba(88, 166, 255, 0.22);
+    font-size: 12px;
+}
+
+.public-release-signals span.bounded {
+    background: rgba(240, 185, 68, 0.1);
+    border-color: rgba(240, 185, 68, 0.24);
+}
+
 .showcase-actions {
     display: flex;
     gap: 10px;

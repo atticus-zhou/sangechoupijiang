@@ -24,7 +24,7 @@ docs/REAL_PRODUCTION_CLAIMS.md
 
 | ID | 产品化承诺 | 当前状态 | 权威证据 |
 | --- | --- | --- | --- |
-| P1 | 个人网站和公开作品集可以展示产品，但不暴露真实 API Key | 已具备 demo-only 展示边界和后端无关的静态部署包 | `python scripts/verify_public_demo_mode.py --format markdown`、`python scripts/verify_static_public_showcase.py --format markdown`、`/api/demo/public-showcase`、`docs/STATIC_SHOWCASE_DEPLOYMENT.md` |
+| P1 | 个人网站和公开作品集可以展示产品，但不暴露真实 API Key | 已具备 demo-only 展示边界、发布状态铭牌和后端无关的静态部署包 | `python scripts/verify_public_demo_mode.py --format markdown`、`python scripts/verify_static_public_showcase.py --format markdown`、`/api/demo/public-showcase` 的 `release_badge`、`docs/STATIC_SHOWCASE_DEPLOYMENT.md` |
 | P2 | 面试官可以无 Key 看到固定样例、流程说明、样例交付物和下载物 | 已具备公开演示包，并提供复现与验收清单说明每条 no-key 检查命令证明什么 | `/api/demo/public-showcase` 的 `portfolio_embed`、样例 Word 画布、handoff manifest、`python scripts/verify_public_demo_mode.py --format markdown` |
 | P3 | 从 GitHub 下载项目后，开发者能复现本地运行路径 | 已具备第一次运行清单 | `python scripts/verify_first_run_readiness.py --format markdown`、`python scripts/doctor.py`、`README.md` |
 | P4 | AI 漫剧制片办公室输出不止聊天文本，而是可追溯制片包 | 已具备 deterministic 样例交付验证 | `python scripts/verify_comic_v2_delivery.py --format markdown`、`python scripts/verify_comic_v2_user_flow.py`、Word 制片画布、`*_handoff_manifest.json` |
@@ -42,6 +42,7 @@ docs/REAL_PRODUCTION_CLAIMS.md
 推荐公开页面展示：
 
 - 办公室大厅和产品定位。
+- 发布状态铭牌，集中说明无 Key、demo-only、静态托管、真实模型不调用和真实画质未验证。
 - AI 漫剧制片办公室的固定样例流程。
 - 研究办公室的固定样例流程。
 - 样例 Word 制片画布、handoff manifest、研究样例报告和截图目标说明。
