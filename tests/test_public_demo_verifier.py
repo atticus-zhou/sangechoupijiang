@@ -36,6 +36,11 @@ class PublicDemoVerifierTests(unittest.TestCase):
             payload["showcase_manifest"]["interview_script_count"],
             payload["showcase_manifest"]["interview_script_ready_count"],
         )
+        self.assertGreaterEqual(payload["showcase_manifest"]["reproducibility_count"], 5)
+        self.assertEqual(
+            payload["showcase_manifest"]["reproducibility_count"],
+            payload["showcase_manifest"]["reproducibility_ready_count"],
+        )
         self.assertEqual(
             payload["showcase_manifest"]["handoff_inventory_uri"],
             "/api/demo/comic-production/handoff-inventory",
@@ -105,6 +110,7 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("公开展示清单", result.stdout)
         self.assertIn("交付物阅读顺序", result.stdout)
         self.assertIn("面试演示脚本", result.stdout)
+        self.assertIn("复现与验收清单", result.stdout)
         self.assertIn("漫剧交付盘点", result.stdout)
         self.assertIn("不调用真实模型", result.stdout)
         self.assertIn("claim report", result.stdout)

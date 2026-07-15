@@ -4560,6 +4560,7 @@ function renderPublicShowcase(showcase) {
     const deliverables = Array.isArray(portfolio.sample_deliverables) ? portfolio.sample_deliverables : [];
     const readingGuide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
     const interviewScript = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
+    const reproducibility = Array.isArray(portfolio.reproducibility_checklist) ? portfolio.reproducibility_checklist : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
     const realProductionClaim = portfolio.real_production_claim || {};
@@ -4645,6 +4646,27 @@ function renderPublicShowcase(showcase) {
                                 <p><span>产品反馈</span>${escapeHtml(item.product_response || '')}</p>
                                 <p><span>证明什么</span>${escapeHtml(item.proof || '')}</p>
                                 <small>${escapeHtml(item.boundary || '')}</small>
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
+        ${reproducibility.length ? `
+            <section class="demo-section public-repro-section">
+                <div class="demo-section-head">
+                    <h2>复现与验收清单</h2>
+                    <span>${reproducibility.length} 条命令</span>
+                </div>
+                <div class="public-repro-list">
+                    ${reproducibility.map(item => `
+                        <article>
+                            <b>${escapeHtml(item.order || '')}</b>
+                            <div>
+                                <strong>${escapeHtml(item.title || '')}</strong>
+                                <code>${escapeHtml(item.command || '')}</code>
+                                <p><span>通过时</span>${escapeHtml(item.expected || '')}</p>
+                                <small>失败时：${escapeHtml(item.if_fails || '')}</small>
                             </div>
                         </article>
                     `).join('')}

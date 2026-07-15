@@ -133,6 +133,15 @@ def verify_static_public_showcase() -> dict[str, Any]:
             else:
                 errors.append(f"static reading guide item is not locally usable: {item.get('title') or uri}")
 
+        reproducibility = portfolio.get("reproducibility_checklist") or []
+        if len(reproducibility) < 5:
+            errors.append("static showcase must include a 5-step reproducibility checklist")
+        for item in reproducibility:
+            if not item.get("command") or not item.get("expected") or not item.get("if_fails"):
+                errors.append(f"static reproducibility item is incomplete: {item.get('title')}")
+        if not any("verify_release_readiness.py" in str(item.get("command") or "") for item in reproducibility):
+            errors.append("static reproducibility checklist must include the release readiness gate")
+
         demos = showcase.get("featured_demos") or []
         for demo in demos:
             if demo.get("demo_uri") != f"#office-{demo.get('office_id')}":
@@ -156,7 +165,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static showcase contains secret-like values: " + ", ".join(secret_like_files))
 
         index_text = (temp_dir / "index.html").read_text(encoding="utf-8")
-        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "交付物阅读顺序", "公开部署安全边界"):
+        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "交付物阅读顺序", "复现与验收清单", "公开部署安全边界"):
             if marker not in index_text and marker not in (temp_dir / "style.css").read_text(encoding="utf-8"):
                 errors.append(f"static showcase page is missing marker: {marker}")
 
@@ -172,6 +181,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "download_count": len(downloads),
             "reading_guide_count": len(reading_guide),
             "reading_guide_ready_count": ready_reading_items,
+            "reproducibility_count": len(reproducibility),
             "featured_demo_count": len(demos),
             "screenshot_ready": screenshot_ready,
             "claim_report_ready": bool(
@@ -201,6 +211,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Files: {payload.get('file_count')}",
         f"- Downloadable deliverables: {payload.get('download_count')}",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
+        f"- Reproducibility checklist: {payload.get('reproducibility_count')} commands",
         f"- Featured demos: {payload.get('featured_demo_count')}",
         f"- Real product screenshot: {payload.get('screenshot_ready')}",
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",

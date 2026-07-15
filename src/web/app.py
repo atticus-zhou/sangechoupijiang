@@ -974,6 +974,46 @@ def _public_showcase_interview_demo_script() -> list[dict]:
     ]
 
 
+def _public_showcase_reproducibility_checklist() -> list[dict]:
+    return [
+        {
+            "order": 1,
+            "title": "确认第一次运行路径",
+            "command": "python scripts/verify_first_run_readiness.py --format markdown",
+            "expected": "看到 public_demo、local_real_use 和 developer_extension 三条路径，说明新用户知道先跑无 Key 演示还是本地真实使用。",
+            "if_fails": "先修 README、部署说明或 first-run 文档，不要直接把仓库交给访客。",
+        },
+        {
+            "order": 2,
+            "title": "验证公开无 Key 演示",
+            "command": "python scripts/verify_public_demo_mode.py --format markdown",
+            "expected": "看到 AI 漫剧制片办公室和研究办公室都有固定样例、下载物、阅读指南和安全边界。",
+            "if_fails": "先检查 /api/demo/public-showcase、样例下载文件和办公室 launch gate 证据链接。",
+        },
+        {
+            "order": 3,
+            "title": "导出可托管静态展示包",
+            "command": "python scripts/export_public_showcase.py && python scripts/verify_static_public_showcase.py --format markdown",
+            "expected": "看到 dist/public-showcase/index.html、5 个下载物、5/5 阅读指南，并且 requires_backend=False。",
+            "if_fails": "不要部署到 Vercel；先修复静态下载路径、data.js、截图资产或 claim report。",
+        },
+        {
+            "order": 4,
+            "title": "验证真实生产声明边界",
+            "command": "python scripts/verify_comic_real_production_claim.py --format markdown",
+            "expected": "看到 claim_level=demo_structure_only，明确不能宣称真实模型画质已验证。",
+            "if_fails": "先修真实生产声明报告，避免作品集或 README 夸大能力。",
+        },
+        {
+            "order": 5,
+            "title": "最后跑公开发布总门禁",
+            "command": "python scripts/verify_release_readiness.py --format markdown",
+            "expected": "看到 All no-key release gates passed，并且 secret scan 通过。",
+            "if_fails": "按失败项逐一修复；不要用单个局部测试替代总门禁。",
+        },
+    ]
+
+
 @app.get("/api/demo/public-showcase")
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
@@ -1084,6 +1124,7 @@ async def get_public_showcase_demo_api():
             "sample_deliverables": sample_deliverables,
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
+            "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
             "handoff_inventory": {
                 "uri": "/api/demo/comic-production/handoff-inventory",
                 "status": comic_inventory.get("status", ""),

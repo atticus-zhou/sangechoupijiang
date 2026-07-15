@@ -25,6 +25,7 @@ dist/public-showcase/index.html
 - AI 漫剧制片办公室与研究办公室的固定样例说明。
 - 样例 Word 制片画布、handoff manifest、阶段调研报告和证据清单。
 - 实际产品界面截图、交付物阅读顺序和 3 分钟面试演示脚本。
+- 复现与验收清单，列出公开 demo、静态导出、真实生产声明和 release readiness 的 no-key 检查命令，以及每条命令通过或失败时该怎么判断。
 - `export-manifest.json`，用于核对文件大小、哈希和安全标志。
 
 ## 本机预览

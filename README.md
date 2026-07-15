@@ -69,6 +69,7 @@ python scripts/verify_static_public_showcase.py --format markdown
 ```
 
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
+静态展示包会同时带上交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单，访客可以直接看到应该运行哪些 no-key 检查命令，以及每条命令通过后证明什么。
 
 本地真实使用路径：
 

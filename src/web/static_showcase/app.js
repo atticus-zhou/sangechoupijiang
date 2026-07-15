@@ -178,6 +178,24 @@
     });
   }
 
+  function renderReproducibilityChecklist() {
+    const portfolio = showcase.portfolio_embed || {};
+    const checklist = Array.isArray(portfolio.reproducibility_checklist) ? portfolio.reproducibility_checklist : [];
+    document.getElementById('repro-count').textContent = checklist.length + ' 条命令';
+    const list = document.getElementById('repro-checklist');
+    checklist.forEach(function (item) {
+      const row = element('li', 'repro-item');
+      row.appendChild(element('span', 'repro-order', item.order));
+      const copy = element('div', 'repro-copy');
+      copy.appendChild(element('h3', '', item.title));
+      copy.appendChild(element('code', '', item.command));
+      addTextRow(copy, '通过时', item.expected);
+      addTextRow(copy, '失败时', item.if_fails);
+      row.appendChild(copy);
+      list.appendChild(row);
+    });
+  }
+
   function renderSafety() {
     const list = document.getElementById('safety-list');
     (showcase.safety_boundaries || []).forEach(function (boundary) {
@@ -195,5 +213,6 @@
   renderOffices();
   renderReadingGuide();
   renderInterviewScript();
+  renderReproducibilityChecklist();
   renderSafety();
 })();

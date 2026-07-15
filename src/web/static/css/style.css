@@ -582,6 +582,21 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     gap: 12px;
 }
 
+.public-repro-list {
+    display: grid;
+    gap: 12px;
+}
+
+.public-repro-list article {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid rgba(63, 185, 80, 0.18);
+    border-radius: 14px;
+    background: rgba(35, 134, 54, 0.08);
+}
+
 .public-interview-script article {
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr);
@@ -604,10 +619,42 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     border: 1px solid rgba(88, 166, 255, 0.24);
 }
 
+.public-repro-list b {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: #8ff0c5;
+    background: rgba(63, 185, 80, 0.1);
+    border: 1px solid rgba(63, 185, 80, 0.24);
+}
+
 .public-interview-script strong {
     display: block;
     margin-bottom: 8px;
     color: #e6edf3;
+}
+
+.public-repro-list strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #e6edf3;
+}
+
+.public-repro-list code {
+    display: block;
+    margin-bottom: 10px;
+    padding: 9px 10px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: 10px;
+    background: rgba(2, 6, 23, 0.42);
+    color: #dbeafe;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .public-interview-script p {
@@ -619,8 +666,23 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     line-height: 1.55;
 }
 
+.public-repro-list p {
+    display: grid;
+    gap: 4px;
+    margin: 0 0 8px;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
 .public-interview-script p span {
     color: #8cc8ff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.public-repro-list p span {
+    color: #8ff0c5;
     font-size: 12px;
     font-weight: 700;
 }
@@ -628,6 +690,13 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .public-interview-script small {
     display: block;
     margin-top: 4px;
+    color: var(--text3);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.public-repro-list small {
+    display: block;
     color: var(--text3);
     font-size: 12px;
     line-height: 1.55;

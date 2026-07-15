@@ -115,6 +115,18 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("API Key", script_text)
         self.assertIn("demo-only", script_text)
 
+        reproducibility = embed["reproducibility_checklist"]
+        self.assertEqual([item["order"] for item in reproducibility], [1, 2, 3, 4, 5])
+        for item in reproducibility:
+            self.assertTrue(item["command"])
+            self.assertTrue(item["expected"])
+            self.assertTrue(item["if_fails"])
+        repro_commands = "\n".join(item["command"] for item in reproducibility)
+        self.assertIn("verify_public_demo_mode.py", repro_commands)
+        self.assertIn("verify_static_public_showcase.py", repro_commands)
+        self.assertIn("verify_release_readiness.py", repro_commands)
+        self.assertIn("check_no_secrets.py", "\n".join(payload["verification_commands"]))
+
         public_deployment = payload["public_deployment"]
         self.assertEqual(public_deployment["mode"], "demo_only")
         self.assertFalse(public_deployment["allows_real_model_calls"])

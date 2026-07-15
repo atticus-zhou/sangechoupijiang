@@ -53,6 +53,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         )
         self.assertIn("访客打开页面时只读取随包的 data.js", script_text)
         self.assertIn("五份交付物已经随静态站点一起导出", script_text)
+        repro = showcase["portfolio_embed"]["reproducibility_checklist"]
+        self.assertEqual(len(repro), 5)
+        self.assertTrue(any("verify_release_readiness.py" in item["command"] for item in repro))
+        self.assertTrue(all(item["expected"] and item["if_fails"] for item in repro))
         safety_text = "\n".join(showcase["safety_boundaries"])
         self.assertIn("页面运行时不连接 FastAPI", safety_text)
         self.assertIn("真实生产声明报告", safety_text)
@@ -64,6 +68,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             self.assertTrue((self.output_dir / item["uri"]).is_file())
         static_script = (self.output_dir / "app.js").read_text(encoding="utf-8")
         self.assertIn("未宣称真实画质", static_script)
+        self.assertIn("renderReproducibilityChecklist", static_script)
         self.assertIn("handoff_inventory", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
 
     def test_static_readiness_verifier_is_public_operator_readable(self):
@@ -79,6 +84,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Status: `passed`", completed.stdout)
         self.assertIn("Downloadable deliverables: 5", completed.stdout)
         self.assertIn("Reading guide: 5/5", completed.stdout)
+        self.assertIn("Reproducibility checklist: 5 commands", completed.stdout)
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
