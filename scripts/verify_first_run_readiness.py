@@ -155,6 +155,12 @@ def _public_demo_path() -> dict[str, Any]:
                 "look_for": "来源、数据、截图计划、缺口和后续人工确认项。",
                 "proves": "调研样例保留证据边界，适合演示 staged delivery 而不是虚假完整自动化。",
             },
+            {
+                "file": "AI 漫剧真实生产声明报告",
+                "uri": "/api/demo/comic-production/claim-report",
+                "look_for": "claim_level、quality_claim、can_claim_real_quality、allowed_public_claims 和 forbidden_public_claims。",
+                "proves": "公开样例只能声明结构、谱系和交付链路通过，不能把固定样例冒充真实模型画质已验证。",
+            },
         ],
         "evidence": [
             "/api/demo/public-showcase",
@@ -188,6 +194,29 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
             f"Run `{LOCAL_DOCTOR_COMMAND}` and fix every blocked item it reports.",
             "Check the doctor section `真实生产前检查`; only start full AI comic production when it says `ready_for_real_run`.",
             f"Start the app with `{SERVER_COMMAND}` and test each department from the model page.",
+        ],
+        "model_setup_ladder": [
+            {
+                "level": "no_key_demo",
+                "title": "公开无 Key 演示",
+                "required_models": [],
+                "can_do": "查看固定样例、下载五份交付物、阅读 quick-start 和安全边界。",
+                "ready_when": f"`{PUBLIC_DEMO_COMMAND}` 和 `{STATIC_SHOWCASE_COMMAND}` 通过。",
+            },
+            {
+                "level": "minimum_text",
+                "title": "最小可跑配置",
+                "required_models": ["中书省文本模型", "门下省文本模型", "兵部文本模型", "户部文本模型", "礼部文本模型"],
+                "can_do": "聊故事、锁定剧本方向、拆资产、生成镜头和提示词草案。",
+                "ready_when": "模型页面的文本部门测试通过，doctor 不再提示核心文本模型缺失。",
+            },
+            {
+                "level": "full_comic_production",
+                "title": "完整制片配置",
+                "required_models": ["工部生图模型", "刑部视觉理解模型"],
+                "can_do": "生成基础资产图、执行视觉质检、输出完整 Word 制片画布和 handoff manifest。",
+                "ready_when": "doctor 的 `真实生产前检查` 显示 ready_for_real_run，且工部/刑部测试通过。",
+            },
         ],
         "evidence": [
             f"doctor.status={doctor.get('status', '')}",
@@ -262,6 +291,14 @@ def format_markdown(payload: dict[str, Any]) -> str:
                 lines.append(
                     f"  - `{guide.get('file')}` ({guide.get('uri')}): "
                     f"{guide.get('look_for')} 证明：{guide.get('proves')}"
+                )
+        if item.get("model_setup_ladder"):
+            lines.append("- Model setup ladder:")
+            for ladder in item.get("model_setup_ladder", []):
+                required_models = ", ".join(ladder.get("required_models") or []) or "不需要模型"
+                lines.append(
+                    f"  - `{ladder.get('level')}` {ladder.get('title')}: "
+                    f"需要 {required_models}；能做：{ladder.get('can_do')}；验收：{ladder.get('ready_when')}"
                 )
         if item.get("blocking_reasons"):
             lines.append("- Blocking reasons:")
