@@ -80,6 +80,18 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any("handoff manifest" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("交付盘点" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("证据清单" in item["title"] for item in embed["deliverable_reading_guide"]))
+        quick_start = embed["downstream_quick_start"]
+        self.assertEqual([item["step"] for item in quick_start], [1, 2, 3, 4, 5])
+        quick_start_text = json.dumps(quick_start, ensure_ascii=False)
+        self.assertIn("锁定基础资产", quick_start_text)
+        self.assertIn("逐镜头生成视频", quick_start_text)
+        self.assertIn("质量复核", quick_start_text)
+        for item in quick_start:
+            self.assertTrue(item["owner"])
+            self.assertGreaterEqual(len(item["input_refs"]), 2)
+            self.assertTrue(item["action"])
+            self.assertTrue(item["output"])
+            self.assertTrue(item["acceptance"])
         inventory = embed["handoff_inventory"]
         self.assertEqual(inventory["uri"], "/api/demo/comic-production/handoff-inventory")
         self.assertGreaterEqual(inventory["manifest_count"], 1)

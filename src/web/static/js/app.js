@@ -4561,6 +4561,7 @@ function renderPublicShowcase(showcase) {
     const readingGuide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
     const interviewScript = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
     const reproducibility = Array.isArray(portfolio.reproducibility_checklist) ? portfolio.reproducibility_checklist : [];
+    const downstreamQuickStart = Array.isArray(portfolio.downstream_quick_start) ? portfolio.downstream_quick_start : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
     const realProductionClaim = portfolio.real_production_claim || {};
@@ -4757,6 +4758,29 @@ function renderPublicShowcase(showcase) {
                                 <p>${escapeHtml(item.look_for || '')}</p>
                                 <small>证明：${escapeHtml(item.proves || '')}</small>
                                 ${item.uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.uri)}" target="_blank">打开文件</a>` : ''}
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
+        ${downstreamQuickStart.length ? `
+            <section class="demo-section">
+                <div class="demo-section-head">
+                    <h2>下游生产 quick-start</h2>
+                    <span>${downstreamQuickStart.length} 步</span>
+                </div>
+                <div class="public-repro-list">
+                    ${downstreamQuickStart.map(item => `
+                        <article>
+                            <b>${escapeHtml(item.step || '')}</b>
+                            <div>
+                                <strong>${escapeHtml(item.title || '')}</strong>
+                                <p><span>负责人</span>${escapeHtml(item.owner || '')}</p>
+                                <p><span>输入</span>${escapeHtml((item.input_refs || []).join(' / '))}</p>
+                                <p><span>动作</span>${escapeHtml(item.action || '')}</p>
+                                <p><span>产出</span>${escapeHtml(item.output || '')}</p>
+                                <small>验收：${escapeHtml(item.acceptance || '')}</small>
                             </div>
                         </article>
                     `).join('')}

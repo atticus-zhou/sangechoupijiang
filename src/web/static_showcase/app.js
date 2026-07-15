@@ -181,6 +181,28 @@
     });
   }
 
+  function renderDownstreamQuickStart() {
+    const portfolio = showcase.portfolio_embed || {};
+    const steps = Array.isArray(portfolio.downstream_quick_start) ? portfolio.downstream_quick_start : [];
+    const count = document.getElementById('downstream-count');
+    const list = document.getElementById('downstream-quick-start');
+    if (!count || !list) return;
+    count.textContent = steps.length + ' 步';
+    steps.forEach(function (item) {
+      const row = element('li', 'script-item');
+      row.appendChild(element('span', 'script-order', item.step));
+      const copy = element('div', 'script-copy');
+      copy.appendChild(element('h3', '', item.title));
+      addTextRow(copy, '负责人', item.owner);
+      addTextRow(copy, '输入', (item.input_refs || []).join(' / '));
+      addTextRow(copy, '动作', item.action);
+      addTextRow(copy, '产出', item.output);
+      addTextRow(copy, '验收', item.acceptance);
+      row.appendChild(copy);
+      list.appendChild(row);
+    });
+  }
+
   function renderInterviewScript() {
     const portfolio = showcase.portfolio_embed || {};
     const script = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
@@ -235,6 +257,7 @@
   renderClaimBoundary();
   renderOffices();
   renderReadingGuide();
+  renderDownstreamQuickStart();
   renderInterviewScript();
   renderReproducibilityChecklist();
   renderSafety();

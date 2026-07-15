@@ -76,6 +76,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     static_export = public_deployment.get("static_export") or {}
     interview_script = portfolio_embed.get("interview_demo_script") or []
     reproducibility = portfolio_embed.get("reproducibility_checklist") or []
+    downstream_quick_start = portfolio_embed.get("downstream_quick_start") or []
     release_badge = portfolio_embed.get("release_badge") or {}
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
@@ -113,6 +114,17 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append(f"reproducibility checklist item missing command/expected/if_fails: {item.get('title')}")
     if not any("verify_release_readiness.py" in str(item.get("command") or "") for item in reproducibility):
         errors.append("reproducibility checklist must include the release readiness gate")
+    if [item.get("step") for item in downstream_quick_start] != [1, 2, 3, 4, 5]:
+        errors.append("portfolio embed must expose a 5-step downstream quick-start")
+    for item in downstream_quick_start:
+        if (
+            not item.get("owner")
+            or len(item.get("input_refs") or []) < 2
+            or not item.get("action")
+            or not item.get("output")
+            or not item.get("acceptance")
+        ):
+            errors.append(f"downstream quick-start item is incomplete: {item.get('title') or item.get('step')}")
     if release_badge.get("status") != "safe_public_demo":
         errors.append("portfolio embed must expose a safe_public_demo release badge")
     if release_badge.get("mode") != "demo_only":
@@ -187,6 +199,16 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             1
             for item in reproducibility
             if item.get("command") and item.get("expected") and item.get("if_fails")
+        ),
+        "downstream_quick_start_count": len(downstream_quick_start),
+        "downstream_quick_start_ready_count": sum(
+            1
+            for item in downstream_quick_start
+            if item.get("owner")
+            and len(item.get("input_refs") or []) >= 2
+            and item.get("action")
+            and item.get("output")
+            and item.get("acceptance")
         ),
         "release_badge_status": release_badge.get("status", ""),
         "release_badge_signal_count": len(release_badge.get("signals") or []),
@@ -364,6 +386,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 作品集样例交付物：{manifest.get('portfolio_deliverable_count')} 个",
         f"- 带阅读说明的样例交付物：{manifest.get('deliverables_with_reader_guidance')} 个",
         f"- 交付物阅读顺序：{manifest.get('reading_guide_count')} 步，其中 {manifest.get('reading_guide_ready_count')} 步可复核",
+        f"- 下游生产 quick-start：{manifest.get('downstream_quick_start_count')} 步，其中 {manifest.get('downstream_quick_start_ready_count')} 步可执行",
         f"- 面试演示脚本：{manifest.get('interview_script_count')} 步，其中 {manifest.get('interview_script_ready_count')} 步可复用",
         f"- 复现与验收清单：{manifest.get('reproducibility_count')} 步，其中 {manifest.get('reproducibility_ready_count')} 步可执行",
         f"- 发布状态铭牌：{manifest.get('release_badge_status')}，信号 {manifest.get('release_badge_signal_count')} 条，真实画质声明 {manifest.get('release_badge_claim_real_quality')}",

@@ -57,6 +57,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(len(repro), 5)
         self.assertTrue(any("verify_release_readiness.py" in item["command"] for item in repro))
         self.assertTrue(all(item["expected"] and item["if_fails"] for item in repro))
+        quick_start = showcase["portfolio_embed"]["downstream_quick_start"]
+        self.assertEqual([item["step"] for item in quick_start], [1, 2, 3, 4, 5])
+        self.assertIn("逐镜头生成视频", json.dumps(quick_start, ensure_ascii=False))
+        self.assertTrue(all(item["owner"] and item["acceptance"] for item in quick_start))
         badge = showcase["portfolio_embed"]["release_badge"]
         self.assertEqual(badge["status"], "safe_public_demo")
         self.assertEqual(badge["mode"], "demo_only")
@@ -75,6 +79,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         static_script = (self.output_dir / "app.js").read_text(encoding="utf-8")
         self.assertIn("未宣称真实画质", static_script)
         self.assertIn("renderReleaseBadge", static_script)
+        self.assertIn("renderDownstreamQuickStart", static_script)
         self.assertIn("renderReproducibilityChecklist", static_script)
         self.assertIn("handoff_inventory", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
 
@@ -91,6 +96,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Status: `passed`", completed.stdout)
         self.assertIn("Downloadable deliverables: 5", completed.stdout)
         self.assertIn("Reading guide: 5/5", completed.stdout)
+        self.assertIn("Downstream quick-start: 5 steps", completed.stdout)
         self.assertIn("Reproducibility checklist: 5 commands", completed.stdout)
         self.assertIn("Release badge: safe_public_demo", completed.stdout)
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)

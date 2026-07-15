@@ -940,6 +940,56 @@ def _public_showcase_deliverable_reading_guide() -> list[dict]:
     ]
 
 
+def _public_showcase_downstream_quick_start() -> list[dict]:
+    return [
+        {
+            "step": 1,
+            "title": "确认制片画布",
+            "owner": "人类制片 / 礼部",
+            "input_refs": ["Word 制片画布", "handoff manifest"],
+            "action": "先通读故事、视觉母版、资产表和镜头表，确认下游要拍的是同一个故事版本。",
+            "output": "一份可继续生产的锁定版制片画布。",
+            "acceptance": "故事版本、视觉风格、资产 ID、镜头 ID 和交付文件能互相对应。",
+        },
+        {
+            "step": 2,
+            "title": "锁定基础资产",
+            "owner": "工部 / 刑部",
+            "input_refs": ["人物三视图", "人物表情", "道具白底图", "场景广角图", "场景俯视图"],
+            "action": "把人物、道具、场景作为基础资产先验收，不把它们当成讲故事画面来用。",
+            "output": "下游视频工具可复用的资产身份证和参考图集合。",
+            "acceptance": "人物与道具背景干净，场景视角齐全，画风与故事时代一致，没有现代化误入或风格漂移。",
+        },
+        {
+            "step": 3,
+            "title": "逐镜头生成视频",
+            "owner": "兵部 / 下游视频工具",
+            "input_refs": ["shot_id", "首帧参考图", "角色引用图", "镜头提示词"],
+            "action": "按 shot_id 逐条投喂首帧、角色引用和导演式提示词，单镜头生成后再进入下一镜头。",
+            "output": "每个镜头一条可复查的视频片段或失败记录。",
+            "acceptance": "镜头动作、对白、构图、情绪和引用资产一致；失败镜头保留原因，不能静默跳过。",
+        },
+        {
+            "step": 4,
+            "title": "执行质量复核",
+            "owner": "刑部",
+            "input_refs": ["生成视频片段", "资产身份证", "镜头提示词", "负面提示词"],
+            "action": "检查脸、服装、道具、时代风格、镜头动作和文字污染，标记需要重跑的镜头。",
+            "output": "通过清单、重跑清单和原因说明。",
+            "acceptance": "不把废片混进交付；每个失败项都能追到资产、提示词或模型输出原因。",
+        },
+        {
+            "step": 5,
+            "title": "归档交付证据",
+            "owner": "史部 / 礼部",
+            "input_refs": ["最终视频片段", "Word 制片画布", "handoff manifest", "质量复核表"],
+            "action": "把最终片段、使用的资产版本、提示词版本和质检结论归档，方便复盘和继续迭代。",
+            "output": "可交给人类剪辑或下游平台继续处理的交付包。",
+            "acceptance": "后续任何人打开交付包，都知道每个镜头用了哪些人物、道具、场景、提示词和参考图。",
+        },
+    ]
+
+
 def _public_showcase_interview_demo_script() -> list[dict]:
     return [
         {
@@ -1188,6 +1238,7 @@ async def get_public_showcase_demo_api():
             "sample_deliverables": sample_deliverables,
             "release_badge": _public_showcase_release_badge(comic_inventory, comic_claim),
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
+            "downstream_quick_start": _public_showcase_downstream_quick_start(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
             "handoff_inventory": {

@@ -137,6 +137,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"{len(demos)} demos; "
                 f"showcase={showcase.get('status_code')}; "
                 f"reading_guide={showcase.get('reading_guide_ready_count')}/{showcase.get('reading_guide_count')}; "
+                f"quick_start={showcase.get('downstream_quick_start_ready_count')}/{showcase.get('downstream_quick_start_count')}; "
                 f"interview_script={showcase.get('interview_script_ready_count')}/{showcase.get('interview_script_count')}; "
                 f"reproducibility={showcase.get('reproducibility_ready_count')}/{showcase.get('reproducibility_count')}; "
                 f"badge={showcase.get('release_badge_status')}; "
@@ -147,6 +148,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"files={parsed.get('file_count')}; "
                 f"downloads={parsed.get('download_count')}; "
                 f"reading_guide={parsed.get('reading_guide_ready_count')}/{parsed.get('reading_guide_count')}; "
+                f"quick_start={parsed.get('downstream_quick_start_ready_count')}/{parsed.get('downstream_quick_start_count')}; "
                 f"backend={parsed.get('requires_backend')}"
             )
         if check_id == "comic_delivery":

@@ -142,6 +142,21 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 errors.append(f"static reproducibility item is incomplete: {item.get('title')}")
         if not any("verify_release_readiness.py" in str(item.get("command") or "") for item in reproducibility):
             errors.append("static reproducibility checklist must include the release readiness gate")
+        downstream_quick_start = portfolio.get("downstream_quick_start") or []
+        if [item.get("step") for item in downstream_quick_start] != [1, 2, 3, 4, 5]:
+            errors.append("static showcase must include a 5-step downstream quick-start")
+        ready_downstream_steps = 0
+        for item in downstream_quick_start:
+            if (
+                item.get("owner")
+                and len(item.get("input_refs") or []) >= 2
+                and item.get("action")
+                and item.get("output")
+                and item.get("acceptance")
+            ):
+                ready_downstream_steps += 1
+            else:
+                errors.append(f"static downstream quick-start item is incomplete: {item.get('title') or item.get('step')}")
         if release_badge.get("status") != "safe_public_demo":
             errors.append("static showcase must include a safe_public_demo release badge")
         if release_badge.get("mode") != "demo_only":
@@ -176,7 +191,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static showcase contains secret-like values: " + ", ".join(secret_like_files))
 
         index_text = (temp_dir / "index.html").read_text(encoding="utf-8")
-        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "复现与验收清单", "公开部署安全边界"):
+        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "下游生产 quick-start", "复现与验收清单", "公开部署安全边界"):
             if marker not in index_text and marker not in (temp_dir / "style.css").read_text(encoding="utf-8"):
                 errors.append(f"static showcase page is missing marker: {marker}")
 
@@ -192,6 +207,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "download_count": len(downloads),
             "reading_guide_count": len(reading_guide),
             "reading_guide_ready_count": ready_reading_items,
+            "downstream_quick_start_count": len(downstream_quick_start),
+            "downstream_quick_start_ready_count": ready_downstream_steps,
             "reproducibility_count": len(reproducibility),
             "release_badge_status": release_badge.get("status", ""),
             "release_badge_signal_count": len(release_badge.get("signals") or []),
@@ -224,6 +241,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Files: {payload.get('file_count')}",
         f"- Downloadable deliverables: {payload.get('download_count')}",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
+        f"- Downstream quick-start: {payload.get('downstream_quick_start_ready_count')} steps",
         f"- Reproducibility checklist: {payload.get('reproducibility_count')} commands",
         f"- Release badge: {payload.get('release_badge_status')} / signals={payload.get('release_badge_signal_count')}",
         f"- Featured demos: {payload.get('featured_demo_count')}",
