@@ -371,6 +371,74 @@ def list_office_creation_template() -> dict:
     }
 
 
+def list_office_extension_blueprint() -> dict:
+    """Return the repeatable implementation path for future offices."""
+    return {
+        "purpose": "Give future offices a concrete path from idea to public-demo-ready workflow without sharing model config, history, artifacts, or runtime output with existing offices.",
+        "implementation_steps": [
+            {
+                "order": 1,
+                "id": "register_profile",
+                "title": "Register an OfficeProfile",
+                "owner": "platform",
+                "files": ["src/offices.py"],
+                "done_when": "The office has a unique id, agent duties, model requirements, checkpoints, artifact contract, schema gates, recovery actions, acceptance criteria, and default template.",
+            },
+            {
+                "order": 2,
+                "id": "isolate_runtime",
+                "title": "Isolate runtime state",
+                "owner": "platform",
+                "files": ["src/config_manager.py", "src/office_runtime.py"],
+                "done_when": "Model config, workspace id, artifacts, history, output paths, and recovery actions are scoped by office_id.",
+            },
+            {
+                "order": 3,
+                "id": "build_no_key_demo",
+                "title": "Build a no-key demo contract",
+                "owner": "office",
+                "files": ["src/web/app.py", "tests/fixtures/"],
+                "done_when": "The demo returns viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, and public_safety_boundaries without calling real models.",
+            },
+            {
+                "order": 4,
+                "id": "wire_schema_and_recovery",
+                "title": "Wire schema gates and recovery",
+                "owner": "office",
+                "files": ["src/offices.py", "src/web/app.py", "tests/"],
+                "done_when": "Every long-running stage has a schema or artifact gate, a human-readable failure state, and a recovery action that explains what is preserved and what is cleared.",
+            },
+            {
+                "order": 5,
+                "id": "document_and_verify",
+                "title": "Document, verify, and expose launch gates",
+                "owner": "release",
+                "files": ["README.md", "docs/", "scripts/verify_office_extension_governance.py"],
+                "done_when": "README explains the office, launch-gates are ready or honestly blocked, no-key demo verifies, release readiness passes, and secret scan is clean.",
+            },
+        ],
+        "required_tests": [
+            "tests.test_offices",
+            "tests.test_office_preflight",
+            "tests.test_office_extension_governance_verifier",
+            "tests.test_frontend_comic_routing",
+        ],
+        "required_verifiers": [
+            "python scripts/verify_office_isolation.py --format markdown",
+            "python scripts/verify_office_extension_governance.py --format markdown",
+            "python scripts/verify_public_demo_mode.py --format markdown",
+            "python scripts/verify_release_readiness.py --format markdown",
+            "python scripts/check_no_secrets.py",
+        ],
+        "non_negotiables": [
+            "Do not reuse another office's office_id for runtime code.",
+            "Do not put API keys, cookies, config.yaml, user_data, output, or browser profiles into public demo assets.",
+            "Do not mark an office as primary unless its launch gates, sample delivery, history trace, schema gates, and recovery actions are all proven.",
+            "Do not ship a public demo that only shows UI; it must include downloadable and reviewable deliverables.",
+        ],
+    }
+
+
 LAUNCH_GATE_LABELS = {
     "no_key_demo": "无 Key 演示",
     "model_preflight": "模型预检",
@@ -616,6 +684,7 @@ def audit_office_extension_governance() -> dict:
         "required_profile_fields": required_profile_fields,
         "required_launch_gates": template["required_launch_gates"],
         "required_demo_contract": template["required_demo_contract"],
+        "extension_blueprint": list_office_extension_blueprint(),
         "primary_standards": PRIMARY_OFFICE_STANDARDS,
         "offices": office_audits,
         "errors": {

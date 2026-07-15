@@ -89,6 +89,7 @@
 - [x] 新办公室必须复用平台协议，而不是复制一套临时代码。
 - [x] 每新增一个办公室，都必须同时提供无 Key 演示、模型预检、端到端测试、失败处理和样例交付物。
 - [x] `/api/offices/protocols` 已暴露新办公室创建模板，后续办公室扩展必须先对齐这份模板。
+- [x] `/api/offices/protocols` 已暴露 `extension_blueprint`，明确新增办公室必须按注册 Profile、隔离运行时、无 Key demo、schema/recovery、文档和验证门禁的顺序推进。
 - [x] 新办公室公开演示必须满足 `required_demo_contract`，不能只提供一个能打开的接口。
 - [x] 新办公室扩展治理已补充离线验收：`python scripts/verify_office_extension_governance.py --format markdown` 会检查所有办公室是否复用 `OfficeProfile` 协议，并确认主力办公室必须满足可展示、可试用、可交付、可追溯四项标准。
 - [x] 研究办公室可靠性已补充离线验收：`python scripts/verify_research_office_readiness.py --format markdown` 会检查阶段报告、来源清单、数据表、竞品表、截图计划、schema gate 和公开演示下载；边界仍是人机协作补证据，不承诺不稳定的一键全自动抓取。

@@ -23,9 +23,14 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertEqual(audit["status"], "passed")
         self.assertEqual(audit["primary_office_ids"], ["comic_production"])
         self.assertIn("required_demo_contract", audit)
+        self.assertIn("extension_blueprint", audit)
         self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
         self.assertIn("interview_demo_script", audit["required_demo_contract"])
         self.assertIn("public_safety_boundaries", audit["required_demo_contract"])
+        step_ids = {step["id"] for step in audit["extension_blueprint"]["implementation_steps"]}
+        self.assertIn("register_profile", step_ids)
+        self.assertIn("isolate_runtime", step_ids)
+        self.assertIn("build_no_key_demo", step_ids)
 
         by_office = {item["office_id"]: item for item in audit["offices"]}
         self.assertTrue(by_office["comic_production"]["primary_allowed"])
@@ -49,6 +54,11 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
 
         self.assertIn("Office Extension Governance Audit", completed.stdout)
         self.assertIn("Required Demo Contract", completed.stdout)
+        self.assertIn("Extension Blueprint", completed.stdout)
+        self.assertIn("Register an OfficeProfile", completed.stdout)
+        self.assertIn("Isolate runtime state", completed.stdout)
+        self.assertIn("Build a no-key demo contract", completed.stdout)
+        self.assertIn("verify_release_readiness.py", completed.stdout)
         self.assertIn("viewer_path", completed.stdout)
         self.assertIn("downloadable_deliverables", completed.stdout)
         self.assertIn("deliverable_reading_guide", completed.stdout)

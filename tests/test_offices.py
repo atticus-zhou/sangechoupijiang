@@ -5,6 +5,7 @@ from src.offices import (
     audit_office_launch_gates,
     get_office,
     list_office_creation_template,
+    list_office_extension_blueprint,
     list_offices,
 )
 
@@ -63,6 +64,23 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("deliverable_reading_guide", template["required_demo_contract"])
         self.assertIn("interview_demo_script", template["required_demo_contract"])
         self.assertIn("public_safety_boundaries", template["required_demo_contract"])
+
+    def test_office_extension_blueprint_is_actionable_for_future_offices(self):
+        blueprint = list_office_extension_blueprint()
+
+        self.assertIn("implementation_steps", blueprint)
+        self.assertGreaterEqual(len(blueprint["implementation_steps"]), 5)
+        step_ids = {step["id"] for step in blueprint["implementation_steps"]}
+        self.assertIn("register_profile", step_ids)
+        self.assertIn("isolate_runtime", step_ids)
+        self.assertIn("build_no_key_demo", step_ids)
+        self.assertIn("wire_schema_and_recovery", step_ids)
+        self.assertIn("document_and_verify", step_ids)
+        for step in blueprint["implementation_steps"]:
+            self.assertTrue(step["files"])
+            self.assertTrue(step["done_when"])
+        self.assertIn("python scripts/verify_release_readiness.py --format markdown", blueprint["required_verifiers"])
+        self.assertTrue(any("office_id" in item for item in blueprint["non_negotiables"]))
 
     def test_comic_production_launch_gate_audit_covers_required_gates(self):
         template = list_office_creation_template()
@@ -176,6 +194,12 @@ class OfficeExtensionGovernanceTests(unittest.TestCase):
         self.assertIn("required_demo_contract", audit)
         self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
         self.assertIn("interview_demo_script", audit["required_demo_contract"])
+        self.assertIn("extension_blueprint", audit)
+        self.assertIn("implementation_steps", audit["extension_blueprint"])
+        self.assertTrue(any(
+            step["id"] == "isolate_runtime"
+            for step in audit["extension_blueprint"]["implementation_steps"]
+        ))
 
         by_office = {item["office_id"]: item for item in audit["offices"]}
         self.assertTrue(by_office["comic_production"]["primary_allowed"])

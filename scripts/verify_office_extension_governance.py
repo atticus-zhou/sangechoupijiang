@@ -39,6 +39,31 @@ def format_markdown(audit: dict[str, Any]) -> str:
     for field in audit.get("required_demo_contract", []):
         lines.append(f"| {field} | {demo_purposes.get(field, 'Required public demo field.')} |")
 
+    blueprint = audit.get("extension_blueprint") or {}
+    lines.extend(
+        [
+            "",
+            "## Extension Blueprint",
+            "",
+            blueprint.get("purpose", "Future offices must follow the shared protocol."),
+            "",
+            "| Step | Owner | Done when | Files |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for step in blueprint.get("implementation_steps", []):
+        lines.append(
+            "| {title} | {owner} | {done_when} | {files} |".format(
+                title=step.get("title", step.get("id", "")),
+                owner=step.get("owner", ""),
+                done_when=step.get("done_when", ""),
+                files=", ".join(step.get("files", [])) or "-",
+            )
+        )
+    if blueprint.get("required_verifiers"):
+        lines.extend(["", "Required verifiers:"])
+        lines.extend(f"- `{command}`" for command in blueprint["required_verifiers"])
+
     lines.extend(
         [
             "",
