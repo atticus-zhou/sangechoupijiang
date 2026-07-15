@@ -377,6 +377,7 @@ async def produce_asset_images(
             status = "approved" if final_review.handoff_ready else "needs_human_review"
             if status != "approved":
                 failures.append(f"{asset.asset_id}/{image_kind}: 视觉质检未通过")
+                failures[-1] = _format_visual_review_failure(asset.asset_id, image_kind, final_review)
             record = ImageRecord(
                 image_id=f"img_{asset.asset_id}_{image_kind}",
                 asset_id=asset.asset_id,
@@ -447,6 +448,13 @@ def _schema_gate_visual_review(
         asdict(review),
         context={"request": request, "baseline": baseline},
     )
+
+
+def _format_visual_review_failure(asset_id: str, image_kind: str, review: VisualReviewResult) -> str:
+    dimensions = ",".join(review.failed_dimensions or review.missing_dimensions) or "unknown"
+    action = review.recovery_action or "review_image"
+    reason = review.recovery_reason or "视觉质检未通过"
+    return f"{asset_id}/{image_kind}: 视觉质检未通过; dimensions={dimensions}; action={action}; reason={reason}"
 
 
 def _prompt_director_system_prompt(asset: AssetPlan) -> str:

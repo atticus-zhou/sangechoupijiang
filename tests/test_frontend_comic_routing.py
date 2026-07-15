@@ -687,6 +687,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("function renderComicV2HistoryImageAssets", js)
         self.assertIn("production_role", js)
         self.assertIn("clean_background_required", js)
+        self.assertIn("review_recovery_action", js)
+        self.assertIn("review_recovery_reason", js)
         self.assertIn("legacy_unverifiable", summary_fn)
         self.assertIn("summary.legacy_package", summary_fn)
 

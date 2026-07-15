@@ -138,6 +138,40 @@ class ComicV2VisualReviewTests(unittest.TestCase):
         self.assertIn("production_role: clean_character_identity_three_view", request.instruction)
         self.assertIn("clean_background_required: True", request.instruction)
 
+    def test_identity_failure_recommends_image_regeneration(self):
+        request = build_visual_review_request(
+            "current.png",
+            ["identity.png"],
+            visual_bible_summary="ancient fantasy style",
+            acceptance_criteria=["same character"],
+            production_role="clean_character_identity_three_view",
+            clean_background_required=True,
+        )
+
+        result = normalize_visual_review(review_payload(identity_consistency=50), request)
+
+        self.assertEqual(result.status, "fail")
+        self.assertEqual(result.recovery_action, "regenerate_images")
+        self.assertEqual(result.recovery_focus, "images")
+        self.assertIn("身份", result.recovery_reason)
+
+    def test_spatial_failure_recommends_prompt_regeneration(self):
+        request = build_visual_review_request(
+            "current.png",
+            ["scene-wide.png"],
+            visual_bible_summary="ancient fantasy style",
+            acceptance_criteria=["clear spatial layout"],
+            production_role="scene_spatial_wide_reference",
+            clean_background_required=False,
+        )
+
+        result = normalize_visual_review(review_payload(spatial_structure=45), request)
+
+        self.assertEqual(result.status, "fail")
+        self.assertEqual(result.recovery_action, "regenerate_prompts")
+        self.assertEqual(result.recovery_focus, "prompts")
+        self.assertIn("空间结构", result.recovery_reason)
+
 
 if __name__ == "__main__":
     unittest.main()

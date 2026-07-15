@@ -5663,6 +5663,9 @@ def _comic_v2_history_image_asset(artifact: dict) -> dict:
         "reference_image_ids": list(metadata.get("reference_image_ids") or []),
         "review_status": review.get("status", ""),
         "review_handoff_ready": bool(review.get("handoff_ready", False)),
+        "review_recovery_action": review.get("recovery_action", ""),
+        "review_recovery_focus": review.get("recovery_focus", ""),
+        "review_recovery_reason": review.get("recovery_reason", ""),
     }
 
 

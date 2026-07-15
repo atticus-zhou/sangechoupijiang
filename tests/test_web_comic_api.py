@@ -1038,7 +1038,13 @@ class WebComicApiTests(unittest.TestCase):
                 "prompt_hash": "hash-three-view",
                 "is_identity_baseline": True,
                 "reference_image_ids": [],
-                "review": {"status": "pass", "handoff_ready": True},
+                "review": {
+                    "status": "pass",
+                    "handoff_ready": True,
+                    "recovery_action": "regenerate_images",
+                    "recovery_focus": "images",
+                    "recovery_reason": "图片需要重新生成以稳定人物身份。",
+                },
                 "path": f"output/workspaces/{workspace_id}/generated/{task_id}/char_001_three_view.png",
             },
             created_by="gongbu",
@@ -1077,6 +1083,9 @@ class WebComicApiTests(unittest.TestCase):
             self.assertTrue(trace["image_assets"][0]["clean_background_required"])
             self.assertEqual(trace["image_assets"][0]["attempts"], 2)
             self.assertEqual(trace["image_assets"][0]["review_status"], "pass")
+            self.assertEqual(trace["image_assets"][0]["review_recovery_action"], "regenerate_images")
+            self.assertEqual(trace["image_assets"][0]["review_recovery_focus"], "images")
+            self.assertIn("人物身份", trace["image_assets"][0]["review_recovery_reason"])
             self.assertEqual(trace["shots"][0]["shot_id"], "shot_001")
             self.assertEqual(trace["shots"][0]["first_frame_reference_image"]["file"], "char_001_three_view.png")
             self.assertEqual(trace["shots"][0]["reference_asset_chain"][0]["name"], "林昭")

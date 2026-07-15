@@ -4370,6 +4370,7 @@ function renderComicV2HistoryImageAssets(images) {
                         <p>${escapeHtml(image.image_kind || '')} · ${escapeHtml(image.production_role || '未标记生产角色')}</p>
                         <p>状态 ${escapeHtml(image.status || 'unknown')} · 重试 ${escapeHtml(image.attempts || 0)} · ${image.clean_background_required ? '要求干净白底' : '不要求白底'}</p>
                         <p>质检 ${escapeHtml(image.review_status || 'unknown')} · 模型 ${escapeHtml(image.model || image.provider || '')}</p>
+                        ${image.review_recovery_action ? `<p>建议 ${escapeHtml(image.review_recovery_action)} · ${escapeHtml(image.review_recovery_reason || image.review_recovery_focus || '')}</p>` : ''}
                     </article>
                 `).join('')}
             </div>

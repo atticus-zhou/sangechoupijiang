@@ -43,6 +43,9 @@ class VisualReviewResult:
     missing_dimensions: tuple[str, ...]
     failed_dimensions: tuple[str, ...]
     reference_count: int
+    recovery_action: str = ""
+    recovery_focus: str = ""
+    recovery_reason: str = ""
 
 
 def build_visual_review_request(
@@ -132,6 +135,11 @@ def normalize_visual_review(
         consistency_status = "fail"
     else:
         consistency_status = "pass"
+    recovery = _review_recovery(
+        missing_dimensions=tuple(missing),
+        failed_dimensions=tuple(failed),
+        request=request,
+    )
 
     declared_status = str(payload.get("status") or "needs_review").strip().lower() if isinstance(payload, dict) else "needs_review"
     if failed or declared_status in {"fail", "failed", "不合格"}:
@@ -152,6 +160,9 @@ def normalize_visual_review(
         missing_dimensions=tuple(missing),
         failed_dimensions=tuple(failed),
         reference_count=reference_count,
+        recovery_action=recovery["action"],
+        recovery_focus=recovery["focus"],
+        recovery_reason=recovery["reason"],
     )
 
 
@@ -175,6 +186,40 @@ def normalize_baseline_review(
         issues=issues,
         reference_count=0,
     )
+
+
+def _review_recovery(
+    *,
+    missing_dimensions: tuple[str, ...],
+    failed_dimensions: tuple[str, ...],
+    request: VisualReviewRequest,
+) -> dict[str, str]:
+    if missing_dimensions:
+        return {
+            "action": "rerun_visual_review",
+            "focus": "visual_review",
+            "reason": "视觉模型没有返回完整七维评分，不能放行或判断图片是否可交付。",
+        }
+    if not failed_dimensions:
+        return {"action": "", "focus": "", "reason": ""}
+    failed = set(failed_dimensions)
+    if failed & {"identity_consistency", "style_consistency", "era_media", "asset_purity", "anatomy"}:
+        return {
+            "action": "regenerate_images",
+            "focus": "images",
+            "reason": "图片本身没有通过身份、风格、时代、纯净度或结构质检，优先保持提示词不变重新生图。",
+        }
+    if failed & {"spatial_structure", "purpose_fit"}:
+        return {
+            "action": "regenerate_prompts",
+            "focus": "prompts",
+            "reason": "图片用途或空间结构没有说清，优先退回工部/兵部重写资产或镜头提示词。",
+        }
+    return {
+        "action": "regenerate_images",
+        "focus": "images",
+        "reason": f"图片未达到 {request.production_role or '当前资产'} 的质检标准。",
+    }
 
 
 def _score(value: Any) -> int | None:

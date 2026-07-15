@@ -358,6 +358,37 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first.asset_id, item.asset_id)
         self.assertIn("统一三视图脸型和发髻", generated_prompts[1])
 
+    async def test_failed_visual_review_records_actionable_recovery_hint(self):
+        from src.comic_office.v2.production import direct_asset_prompts, produce_asset_images
+
+        item = manifest().items[0]
+        package = await direct_asset_prompts(
+            bundle(), manifest(), ModelConfig(provider="openai", model="fake", api_key="test"),
+            llm=FakePromptProvider([prompt_response(item)]),
+        )
+
+        def generator(config, prompt, output_dir, title):
+            path = Path(output_dir) / f"{title}.png"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"fake-png")
+            return GeneratedImage(title=title, prompt=prompt, path=str(path), provider="doubao", model="seedream")
+
+        async def reviewer(request, *, baseline):
+            return review_result("fail", ready=False, revision_prompt="统一人物身份")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = await produce_asset_images(
+                package, manifest(), bundle().visual,
+                ModelConfig(provider="doubao", model="doubao-seedream-5", api_key="test"),
+                ModelConfig(provider="dashscope", model="qwen-vl", api_key="test"),
+                Path(tmp), generator=generator, reviewer=reviewer, max_attempts=1,
+            )
+
+        self.assertFalse(result.production_ready)
+        self.assertIn("action=regenerate_images", result.failures[0])
+        self.assertEqual(result.records[0].review["recovery_action"], "regenerate_images")
+        self.assertEqual(result.records[0].review["recovery_focus"], "images")
+
     async def test_generation_rejects_image_review_when_schema_gate_fails(self):
         from src.comic_office.v2.output_schemas import AgentOutputSchemaError
         from src.comic_office.v2.production import direct_asset_prompts, produce_asset_images
