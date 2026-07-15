@@ -89,6 +89,10 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("loadOfficePreflight(activeComicOfficeId()", js)
         self.assertIn("/api/offices/${officeId}/readiness", js)
         self.assertIn("renderProductReadiness", js)
+        self.assertIn("/api/offices/${officeId}/real-production-readiness", js)
+        self.assertIn("function renderRealProductionReadiness", js)
+        self.assertIn("真实生产前检查", js)
+        self.assertIn("完整制片包", js)
 
     def test_model_page_renders_current_office_model_requirement_summary(self):
         html = INDEX_HTML.read_text(encoding="utf-8")

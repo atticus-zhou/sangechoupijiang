@@ -3668,6 +3668,10 @@ async function loadOfficePreflight(officeId, targetId = '') {
                 const readiness = await API.get(`/api/offices/${officeId}/readiness`);
                 renderProductReadiness(readiness, targetId);
             } catch (e) {}
+            try {
+                const realReadiness = await API.get(`/api/offices/${officeId}/real-production-readiness`);
+                renderRealProductionReadiness(realReadiness, targetId);
+            } catch (e) {}
         }
         return result;
     } catch (e) {
@@ -3895,6 +3899,55 @@ function renderProductReadiness(result, targetId = '') {
                     </div>
                 `).join('')}
             </div>
+        </div>
+    `);
+}
+
+function renderRealProductionReadiness(result, targetId = '') {
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (!target || !result || result.status === 'not_applicable') return;
+    const status = result.status || 'unknown';
+    const uiStatus = status === 'ready_for_real_run' ? 'ready' : (status === 'blocked' ? 'blocked' : 'partial');
+    const label = status === 'ready_for_real_run'
+        ? '可真实生产'
+        : (status === 'limited_planning_only' ? '只能先规划' : '暂不建议开工');
+    const capabilities = Array.isArray(result.required_capabilities) ? result.required_capabilities : [];
+    const inventory = result.handoff_inventory || {};
+    const checklist = Array.isArray(result.operator_checklist) ? result.operator_checklist : [];
+    target.insertAdjacentHTML('beforeend', `
+        <div class="preflight-card preflight-${escapeHtml(uiStatus)} product-readiness-card real-production-readiness-card">
+            <div class="preflight-head">
+                <div>
+                    <strong>真实生产前检查</strong>
+                    <p>${escapeHtml(result.summary || '')}</p>
+                </div>
+                <span class="badge ${preflightBadgeClass(uiStatus)}">${escapeHtml(label)}</span>
+            </div>
+            <div class="preflight-next">下一步：${escapeHtml(result.next_action || '')}</div>
+            <div class="preflight-modes">
+                <b>当前开工判断</b>
+                <div>
+                    <span>完整制片包：${result.can_start_full_production ? '可以开始' : '暂不可开始'}</span>
+                    <span>故事/资产/提示词：${result.can_start_limited_planning ? '可以先做' : '暂不可开始'}</span>
+                    <span>真实质量通过：${escapeHtml(inventory.production_verified_count || 0)} 份</span>
+                    <span>结构样例：${escapeHtml(inventory.demo_only_count || 0)} 份</span>
+                </div>
+            </div>
+            <div class="preflight-grid">
+                ${capabilities.map(item => `
+                    <div class="preflight-item ${escapeHtml(item.status || '')}">
+                        <span>${escapeHtml(item.title || item.id || '')}</span>
+                        <em class="preflight-owner">${escapeHtml([item.owner_label, item.model_kind].filter(Boolean).join(' / '))}</em>
+                        <small>${escapeHtml(item.status === 'ok' ? '已具备' : item.next_action || item.impact || '')}</small>
+                    </div>
+                `).join('')}
+            </div>
+            ${checklist.length ? `
+                <div class="preflight-limited">
+                    <b>开工前清单</b>
+                    ${checklist.slice(0, 5).map(item => `<p><span>检查</span>${escapeHtml(item)}</p>`).join('')}
+                </div>
+            ` : ''}
         </div>
     `);
 }
