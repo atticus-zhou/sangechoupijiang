@@ -43,6 +43,8 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "dist/public-showcase",
             "python scripts/verify_first_run_readiness.py --format markdown",
             "python scripts/verify_release_readiness.py --format markdown",
+            "五份下载物",
+            "下游生产 quick-start",
         ],
     },
     {
@@ -63,6 +65,8 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "python scripts/verify_static_public_showcase.py --format markdown",
             "dist/public-showcase/index.html",
             "npx vercel --prod --cwd dist/public-showcase",
+            "五份样例交付物",
+            "下游生产 quick-start",
         ],
     },
     {

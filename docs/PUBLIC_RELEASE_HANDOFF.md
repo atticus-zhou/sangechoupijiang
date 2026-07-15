@@ -70,7 +70,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_productization_status.py --format markdown` 能把产品化目标映射到证据。
 - `python scripts/verify_first_run_readiness.py --format markdown` 能说明公开演示、本地真实使用和开发者扩展三条路径。
 - `python scripts/verify_public_demo_mode.py --format markdown` 能证明公开展示清单、demo 端点和样例下载可用。
-- `python scripts/verify_static_public_showcase.py --format markdown` 能证明静态作品集不依赖后端，四份下载物、阅读指南和真实产品截图都可用。
+- `python scripts/verify_static_public_showcase.py --format markdown` 能证明静态作品集不依赖后端，五份下载物、阅读指南、下游生产 quick-start 和真实产品截图都可用。
 - `python scripts/verify_comic_v2_delivery.py --format markdown` 能证明 AI 漫剧 Word 画布结构、资产 ID、镜头 ID、图片记录和交付审计可用。
 - `python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 能证明人物三视图、表情、道具、场景广角/俯视图、镜头视频包、首帧参考图和失败重试策略可交接。
 - `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 能证明故事、资产、提示词、镜头、视觉质检和谱系已经交叉校验，并明确区分无 Key 结构样例与真实模型质量证据。
