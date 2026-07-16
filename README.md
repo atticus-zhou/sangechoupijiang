@@ -190,7 +190,7 @@ office_models:
 
 新办公室进入公开展示前，还必须满足 `creation_template.required_launch_gates` 中的上线门槛：`no_key_demo`、`model_preflight`、`end_to_end_test`、`sample_delivery`、`failure_recovery`、`history_trace`、`schema_gate`、`readme_documentation` 和 `secret_scan`。
 
-同一个接口还会返回 `extension_blueprint`，把新办公室从注册到上线拆成可执行步骤：注册 `OfficeProfile`、隔离运行时状态、建立无 Key demo、接入 schema/recovery、补文档和验证命令。新增办公室时先按这份蓝图走，不要直接复制研究办公室或漫剧办公室的临时代码。
+同一个接口还会返回 `extension_blueprint`，把新办公室从注册到上线拆成可执行步骤：注册 `OfficeProfile`、隔离运行时状态、建立无 Key demo、接入 schema/recovery、补文档和验证命令。新增办公室时先按这份蓝图走，不要直接复制研究办公室或漫剧办公室的临时代码。完整执行协议见 `docs/OFFICE_EXTENSION_PROTOCOL.md`，扩展治理脚本会检查这份文档没有丢失关键边界。
 
 查看单个办公室的上线门禁：
 

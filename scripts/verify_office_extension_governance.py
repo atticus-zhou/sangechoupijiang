@@ -14,6 +14,37 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.offices import audit_office_extension_governance
 
+PROTOCOL_DOC = REPO_ROOT / "docs" / "OFFICE_EXTENSION_PROTOCOL.md"
+PROTOCOL_DOC_MARKERS = [
+    "OfficeProfile",
+    "office_id",
+    "verify_office_isolation.py",
+    "no-key demo",
+    "downloadable_deliverables",
+    "schema gates",
+    "recovery_actions",
+    "verify_release_readiness.py",
+    "check_no_secrets.py",
+    "API Key",
+]
+
+
+def audit_protocol_doc() -> dict[str, Any]:
+    doc_path = PROTOCOL_DOC.relative_to(REPO_ROOT).as_posix()
+    if not PROTOCOL_DOC.exists():
+        return {
+            "path": doc_path,
+            "status": "missing",
+            "missing_markers": PROTOCOL_DOC_MARKERS,
+        }
+    text = PROTOCOL_DOC.read_text(encoding="utf-8")
+    missing = [marker for marker in PROTOCOL_DOC_MARKERS if marker not in text]
+    return {
+        "path": doc_path,
+        "status": "passed" if not missing else "needs_work",
+        "missing_markers": missing,
+    }
+
 
 def format_markdown(audit: dict[str, Any]) -> str:
     lines = [
@@ -63,6 +94,21 @@ def format_markdown(audit: dict[str, Any]) -> str:
     if blueprint.get("required_verifiers"):
         lines.extend(["", "Required verifiers:"])
         lines.extend(f"- `{command}`" for command in blueprint["required_verifiers"])
+
+    protocol_doc = audit.get("protocol_doc") or {}
+    lines.extend(
+        [
+            "",
+            "## Human-Readable Protocol",
+            "",
+            f"Path: `{protocol_doc.get('path', 'docs/OFFICE_EXTENSION_PROTOCOL.md')}`",
+            f"Status: `{protocol_doc.get('status', 'missing')}`",
+        ]
+    )
+    if protocol_doc.get("missing_markers"):
+        lines.append(
+            "Missing markers: `" + "`, `".join(protocol_doc.get("missing_markers", [])) + "`"
+        )
 
     lines.extend(
         [
@@ -126,6 +172,13 @@ def main() -> int:
     args = parser.parse_args()
 
     audit = audit_office_extension_governance()
+    protocol_doc = audit_protocol_doc()
+    audit["protocol_doc"] = protocol_doc
+    if protocol_doc.get("status") != "passed":
+        audit["status"] = "failed"
+        audit.setdefault("errors", {}).setdefault("protocol_doc_errors", []).append(
+            f"{protocol_doc.get('path')} is {protocol_doc.get('status')}"
+        )
     if args.format == "json":
         print(json.dumps(audit, ensure_ascii=False, indent=2))
     else:
