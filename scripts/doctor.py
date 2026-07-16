@@ -121,6 +121,22 @@ def format_doctor_markdown(report: dict) -> str:
     if checklist:
         lines.extend(["", "开工前清单："])
         lines.extend(f"- {item}" for item in checklist)
+    post_run = real.get("post_run_validation") or []
+    if post_run:
+        lines.extend([
+            "",
+            "## 真实生产后验收清单",
+            "",
+            "| 步骤 | 命令或动作 | 通过标准 | 失败处理 |",
+            "| ---: | --- | --- | --- |",
+        ])
+        for item in post_run:
+            lines.append(_row(
+                item.get("step"),
+                item.get("command") or item.get("title"),
+                item.get("passes_when"),
+                item.get("if_fails"),
+            ))
     return "\n".join(lines)
 
 

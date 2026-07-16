@@ -100,6 +100,36 @@ def audit_comic_real_production_start_readiness(
             "真实生产完成后运行 python scripts/audit_comic_v2_handoffs.py --format markdown。",
             "只有交付盘点和质量基准显示 production_quality_verified 时，才把该包说成真实质量已验证。",
         ],
+        "post_run_validation": [
+            {
+                "step": 1,
+                "title": "盘点本地制片包",
+                "command": "python scripts/audit_comic_v2_handoffs.py --format markdown",
+                "passes_when": "最近一份真实项目显示 production_quality_verified，或明确列出 needs_review 的责任部门和恢复动作。",
+                "if_fails": "先按表格里的 Recovery/Stage 修复；不要把 needs_review 或 legacy_unverifiable 当成可交付成品。",
+            },
+            {
+                "step": 2,
+                "title": "审计目标 manifest 的真实生产声明",
+                "command": "python scripts/verify_comic_real_production_claim.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown",
+                "passes_when": "Claim level 为 real_quality_verified，且 Can claim real quality 为 True。",
+                "if_fails": "把报告里的 Claim Upgrade Checklist 当成补证据清单；不要公开宣称真实画质已验证。",
+            },
+            {
+                "step": 3,
+                "title": "复核制片包质量基准",
+                "command": "python scripts/verify_comic_v2_production_benchmark.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown",
+                "passes_when": "package_quality_ready、production_quality_verified 和 stored_benchmark_matches 都成立。",
+                "if_fails": "按 recommended_recovery 退回图片、提示词、质检或交付组装阶段。",
+            },
+            {
+                "step": 4,
+                "title": "保留交付证据",
+                "command": "下载或归档 Word 画布、handoff manifest、提示词包、图片记录和追溯 JSON。",
+                "passes_when": "历史页和 manifest 能互相指向同一批故事、资产、图片、镜头和质量基准版本。",
+                "if_fails": "先重新生成交付包或追溯记录；不要只保留一个 Word 文件。",
+            },
+        ],
     }
 
 

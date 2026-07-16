@@ -32,6 +32,16 @@ class ComicProductionReadinessTests(unittest.TestCase):
             self.assertTrue(checks[check_id]["evidence"])
         self.assertTrue(any("办公室可用性" in item for item in checks["local_doctor"]["evidence"]))
         self.assertTrue(any('"offices"' in item for item in checks["local_doctor"]["evidence"]))
+        from src.config_manager import ConfigManager
+        from src.product_readiness import audit_comic_real_production_start_readiness
+
+        real_run = audit_comic_real_production_start_readiness(ConfigManager().get_model_config)
+        post_run = real_run["post_run_validation"]
+        self.assertEqual([item["step"] for item in post_run], [1, 2, 3, 4])
+        post_run_text = "\n".join(item["command"] for item in post_run)
+        self.assertIn("audit_comic_v2_handoffs.py", post_run_text)
+        self.assertIn("verify_comic_real_production_claim.py", post_run_text)
+        self.assertIn("verify_comic_v2_production_benchmark.py", post_run_text)
         runtime_evidence = "\n".join(checks["runtime_status"]["evidence"])
         self.assertIn("src/web/static/js/app.js", runtime_evidence)
         self.assertIn("src/web/static/index.html", runtime_evidence)
