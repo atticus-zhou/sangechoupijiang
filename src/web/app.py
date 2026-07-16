@@ -6024,6 +6024,7 @@ def _comic_v2_image_production_evidence(image_assets: list[dict], quality_benchm
         "rerun_visual_review_count": int(benchmark_image_summary.get("rerun_visual_review_count") or 0),
         "regenerate_prompt_count": int(benchmark_image_summary.get("regenerate_prompt_count") or 0),
         "failed_image_ids": list(benchmark_image_summary.get("failed_image_ids") or []),
+        "rework_instructions": list(benchmark_image_summary.get("rework_instructions") or []),
         "evidence_level": evidence_level,
         "supports_real_quality_claim": evidence_level == "model_reviewed" and benchmark_verified,
         "summary": summary,
@@ -6071,6 +6072,8 @@ def _comic_v2_history_image_asset(artifact: dict) -> dict:
         "review_recovery_action": review.get("recovery_action", ""),
         "review_recovery_focus": review.get("recovery_focus", ""),
         "review_recovery_reason": review.get("recovery_reason", ""),
+        "review_rework_label": review.get("rework_label", ""),
+        "review_operator_steps": list(review.get("operator_steps") or []),
     }
 
 

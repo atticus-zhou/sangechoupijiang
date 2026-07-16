@@ -46,6 +46,8 @@ class VisualReviewResult:
     recovery_action: str = ""
     recovery_focus: str = ""
     recovery_reason: str = ""
+    rework_label: str = ""
+    operator_steps: tuple[str, ...] = ()
 
 
 def build_visual_review_request(
@@ -163,6 +165,8 @@ def normalize_visual_review(
         recovery_action=recovery["action"],
         recovery_focus=recovery["focus"],
         recovery_reason=recovery["reason"],
+        rework_label=recovery["label"],
+        operator_steps=tuple(recovery["operator_steps"]),
     )
 
 
@@ -193,32 +197,66 @@ def _review_recovery(
     missing_dimensions: tuple[str, ...],
     failed_dimensions: tuple[str, ...],
     request: VisualReviewRequest,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     if missing_dimensions:
         return {
             "action": "rerun_visual_review",
             "focus": "visual_review",
             "reason": "视觉模型没有返回完整七维评分，不能放行或判断图片是否可交付。",
+            "label": "重跑视觉质检",
+            "operator_steps": [
+                "保留当前图片和提示词不变。",
+                "重新调用刑部视觉模型，要求返回完整七维评分、证据和修改建议。",
+            ],
         }
     if not failed_dimensions:
-        return {"action": "", "focus": "", "reason": ""}
+        return {"action": "", "focus": "", "reason": "", "label": "", "operator_steps": []}
     failed = set(failed_dimensions)
-    if failed & {"identity_consistency", "style_consistency", "era_media", "asset_purity", "anatomy"}:
+    if failed & {"identity_consistency", "anatomy"}:
         return {
             "action": "regenerate_images",
             "focus": "images",
-            "reason": "图片本身没有通过身份、风格、时代、纯净度或结构质检，优先保持提示词不变重新生图。",
+            "reason": "图片本身没有通过身份或结构质检，优先保持提示词不变重新生图。",
+            "label": "保留提示词重新生图",
+            "operator_steps": [
+                "保留当前故事、资产身份证和提示词版本。",
+                "用同一提示词重新生成这张图，优先修正脸型、发型、体态或肢体结构。",
+                "新图生成后重新执行七维视觉质检。",
+            ],
+        }
+    if failed & {"style_consistency", "era_media", "asset_purity"}:
+        return {
+            "action": "regenerate_images",
+            "focus": "images",
+            "reason": "图片没有继承视觉母版、时代设定或基础资产纯净度，优先保持提示词不变重新生图。",
+            "label": "按风格和时代重生图片",
+            "operator_steps": [
+                "保留当前提示词，但重点检查生成图是否偏离时代、画风或白底/空场景要求。",
+                "重新生成图片，要求模型严格继承视觉母版和用途合同。",
+                "若连续失败，再退回工部重写提示词中的风格、时代和背景约束。",
+            ],
         }
     if failed & {"spatial_structure", "purpose_fit"}:
         return {
             "action": "regenerate_prompts",
             "focus": "prompts",
             "reason": "图片用途或空间结构没有说清，优先退回工部/兵部重写资产或镜头提示词。",
+            "label": "退回提示词重写",
+            "operator_steps": [
+                "保留已确认故事和资产清单。",
+                "退回工部/兵部，补清楚这张图的用途、空间结构、镜头目的和引用资产。",
+                "用新版提示词重新生成图片并重新质检。",
+            ],
         }
     return {
         "action": "regenerate_images",
         "focus": "images",
         "reason": f"图片未达到 {request.production_role or '当前资产'} 的质检标准。",
+        "label": "重新生成图片",
+        "operator_steps": [
+            "保留当前生产链路证据。",
+            "重新生成未达标图片并再次执行视觉质检。",
+        ],
     }
 
 

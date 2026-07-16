@@ -4330,6 +4330,7 @@ function renderComicV2HistoryTrace(trace) {
     const productionEvidence = trace.image_production_evidence || {};
     const imageAssets = Array.isArray(trace.image_assets) ? trace.image_assets : [];
     const claimUpgradeChecklist = Array.isArray(trace.claim_upgrade_checklist) ? trace.claim_upgrade_checklist : [];
+    const reworkInstructions = Array.isArray(productionEvidence.rework_instructions) ? productionEvidence.rework_instructions : [];
     const promptQualityLabel = {
         ready: '通过',
         needs_review: '需复核',
@@ -4393,6 +4394,13 @@ function renderComicV2HistoryTrace(trace) {
                     <span>重生 ${escapeHtml(productionEvidence.regenerate_image_count || 0)} · 重审 ${escapeHtml(productionEvidence.rerun_visual_review_count || 0)} · 重写提示词 ${escapeHtml(productionEvidence.regenerate_prompt_count || 0)}</span>
                     <span>fixture ${productionEvidence.uses_fixture ? 'yes' : 'no'}</span>
                 </div>
+                ${reworkInstructions.length ? `
+                    <ul class="v2-prompt-quality-issues">
+                        ${reworkInstructions.slice(0, 3).map(item => `
+                            <li>${escapeHtml(item.image_id || item.asset_id || '图片')}：${escapeHtml(item.label || item.action || '复核')} · ${escapeHtml(item.reason || '')}</li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
                 <small>${escapeHtml(productionEvidence.next_action || '')}</small>
             </div>
         ` : ''}
@@ -4458,7 +4466,12 @@ function renderComicV2HistoryImageAssets(images) {
                         <p>质检 ${escapeHtml(image.review_status || 'unknown')} · 模型 ${escapeHtml(image.model || image.provider || '')}</p>
                         ${usageContract ? `<p><b>用途合同</b>${escapeHtml(usageContract)}</p>` : ''}
                         ${referencePolicy ? `<p><b>引用方式</b>${escapeHtml(referencePolicy)}</p>` : ''}
-                        ${image.review_recovery_action ? `<p>建议 ${escapeHtml(image.review_recovery_action)} · ${escapeHtml(image.review_recovery_reason || image.review_recovery_focus || '')}</p>` : ''}
+                        ${image.review_recovery_action ? `<p><b>${escapeHtml(image.review_rework_label || '返工建议')}</b>${escapeHtml(image.review_recovery_action)} · ${escapeHtml(image.review_recovery_reason || image.review_recovery_focus || '')}</p>` : ''}
+                        ${Array.isArray(image.review_operator_steps) && image.review_operator_steps.length ? `
+                            <ul class="v2-prompt-quality-issues">
+                                ${image.review_operator_steps.slice(0, 3).map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+                            </ul>
+                        ` : ''}
                     </article>
                 `;
                 }).join('')}

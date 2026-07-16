@@ -103,6 +103,16 @@ def format_markdown(result: dict[str, Any]) -> str:
         failed_ids = image_summary.get("failed_image_ids") or []
         if failed_ids:
             lines.append(f"- Failed image ids: `{', '.join(failed_ids[:8])}`")
+        instructions = image_summary.get("rework_instructions") or []
+        if instructions:
+            lines.extend(["", "### Rework Instructions", ""])
+            for item in instructions[:5]:
+                lines.append(
+                    f"- `{item.get('image_id') or item.get('asset_id')}` · "
+                    f"{item.get('label') or item.get('action')}: {item.get('reason') or ''}"
+                )
+                for step in item.get("operator_steps") or []:
+                    lines.append(f"  - {step}")
     if result.get("issues"):
         lines.extend(["", "## Issues", ""])
         for issue in result["issues"]:

@@ -154,6 +154,8 @@ class ComicV2VisualReviewTests(unittest.TestCase):
         self.assertEqual(result.recovery_action, "regenerate_images")
         self.assertEqual(result.recovery_focus, "images")
         self.assertIn("身份", result.recovery_reason)
+        self.assertEqual(result.rework_label, "保留提示词重新生图")
+        self.assertIn("重新生成这张图", "；".join(result.operator_steps))
 
     def test_spatial_failure_recommends_prompt_regeneration(self):
         request = build_visual_review_request(
@@ -171,6 +173,27 @@ class ComicV2VisualReviewTests(unittest.TestCase):
         self.assertEqual(result.recovery_action, "regenerate_prompts")
         self.assertEqual(result.recovery_focus, "prompts")
         self.assertIn("空间结构", result.recovery_reason)
+        self.assertEqual(result.rework_label, "退回提示词重写")
+        self.assertIn("退回工部/兵部", "；".join(result.operator_steps))
+
+    def test_missing_dimensions_produce_rerun_review_playbook(self):
+        request = build_visual_review_request(
+            "current.png",
+            ["identity.png"],
+            visual_bible_summary="ancient fantasy style",
+            acceptance_criteria=["same character"],
+            production_role="clean_character_identity_three_view",
+            clean_background_required=True,
+        )
+        payload = review_payload()
+        payload["scores"].pop("purpose_fit")
+
+        result = normalize_visual_review(payload, request)
+
+        self.assertEqual(result.status, "needs_review")
+        self.assertEqual(result.recovery_action, "rerun_visual_review")
+        self.assertEqual(result.rework_label, "重跑视觉质检")
+        self.assertIn("完整七维评分", "；".join(result.operator_steps))
 
 
 if __name__ == "__main__":

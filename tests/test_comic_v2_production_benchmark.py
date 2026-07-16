@@ -145,7 +145,24 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(audit["image_quality_summary"]["waste_or_rework_images"], 7)
         self.assertEqual(audit["image_quality_summary"]["waste_or_rework_rate"], 1)
         self.assertIn("img_", audit["image_quality_summary"]["failed_image_ids"][0])
+        instructions = audit["image_quality_summary"]["rework_instructions"]
+        self.assertEqual(len(instructions), 7)
+        self.assertEqual(instructions[0]["action"], "manual_review")
+        self.assertTrue(instructions[0]["label"])
+        self.assertIn("operator_steps", instructions[0])
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_images")
+
+    def test_missing_visual_review_creates_rerun_review_instruction(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = fixture_manifest(Path(tmp))
+        manifest["images"][0]["review"] = {}
+
+        audit = audit_handoff_manifest(manifest)
+
+        first = audit["image_quality_summary"]["rework_instructions"][0]
+        self.assertEqual(first["action"], "rerun_visual_review")
+        self.assertEqual(first["label"], "补跑视觉质检")
+        self.assertIn("七维评分", "；".join(first["operator_steps"]))
 
     def test_recommended_recovery_includes_operator_playbook(self):
         with tempfile.TemporaryDirectory() as tmp:

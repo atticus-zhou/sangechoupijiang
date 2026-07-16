@@ -444,6 +444,7 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
     regenerate_prompts = 0
     by_role: dict[str, int] = {}
     failed_image_ids: list[str] = []
+    rework_instructions: list[dict[str, Any]] = []
 
     for image in images:
         image_id = str(image.get("image_id") or image.get("asset_id") or "<unknown>")
@@ -455,6 +456,21 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
         if not isinstance(review, dict) or not review:
             missing_review += 1
             failed_image_ids.append(image_id)
+            rework_instructions.append({
+                "image_id": image_id,
+                "asset_id": str(image.get("asset_id") or ""),
+                "image_kind": str(image.get("image_kind") or ""),
+                "production_role": role,
+                "action": "rerun_visual_review",
+                "label": "补跑视觉质检",
+                "reason": "图片缺少视觉质检记录，不能判断是否可交付。",
+                "failed_dimensions": [],
+                "missing_dimensions": list(REVIEW_DIMENSIONS),
+                "operator_steps": [
+                    "保留当前图片和提示词。",
+                    "调用刑部视觉模型补齐七维评分、证据和修改建议。",
+                ],
+            })
             continue
         reviewed += 1
         review_status = str(review.get("status") or "").strip().lower()
@@ -469,6 +485,19 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
                 needs_review += 1
             failed_image_ids.append(image_id)
         action = str(review.get("recovery_action") or "").strip()
+        if image_id in failed_image_ids:
+            rework_instructions.append({
+                "image_id": image_id,
+                "asset_id": str(image.get("asset_id") or ""),
+                "image_kind": str(image.get("image_kind") or ""),
+                "production_role": role,
+                "action": action or "manual_review",
+                "label": str(review.get("rework_label") or review.get("recovery_reason") or "人工复核"),
+                "reason": str(review.get("recovery_reason") or ""),
+                "failed_dimensions": list(review.get("failed_dimensions") or []),
+                "missing_dimensions": list(review.get("missing_dimensions") or []),
+                "operator_steps": list(review.get("operator_steps") or []),
+            })
         if action == "regenerate_images":
             regenerate_images += 1
         elif action == "rerun_visual_review":
@@ -493,6 +522,7 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
         "rerun_visual_review_count": rerun_review,
         "regenerate_prompt_count": regenerate_prompts,
         "failed_image_ids": failed_image_ids[:20],
+        "rework_instructions": rework_instructions[:20],
         "by_production_role": by_role,
         "summary": (
             f"共 {total} 张图片，{usable} 张可直接交付，{waste_or_rework} 张需要重生、重审或人工复核。"

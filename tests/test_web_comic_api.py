@@ -1081,6 +1081,7 @@ class WebComicApiTests(unittest.TestCase):
                         "rerun_visual_review_count": 0,
                         "regenerate_prompt_count": 0,
                         "failed_image_ids": [],
+                        "rework_instructions": [],
                     },
                     "summary": "制片包质量已验证。",
                     "issue_count": 0,
@@ -1178,6 +1179,8 @@ class WebComicApiTests(unittest.TestCase):
                     "recovery_action": "regenerate_images",
                     "recovery_focus": "images",
                     "recovery_reason": "图片需要重新生成以稳定人物身份。",
+                    "rework_label": "保留提示词重新生图",
+                    "operator_steps": ["保留当前提示词", "重新生成这张图", "重新执行七维视觉质检"],
                 },
                 "path": f"output/workspaces/{workspace_id}/generated/{task_id}/char_001_three_view.png",
             },
@@ -1231,6 +1234,8 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["image_assets"][0]["review_recovery_action"], "regenerate_images")
             self.assertEqual(trace["image_assets"][0]["review_recovery_focus"], "images")
             self.assertIn("人物身份", trace["image_assets"][0]["review_recovery_reason"])
+            self.assertEqual(trace["image_assets"][0]["review_rework_label"], "保留提示词重新生图")
+            self.assertIn("重新生成这张图", "；".join(trace["image_assets"][0]["review_operator_steps"]))
             self.assertEqual(trace["shots"][0]["shot_id"], "shot_001")
             self.assertEqual(trace["shots"][0]["first_frame_reference_image"]["file"], "char_001_three_view.png")
             self.assertEqual(trace["shots"][0]["reference_asset_chain"][0]["name"], "林昭")

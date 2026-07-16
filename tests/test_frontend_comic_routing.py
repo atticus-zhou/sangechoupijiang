@@ -706,6 +706,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("productionEvidence.waste_or_rework_image_count", trace_fn)
         self.assertIn("productionEvidence.waste_or_rework_rate", trace_fn)
         self.assertIn("productionEvidence.regenerate_image_count", trace_fn)
+        self.assertIn("productionEvidence.rework_instructions", trace_fn)
         self.assertIn("trace.claim_upgrade_checklist", trace_fn)
         self.assertIn("trace.claim_level", trace_fn)
         self.assertIn("history-claim-upgrade", trace_fn)
@@ -721,6 +722,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("引用方式", js)
         self.assertIn("review_recovery_action", js)
         self.assertIn("review_recovery_reason", js)
+        self.assertIn("review_rework_label", js)
+        self.assertIn("review_operator_steps", js)
         self.assertIn("legacy_unverifiable", summary_fn)
         self.assertIn("summary.legacy_package", summary_fn)
 
