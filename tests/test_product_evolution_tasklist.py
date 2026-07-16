@@ -109,9 +109,17 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
     def test_development_checklist_verifier_is_part_of_required_loop(self):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
 
+        self.assertIn("- [x] 每次修改都要有最小验证；涉及核心链路时必须跑端到端验证。", text)
         self.assertIn("python scripts/verify_development_checklist.py --format markdown", text)
+        self.assertIn("python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean", text)
+        self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_office_isolation.py --format markdown", text)
+        self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)
+        self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", text)
+        self.assertIn("python scripts/verify_comic_v2_production_benchmark.py --format markdown", text)
         self.assertIn("python -m unittest discover -s tests -q", text)
         self.assertIn("git diff --check", text)
+        self.assertIn("scripts/check_no_secrets.py", text)
 
 
 if __name__ == "__main__":

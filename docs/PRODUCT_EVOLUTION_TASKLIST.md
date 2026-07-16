@@ -105,7 +105,8 @@
 - [x] 用户每次点击关键按钮后，都必须知道系统正在做什么、由哪个 Agent 做、下一步是什么。
 - [x] 所有真实模型调用失败都必须可见，不允许静默生成伪正式结果。
 - [x] 所有 API Key、Cookie、登录态、运行产物、生成文档和用户数据不得进入 Git。
-- [ ] 每次修改都要有最小验证；涉及核心链路时必须跑端到端验证。
+- [x] 每次修改都要有最小验证；涉及核心链路时必须跑端到端验证。
+  说明：已固化为 `python scripts/verify_development_checklist.py --format markdown`。该脚本会串联 `git status --short --branch`、`git diff --check`、敏感信息扫描、办公室隔离和 release readiness；普通小改动可用 `--skip-release` 做快速收尾，公开交付或核心链路改动必须使用 release readiness，必要时追加 `--run-tests --require-clean`。
 
 ## 1. 当前版本固化
 
@@ -381,36 +382,40 @@
 
 小改动：
 
-- [ ] 查看 `git status --short --branch`。
-- [ ] 明确本次改动影响哪个办公室。
-- [ ] 跑对应单元测试。
-- [ ] 检查是否误改其他办公室模型配置。
+- [x] 查看 `git status --short --branch`。
+- [x] 明确本次改动影响哪个办公室。
+- [x] 跑对应单元测试。
+- [x] 检查是否误改其他办公室模型配置。
+  说明：小改动必须至少跑 focused tests、`git diff --check` 和 `scripts/check_no_secrets.py`；触碰模型配置、工作区、历史或产物时，必须追加 `python scripts/verify_office_isolation.py --format markdown`。
 
 核心链路改动：
 
-- [ ] 先写失败测试或补充验证脚本。
-- [ ] 跑相关 focused tests。
-- [ ] 跑端到端验证脚本。
-- [ ] 必要时用浏览器真实点击验证。
-- [ ] 检查生成产物。
-- [ ] 扫描敏感信息。
+- [x] 先写失败测试或补充验证脚本。
+- [x] 跑相关 focused tests。
+- [x] 跑端到端验证脚本。
+- [x] 必要时用浏览器真实点击验证。
+- [x] 检查生成产物。
+- [x] 扫描敏感信息。
+  说明：核心链路改动必须跑对应 focused tests，并用 `python scripts/verify_release_readiness.py --format markdown` 或更窄的端到端验证证明公开演示、漫剧交付、研究办公室、隔离和安全边界没有被破坏；需要 UI 体验判断时再补浏览器点击验证。
 
 交付物改动：
 
-- [ ] 检查 DOCX 结构。
-- [ ] 检查图片嵌入数量。
-- [ ] 条件允许时渲染页面检查。
+- [x] 检查 DOCX 结构。
+- [x] 检查图片嵌入数量。
+- [x] 条件允许时渲染页面检查。
 - [x] 下载链接必须可用。
   说明：无 Key 演示下载链接已纳入 `/api/offices/{office_id}/launch-gates` 的 `evidence_links`，并在办公室大厅展示；AI 漫剧制片办公室样例 Word 指向 `/api/demo/comic-production/files/word_canvas.docx`，研究办公室阶段报告指向 `/api/demo/research/files/report.md`。
+  说明：AI 漫剧 Word 和 handoff manifest 由 `python scripts/verify_comic_v2_delivery.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 覆盖；这些检查会审计 DOCX 结构、嵌入图片数量、图片记录、引用链路、quick-start 和下游交接字段。
 
 发布前：
 
-- [ ] `python -m unittest discover -s tests -q`
+- [x] `python -m unittest discover -s tests -q`
 - [x] `python scripts/verify_development_checklist.py --format markdown`
-- [ ] `git diff --check`
-- [ ] 敏感信息扫描。
-- [ ] README 与实际功能一致。
-- [ ] 本地分支和远端状态明确。
+- [x] `git diff --check`
+- [x] 敏感信息扫描。
+- [x] README 与实际功能一致。
+- [x] 本地分支和远端状态明确。
+  说明：公开交付前首选 `python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean`；如果只是本地阶段性提交，至少运行 focused tests、release readiness、secret scan 和 `git diff --check`，并在最终答复中说明哪些检查已跑、哪些因范围或时间未跑。
 
 ## 14. 当前最高优先级
 
