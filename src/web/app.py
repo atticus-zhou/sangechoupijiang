@@ -950,6 +950,68 @@ def _public_showcase_quality_upgrade_path(claim: dict) -> dict:
     }
 
 
+def _public_showcase_portfolio_integration() -> dict:
+    return {
+        "title": "个人网站接入方式",
+        "summary": "公开展示应只接入 no-key 静态包或 /api/demo/public-showcase 数据，不接入真实生产接口、config.yaml、用户工作区或作者 API Key。",
+        "recommended_path": "static_export",
+        "static_export": {
+            "command": "python scripts/export_public_showcase.py",
+            "verify_command": "python scripts/verify_static_public_showcase.py --format markdown",
+            "source_dir": "dist/public-showcase",
+            "entrypoint": "dist/public-showcase/index.html",
+            "requires_backend": False,
+            "requires_api_key": False,
+        },
+        "integration_options": [
+            {
+                "id": "standalone_static_site",
+                "label": "独立静态展示项目",
+                "target": "Vercel / Netlify / GitHub Pages",
+                "copy_from": "dist/public-showcase",
+                "copy_to": "站点发布根目录",
+                "public_url_example": "https://your-domain.example/three-stooges/",
+                "best_for": "不想影响已有个人网站构建时最稳。",
+            },
+            {
+                "id": "personal_site_subdirectory",
+                "label": "复制到个人网站子目录",
+                "target": "已有个人网站仓库",
+                "copy_from": "dist/public-showcase/*",
+                "copy_to": "public/three-stooges/",
+                "public_url_example": "/three-stooges/",
+                "best_for": "个人网站已经上线，只想新增一个作品入口。",
+            },
+        ],
+        "must_keep": [
+            "index.html",
+            "data.js",
+            "app.js",
+            "style.css",
+            "assets/public-showcase-desktop.png",
+            "downloads/",
+            "data/comic_production_claim_report.json",
+            "export-manifest.json",
+        ],
+        "must_not_include": [
+            "config.yaml",
+            ".env",
+            "API Key",
+            "Cookie",
+            "user_data/",
+            "output/",
+            "browser profile",
+            "real user workspace",
+        ],
+        "verification_commands": [
+            "python scripts/export_public_showcase.py",
+            "python scripts/verify_static_public_showcase.py --format markdown",
+            "python scripts/verify_release_readiness.py --format markdown",
+            "python scripts/check_no_secrets.py",
+        ],
+    }
+
+
 def _public_showcase_deliverable_reading_guide() -> list[dict]:
     return [
         {
@@ -1291,6 +1353,7 @@ async def get_public_showcase_demo_api():
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
+            "portfolio_integration": _public_showcase_portfolio_integration(),
             "handoff_inventory": {
                 "uri": "/api/demo/comic-production/handoff-inventory",
                 "status": comic_inventory.get("status", ""),

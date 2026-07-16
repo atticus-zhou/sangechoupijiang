@@ -279,6 +279,43 @@
     });
   }
 
+  function renderPortfolioIntegration() {
+    const portfolio = showcase.portfolio_embed || {};
+    const integration = portfolio.portfolio_integration || {};
+    const target = document.getElementById('portfolio-integration');
+    const count = document.getElementById('integration-count');
+    if (!target || !count || !integration.static_export) return;
+    const options = Array.isArray(integration.integration_options) ? integration.integration_options : [];
+    count.textContent = options.length + ' 种接法';
+    target.appendChild(element('p', 'lead compact', integration.summary || '公开展示只接入静态包，不接入真实生产接口。'));
+    const exportCard = element('article', 'card integration-export-card');
+    exportCard.appendChild(element('h3', '', integration.title || '个人网站接入方式'));
+    addTextRow(exportCard, '生成命令', integration.static_export.command);
+    addTextRow(exportCard, '验证命令', integration.static_export.verify_command);
+    addTextRow(exportCard, '源目录', integration.static_export.source_dir);
+    addTextRow(exportCard, '入口文件', integration.static_export.entrypoint);
+    target.appendChild(exportCard);
+    const optionGrid = element('div', 'card-grid two integration-options');
+    options.forEach(function (item) {
+      const card = element('article', 'card');
+      card.appendChild(element('h3', '', item.label || item.id));
+      addTextRow(card, '目标', item.target);
+      addTextRow(card, '复制', text(item.copy_from || '') + ' -> ' + text(item.copy_to || ''));
+      addTextRow(card, '入口', item.public_url_example);
+      card.appendChild(element('p', '', item.best_for || ''));
+      optionGrid.appendChild(card);
+    });
+    target.appendChild(optionGrid);
+    const forbidden = element('article', 'card integration-forbidden');
+    forbidden.appendChild(element('h3', '', '禁止复制到公开站点'));
+    const list = element('ul', 'proof-list');
+    (integration.must_not_include || []).forEach(function (item) {
+      list.appendChild(element('li', '', item));
+    });
+    forbidden.appendChild(list);
+    target.appendChild(forbidden);
+  }
+
   function renderSafety() {
     const list = document.getElementById('safety-list');
     (showcase.safety_boundaries || []).forEach(function (boundary) {
@@ -299,5 +336,6 @@
   renderDownstreamQuickStart();
   renderInterviewScript();
   renderReproducibilityChecklist();
+  renderPortfolioIntegration();
   renderSafety();
 })();

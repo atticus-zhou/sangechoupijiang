@@ -185,6 +185,25 @@ a {
   line-height: 1.55;
 }
 
+.integration-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.integration-panel .lead.compact {
+  margin: 0;
+  max-width: 860px;
+}
+
+.integration-export-card,
+.integration-forbidden {
+  border-color: rgba(99, 167, 255, 0.22);
+}
+
+.integration-options {
+  margin-top: 0;
+}
+
 .hero-actions,
 .download-row {
   display: flex;

@@ -108,6 +108,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
         release_badge = portfolio.get("release_badge") or {}
         real_production_claim = portfolio.get("real_production_claim") or {}
         quality_upgrade_path = portfolio.get("quality_upgrade_path") or {}
+        portfolio_integration = portfolio.get("portfolio_integration") or {}
         claim_uri = str(real_production_claim.get("uri") or "")
         claim_path = temp_dir / claim_uri
         claim_payload = {}
@@ -186,6 +187,22 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static quality upgrade path must expose the history trace endpoint")
         if len(quality_upgrade_path.get("steps") or []) < 3:
             errors.append("static quality upgrade path must include at least three operator steps")
+        if portfolio_integration.get("recommended_path") != "static_export":
+            errors.append("static portfolio integration must recommend static_export")
+        integration_static = portfolio_integration.get("static_export") or {}
+        if integration_static.get("source_dir") != "dist/public-showcase":
+            errors.append("static portfolio integration must preserve dist/public-showcase source dir")
+        if integration_static.get("requires_backend") is not False or integration_static.get("requires_api_key") is not False:
+            errors.append("static portfolio integration must remain backend-free and no-key")
+        integration_options = portfolio_integration.get("integration_options") or []
+        if {"standalone_static_site", "personal_site_subdirectory"} - {item.get("id") for item in integration_options}:
+            errors.append("static portfolio integration must document both integration options")
+        if "public/three-stooges/" not in json.dumps(integration_options, ensure_ascii=False):
+            errors.append("static portfolio integration must include personal website copy target")
+        forbidden = "\n".join(portfolio_integration.get("must_not_include") or [])
+        for marker in ("config.yaml", "API Key", "Cookie", "user_data/", "output/"):
+            if marker not in forbidden:
+                errors.append(f"static portfolio integration must forbid {marker}")
 
         demos = showcase.get("featured_demos") or []
         for demo in demos:
@@ -247,6 +264,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "claim_upgrade_checklist_count": len(claim_upgrade_checklist),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
+            "portfolio_integration_option_count": len(integration_options),
+            "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),
@@ -277,6 +296,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
+        f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Requires backend: {payload.get('requires_backend')}",
         f"- Requires API Key: {payload.get('requires_api_key')}",
         f"- Calls real models: {payload.get('calls_real_models')}",

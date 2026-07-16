@@ -4600,6 +4600,7 @@ function renderPublicShowcase(showcase) {
     const qualityUpgradePath = portfolio.quality_upgrade_path || {};
     const claimUpgradeChecklist = Array.isArray(realProductionClaim.claim_upgrade_checklist) ? realProductionClaim.claim_upgrade_checklist : [];
     const releaseBadge = portfolio.release_badge || {};
+    const portfolioIntegration = portfolio.portfolio_integration || {};
     const deployment = showcase.public_deployment || {};
     return `
         <section class="demo-hero public-showcase-hero">
@@ -4753,6 +4754,31 @@ function renderPublicShowcase(showcase) {
                             </div>
                         </article>
                     `).join('')}
+                </div>
+            </section>
+        ` : ''}
+        ${portfolioIntegration.static_export ? `
+            <section class="demo-section public-integration-section">
+                <div class="demo-section-head">
+                    <h2>${escapeHtml(portfolioIntegration.title || '个人网站接入方式')}</h2>
+                    <span>${escapeHtml(portfolioIntegration.recommended_path || 'static_export')}</span>
+                </div>
+                <p>${escapeHtml(portfolioIntegration.summary || '')}</p>
+                <div class="public-demo-grid">
+                    ${(portfolioIntegration.integration_options || []).map(item => `
+                        <article>
+                            <strong>${escapeHtml(item.label || item.id || '')}</strong>
+                            <span>${escapeHtml(item.target || '')}</span>
+                            <p>${escapeHtml(item.best_for || '')}</p>
+                            <small>copy: ${escapeHtml(item.copy_from || '')} -> ${escapeHtml(item.copy_to || '')}</small>
+                        </article>
+                    `).join('')}
+                </div>
+                <div class="public-deployment-summary">
+                    <code>${escapeHtml(portfolioIntegration.static_export.command || '')}</code>
+                    <code>${escapeHtml(portfolioIntegration.static_export.verify_command || '')}</code>
+                    <p>入口：${escapeHtml(portfolioIntegration.static_export.entrypoint || '')}</p>
+                    <small>禁止复制：${escapeHtml((portfolioIntegration.must_not_include || []).join(' / '))}</small>
                 </div>
             </section>
         ` : ''}

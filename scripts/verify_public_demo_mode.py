@@ -81,6 +81,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
     quality_upgrade_path = portfolio_embed.get("quality_upgrade_path") or {}
+    portfolio_integration = portfolio_embed.get("portfolio_integration") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
     if payload.get("requires_api_key") is not False:
@@ -167,6 +168,27 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for item in quality_upgrade_path.get("steps") or []:
         if not item.get("owner") or not item.get("action") or not item.get("evidence") or not item.get("expected"):
             errors.append(f"quality upgrade path step is incomplete: {item.get('order') or item.get('owner')}")
+    if portfolio_integration.get("recommended_path") != "static_export":
+        errors.append("portfolio integration must recommend static_export for public websites")
+    integration_static = portfolio_integration.get("static_export") or {}
+    if integration_static.get("source_dir") != "dist/public-showcase":
+        errors.append("portfolio integration must use dist/public-showcase as the static source")
+    if integration_static.get("requires_backend") is not False or integration_static.get("requires_api_key") is not False:
+        errors.append("portfolio integration static export must be backend-free and no-key")
+    integration_options = portfolio_integration.get("integration_options") or []
+    option_ids = {item.get("id") for item in integration_options}
+    if {"standalone_static_site", "personal_site_subdirectory"} - option_ids:
+        errors.append("portfolio integration must document standalone and personal-site-subdirectory options")
+    if "public/three-stooges/" not in json.dumps(integration_options, ensure_ascii=False):
+        errors.append("portfolio integration must show the personal website copy target")
+    forbidden = "\n".join(portfolio_integration.get("must_not_include") or [])
+    for marker in ("config.yaml", "API Key", "Cookie", "user_data/", "output/"):
+        if marker not in forbidden:
+            errors.append(f"portfolio integration must forbid {marker}")
+    commands = "\n".join(portfolio_integration.get("verification_commands") or [])
+    for marker in ("export_public_showcase.py", "verify_static_public_showcase.py", "verify_release_readiness.py", "check_no_secrets.py"):
+        if marker not in commands:
+            errors.append(f"portfolio integration must include verifier command: {marker}")
     if len(interview_script) < 4:
         errors.append("portfolio embed must expose a 4-step interview demo script")
     for item in interview_script:
@@ -238,6 +260,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "real_production_can_claim_real_quality": real_production_claim.get("can_claim_real_quality"),
         "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
         "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
+        "portfolio_integration_option_count": len(integration_options),
+        "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
         "public_deployment_mode": public_deployment.get("mode", ""),
         "static_export_command": static_export.get("command", ""),
         "static_export_entrypoint": static_export.get("entrypoint", ""),
@@ -418,6 +442,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 漫剧交付盘点：{inventory.get('manifest_count')} 份，真实质量通过 {inventory.get('production_verified_count')} 份，结构样例 {inventory.get('demo_only_count')} 份",
         f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
+        f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]

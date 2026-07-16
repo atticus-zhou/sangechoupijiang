@@ -19,6 +19,18 @@ python scripts/verify_static_public_showcase.py --format markdown
 dist/public-showcase/index.html
 ```
 
+## 个人网站接入协议
+
+`/api/demo/public-showcase` 的 `portfolio_embed.portfolio_integration` 是给个人网站或作品集页使用的机器可读接入协议。它和这份文档保持同一套边界：
+
+- 推荐路径是 `static_export`，源目录固定为 `dist/public-showcase`。
+- 独立部署时，把 `dist/public-showcase` 当作一个纯静态站点发布。
+- 嵌入已有个人网站时，把 `dist/public-showcase/*` 复制到个人网站仓库的 `public/three-stooges/`，再链接到 `/three-stooges/`。
+- 必须保留 `index.html`、`data.js`、`app.js`、`style.css`、`assets/public-showcase-desktop.png`、`downloads/`、`data/comic_production_claim_report.json` 和 `export-manifest.json`。
+- 禁止把 `config.yaml`、`.env`、API Key、Cookie、`user_data/`、`output/`、浏览器 Profile 或真实用户工作区复制进公开站点。
+
+`python scripts/verify_public_demo_mode.py --format markdown` 和 `python scripts/verify_static_public_showcase.py --format markdown` 都会检查这份接入协议。如果后续修改了个人网站接入方式，必须同时更新接口、静态页和验证器。
+
 静态包包含：
 
 - 一个无需后端即可打开的公开展示页。

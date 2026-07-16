@@ -158,6 +158,20 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("verify_public_demo_mode.py", repro_commands)
         self.assertIn("verify_static_public_showcase.py", repro_commands)
         self.assertIn("verify_release_readiness.py", repro_commands)
+        integration = embed["portfolio_integration"]
+        self.assertEqual(integration["recommended_path"], "static_export")
+        self.assertEqual(integration["static_export"]["source_dir"], "dist/public-showcase")
+        self.assertEqual(integration["static_export"]["entrypoint"], "dist/public-showcase/index.html")
+        self.assertFalse(integration["static_export"]["requires_backend"])
+        self.assertFalse(integration["static_export"]["requires_api_key"])
+        self.assertEqual(
+            {item["id"] for item in integration["integration_options"]},
+            {"standalone_static_site", "personal_site_subdirectory"},
+        )
+        self.assertIn("public/three-stooges/", json.dumps(integration["integration_options"], ensure_ascii=False))
+        self.assertIn("API Key", " ".join(integration["must_not_include"]))
+        self.assertIn("output/", " ".join(integration["must_not_include"]))
+        self.assertIn("verify_release_readiness.py", "\n".join(integration["verification_commands"]))
         self.assertIn("check_no_secrets.py", "\n".join(payload["verification_commands"]))
 
         public_deployment = payload["public_deployment"]

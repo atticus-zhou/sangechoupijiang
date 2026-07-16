@@ -65,6 +65,15 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(len(repro), 5)
         self.assertTrue(any("verify_release_readiness.py" in item["command"] for item in repro))
         self.assertTrue(all(item["expected"] and item["if_fails"] for item in repro))
+        integration = showcase["portfolio_embed"]["portfolio_integration"]
+        self.assertEqual(integration["static_export"]["source_dir"], "dist/public-showcase")
+        self.assertEqual(integration["static_export"]["entrypoint"], "dist/public-showcase/index.html")
+        self.assertEqual(
+            {item["id"] for item in integration["integration_options"]},
+            {"standalone_static_site", "personal_site_subdirectory"},
+        )
+        self.assertIn("public/three-stooges/", json.dumps(integration["integration_options"], ensure_ascii=False))
+        self.assertIn("config.yaml", " ".join(integration["must_not_include"]))
         quick_start = showcase["portfolio_embed"]["downstream_quick_start"]
         self.assertEqual([item["step"] for item in quick_start], [1, 2, 3, 4, 5])
         self.assertIn("逐镜头生成视频", json.dumps(quick_start, ensure_ascii=False))
@@ -93,7 +102,9 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("renderReleaseBadge", static_script)
         self.assertIn("renderDownstreamQuickStart", static_script)
         self.assertIn("renderReproducibilityChecklist", static_script)
+        self.assertIn("renderPortfolioIntegration", static_script)
         self.assertIn("handoff_inventory", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
+        self.assertIn("portfolio_integration", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
 
     def test_static_readiness_verifier_is_public_operator_readable(self):
         completed = subprocess.run(
@@ -114,6 +125,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
         self.assertIn("Claim upgrade checklist: 3 items", completed.stdout)
         self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
+        self.assertIn("Portfolio integration: source=dist/public-showcase / options=2", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
 
