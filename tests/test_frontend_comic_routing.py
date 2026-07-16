@@ -69,12 +69,16 @@ class FrontendComicRoutingTests(unittest.TestCase):
 
     def test_readme_model_table_matches_comic_production_roles(self):
         readme = README.read_text(encoding="utf-8")
+        example = Path("config.example.yaml").read_text(encoding="utf-8")
 
         self.assertIn("| 兵部 | 文本镜头 / 视频提示词 |", readme)
         self.assertIn("| 工部 | 生图 + 文本组装，也就是图片生成模型加文本模型 |", readme)
         self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", readme)
         self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", readme)
         self.assertNotIn("| 兵部 | 生图模型 |", readme)
+        self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", example)
+        self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", example)
+        self.assertIn("    xingbu:\n      provider: dashscope\n      model: qwen-vl-max", example)
 
     def test_model_page_and_comic_workbench_render_office_preflight(self):
         html = INDEX_HTML.read_text(encoding="utf-8")

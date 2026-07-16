@@ -84,12 +84,16 @@ class ReadmeQualityTests(unittest.TestCase):
 
     def test_readme_model_table_matches_comic_production_roles(self):
         text = Path("README.md").read_text(encoding="utf-8")
+        example = Path("config.example.yaml").read_text(encoding="utf-8")
 
         self.assertIn("| 兵部 | 文本镜头 / 视频提示词 |", text)
         self.assertIn("| 工部 | 生图 + 文本组装，也就是图片生成模型加文本模型 |", text)
         self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", text)
         self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", text)
         self.assertNotIn("| 兵部 | 生图模型 |", text)
+        self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", example)
+        self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", example)
+        self.assertIn("    xingbu:\n      provider: dashscope\n      model: qwen-vl-max", example)
 
     def test_readme_splits_public_experience_by_audience(self):
         text = Path("README.md").read_text(encoding="utf-8")

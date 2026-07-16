@@ -61,9 +61,9 @@ office_models:
       model: doubao-seedream-5
       api_key: ${ARK_API_KEY}
     bingbu:
-      provider: doubao
-      model: doubao-seedream-5
-      api_key: ${ARK_API_KEY}
+      provider: deepseek
+      model: deepseek-chat
+      api_key: ${DEEPSEEK_API_KEY}
     xingbu:
       provider: dashscope
       model: qwen-vl-max

@@ -67,6 +67,17 @@ CHECKS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "comic_department_examples_match_runtime_roles",
+        "title": "AI comic example config keeps Bingbu text, Gongbu image, and Xingbu vision",
+        "file": REPO_ROOT / "config.example.yaml",
+        "markers": [
+            "comic_production:",
+            "bingbu:\n      provider: deepseek\n      model: deepseek-chat",
+            "gongbu:\n      provider: doubao\n      model: doubao-seedream-5",
+            "xingbu:\n      provider: dashscope\n      model: qwen-vl-max",
+        ],
+    },
+    {
         "id": "readme_links_guide",
         "title": "README links to the detailed model guide",
         "file": REPO_ROOT / "README.md",
