@@ -113,6 +113,10 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python scripts/export_public_showcase.py", text)
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", text)
         self.assertIn("dist/public-showcase/index.html", text)
+        self.assertIn("最快验收路线", text)
+        self.assertIn("六份下载物", text)
+        self.assertIn("七个可复核文件", text)
+        self.assertIn("核对 handoff manifest", text)
         self.assertIn("python scripts/check_no_secrets.py", text)
         self.assertIn("不要把自己的 API Key 暴露给访问者", text)
 

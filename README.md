@@ -69,7 +69,7 @@ python scripts/verify_static_public_showcase.py --format markdown
 ```
 
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
-静态展示包会同时带上交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单，访客可以直接看到应该运行哪些 no-key 检查命令，以及每条命令通过后证明什么。
+静态展示包会同时带上最快验收路线、六份下载物、七个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 查看声明边界和复现命令”的顺序判断产品价值。
 
 本地真实使用路径：
 
@@ -125,6 +125,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 - `handoff_manifest.json`：给系统看的引用清单，记录 story、asset、prompt、image、shot 和 Word 的版本关系。
 - AI 漫剧真实生产声明报告：说明固定样例能公开证明什么、不能宣称什么，避免把 demo 说成真实画质验证。
 - 研究办公室阶段报告：用于展示人机协作调研如何保留证据缺口，而不是假装全自动。
+- 研究办公室阶段性交付声明：说明研究办公室可以公开展示 staged delivery，但不能宣称全自动飞瓜会员级采集。
 - Deliverable reading guide 和下游生产 quick-start：告诉面试官或新开发者应该从哪几份文件理解产品价值，以及 Word 之后如何继续交给视频平台或剪辑流程。
 
 ## 模型配置
@@ -321,6 +322,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 可以公开展示：
 
 - 办公室大厅和产品定位。
+- 公开静态页的最快验收路线、六份下载物和七个可复核文件。
 - AI 漫剧制片办公室固定样例流程。
 - 研究办公室固定样例流程。
 - 样例 Word 制片画布、handoff manifest、研究样例报告和截图目标说明。
