@@ -110,6 +110,16 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("不能宣称真实模型画质已验证", "\n".join(claim["forbidden_public_claims"]))
         self.assertEqual(claim["evidence"]["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
         self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
+        upgrade_path = embed["quality_upgrade_path"]
+        self.assertEqual(upgrade_path["current_public_level"], "demo_structure_only")
+        self.assertEqual(upgrade_path["current_image_evidence"], "fixture_only")
+        self.assertFalse(upgrade_path["can_claim_real_quality"])
+        self.assertEqual(upgrade_path["recovery_action"], "regenerate_images")
+        self.assertEqual(upgrade_path["trace_endpoint"], "/api/tasks/{task_id}/comic-v2-trace.json")
+        self.assertIn("prompt_package", upgrade_path["preserves"])
+        self.assertIn("image_production_evidence", upgrade_path["rebuilds"])
+        self.assertEqual([item["order"] for item in upgrade_path["steps"]], [1, 2, 3])
+        self.assertTrue(all(item["owner"] and item["action"] and item["evidence"] and item["expected"] for item in upgrade_path["steps"]))
         handoff_guide = next(
             item for item in embed["deliverable_reading_guide"] if "handoff manifest" in item["title"]
         )

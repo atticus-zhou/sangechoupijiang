@@ -159,6 +159,32 @@ a {
   color: #f3d38a;
 }
 
+.quality-upgrade-path-card {
+  grid-column: 1 / -1;
+}
+
+.quality-upgrade-steps {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding-left: 20px;
+}
+
+.quality-upgrade-steps li {
+  color: var(--muted);
+}
+
+.quality-upgrade-steps strong {
+  color: var(--text);
+}
+
+.quality-upgrade-steps p,
+.quality-upgrade-steps small {
+  display: block;
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
 .hero-actions,
 .download-row {
   display: flex;

@@ -107,6 +107,7 @@
   function renderClaimBoundary() {
     const portfolio = showcase.portfolio_embed || {};
     const claim = portfolio.real_production_claim || {};
+    const qualityUpgradePath = portfolio.quality_upgrade_path || {};
     const grid = document.getElementById('claim-grid');
     const level = document.getElementById('claim-level');
     if (!grid || !level) return;
@@ -156,6 +157,28 @@
       });
       grid.appendChild(upgradeCard);
     }
+
+    renderQualityUpgradePath(grid, qualityUpgradePath);
+  }
+
+  function renderQualityUpgradePath(grid, path) {
+    if (!grid || !path || !path.recovery_action) return;
+    const card = element('article', 'card claim-card claim-upgrade-card quality-upgrade-path-card');
+    card.appendChild(element('h3', '', text(path.title || '从 demo 升级到真实生产证据')));
+    card.appendChild(element('p', '', text(path.summary || '公开展示只证明结构，真实画质需要本地重新生成并质检。')));
+    addTextRow(card, '图片证据', path.current_image_evidence || 'fixture_only');
+    addTextRow(card, '恢复动作', path.recovery_action);
+    addTextRow(card, '追溯接口', path.trace_endpoint);
+    const steps = element('ol', 'quality-upgrade-steps');
+    (Array.isArray(path.steps) ? path.steps : []).forEach(function (item) {
+      const li = element('li', '');
+      li.appendChild(element('strong', '', text(item.owner || 'operator')));
+      li.appendChild(element('p', '', text(item.action || '')));
+      li.appendChild(element('small', '', '证据：' + text(item.evidence || '') + '；预期：' + text(item.expected || '')));
+      steps.appendChild(li);
+    });
+    card.appendChild(steps);
+    grid.appendChild(card);
   }
 
   function renderReleaseBadge() {

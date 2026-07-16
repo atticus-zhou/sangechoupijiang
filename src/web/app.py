@@ -911,6 +911,45 @@ def _public_showcase_claim_report_deliverable(claim: dict) -> dict:
     }
 
 
+def _public_showcase_quality_upgrade_path(claim: dict) -> dict:
+    evidence = claim.get("evidence") or {}
+    return {
+        "title": "从公开 demo 升级到真实生产证据",
+        "summary": "公开展示只证明结构和交付链路；真实画质必须在本地用使用者自己的模型 Key 重新生成图片、完成视觉质检，再更新 claim report。",
+        "current_public_level": claim.get("claim_level", "demo_structure_only"),
+        "current_image_evidence": evidence.get("visual_evidence_level", "fixture_only"),
+        "can_claim_real_quality": bool(claim.get("can_claim_real_quality")),
+        "recovery_action": "regenerate_images",
+        "recovery_endpoint": "/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+        "trace_endpoint": "/api/tasks/{task_id}/comic-v2-trace.json",
+        "preserves": ["confirmed_story", "asset_manifest", "prompt_package", "old_word_canvas", "old_handoff_manifest"],
+        "rebuilds": ["image_production_evidence", "visual_review", "quality_benchmark", "claim_report"],
+        "steps": [
+            {
+                "order": 1,
+                "owner": "使用者",
+                "action": "在本地模型页配置并测试文本模型、生图模型和视觉理解模型。",
+                "evidence": "模型预检通过，不把 API Key 放进公开页面或 GitHub。",
+                "expected": "真实生产可以开始，但公开 demo 仍保持 no-key。",
+            },
+            {
+                "order": 2,
+                "owner": "工部 / 刑部",
+                "action": "按已确认故事、资产拆解和提示词包重新生成图片并完成视觉质检。",
+                "evidence": "图片记录包含 provider、model、非 fixture 标记和 review pass 结果。",
+                "expected": "image_production_evidence 从 fixture_only 升级为 model_reviewed。",
+            },
+            {
+                "order": 3,
+                "owner": "史部 / 礼部",
+                "action": "重新生成 Word 画布、handoff manifest 和 claim report，并保留旧交付物归档。",
+                "evidence": "history trace 可看到 story、asset、prompt、image、review、delivery 的版本链。",
+                "expected": "只有验证通过后，claim_level 才能从 demo_structure_only 升级。",
+            },
+        ],
+    }
+
+
 def _public_showcase_deliverable_reading_guide() -> list[dict]:
     return [
         {
@@ -1263,6 +1302,7 @@ async def get_public_showcase_demo_api():
                 "safe_public_claim": comic_inventory.get("safe_public_claim", ""),
                 "next_action": comic_inventory.get("next_action", ""),
             },
+            "quality_upgrade_path": _public_showcase_quality_upgrade_path(comic_claim),
             "real_production_claim": {
                 "uri": comic_claim.get("uri", "/api/demo/comic-production/claim-report"),
                 "claim_level": comic_claim.get("claim_level", ""),

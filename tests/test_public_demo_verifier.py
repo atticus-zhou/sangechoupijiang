@@ -121,6 +121,7 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("不调用真实模型", result.stdout)
         self.assertIn("claim report", result.stdout)
         self.assertIn("upgrade_checklist=3", result.stdout)
+        self.assertIn("action=regenerate_images", result.stdout)
         self.assertIn("demo_structure_only", result.stdout)
         self.assertIn("demo_structure_verified", result.stdout)
         self.assertIn("已验证真实模型画质：False", result.stdout)

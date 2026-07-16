@@ -80,6 +80,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     release_badge = portfolio_embed.get("release_badge") or {}
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
+    quality_upgrade_path = portfolio_embed.get("quality_upgrade_path") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
     if payload.get("requires_api_key") is not False:
@@ -151,6 +152,21 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public showcase must not claim real production quality from the fixed sample")
     if not real_production_claim.get("forbidden_public_claims"):
         errors.append("real production claim report must include forbidden public claims")
+    if quality_upgrade_path.get("current_public_level") != "demo_structure_only":
+        errors.append("portfolio embed quality upgrade path must start from demo_structure_only")
+    if quality_upgrade_path.get("current_image_evidence") != "fixture_only":
+        errors.append("portfolio embed quality upgrade path must expose fixture_only as the public image evidence")
+    if quality_upgrade_path.get("can_claim_real_quality") is not False:
+        errors.append("portfolio embed quality upgrade path must not claim real quality in public demo")
+    if quality_upgrade_path.get("recovery_action") != "regenerate_images":
+        errors.append("portfolio embed quality upgrade path must point to regenerate_images")
+    if quality_upgrade_path.get("trace_endpoint") != "/api/tasks/{task_id}/comic-v2-trace.json":
+        errors.append("portfolio embed quality upgrade path must expose the history trace endpoint")
+    if len(quality_upgrade_path.get("steps") or []) < 3:
+        errors.append("portfolio embed quality upgrade path must include at least three operator steps")
+    for item in quality_upgrade_path.get("steps") or []:
+        if not item.get("owner") or not item.get("action") or not item.get("evidence") or not item.get("expected"):
+            errors.append(f"quality upgrade path step is incomplete: {item.get('order') or item.get('owner')}")
     if len(interview_script) < 4:
         errors.append("portfolio embed must expose a 4-step interview demo script")
     for item in interview_script:
@@ -220,6 +236,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "real_production_claim_uri": real_production_claim.get("uri", ""),
         "real_production_claim_level": real_production_claim.get("claim_level", ""),
         "real_production_can_claim_real_quality": real_production_claim.get("can_claim_real_quality"),
+        "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
+        "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
         "public_deployment_mode": public_deployment.get("mode", ""),
         "static_export_command": static_export.get("command", ""),
         "static_export_entrypoint": static_export.get("entrypoint", ""),
@@ -399,6 +417,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 发布状态铭牌：{manifest.get('release_badge_status')}，信号 {manifest.get('release_badge_signal_count')} 条，真实画质声明 {manifest.get('release_badge_claim_real_quality')}",
         f"- 漫剧交付盘点：{inventory.get('manifest_count')} 份，真实质量通过 {inventory.get('production_verified_count')} 份，结构样例 {inventory.get('demo_only_count')} 份",
         f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
+        f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]

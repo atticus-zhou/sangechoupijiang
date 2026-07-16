@@ -107,6 +107,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
         portfolio = showcase.get("portfolio_embed") or {}
         release_badge = portfolio.get("release_badge") or {}
         real_production_claim = portfolio.get("real_production_claim") or {}
+        quality_upgrade_path = portfolio.get("quality_upgrade_path") or {}
         claim_uri = str(real_production_claim.get("uri") or "")
         claim_path = temp_dir / claim_uri
         claim_payload = {}
@@ -175,6 +176,16 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static release badge must link to release readiness")
         if len(release_badge.get("signals") or []) < 5:
             errors.append("static release badge must include at least five signals")
+        if quality_upgrade_path.get("current_public_level") != "demo_structure_only":
+            errors.append("static quality upgrade path must start from demo_structure_only")
+        if quality_upgrade_path.get("current_image_evidence") != "fixture_only":
+            errors.append("static quality upgrade path must expose fixture_only public image evidence")
+        if quality_upgrade_path.get("recovery_action") != "regenerate_images":
+            errors.append("static quality upgrade path must point to regenerate_images")
+        if quality_upgrade_path.get("trace_endpoint") != "/api/tasks/{task_id}/comic-v2-trace.json":
+            errors.append("static quality upgrade path must expose the history trace endpoint")
+        if len(quality_upgrade_path.get("steps") or []) < 3:
+            errors.append("static quality upgrade path must include at least three operator steps")
 
         demos = showcase.get("featured_demos") or []
         for demo in demos:
@@ -234,6 +245,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             ),
             "claim_report_uri": claim_uri,
             "claim_upgrade_checklist_count": len(claim_upgrade_checklist),
+            "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
+            "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),
@@ -263,6 +276,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Real product screenshot: {payload.get('screenshot_ready')}",
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
+        f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- Requires backend: {payload.get('requires_backend')}",
         f"- Requires API Key: {payload.get('requires_api_key')}",
         f"- Calls real models: {payload.get('calls_real_models')}",

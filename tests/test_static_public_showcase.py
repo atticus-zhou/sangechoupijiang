@@ -50,6 +50,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertGreaterEqual(len(claim_payload["claim_upgrade_checklist"]), 3)
         self.assertTrue(all(item["required_evidence"] for item in claim_payload["claim_upgrade_checklist"]))
         self.assertNotIn("E:\\", json.dumps(claim_payload, ensure_ascii=False))
+        upgrade_path = showcase["portfolio_embed"]["quality_upgrade_path"]
+        self.assertEqual(upgrade_path["current_public_level"], "demo_structure_only")
+        self.assertEqual(upgrade_path["current_image_evidence"], "fixture_only")
+        self.assertEqual(upgrade_path["recovery_action"], "regenerate_images")
+        self.assertEqual(upgrade_path["trace_endpoint"], "/api/tasks/{task_id}/comic-v2-trace.json")
+        self.assertEqual(len(upgrade_path["steps"]), 3)
         script_text = "\n".join(
             item["product_response"] for item in showcase["portfolio_embed"]["interview_demo_script"]
         )
@@ -81,6 +87,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         static_script = (self.output_dir / "app.js").read_text(encoding="utf-8")
         self.assertIn("未宣称真实画质", static_script)
         self.assertIn("claim.claim_upgrade_checklist", static_script)
+        self.assertIn("quality_upgrade_path", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
+        self.assertIn("renderQualityUpgradePath", static_script)
         self.assertIn("claim-upgrade-card", static_script)
         self.assertIn("renderReleaseBadge", static_script)
         self.assertIn("renderDownstreamQuickStart", static_script)
@@ -105,6 +113,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Release badge: safe_public_demo", completed.stdout)
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
         self.assertIn("Claim upgrade checklist: 3 items", completed.stdout)
+        self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
 

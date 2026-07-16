@@ -4597,6 +4597,7 @@ function renderPublicShowcase(showcase) {
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
     const realProductionClaim = portfolio.real_production_claim || {};
+    const qualityUpgradePath = portfolio.quality_upgrade_path || {};
     const claimUpgradeChecklist = Array.isArray(realProductionClaim.claim_upgrade_checklist) ? realProductionClaim.claim_upgrade_checklist : [];
     const releaseBadge = portfolio.release_badge || {};
     const deployment = showcase.public_deployment || {};
@@ -4671,6 +4672,23 @@ function renderPublicShowcase(showcase) {
                                     <b>${escapeHtml(item.title || item.id || '')}</b>
                                     <p>\u9700\u8981\uff1a${escapeHtml((item.required_evidence || []).join('\u3001'))}</p>
                                     <small>${escapeHtml(item.why_it_matters || '')}</small>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${qualityUpgradePath.recovery_action ? `
+                    <div class="public-claim-upgrade public-quality-upgrade-path">
+                        <strong>${escapeHtml(qualityUpgradePath.title || '从 demo 升级到真实生产证据')}</strong>
+                        <p>${escapeHtml(qualityUpgradePath.summary || '')}</p>
+                        <small>image_evidence=${escapeHtml(qualityUpgradePath.current_image_evidence || '')} · action=${escapeHtml(qualityUpgradePath.recovery_action || '')}</small>
+                        <div>
+                            ${(qualityUpgradePath.steps || []).map(item => `
+                                <article>
+                                    <span>${escapeHtml(item.owner || '')}</span>
+                                    <b>${escapeHtml(item.action || '')}</b>
+                                    <p>证据：${escapeHtml(item.evidence || '')}</p>
+                                    <small>预期：${escapeHtml(item.expected || '')}</small>
                                 </article>
                             `).join('')}
                         </div>
