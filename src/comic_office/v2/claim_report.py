@@ -88,7 +88,13 @@ def claim_upgrade_checklist(claim_level: str, benchmark: dict[str, Any]) -> list
             {
                 "id": "stored_benchmark",
                 "title": "\u91cd\u65b0\u5199\u5165\u5e76\u590d\u6838\u8d28\u91cf\u57fa\u51c6",
-                "status": "complete" if stored_matches else "missing",
+                "status": (
+                    "complete"
+                    if stored_matches and production_verified
+                    else "structure_only"
+                    if stored_matches
+                    else "missing"
+                ),
                 "required_evidence": [
                     "quality_benchmark",
                     "stored_benchmark_matches=true",

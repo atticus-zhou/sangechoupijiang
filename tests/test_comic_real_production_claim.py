@@ -48,6 +48,7 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         checklist = {item["id"]: item for item in report["claim_upgrade_checklist"]}
         self.assertEqual(checklist["run_real_models"]["status"], "missing")
         self.assertEqual(checklist["visual_review"]["status"], "missing")
+        self.assertEqual(checklist["stored_benchmark"]["status"], "structure_only")
         self.assertIn("真实模型", checklist["run_real_models"]["why_it_matters"])
 
     def test_real_verified_manifest_allows_real_quality_claim(self):
@@ -83,6 +84,7 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertIn("Forbidden Public Claims", completed.stdout)
         self.assertIn("Claim Upgrade Checklist", completed.stdout)
         self.assertIn("使用真实模型生成图片资产", completed.stdout)
+        self.assertIn("Status: `structure_only`", completed.stdout)
         self.assertIn("不能宣称真实模型画质已验证", completed.stdout)
 
 
