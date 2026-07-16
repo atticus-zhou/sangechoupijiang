@@ -288,9 +288,13 @@ def verify_static_public_showcase() -> dict[str, Any]:
         style_text = (temp_dir / "style.css").read_text(encoding="utf-8")
         if "claim.claim_upgrade_checklist" not in app_text or "claim-upgrade-card" not in app_text:
             errors.append("static showcase page must render the claim upgrade checklist")
+        if "showcase.download_catalog" not in app_text or "renderDownloadCatalog" not in app_text:
+            errors.append("static showcase page must render the reviewable download catalog")
         if "claim-upgrade-item" not in style_text:
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
-        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "下游生产 quick-start", "复现与验收清单", "公开部署安全边界"):
+        if "catalog-card" not in style_text or "hash-code" not in style_text:
+            errors.append("static showcase stylesheet must style the reviewable download catalog")
+        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "公开部署安全边界"):
             if marker not in index_text and marker not in (temp_dir / "style.css").read_text(encoding="utf-8"):
                 errors.append(f"static showcase page is missing marker: {marker}")
 

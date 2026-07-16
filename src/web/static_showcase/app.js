@@ -220,6 +220,31 @@
     });
   }
 
+  function renderDownloadCatalog() {
+    const catalog = Array.isArray(showcase.download_catalog) ? showcase.download_catalog : [];
+    const count = document.getElementById('catalog-count');
+    const grid = document.getElementById('download-catalog');
+    if (!count || !grid) return;
+    count.textContent = catalog.length + ' 个文件';
+    catalog.forEach(function (item) {
+      const card = element('article', 'catalog-card');
+      const head = element('div', 'catalog-head');
+      head.appendChild(element('h3', '', item.title || item.local_uri));
+      head.appendChild(element('span', 'status-pill', item.type || 'artifact'));
+      card.appendChild(head);
+      addTextRow(card, '文件', item.local_uri);
+      addTextRow(card, '来源', item.office_name || item.office_id);
+      addTextRow(card, '大小', item.bytes ? Math.ceil(Number(item.bytes) / 1024) + ' KB' : '');
+      addTextRow(card, '证明', item.proves || item.reader_guidance || item.look_for);
+      if (item.sha256) {
+        const hash = element('code', 'hash-code', item.sha256);
+        card.appendChild(hash);
+      }
+      card.appendChild(downloadButton({ uri: item.local_uri }, '下载复核'));
+      grid.appendChild(card);
+    });
+  }
+
   function renderDownstreamQuickStart() {
     const portfolio = showcase.portfolio_embed || {};
     const steps = Array.isArray(portfolio.downstream_quick_start) ? portfolio.downstream_quick_start : [];
@@ -333,6 +358,7 @@
   renderClaimBoundary();
   renderOffices();
   renderReadingGuide();
+  renderDownloadCatalog();
   renderDownstreamQuickStart();
   renderInterviewScript();
   renderReproducibilityChecklist();
