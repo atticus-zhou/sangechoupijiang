@@ -4443,15 +4443,21 @@ function renderComicV2HistoryImageAssets(images) {
                 <span>${items.length} 张图片</span>
             </div>
             <div class="v2-shot-card-grid">
-                ${visible.map(image => `
+                ${visible.map(image => {
+                    const usageContract = Array.isArray(image.usage_contract) ? image.usage_contract.filter(Boolean).join('；') : '';
+                    const referencePolicy = image.reference_policy || '';
+                    return `
                     <article class="v2-shot-card">
                         <h5>${escapeHtml(image.asset_id || image.image_id)}</h5>
                         <p>${escapeHtml(image.image_kind || '')} · ${escapeHtml(image.production_role || '未标记生产角色')}</p>
                         <p>状态 ${escapeHtml(image.status || 'unknown')} · 重试 ${escapeHtml(image.attempts || 0)} · ${image.clean_background_required ? '要求干净白底' : '不要求白底'}</p>
                         <p>质检 ${escapeHtml(image.review_status || 'unknown')} · 模型 ${escapeHtml(image.model || image.provider || '')}</p>
+                        ${usageContract ? `<p><b>用途合同</b>${escapeHtml(usageContract)}</p>` : ''}
+                        ${referencePolicy ? `<p><b>引用方式</b>${escapeHtml(referencePolicy)}</p>` : ''}
                         ${image.review_recovery_action ? `<p>建议 ${escapeHtml(image.review_recovery_action)} · ${escapeHtml(image.review_recovery_reason || image.review_recovery_focus || '')}</p>` : ''}
                     </article>
-                `).join('')}
+                `;
+                }).join('')}
             </div>
             ${hiddenCount ? `<small>另有 ${hiddenCount} 张图片在追溯 JSON 中。</small>` : ''}
         </section>
