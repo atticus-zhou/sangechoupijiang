@@ -43,8 +43,11 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertIn("完整制片配置", text)
         self.assertIn("工部", text)
         self.assertIn("刑部", text)
+        self.assertIn("office_models.comic_production.bingbu", text)
         self.assertIn("office_models.comic_production.gongbu", text)
         self.assertIn("office_models.comic_production.xingbu", text)
+        self.assertIn("常见误填", text)
+        self.assertIn("把豆包 Seedream 填到兵部", text)
         self.assertIn("不要提交真实 Key", text)
 
 

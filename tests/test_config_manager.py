@@ -317,16 +317,16 @@ class ConfigManagerTaskRunTests(unittest.TestCase):
         self.assertEqual(engine.office_id, "research")
         self.assertTrue(all(agent.office_id == "research" for agent in agents))
 
-    def test_comic_office_can_store_doubao_image_model_config(self):
+    def test_comic_production_office_keeps_bingbu_text_and_gongbu_image_overrides(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ConfigManager(base_dir=tmp)
             config = manager.load_yaml()
             config["office_models"] = {
-                "comic": {
+                "comic_production": {
                     "bingbu": {
-                        "provider": "doubao",
-                        "model": "doubao-seedream-5",
-                        "api_key": "doubao-key",
+                        "provider": "deepseek",
+                        "model": "deepseek-chat",
+                        "api_key": "deepseek-key",
                     },
                     "gongbu": {
                         "provider": "doubao",
@@ -337,12 +337,12 @@ class ConfigManagerTaskRunTests(unittest.TestCase):
             }
             manager.save_yaml(config)
 
-            bingbu = manager.get_model_config("bingbu", office_id="comic")
-            gongbu = manager.get_model_config("gongbu", office_id="comic")
+            bingbu = manager.get_model_config("bingbu", office_id="comic_production")
+            gongbu = manager.get_model_config("gongbu", office_id="comic_production")
             research_bingbu = manager.get_model_config("bingbu", office_id="research")
 
-            self.assertEqual(bingbu.provider, "doubao")
-            self.assertEqual(bingbu.model, "doubao-seedream-5")
+            self.assertEqual(bingbu.provider, "deepseek")
+            self.assertEqual(bingbu.model, "deepseek-chat")
             self.assertEqual(gongbu.provider, "doubao")
             self.assertNotEqual(research_bingbu.provider, "doubao")
 

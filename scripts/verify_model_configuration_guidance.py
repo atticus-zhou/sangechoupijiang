@@ -60,8 +60,11 @@ CHECKS: list[dict[str, Any]] = [
         "markers": [
             "office_models:",
             "comic_production:",
+            "bingbu:",
+            "deepseek-chat",
             "doubao-seedream-5",
             "qwen-vl-max",
+            "${DEEPSEEK_API_KEY}",
             "${ARK_API_KEY}",
             "${DASHSCOPE_API_KEY}",
         ],
@@ -84,6 +87,18 @@ CHECKS: list[dict[str, Any]] = [
         "markers": [
             "docs/MODEL_CONFIGURATION.md",
             "verify_model_configuration_guidance.py",
+        ],
+    },
+    {
+        "id": "guide_warns_common_model_misfills",
+        "title": "Guide warns about common text/image/vision misfills",
+        "file": GUIDE,
+        "markers": [
+            "常见误填",
+            "把豆包 Seedream 填到兵部",
+            "兵部填 DeepSeek Chat、Qwen 文本模型或 GPT 文本模型",
+            "把 DeepSeek 填到工部后期待它生图",
+            "把普通文本模型填到刑部后期待它看图",
         ],
     },
     {

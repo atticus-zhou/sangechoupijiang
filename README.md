@@ -169,9 +169,9 @@ office_models:
     gongbu:
       provider: doubao
       model: doubao-seedream-5
-      api_key: ${DOUBAO_API_KEY}
+      api_key: ${ARK_API_KEY}
     xingbu:
-      provider: qwen
+      provider: dashscope
       model: qwen-vl-max
       api_key: ${DASHSCOPE_API_KEY}
 ```

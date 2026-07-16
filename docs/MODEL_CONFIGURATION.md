@@ -25,9 +25,10 @@
 2. 复制 `config.example.yaml` 为 `config.yaml`。
 3. 先给全局 `models` 里的文本部门填一个可用文本模型。
 4. 进入模型页面，逐个点击“测试此部门”。
-5. 如果要做 AI 漫剧制片，再补 `office_models.comic_production.gongbu` 的生图模型。
-6. 再补 `office_models.comic_production.xingbu` 的视觉理解模型。
-7. 全部通过后再进入工作台跑真实项目。
+5. 如果要做 AI 漫剧制片，确认 `office_models.comic_production.bingbu` 是文本模型。
+6. 再补 `office_models.comic_production.gongbu` 的生图模型。
+7. 再补 `office_models.comic_production.xingbu` 的视觉理解模型。
+8. 全部通过后再进入工作台跑真实项目。
 
 ## 部门能力表
 
@@ -79,6 +80,10 @@ models:
 
 office_models:
   comic_production:
+    bingbu:
+      provider: deepseek
+      model: deepseek-chat
+      api_key: ${DEEPSEEK_API_KEY}
     gongbu:
       provider: doubao
       model: doubao-seedream-5
@@ -119,6 +124,15 @@ python scripts/verify_release_readiness.py --format markdown
 ```
 
 注意：`verify_model_configuration_guidance.py` 不会调用真实模型，不会读取或打印 API Key。它只检查文档、示例配置、前端提示和 preflight 规则是否一致。
+
+## 常见误填
+
+| 误填方式 | 为什么会出问题 | 正确做法 |
+| --- | --- | --- |
+| 把豆包 Seedream 填到兵部 | 兵部负责镜头、动作链和视频提示词，需要能写文本的模型；Seedream 是生图模型，不能稳定产出镜头卡文本。 | 兵部填 DeepSeek Chat、Qwen 文本模型或 GPT 文本模型。 |
+| 把 DeepSeek 填到工部后期待它生图 | DeepSeek 文本模型可以写提示词，但不能生成基础资产图片。 | 工部填豆包 Seedream、MiniMax Image、Qwen Image 等生图模型。 |
+| 把普通文本模型填到刑部后期待它看图 | 普通文本模型无法读取人物图、道具图和场景图，不能做视觉一致性质检。 | 刑部填 Qwen VL、GPT 多模态、Gemini 多模态等视觉理解模型。 |
+| 把真实 Key 写进 README 或 GitHub | 公开仓库会泄露账号额度和调用权限。 | 使用本机环境变量或被 `.gitignore` 忽略的 `config.yaml`。 |
 
 ## 最小可跑与完整制片的区别
 

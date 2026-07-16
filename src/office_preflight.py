@@ -100,10 +100,10 @@ def _comic_production_preflight(
             office_id,
             "prompt_planning",
             "专属提示词与镜头卡",
-            ("gongbu", "zhongshu", "bingbu"),
+            ("zhongshu", "bingbu"),
             model,
             "缺少可用文本模型时，无法生成资产提示词和视频提示词。",
-            "配置工部或兵部文本模型；如果暂时没有，也要保证中书省文本模型可用作兜底。",
+            "配置兵部文本模型；如果暂时没有，也要保证中书省文本模型可用作兜底。工部只在生图阶段填图片生成模型。",
         ),
         _requires_image(
             office_id,
