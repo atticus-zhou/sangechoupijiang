@@ -5999,6 +5999,7 @@ def _comic_v2_image_production_evidence(image_assets: list[dict], quality_benchm
         evidence_level = "mixed_or_unknown"
         summary = "图片来源混合或缺少 provider/model，不能支撑真实质量声明。"
     benchmark_verified = bool(benchmark.get("production_quality_verified"))
+    benchmark_image_summary = benchmark.get("image_quality_summary") or {}
     return {
         "total_images": total,
         "providers": providers,
@@ -6008,6 +6009,21 @@ def _comic_v2_image_production_evidence(image_assets: list[dict], quality_benchm
         "reviewed_image_count": len(reviewed),
         "review_passed_image_count": len(passed),
         "review_failed_image_count": len(failed),
+        "usable_image_count": int(benchmark_image_summary.get("usable_images") or len(passed)),
+        "waste_or_rework_image_count": int(
+            benchmark_image_summary.get("waste_or_rework_images")
+            if benchmark_image_summary
+            else max(0, total - len(passed))
+        ),
+        "waste_or_rework_rate": float(
+            benchmark_image_summary.get("waste_or_rework_rate")
+            if benchmark_image_summary
+            else (round(max(0, total - len(passed)) / total, 4) if total else 0)
+        ),
+        "regenerate_image_count": int(benchmark_image_summary.get("regenerate_image_count") or 0),
+        "rerun_visual_review_count": int(benchmark_image_summary.get("rerun_visual_review_count") or 0),
+        "regenerate_prompt_count": int(benchmark_image_summary.get("regenerate_prompt_count") or 0),
+        "failed_image_ids": list(benchmark_image_summary.get("failed_image_ids") or []),
         "evidence_level": evidence_level,
         "supports_real_quality_claim": evidence_level == "model_reviewed" and benchmark_verified,
         "summary": summary,

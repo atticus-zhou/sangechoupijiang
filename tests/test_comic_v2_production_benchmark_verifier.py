@@ -26,6 +26,9 @@ class ComicV2ProductionBenchmarkVerifierTests(unittest.TestCase):
         self.assertTrue(payload["package_quality_ready"])
         self.assertFalse(payload["production_quality_verified"])
         self.assertEqual(payload["visual_evidence_level"], "fixture_only")
+        self.assertEqual(payload["image_quality_summary"]["total_images"], 7)
+        self.assertEqual(payload["image_quality_summary"]["usable_images"], 7)
+        self.assertEqual(payload["image_quality_summary"]["waste_or_rework_images"], 0)
         self.assertTrue(payload["stored_benchmark_matches"])
         self.assertEqual(payload["manifest_schema_version"], 3)
 
@@ -47,6 +50,9 @@ class ComicV2ProductionBenchmarkVerifierTests(unittest.TestCase):
         self.assertIn("Package quality score: `100/100`", completed.stdout)
         self.assertIn("Quality claim: `demo_structure_verified`", completed.stdout)
         self.assertIn("Visual evidence: `fixture_only`", completed.stdout)
+        self.assertIn("Image Quality Summary", completed.stdout)
+        self.assertIn("Total images: `7`", completed.stdout)
+        self.assertIn("Waste/rework images: `0`", completed.stdout)
         self.assertIn("不证明真实模型", completed.stdout)
 
 

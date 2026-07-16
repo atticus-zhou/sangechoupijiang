@@ -44,6 +44,7 @@ def verify_production_benchmark(
             "package_quality_ready",
             "production_quality_verified",
             "visual_evidence_level",
+            "image_quality_summary",
             "issue_count",
             "blocker_count",
             "recommended_recovery",
@@ -85,6 +86,23 @@ def format_markdown(result: dict[str, Any]) -> str:
         lines.append(
             f"| {dimension.get('label')} | {dimension.get('status')} | {dimension.get('score')}/100 |"
         )
+    image_summary = result.get("image_quality_summary") or {}
+    if image_summary:
+        lines.extend([
+            "",
+            "## Image Quality Summary",
+            "",
+            f"- Total images: `{image_summary.get('total_images', 0)}`",
+            f"- Usable images: `{image_summary.get('usable_images', 0)}`",
+            f"- Waste/rework images: `{image_summary.get('waste_or_rework_images', 0)}`",
+            f"- Waste/rework rate: `{round(float(image_summary.get('waste_or_rework_rate') or 0) * 100)}%`",
+            f"- Regenerate images: `{image_summary.get('regenerate_image_count', 0)}`",
+            f"- Rerun visual review: `{image_summary.get('rerun_visual_review_count', 0)}`",
+            f"- Regenerate prompts: `{image_summary.get('regenerate_prompt_count', 0)}`",
+        ])
+        failed_ids = image_summary.get("failed_image_ids") or []
+        if failed_ids:
+            lines.append(f"- Failed image ids: `{', '.join(failed_ids[:8])}`")
     if result.get("issues"):
         lines.extend(["", "## Issues", ""])
         for issue in result["issues"]:

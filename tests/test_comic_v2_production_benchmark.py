@@ -26,6 +26,10 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertTrue(audit["package_quality_ready"])
         self.assertFalse(audit["production_quality_verified"])
         self.assertEqual(audit["visual_evidence_level"], "fixture_only")
+        self.assertEqual(audit["image_quality_summary"]["total_images"], 7)
+        self.assertEqual(audit["image_quality_summary"]["usable_images"], 7)
+        self.assertEqual(audit["image_quality_summary"]["waste_or_rework_images"], 0)
+        self.assertEqual(audit["image_quality_summary"]["waste_or_rework_rate"], 0)
         self.assertIn("不证明真实模型", audit["limitations"][0])
         self.assertEqual(audit["recommended_recovery"], {})
 
@@ -136,6 +140,11 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(audit["visual_evidence_level"], "model_reviewed")
         self.assertFalse(audit["production_quality_verified"])
         self.assertIn("visual.review_dimensions", issue_codes)
+        self.assertEqual(audit["image_quality_summary"]["total_images"], 7)
+        self.assertEqual(audit["image_quality_summary"]["usable_images"], 0)
+        self.assertEqual(audit["image_quality_summary"]["waste_or_rework_images"], 7)
+        self.assertEqual(audit["image_quality_summary"]["waste_or_rework_rate"], 1)
+        self.assertIn("img_", audit["image_quality_summary"]["failed_image_ids"][0])
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_images")
 
     def test_recommended_recovery_includes_operator_playbook(self):

@@ -46,6 +46,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
     shots = list(manifest.get("shots") or [])
     lineage = list(manifest.get("production_lineage") or [])
     visual_evidence = _visual_evidence_level(images)
+    image_quality_summary = _image_quality_summary(images)
 
     dimensions = [
         _story_grounding(story, assets, shots),
@@ -102,6 +103,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         "package_quality_ready": package_quality_ready,
         "production_quality_verified": production_quality_verified,
         "visual_evidence_level": visual_evidence,
+        "image_quality_summary": image_quality_summary,
         "summary": _summary(claim, score),
         "dimensions": dimensions,
         "issue_count": len(issues),
@@ -427,6 +429,77 @@ def _visual_evidence_level(images: list[dict[str, Any]]) -> str:
     if images and "fixture" not in providers and "" not in providers:
         return "model_reviewed"
     return "mixed_or_unknown"
+
+
+def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
+    total = len(images)
+    approved = 0
+    reviewed = 0
+    passed = 0
+    failed = 0
+    needs_review = 0
+    missing_review = 0
+    regenerate_images = 0
+    rerun_review = 0
+    regenerate_prompts = 0
+    by_role: dict[str, int] = {}
+    failed_image_ids: list[str] = []
+
+    for image in images:
+        image_id = str(image.get("image_id") or image.get("asset_id") or "<unknown>")
+        role = str(image.get("production_role") or image.get("image_kind") or "unlabeled")
+        by_role[role] = by_role.get(role, 0) + 1
+        if str(image.get("status") or "") == "approved":
+            approved += 1
+        review = image.get("review") or {}
+        if not isinstance(review, dict) or not review:
+            missing_review += 1
+            failed_image_ids.append(image_id)
+            continue
+        reviewed += 1
+        review_status = str(review.get("status") or "").strip().lower()
+        handoff_ready = bool(review.get("handoff_ready"))
+        score_ready = _review_scores_ready(review) if "scores" in review else handoff_ready
+        if review_status == "pass" and handoff_ready and score_ready:
+            passed += 1
+        else:
+            if review_status in {"fail", "failed", "不合格"}:
+                failed += 1
+            else:
+                needs_review += 1
+            failed_image_ids.append(image_id)
+        action = str(review.get("recovery_action") or "").strip()
+        if action == "regenerate_images":
+            regenerate_images += 1
+        elif action == "rerun_visual_review":
+            rerun_review += 1
+        elif action == "regenerate_prompts":
+            regenerate_prompts += 1
+
+    usable = passed
+    waste_or_rework = total - usable
+    return {
+        "total_images": total,
+        "approved_images": approved,
+        "reviewed_images": reviewed,
+        "passed_images": passed,
+        "failed_images": failed,
+        "needs_review_images": needs_review,
+        "missing_review_images": missing_review,
+        "usable_images": usable,
+        "waste_or_rework_images": waste_or_rework,
+        "waste_or_rework_rate": round(waste_or_rework / total, 4) if total else 0,
+        "regenerate_image_count": regenerate_images,
+        "rerun_visual_review_count": rerun_review,
+        "regenerate_prompt_count": regenerate_prompts,
+        "failed_image_ids": failed_image_ids[:20],
+        "by_production_role": by_role,
+        "summary": (
+            f"共 {total} 张图片，{usable} 张可直接交付，{waste_or_rework} 张需要重生、重审或人工复核。"
+            if total
+            else "尚未生成可统计的图片资产。"
+        ),
+    }
 
 
 def _review_scores_ready(review: dict[str, Any]) -> bool:

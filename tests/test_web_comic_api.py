@@ -1072,6 +1072,16 @@ class WebComicApiTests(unittest.TestCase):
                     "package_quality_ready": True,
                     "production_quality_verified": True,
                     "visual_evidence_level": "model_reviewed",
+                    "image_quality_summary": {
+                        "total_images": 1,
+                        "usable_images": 1,
+                        "waste_or_rework_images": 0,
+                        "waste_or_rework_rate": 0,
+                        "regenerate_image_count": 0,
+                        "rerun_visual_review_count": 0,
+                        "regenerate_prompt_count": 0,
+                        "failed_image_ids": [],
+                    },
                     "summary": "制片包质量已验证。",
                     "issue_count": 0,
                     "blocker_count": 0,
@@ -1208,6 +1218,10 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["image_production_evidence"]["providers"], ["doubao"])
             self.assertEqual(trace["image_production_evidence"]["models"], ["seedream"])
             self.assertEqual(trace["image_production_evidence"]["review_passed_image_count"], 1)
+            self.assertEqual(trace["image_production_evidence"]["usable_image_count"], 1)
+            self.assertEqual(trace["image_production_evidence"]["waste_or_rework_image_count"], 0)
+            self.assertEqual(trace["image_production_evidence"]["waste_or_rework_rate"], 0)
+            self.assertEqual(trace["image_production_evidence"]["failed_image_ids"], [])
             self.assertEqual(trace["image_assets"][0]["production_role"], "clean_character_identity_three_view")
             self.assertTrue(trace["image_assets"][0]["clean_background_required"])
             self.assertIn("不负责讲述剧情", "；".join(trace["image_assets"][0]["usage_contract"]))

@@ -4387,6 +4387,10 @@ function renderComicV2HistoryTrace(trace) {
                     <span>provider ${escapeHtml((productionEvidence.providers || []).join('\u3001') || 'unknown')}</span>
                     <span>model ${escapeHtml((productionEvidence.models || []).join('\u3001') || 'unknown')}</span>
                     <span>\u901a\u8fc7 ${escapeHtml(productionEvidence.review_passed_image_count || 0)} / ${escapeHtml(productionEvidence.total_images || 0)}</span>
+                    <span>可用 ${escapeHtml(productionEvidence.usable_image_count || 0)} 张</span>
+                    <span>需返工 ${escapeHtml(productionEvidence.waste_or_rework_image_count || 0)} 张</span>
+                    <span>返工率 ${escapeHtml(Math.round(Number(productionEvidence.waste_or_rework_rate || 0) * 100))}%</span>
+                    <span>重生 ${escapeHtml(productionEvidence.regenerate_image_count || 0)} · 重审 ${escapeHtml(productionEvidence.rerun_visual_review_count || 0)} · 重写提示词 ${escapeHtml(productionEvidence.regenerate_prompt_count || 0)}</span>
                     <span>fixture ${productionEvidence.uses_fixture ? 'yes' : 'no'}</span>
                 </div>
                 <small>${escapeHtml(productionEvidence.next_action || '')}</small>
