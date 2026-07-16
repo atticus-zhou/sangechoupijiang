@@ -2619,8 +2619,13 @@ async def generate_comic_v2_images_api(workspace_id: str):
             agent=state.current_agent,
         ) from exc
     _save_comic_v2_state(workspace_id, next_state.to_dict())
+    prompt_lookup = {
+        (prompt.object_id, prompt.image_kind): prompt
+        for prompt in package.prompts
+    }
     for record in result.records:
         filename = Path(record.path).name
+        prompt = prompt_lookup.get((record.asset_id, record.image_kind))
         config_manager.create_artifact(
             artifact_id=f"art_{workspace_id}_{record.image_id}",
             workspace_id=workspace_id,
@@ -2631,6 +2636,8 @@ async def generate_comic_v2_images_api(workspace_id: str):
             content=json.dumps(record.to_dict(), ensure_ascii=False, indent=2),
             metadata={
                 **record.to_dict(),
+                "usage_contract": list(prompt.usage_contract) if prompt else [],
+                "reference_policy": prompt.reference_policy if prompt else "",
                 "office_id": "comic_production",
                 "pipeline_version": 2,
             },
@@ -6034,6 +6041,8 @@ def _comic_v2_history_image_asset(artifact: dict) -> dict:
         "image_kind": metadata.get("image_kind", ""),
         "production_role": metadata.get("production_role", ""),
         "clean_background_required": bool(metadata.get("clean_background_required", False)),
+        "usage_contract": list(metadata.get("usage_contract") or []),
+        "reference_policy": metadata.get("reference_policy", ""),
         "status": metadata.get("status", ""),
         "attempts": int(metadata.get("attempts") or 0),
         "provider": metadata.get("provider", ""),

@@ -1095,6 +1095,11 @@ class WebComicApiTests(unittest.TestCase):
                         "image_kind": "three_view",
                         "production_role": "clean_character_identity_three_view",
                         "clean_background_required": True,
+                        "usage_contract": [
+                            "基础资产图只建立角色身份参考，不负责讲述剧情。",
+                            "本图种 three_view 用于锁定角色脸型、发型、体型、服装主色和年龄感。",
+                        ],
+                        "reference_policy": "人物资产用于后续镜头身份一致性参考；镜头生成时继承脸型、发型、服装和年龄感。",
                         "generator_prompt": "资产ID character_001，风格身份 ink wash fantasy，林昭人物三视图，纯白或近白色干净背景。",
                         "negative_prompt": ["禁止剧情动作", "禁止剧情场景", "禁止文字水印"],
                     }
@@ -1145,6 +1150,11 @@ class WebComicApiTests(unittest.TestCase):
                 "image_kind": "three_view",
                 "production_role": "clean_character_identity_three_view",
                 "clean_background_required": True,
+                "usage_contract": [
+                    "基础资产图只建立角色身份参考，不负责讲述剧情。",
+                    "本图种 three_view 用于锁定角色脸型、发型、体型、服装主色和年龄感。",
+                ],
+                "reference_policy": "人物资产用于后续镜头身份一致性参考；镜头生成时继承脸型、发型、服装和年龄感。",
                 "status": "approved",
                 "attempts": 2,
                 "provider": "doubao",
@@ -1200,6 +1210,8 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["image_production_evidence"]["review_passed_image_count"], 1)
             self.assertEqual(trace["image_assets"][0]["production_role"], "clean_character_identity_three_view")
             self.assertTrue(trace["image_assets"][0]["clean_background_required"])
+            self.assertIn("不负责讲述剧情", "；".join(trace["image_assets"][0]["usage_contract"]))
+            self.assertIn("人物资产用于后续镜头身份一致性参考", trace["image_assets"][0]["reference_policy"])
             self.assertEqual(trace["image_assets"][0]["attempts"], 2)
             self.assertEqual(trace["image_assets"][0]["review_status"], "pass")
             self.assertEqual(trace["image_assets"][0]["review_recovery_action"], "regenerate_images")

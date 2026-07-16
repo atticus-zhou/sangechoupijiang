@@ -21,6 +21,8 @@ class PromptPlan:
     style_id: str
     production_role: str = ""
     clean_background_required: bool = False
+    usage_contract: tuple[str, ...] = ()
+    reference_policy: str = ""
 
     def render(self) -> str:
         negative = "；".join(self.negative_prompt)
@@ -148,6 +150,8 @@ def build_asset_prompt_plan(
         style_id=visual.style_id,
         production_role=production_role,
         clean_background_required=clean_background_required,
+        usage_contract=_asset_usage_contract(asset, image_kind),
+        reference_policy=_asset_reference_policy(asset),
     )
 
 
@@ -272,6 +276,8 @@ def parse_prompt_director_response(text: str) -> PromptDirectorResult:
                 style_id=str(item.get("style_id") or "").strip(),
                 production_role=str(item.get("production_role") or _infer_production_role(item)).strip(),
                 clean_background_required=_infer_clean_background_required(item),
+                usage_contract=_infer_usage_contract(item),
+                reference_policy=_infer_reference_policy(item),
             ))
     except ValueError as exc:
         return PromptDirectorResult(
@@ -312,6 +318,39 @@ def _asset_production_role(asset_type: str, image_kind: str) -> str:
     return f"{asset_type}_{image_kind}_reference"
 
 
+def _asset_usage_contract(asset: AssetPlan, image_kind: str) -> tuple[str, ...]:
+    common = (
+        "基础资产图只建立身份、形体、材质、空间和一致性参考，不负责讲述剧情。",
+        "后续镜头必须引用本图作为参考资产，不得重新发明角色、道具或场景。",
+    )
+    if asset.asset_type == "character":
+        return common + (
+            f"本图种 {image_kind} 用于锁定同一角色的脸型、发型、体型、服装主色和年龄感。",
+            "允许变化只限表情、姿势和镜头角度；禁止加入故事动作、其他人物和剧情现场。",
+        )
+    if asset.asset_type == "prop":
+        return common + (
+            f"本图种 {image_kind} 用于锁定单独道具的轮廓、比例、材质、磨损位置和可变化状态。",
+            "允许变化只限开合、亮度、磨损或状态；禁止人物手持、剧情使用和现代化改造。",
+        )
+    if asset.asset_type == "scene":
+        return common + (
+            f"本图种 {image_kind} 用于锁定空场景的空间边界、入口出口、纵深、陈设和可拍机位。",
+            "允许变化只限光线、天气、机位和局部陈设状态；禁止人物互动和剧情事件。",
+        )
+    return common
+
+
+def _asset_reference_policy(asset: AssetPlan) -> str:
+    if asset.asset_type == "character":
+        return "人物资产必须优先作为脸型、发型、服装和年龄感参考；镜头生成时只继承身份，不继承白底背景。"
+    if asset.asset_type == "prop":
+        return "道具资产必须优先作为形状、材质、比例和状态参考；镜头生成时只继承道具身份，不继承白底背景。"
+    if asset.asset_type == "scene":
+        return "场景资产必须优先作为空间结构、动线和机位参考；镜头生成时继承空间关系，不把场景改成白底棚拍。"
+    return "资产必须作为后续镜头的一致性参考，不得被下游重新改写。"
+
+
 def _infer_production_role(item: dict[str, Any]) -> str:
     object_id = str(item.get("object_id") or "")
     image_kind = str(item.get("image_kind") or "model_generated")
@@ -329,6 +368,53 @@ def _infer_clean_background_required(item: dict[str, Any]) -> bool:
         return bool(item.get("clean_background_required"))
     object_id = str(item.get("object_id") or "")
     return object_id.startswith("character_") or object_id.startswith("prop_")
+
+
+def _infer_usage_contract(item: dict[str, Any]) -> tuple[str, ...]:
+    raw = item.get("usage_contract") or item.get("asset_contract") or ()
+    if isinstance(raw, str):
+        raw_values = (raw,)
+    elif isinstance(raw, (list, tuple)):
+        raw_values = tuple(str(value).strip() for value in raw if str(value).strip())
+    else:
+        raw_values = ()
+    if raw_values:
+        return _unique(raw_values)
+    object_id = str(item.get("object_id") or "")
+    image_kind = str(item.get("image_kind") or "model_generated")
+    if object_id.startswith("character_"):
+        return (
+            "基础资产图只建立角色身份参考，不负责讲述剧情。",
+            f"本图种 {image_kind} 用于锁定角色脸型、发型、体型、服装主色和年龄感。",
+            "禁止加入故事动作、其他人物和剧情现场。",
+        )
+    if object_id.startswith("prop_"):
+        return (
+            "基础资产图只建立道具身份参考，不负责讲述剧情。",
+            f"本图种 {image_kind} 用于锁定道具轮廓、比例、材质和状态。",
+            "禁止人物手持、剧情使用和现代化改造。",
+        )
+    if object_id.startswith("scene_"):
+        return (
+            "基础资产图只建立空场景空间参考，不负责讲述剧情。",
+            f"本图种 {image_kind} 用于锁定空间边界、入口出口、纵深、陈设和机位。",
+            "禁止人物互动和剧情事件。",
+        )
+    return ("基础资产图只建立一致性参考，不负责讲述剧情。",)
+
+
+def _infer_reference_policy(item: dict[str, Any]) -> str:
+    raw = str(item.get("reference_policy") or "").strip()
+    if raw:
+        return raw
+    object_id = str(item.get("object_id") or "")
+    if object_id.startswith("character_"):
+        return "人物资产用于后续镜头身份一致性参考；镜头生成时继承脸型、发型、服装和年龄感。"
+    if object_id.startswith("prop_"):
+        return "道具资产用于后续镜头物件一致性参考；镜头生成时继承形状、材质、比例和状态。"
+    if object_id.startswith("scene_"):
+        return "场景资产用于后续镜头空间一致性参考；镜头生成时继承空间结构、动线和机位。"
+    return "资产用于后续镜头一致性参考。"
 
 
 def _prohibition(value: str) -> str:

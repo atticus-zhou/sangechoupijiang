@@ -99,6 +99,8 @@ def prompt_package_from_dict(payload: dict[str, Any]) -> PromptPackage:
             style_id=str(item.get("style_id") or ""),
             production_role=str(item.get("production_role") or ""),
             clean_background_required=bool(item.get("clean_background_required", False)),
+            usage_contract=tuple(item.get("usage_contract") or ()),
+            reference_policy=str(item.get("reference_policy") or ""),
         )
         for item in (payload.get("prompts") or [])
     )

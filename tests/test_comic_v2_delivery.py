@@ -67,6 +67,11 @@ def parts(image_dir: Path):
                 else "clean_character_expression_library"
             ),
             clean_background_required=True,
+            usage_contract=(
+                "基础资产图只建立角色身份参考，不负责讲述剧情。",
+                f"本图种 {kind} 用于锁定角色脸型、发型、体型、服装主色和年龄感。",
+            ),
+            reference_policy="人物资产用于后续镜头身份一致性参考；镜头生成时继承脸型、发型、服装和年龄感。",
         )
         for kind in asset.planned_images
     )
@@ -192,6 +197,9 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("负面提示词", text)
             self.assertIn("镜头验收标准", text)
             self.assertIn("平台执行备注", text)
+            self.assertIn("用途合同", text)
+            self.assertIn("不负责讲述剧情", text)
+            self.assertIn("引用方式", text)
             self.assertEqual(image_production_result_from_dict(result.to_dict()), result)
             restored = image_production_result_from_dict(result.to_dict())
             self.assertEqual(restored.records[0].production_role, "clean_character_identity_three_view")
@@ -245,6 +253,10 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("禁止现代服装", first_image["negative_prompt"])
             self.assertEqual(first_image["production_role"], "clean_character_identity_three_view")
             self.assertTrue(first_image["clean_background_required"])
+            usage_contract = "；".join(first_image["usage_contract"])
+            self.assertIn("基础资产图只建立角色身份参考", usage_contract)
+            self.assertIn("不负责讲述剧情", usage_contract)
+            self.assertIn("人物资产用于后续镜头身份一致性参考", first_image["reference_policy"])
             self.assertEqual(first_image["story_id"], bundle.creative.story_id)
             self.assertEqual(first_image["style_id"], bundle.visual.style_id)
             self.assertEqual(first_image["manifest_version"], manifest.version)

@@ -266,6 +266,8 @@ def _prompt_quality_audit(
                 "image_kind": image.get("image_kind", ""),
                 "production_role": image.get("production_role", ""),
                 "clean_background_required": image.get("clean_background_required"),
+                "usage_contract": image.get("usage_contract") or [],
+                "reference_policy": image.get("reference_policy", ""),
                 "generator_prompt": image.get("generator_prompt", ""),
                 "negative_prompt": image.get("negative_prompt") or [],
             }

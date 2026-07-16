@@ -155,6 +155,10 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
         self.assertEqual(plan.purpose, "identity_reference")
         self.assertEqual(plan.production_role, "clean_character_identity_three_view")
         self.assertTrue(plan.clean_background_required)
+        self.assertTrue(plan.usage_contract)
+        self.assertIn("基础资产", "；".join(plan.usage_contract))
+        self.assertIn("不负责讲述剧情", "；".join(plan.usage_contract))
+        self.assertIn("人物资产", plan.reference_policy)
         self.assertIn("资产ID", plan.generator_prompt)
         self.assertIn(assets["character"].asset_id, plan.generator_prompt)
         self.assertIn("纯白或近白色干净背景", plan.generator_prompt)
@@ -175,6 +179,9 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
 
         self.assertEqual(plan.production_role, "clean_prop_turnaround_reference")
         self.assertTrue(plan.clean_background_required)
+        self.assertIn("道具", "；".join(plan.usage_contract))
+        self.assertIn("不负责讲述剧情", "；".join(plan.usage_contract))
+        self.assertIn("道具资产", plan.reference_policy)
         self.assertIn("纯白或近白色干净背景", plan.generator_prompt)
         self.assertIn("右上方固定弧形裂纹", plan.generator_prompt)
         self.assertIn("材质", plan.generator_prompt)
@@ -187,6 +194,9 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
 
         self.assertEqual(plan.production_role, "scene_spatial_top_down_reference")
         self.assertFalse(plan.clean_background_required)
+        self.assertIn("空场景", "；".join(plan.usage_contract))
+        self.assertIn("不负责讲述剧情", "；".join(plan.usage_contract))
+        self.assertIn("场景资产", plan.reference_policy)
         self.assertIn("俯视布局", plan.generator_prompt)
         self.assertIn("空间结构", plan.generator_prompt)
         self.assertIn("圆形外环", plan.generator_prompt)
@@ -272,6 +282,9 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
         self.assertEqual(result.prompts[0].negative_prompt, ("禁止文字", "禁止剧情动作"))
         self.assertEqual(result.prompts[0].production_role, "clean_character_model_generated_reference")
         self.assertTrue(result.prompts[0].clean_background_required)
+        self.assertIn("基础资产", "；".join(result.prompts[0].usage_contract))
+        self.assertIn("不负责讲述剧情", "；".join(result.prompts[0].usage_contract))
+        self.assertIn("人物资产", result.prompts[0].reference_policy)
 
     def test_model_inline_negative_prompt_is_moved_out_of_generator_prompt(self):
         result = parse_prompt_director_response(json.dumps({

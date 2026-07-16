@@ -73,6 +73,9 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
         combined = f"{generator}；{negative_text}"
         production_role = str(prompt.get("production_role") or "")
         clean_background_required = prompt.get("clean_background_required")
+        usage_contract = [str(item) for item in (prompt.get("usage_contract") or [])]
+        reference_policy = str(prompt.get("reference_policy") or "")
+        contract_text = "；".join(usage_contract)
         label = f"{object_id}:{image_kind}" if image_kind else object_id or "asset_prompt"
 
         def add(message: str) -> None:
@@ -88,6 +91,12 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
             add("缺少资产 ID 或风格身份，后续一致性追溯会变弱。")
         if not production_role:
             add("缺少 production_role，系统无法判断这张基础图是身份照、状态图还是空间参考。")
+        if not usage_contract:
+            add("缺少 usage_contract，用户和下游无法判断这张图是基础资产参考还是剧情镜头。")
+        if usage_contract and ("基础资产" not in contract_text or "不负责讲述剧情" not in contract_text):
+            add("usage_contract 必须明确基础资产只做一致性参考，不负责讲述剧情。")
+        if not reference_policy:
+            add("缺少 reference_policy，后续镜头不知道应该如何继承这张资产。")
 
         if object_id.startswith("character_"):
             if clean_background_required is not True:
@@ -102,6 +111,8 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 add("人物 expression_sheet 必须明确表情表。")
             if "禁止剧情动作" not in negative_text or "禁止剧情场景" not in negative_text:
                 add("人物资产负面提示词必须禁止剧情动作和剧情场景。")
+            if usage_contract and "角色" not in contract_text:
+                add("人物资产 usage_contract 必须说明锁定角色身份。")
 
         if object_id.startswith("prop_"):
             if clean_background_required is not True:
@@ -114,6 +125,8 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 add("道具 turnaround 必须说明多角度或转面参考。")
             if "禁止人物手持或人物入镜" not in negative_text or "禁止剧情现场" not in negative_text:
                 add("道具资产负面提示词必须禁止人物入镜和剧情现场。")
+            if usage_contract and "道具" not in contract_text:
+                add("道具资产 usage_contract 必须说明锁定道具身份。")
 
         if object_id.startswith("scene_"):
             if clean_background_required is not False:
@@ -128,6 +141,8 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 add("场景资产必须保持空场景，不画剧情事件。")
             if "禁止人物和人物互动" not in negative_text or "禁止剧情事件" not in negative_text:
                 add("场景资产负面提示词必须禁止人物互动和剧情事件。")
+            if usage_contract and "空场景" not in contract_text:
+                add("场景资产 usage_contract 必须说明锁定空场景空间参考。")
     return issues
 
 

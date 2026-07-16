@@ -190,6 +190,8 @@ def _write_handoff_manifest(
                 if record.production_role
                 else (bool(prompt.clean_background_required) if prompt else False)
             ),
+            "usage_contract": list(prompt.usage_contract) if prompt else [],
+            "reference_policy": prompt.reference_policy if prompt else "",
             "generator_prompt": prompt.generator_prompt if prompt else "",
             "negative_prompt": list(prompt.negative_prompt) if prompt else [],
             "review": dict(record.review or {}),
