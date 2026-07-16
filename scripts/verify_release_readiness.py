@@ -147,6 +147,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             return (
                 f"files={parsed.get('file_count')}; "
                 f"downloads={parsed.get('download_count')}; "
+                f"catalog={parsed.get('download_catalog_count')}; "
                 f"reading_guide={parsed.get('reading_guide_ready_count')}/{parsed.get('reading_guide_count')}; "
                 f"quick_start={parsed.get('downstream_quick_start_ready_count')}/{parsed.get('downstream_quick_start_count')}; "
                 f"backend={parsed.get('requires_backend')}"

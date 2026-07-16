@@ -34,6 +34,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(showcase["mode"], "public_no_key_static_showcase")
         self.assertIn('<link rel="icon" href="data:,">', index_text)
         self.assertFalse(showcase["static_export"]["requires_backend"])
+        self.assertEqual(showcase["static_export"]["reviewable_file_count"], 6)
+        catalog = showcase["download_catalog"]
+        self.assertEqual(len(catalog), 6)
+        self.assertIn("data/comic_production_claim_report.json", {item["local_uri"] for item in catalog})
+        self.assertTrue(all(item["title"] and item["sha256"] and item["bytes"] for item in catalog))
+        self.assertTrue(all(item["proves"] or item["reader_guidance"] or item["look_for"] for item in catalog))
         demos = {item["office_id"]: item for item in showcase["featured_demos"]}
         comic_benchmark = demos["comic_production"]["quality_benchmark"]
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
@@ -132,6 +138,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Static Public Showcase Readiness", completed.stdout)
         self.assertIn("Status: `passed`", completed.stdout)
         self.assertIn("Downloadable deliverables: 5", completed.stdout)
+        self.assertIn("Reviewable catalog: 6 files", completed.stdout)
         self.assertIn("Reading guide: 5/5", completed.stdout)
         self.assertIn("Downstream quick-start: 5 steps", completed.stdout)
         self.assertIn("Reproducibility checklist: 5 commands", completed.stdout)

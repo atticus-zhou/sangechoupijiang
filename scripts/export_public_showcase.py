@@ -73,6 +73,63 @@ def _showcase_download_uris(showcase: dict[str, Any]) -> list[str]:
     return sorted(uris)
 
 
+def _download_catalog_metadata(static_showcase: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    portfolio = static_showcase.get("portfolio_embed") or {}
+    metadata: dict[str, dict[str, Any]] = {}
+    for group in ("deliverable_reading_guide", "sample_deliverables"):
+        for item in portfolio.get(group) or []:
+            local_uri = str(item.get("uri") or "")
+            if not local_uri or local_uri.startswith("/"):
+                continue
+            entry = metadata.setdefault(local_uri, {})
+            for key in (
+                "order",
+                "title",
+                "office_id",
+                "office_name",
+                "type",
+                "reader_guidance",
+                "look_for",
+                "proves",
+                "acceptance_signals",
+                "claim_level",
+                "can_claim_real_quality",
+            ):
+                value = item.get(key)
+                if value not in (None, "", []):
+                    entry[key] = value
+    return metadata
+
+
+def _build_download_catalog(static_showcase: dict[str, Any], file_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    metadata = _download_catalog_metadata(static_showcase)
+    catalog: list[dict[str, Any]] = []
+    for record in file_records:
+        local_uri = str(record.get("local_uri") or "")
+        meta = metadata.get(local_uri, {})
+        catalog.append(
+            {
+                "order": meta.get("order", 99),
+                "title": meta.get("title") or Path(local_uri).name,
+                "local_uri": local_uri,
+                "source_uri": record.get("source_uri", ""),
+                "bytes": record.get("bytes", 0),
+                "sha256": record.get("sha256", ""),
+                "content_type": record.get("content_type", ""),
+                "office_id": meta.get("office_id", ""),
+                "office_name": meta.get("office_name", ""),
+                "type": meta.get("type", ""),
+                "reader_guidance": meta.get("reader_guidance", ""),
+                "look_for": meta.get("look_for", ""),
+                "proves": meta.get("proves", ""),
+                "acceptance_signals": meta.get("acceptance_signals", []),
+                "claim_level": meta.get("claim_level", ""),
+                "can_claim_real_quality": meta.get("can_claim_real_quality", ""),
+            }
+        )
+    return sorted(catalog, key=lambda item: (int(item.get("order") or 99), str(item.get("local_uri") or "")))
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -156,14 +213,28 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
         uri_map[claim_report_uri] = claim_report_path
 
         static_showcase = _rewrite_uris(showcase, uri_map)
+        _write_json(staging / claim_report_path, _rewrite_uris(claim_report, uri_map))
+        claim_path = staging / claim_report_path
+        reviewable_records = download_records + [
+            {
+                "source_uri": claim_report_uri,
+                "local_uri": claim_report_path,
+                "bytes": claim_path.stat().st_size,
+                "content_type": "application/json",
+                "sha256": _sha256(claim_path),
+            }
+        ]
         source_mode = static_showcase.get("mode")
         static_showcase["mode"] = "public_no_key_static_showcase"
+        static_showcase["download_catalog"] = _build_download_catalog(static_showcase, reviewable_records)
         static_showcase["static_export"] = {
             "source_mode": source_mode,
             "entrypoint": "index.html",
             "requires_backend": False,
             "contains_api_keys": False,
             "download_count": len(download_records),
+            "reviewable_file_count": len(static_showcase["download_catalog"]),
+            "download_catalog_includes_claim_report": True,
             "visual_asset": "assets/public-showcase-desktop.png",
             "generated_by": "python scripts/export_public_showcase.py",
         }
@@ -191,7 +262,6 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
         _write_json(staging / "showcase.json", static_showcase)
         for office_id, payload in demo_payloads.items():
             _write_json(staging / "data" / f"{office_id}.json", payload)
-        _write_json(staging / claim_report_path, _rewrite_uris(claim_report, uri_map))
         data_json = json.dumps(static_showcase, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
         (staging / "data.js").write_text(
             f"window.__PUBLIC_SHOWCASE__ = {data_json};\n",

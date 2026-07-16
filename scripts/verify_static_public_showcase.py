@@ -140,6 +140,27 @@ def verify_static_public_showcase() -> dict[str, Any]:
             if item.get("sha256") != _sha256(path):
                 errors.append(f"static download hash mismatch: {local_uri}")
 
+        download_catalog = showcase.get("download_catalog") or []
+        if len(download_catalog) < 5:
+            errors.append("static showcase must expose a top-level download_catalog with at least five reviewable files")
+        if (showcase.get("static_export") or {}).get("reviewable_file_count") != len(download_catalog):
+            errors.append("static showcase reviewable_file_count must match download_catalog")
+        catalog_uris = {str(item.get("local_uri") or "") for item in download_catalog}
+        if "data/comic_production_claim_report.json" not in catalog_uris:
+            errors.append("download_catalog must include the real production claim report")
+        for item in download_catalog:
+            local_uri = str(item.get("local_uri") or "")
+            path = temp_dir / local_uri
+            if not local_uri or local_uri.startswith("/") or not path.is_file():
+                errors.append(f"download_catalog item is not local: {local_uri}")
+                continue
+            if not item.get("title") or not item.get("sha256") or item.get("sha256") != _sha256(path):
+                errors.append(f"download_catalog item is missing title or valid hash: {local_uri}")
+            if int(item.get("bytes") or 0) != path.stat().st_size:
+                errors.append(f"download_catalog item byte count mismatch: {local_uri}")
+            if not (item.get("proves") or item.get("reader_guidance") or item.get("look_for")):
+                errors.append(f"download_catalog item lacks visitor guidance: {local_uri}")
+
         portfolio = showcase.get("portfolio_embed") or {}
         release_badge = portfolio.get("release_badge") or {}
         real_production_claim = portfolio.get("real_production_claim") or {}
@@ -283,6 +304,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
             ),
             "file_count": len(files),
             "download_count": len(downloads),
+            "download_catalog_count": len(download_catalog),
             "reading_guide_count": len(reading_guide),
             "reading_guide_ready_count": ready_reading_items,
             "downstream_quick_start_count": len(downstream_quick_start),
@@ -325,6 +347,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- Files: {payload.get('file_count')}",
         f"- Downloadable deliverables: {payload.get('download_count')}",
+        f"- Reviewable catalog: {payload.get('download_catalog_count')} files",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- Downstream quick-start: {payload.get('downstream_quick_start_ready_count')} steps",
         f"- Reproducibility checklist: {payload.get('reproducibility_count')} commands",
