@@ -103,6 +103,14 @@ http://127.0.0.1:8080/
 6. 生成后去历史页下载 Word、图片、清单、提示词包和追溯记录。
 7. 如果历史追溯显示图片证据仍是 fixture、缺图或未完整质检，不要把它当成真实画质样例；先看 `image_quality_summary` 里的废片/返工数量和 `rework_instructions`，再用历史页推荐的 `regenerate_images`、重新质检或重写提示词恢复动作补跑真实图片和视觉质检。
 
+常见首次运行问题可以直接看：
+
+```powershell
+python scripts/verify_first_run_readiness.py --format markdown
+```
+
+它会把依赖缺失、`config.yaml` 未创建、模型预检失败、8080 端口占用、公开部署误用真实模式等问题列成可执行恢复步骤。若 Codex Windows 桌面端反复弹出 `codex-windows-sandbox-setup.exe` 并提示“找不到指定的模块”，这通常是 Codex 应用沙箱组件或安装状态问题，不是本项目代码报错；先重启、更新或重装 Codex，本地项目仍可用 `python run.py --port 8080` 运行。
+
 模型台阶可以这样理解：
 
 | 阶段 | 需要什么 | 通过后能做什么 |

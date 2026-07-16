@@ -73,6 +73,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "missing_local_config",
             "model_preflight_blocked",
             "port_in_use",
+            "codex_windows_sandbox_setup_failed",
             "public_deploy_real_mode",
         ]:
             self.assertIn(failure_id, failures)
@@ -82,6 +83,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertFalse(failures["missing_dependencies"]["requires_api_key"])
         self.assertTrue(failures["model_preflight_blocked"]["requires_api_key"])
         self.assertIn("requirements.txt", failures["missing_dependencies"]["recovery_action"])
+        self.assertIn("不是三个臭皮匠项目代码报错", failures["codex_windows_sandbox_setup_failed"]["likely_cause"])
+        self.assertFalse(failures["codex_windows_sandbox_setup_failed"]["requires_api_key"])
         self.assertIn("dist/public-showcase", failures["public_deploy_real_mode"]["recovery_action"])
 
     def test_markdown_is_readable_as_a_github_first_run_checklist(self):
@@ -115,6 +118,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("missing_dependencies", result.stdout)
         self.assertIn("python -m pip install -r requirements.txt", result.stdout)
         self.assertIn("netstat -ano | findstr :8080", result.stdout)
+        self.assertIn("codex_windows_sandbox_setup_failed", result.stdout)
+        self.assertIn("codex-windows-sandbox-setup.exe", result.stdout)
         self.assertIn("public_deploy_real_mode", result.stdout)
 
 

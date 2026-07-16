@@ -104,6 +104,14 @@ def _common_first_run_failures() -> list[dict[str, Any]]:
             "requires_api_key": False,
         },
         {
+            "id": "codex_windows_sandbox_setup_failed",
+            "symptom": "Codex 桌面端反复弹出 codex-windows-sandbox-setup.exe，提示“找不到指定的模块”。",
+            "likely_cause": "这是 Codex Windows 应用自带沙箱初始化组件启动失败，通常是应用更新不完整、安装包损坏或系统运行库缺失；它不是三个臭皮匠项目代码报错。",
+            "check_command": "重新打开 Codex；如果仍弹窗，更新或重装 Codex Windows 应用。",
+            "recovery_action": "先完全退出并重启 Codex。仍失败时更新或重装 Codex；项目本身可以继续用本地命令运行，公开演示和 release 验证不依赖这个弹窗里的 setup 程序。",
+            "requires_api_key": False,
+        },
+        {
             "id": "public_deploy_real_mode",
             "symptom": "准备放到 Vercel/个人网站时，不确定是否会暴露作者自己的 API Key。",
             "likely_cause": "把本地真实模式当成公开 SaaS 部署，或者把 config.yaml/.env/运行产物带进公开构建。",
