@@ -88,6 +88,8 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、且其他维度全部通过时，才会得到 `production_quality_verified`。
 
+历史追溯中的 `image_production_evidence` 是判断图片是否可交付的第一信号。如果它是 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown`，下游只能把当前包当作结构样例或待补证据包。此时使用质量恢复动作 `regenerate_images`，保留已确认故事、资产拆解、提示词包和旧版 Word/manifest 归档，重新生成图片并补视觉质检；补齐之前不要把包交给 Libtv、小云雀或其他视频平台当作最终生产素材。
+
 质量基准失败时会同时返回责任部门和恢复动作：确认故事缺失或版本哈希不一致时返回内阁/中书省；资产找不到故事依据、身份证或计划图组不完整时返回中书省/门下省；镜头找不到故事依据、提示词或导演执行不合格时返回工部/兵部/刑部；已批准资产缺图、版本绑定或图片质检有问题时返回工部/刑部；交付谱系问题返回礼部/刑部。工作台和历史页会把可自动恢复的项目退回对应阶段，并保留旧 Word 和旧 manifest，不覆盖历史。恢复接口只接受当前质量基准推荐的动作，不能由前端跳过真正的阻塞阶段；早期 V2 包缺少质量清单时，只允许退回礼部重新组装 V3 交付物。
 
 旧版制片画布如果没有 handoff manifest v3，历史页会标记为“旧版不可审计”。它仍可下载留档，但不能证明故事、资产、图片、镜头和质检来自同一版本；继续生产时应使用当前 V2 流程重新生成，而不是为旧文件伪造质量通过结论。

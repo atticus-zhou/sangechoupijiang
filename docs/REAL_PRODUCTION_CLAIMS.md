@@ -22,6 +22,16 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 报告还会输出 `claim_upgrade_checklist`。它不是宣传文案，而是补证据清单：固定样例会列出还缺真实模型图片、视觉质检和重新写入质量基准；真实质量已验证的 manifest 会提示保留证据包，并在故事、资产、模型或提示词有重大改动后重新验证。
 
+## 图片证据恢复路径
+
+历史追溯会输出 `image_production_evidence`，用来说明图片证据到底强到什么程度。`demo_structure_only` 通常会对应 `fixture_only`：它可以证明结构和引用链，但不能证明真实模型画质。`missing_images` 表示 manifest 或 Word 画布存在，但图片文件或图片记录不完整；`model_partial` 表示有真实模型图片，但还没有形成完整视觉质检证据；`mixed_or_unknown` 表示图片来源混杂或缺少 provider/model/review 信息。
+
+这些状态都不能公开宣称“真实模型画质已验证”。工作台或历史页应提示使用 `regenerate_images` 恢复动作：系统保留已确认故事、资产 manifest、提示词包和旧交付记录，只清理需要重建的图片生产证据，并把项目退回图片生成和视觉质检阶段。如果当前包连提示词包都缺失，则先回到提示词规划，而不是直接生图。恢复完成后，再重新运行：
+
+```powershell
+python scripts/verify_comic_real_production_claim.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+```
+
 ## 三种声明等级
 
 | 等级 | 能说什么 | 不能说什么 |

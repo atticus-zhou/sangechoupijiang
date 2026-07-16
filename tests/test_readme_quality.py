@@ -123,6 +123,16 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean", text)
         self.assertIn("python -m unittest discover -s tests -q", text)
 
+    def test_readme_documents_image_evidence_recovery_path(self):
+        text = Path("README.md").read_text(encoding="utf-8")
+
+        self.assertIn("image_production_evidence", text)
+        self.assertIn("/api/tasks/{task_id}/comic-v2-trace.json", text)
+        self.assertIn("/api/workspaces/{workspace_id}/comic/v2/quality/recover", text)
+        self.assertIn("regenerate_images", text)
+        self.assertIn("fixture_only", text)
+        self.assertIn("model_partial", text)
+
 
 if __name__ == "__main__":
     unittest.main()

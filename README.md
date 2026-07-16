@@ -35,7 +35,7 @@
 
 V2 的目标交付不是一部成片，而是一份可生产的制片包：人物图、道具图、场景图、镜头提示词、视频提示词、资产引用链路和 Word 画布。生成 Word 时会同时生成 `*_handoff_manifest.json`，用于追踪故事版本、视觉母版、资产 ID、图片记录、镜头引用和 Word 文件之间的对应关系。
 
-历史页可以下载 Word 画布，也可以查看制片追溯：故事版本、风格版本、资产版本、提示词数量、视觉质检结果和交付审计。
+历史页可以下载 Word 画布，也可以查看制片追溯：故事版本、风格版本、资产版本、提示词数量、视觉质检结果和交付审计。追溯 JSON 还会暴露 `image_production_evidence`，用来区分当前图片证据是固定样例、缺图、部分真实模型，还是已经通过真实模型视觉质检。
 
 ## 三类读者怎么体验
 
@@ -101,6 +101,7 @@ http://127.0.0.1:8080/
 4. 从最小可跑配置开始：先让文本部门通过测试，验证故事、资产拆解、镜头和提示词草案能跑起来。
 5. 再补完整制片配置：工部生图模型和刑部视觉理解模型都通过测试后，才开始完整制片。
 6. 生成后去历史页下载 Word、图片、清单、提示词包和追溯记录。
+7. 如果历史追溯显示图片证据仍是 fixture、缺图或未完整质检，不要把它当成真实画质样例；先用历史页推荐的 `regenerate_images` 恢复动作补跑真实图片和视觉质检。
 
 模型台阶可以这样理解：
 
@@ -304,6 +305,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 ```
 
 不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
+
+历史页的追溯接口 `/api/tasks/{task_id}/comic-v2-trace.json` 会返回 `image_production_evidence`。当它显示 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown` 时，说明当前制片包只能证明结构或部分流程，不能证明真实画质。此时可以对 `/api/workspaces/{workspace_id}/comic/v2/quality/recover` 提交 `{"action":"regenerate_images"}`：系统会保留已确认故事、资产拆解、提示词包和旧交付记录，把项目退回图片生成/质检阶段，用真实模型重新补齐图片证据。
 
 ## 当前边界
 

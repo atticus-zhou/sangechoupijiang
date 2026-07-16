@@ -79,6 +79,8 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "demo_structure_only",
             "production_quality_verified",
             "claim_upgrade_checklist",
+            "image_production_evidence",
+            "regenerate_images",
             "python scripts/verify_comic_real_production_claim.py --format markdown",
         ],
     },
@@ -90,6 +92,8 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "handoff manifest",
             "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
             "production_quality_verified=False",
+            "image_production_evidence",
+            "regenerate_images",
         ],
     },
 ]
