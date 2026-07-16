@@ -810,8 +810,72 @@ async def get_research_demo_api():
                 "status": "downloadable",
                 "uri": "/api/demo/research/files/evidence_manifest.json",
             },
+            {
+                "type": "research_claim",
+                "title": "研究办公室阶段性交付声明",
+                "status": "downloadable",
+                "uri": "/api/demo/research/claim-report",
+            },
         ],
     }
+
+
+def _research_claim_report_from_demo(demo: dict) -> dict:
+    evidence_boundaries = demo.get("evidence_boundaries") or {}
+    evidence_handoff = demo.get("evidence_handoff") or []
+    return {
+        "status": "passed",
+        "mode": "research_staged_delivery_claim",
+        "office_id": "research",
+        "claim_level": "staged_research_demo",
+        "can_publicly_show": True,
+        "can_claim_full_automation": False,
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "allowed_public_claims": [
+            "这份无 Key 样例证明研究办公室可以组织阶段报告、来源、数据表、竞品表和截图计划。",
+            "可以展示报告与证据清单如何把已覆盖信息和待补证据分开。",
+            "可以作为面试官或访客理解研究办公室工作链的固定样例。",
+        ],
+        "forbidden_public_claims": [
+            "不能宣称已经自动登录飞瓜、抖音、电商后台或其他第三方平台。",
+            "不能宣称已经完成会员级榜单、销量、达人或商品详情截图采集。",
+            "不能把待人工核验的数据、截图计划或权限缺口说成已完成证据。",
+        ],
+        "evidence_boundaries": evidence_boundaries,
+        "evidence_handoff": evidence_handoff,
+        "claim_upgrade_checklist": [
+            {
+                "id": "account_authorized_capture",
+                "title": "使用真实账号补齐平台截图",
+                "status": "missing",
+                "required_evidence": ["登录后的页面截图", "截图文件名", "来源页面或页面说明", "采集时间"],
+                "why_it_matters": "固定样例只能证明证据计划，不能证明受限平台页面已经采集完成。",
+            },
+            {
+                "id": "source_verification",
+                "title": "复核关键数据来源",
+                "status": "missing",
+                "required_evidence": ["来源 URL", "数据年份", "截图或导出表格", "人工复核记录"],
+                "why_it_matters": "老板汇报需要知道关键数字来自哪里、是否过期、是否只是待核验线索。",
+            },
+            {
+                "id": "final_report_refresh",
+                "title": "补证后重新生成最终报告",
+                "status": "required_after_capture",
+                "required_evidence": ["更新后的 report", "更新后的 evidence manifest", "变更说明"],
+                "why_it_matters": "补截图或改数据后，阶段报告不能自动继承旧结论，必须重新生成并保留变更记录。",
+            },
+        ],
+        "next_action": "真实调研时先按 evidence_handoff 补齐账号或截图证据，再重新生成报告和证据清单。",
+    }
+
+
+@app.get("/api/demo/research/claim-report")
+async def get_research_claim_report_demo_api():
+    """Return a no-key claim boundary for the research-office public demo."""
+    demo = await get_research_demo_api()
+    return _research_claim_report_from_demo(demo)
 
 
 
@@ -862,6 +926,10 @@ def _public_showcase_deliverable_guidance(item_type: str) -> tuple[str, list[str
         "evidence_manifest": (
             "用于复核研究办公室到底有哪些来源、数据、截图计划和待人工确认事项。",
             ["来源清单可追踪", "截图计划可执行", "未验证信息不会伪装成已验证结论"],
+        ),
+        "research_claim": (
+            "用于判断研究办公室公开样例能说到什么程度，重点看哪些证据已覆盖、哪些必须用真实账号或人工截图补齐。",
+            ["明确 staged delivery 边界", "不宣称全自动会员级采集", "给出补证后重新生成报告的动作"],
         ),
         "real_production_claim": (
             "用于判断这份公开样例到底能对外说到什么程度，重点看 claim_level、production_quality_verified 和禁止宣传的内容。",
@@ -1048,6 +1116,13 @@ def _public_showcase_deliverable_reading_guide() -> list[dict]:
             "uri": "/api/demo/research/files/evidence_manifest.json",
             "look_for": "来源、数据、截图计划、缺口和人工确认项是否可追踪。",
             "proves": "公开演示保留证据边界，方便访客判断哪些已确认、哪些需要真实账号或人工补证。",
+        },
+        {
+            "order": 6,
+            "title": "最后确认研究办公室声明边界",
+            "uri": "/api/demo/research/claim-report",
+            "look_for": "claim_level、forbidden_public_claims、evidence_boundaries 和 claim_upgrade_checklist 是否明确说明不能宣称全自动平台采集。",
+            "proves": "研究办公室可以公开展示阶段性交付能力，但不会把固定样例、待补截图或权限缺口说成完整自动化调研结果。",
         },
     ]
 

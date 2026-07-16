@@ -208,7 +208,7 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
                 "level": "no_key_demo",
                 "title": "公开无 Key 演示",
                 "required_models": [],
-                "can_do": "查看固定样例、下载五份交付物、阅读 quick-start 和安全边界。",
+                "can_do": "查看固定样例、下载六份交付物、阅读 quick-start 和安全边界。",
                 "ready_when": f"`{PUBLIC_DEMO_COMMAND}` 和 `{STATIC_SHOWCASE_COMMAND}` 通过。",
             },
             {

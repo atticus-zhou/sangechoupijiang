@@ -12,7 +12,7 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("npx vercel --prod --cwd dist/public-showcase", text)
         self.assertIn("portfolio-deploy-manifest.json", text)
         self.assertIn("不需要 Python 后端", text)
-        self.assertIn("五份样例交付物", text)
+        self.assertIn("六份样例交付物", text)
         self.assertIn("下游生产 quick-start", text)
         self.assertIn("不要把下面内容复制进静态展示目录", text)
 

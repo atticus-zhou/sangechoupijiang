@@ -337,7 +337,13 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertIn("证据", " ".join(payload["proof_points"]))
         self.assertGreaterEqual(len(payload["deliverable_reading_guide"]), 2)
         self.assertTrue(all(item["look_for"] and item["proves"] for item in payload["deliverable_reading_guide"]))
-        self.assertTrue(all(item["uri"].startswith("/api/demo/research/files/") for item in payload["deliverable_reading_guide"]))
+        self.assertTrue(
+            all(
+                item["uri"].startswith("/api/demo/research/files/")
+                or item["uri"] == "/api/demo/research/claim-report"
+                for item in payload["deliverable_reading_guide"]
+            )
+        )
         gate_ids = {item["id"] for item in payload["quality_gates"]}
         self.assertIn("no_key_read_only", gate_ids)
         self.assertIn("traceable_sources", gate_ids)

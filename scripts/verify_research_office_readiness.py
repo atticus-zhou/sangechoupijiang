@@ -101,7 +101,9 @@ def _download_items(payload: dict[str, Any]) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     for item in payload.get("artifacts") or []:
         uri = str(item.get("uri") or "")
-        if item.get("status") == "downloadable" and uri.startswith("/api/demo/research/files/"):
+        if item.get("status") == "downloadable" and (
+            uri.startswith("/api/demo/research/files/") or uri == "/api/demo/research/claim-report"
+        ):
             items.append({"title": str(item.get("title") or uri), "uri": uri})
     return items
 
@@ -126,6 +128,8 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     public_demo_boundary = str(evidence_boundaries.get("public_demo_boundary") or "")
     reading_guide = payload.get("deliverable_reading_guide") or []
     evidence_handoff = payload.get("evidence_handoff") or []
+    claim_response = client.get("/api/demo/research/claim-report")
+    claim_report = claim_response.json() if claim_response.status_code == 200 else {}
     if len(covered_in_demo) < 4:
         errors.append("research demo must describe which evidence is covered in the fixed sample")
     if len(requires_human_or_account) < 3:
@@ -144,6 +148,23 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     for item in evidence_handoff:
         if not item.get("owner") or not item.get("target_evidence") or not item.get("why_needed") or not item.get("upgrades"):
             errors.append(f"research evidence handoff item is incomplete: {item.get('title') or item.get('id')}")
+    if claim_response.status_code != 200:
+        errors.append(f"research claim report returned {claim_response.status_code}")
+    if claim_report.get("claim_level") != "staged_research_demo":
+        errors.append("research claim report must stay at staged_research_demo")
+    if claim_report.get("can_claim_full_automation") is not False:
+        errors.append("research claim report must not claim full automation")
+    if claim_report.get("requires_api_key") is not False or claim_report.get("calls_real_models") is not False:
+        errors.append("research claim report must remain no-key and offline")
+    forbidden_claims = "\n".join(claim_report.get("forbidden_public_claims") or [])
+    if "自动登录飞瓜" not in forbidden_claims or "会员级" not in forbidden_claims:
+        errors.append("research claim report must forbid full platform automation claims")
+    upgrade_checklist = claim_report.get("claim_upgrade_checklist") or []
+    if len(upgrade_checklist) < 3:
+        errors.append("research claim report must include a 3-step upgrade checklist")
+    for item in upgrade_checklist:
+        if not item.get("id") or not item.get("status") or not item.get("required_evidence") or not item.get("why_it_matters"):
+            errors.append(f"research claim checklist item is incomplete: {item.get('id') or item.get('title')}")
 
     downloads = []
     for item in _download_items(payload):
@@ -164,6 +185,7 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     required_downloads = {
         "/api/demo/research/files/report.md",
         "/api/demo/research/files/evidence_manifest.json",
+        "/api/demo/research/claim-report",
     }
     present_downloads = {item["uri"] for item in downloads}
     missing_downloads = sorted(required_downloads - present_downloads)
@@ -195,6 +217,10 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
             for item in evidence_handoff
             if item.get("owner") and item.get("target_evidence") and item.get("why_needed") and item.get("upgrades")
         ),
+        "claim_report_status_code": claim_response.status_code,
+        "claim_level": claim_report.get("claim_level", ""),
+        "can_claim_full_automation": bool(claim_report.get("can_claim_full_automation")),
+        "claim_upgrade_checklist_count": len(upgrade_checklist),
     }
 
 
@@ -261,6 +287,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
             f"- Human/account boundaries: {demo.get('human_or_account_boundary_count')}",
         f"- Reading guide: {demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}",
         f"- Evidence handoff: {demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}",
+        f"- Claim report: HTTP {demo.get('claim_report_status_code')} / {demo.get('claim_level')} / full_automation={demo.get('can_claim_full_automation')}",
+        f"- Claim upgrade checklist: {demo.get('claim_upgrade_checklist_count')} items",
         f"- Public demo boundary: {demo.get('public_demo_boundary')}",
         ]
     )

@@ -61,7 +61,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any(item["label"] == "真实画质声明" for item in release_badge["signals"]))
         self.assertGreaterEqual(len(embed["workflow_showcase"]), 4)
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
-        self.assertGreaterEqual(len(embed["sample_deliverables"]), 5)
+        self.assertGreaterEqual(len(embed["sample_deliverables"]), 6)
         self.assertTrue(all(item["uri"].startswith("/api/demo/") for item in embed["sample_deliverables"]))
         claim_deliverables = [
             item for item in embed["sample_deliverables"] if item["type"] == "real_production_claim"
@@ -70,8 +70,14 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(claim_deliverables[0]["uri"], "/api/demo/comic-production/claim-report")
         self.assertFalse(claim_deliverables[0]["can_claim_real_quality"])
         self.assertIn("demo-only", claim_deliverables[0]["acceptance_signals"][0])
-        self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 5)
-        self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4, 5])
+        research_claim_deliverables = [
+            item for item in embed["sample_deliverables"] if item["type"] == "research_claim"
+        ]
+        self.assertEqual(len(research_claim_deliverables), 1)
+        self.assertEqual(research_claim_deliverables[0]["uri"], "/api/demo/research/claim-report")
+        self.assertIn("全自动会员级采集", " ".join(research_claim_deliverables[0]["acceptance_signals"]))
+        self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 6)
+        self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4, 5, 6])
         for item in embed["deliverable_reading_guide"]:
             self.assertTrue(item["uri"].startswith("/api/demo/"))
             self.assertTrue(item["look_for"])
@@ -80,6 +86,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any("handoff manifest" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("交付盘点" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("证据清单" in item["title"] for item in embed["deliverable_reading_guide"]))
+        self.assertTrue(any("声明边界" in item["title"] for item in embed["deliverable_reading_guide"]))
         quick_start = embed["downstream_quick_start"]
         self.assertEqual([item["step"] for item in quick_start], [1, 2, 3, 4, 5])
         quick_start_text = json.dumps(quick_start, ensure_ascii=False)
@@ -110,6 +117,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("不能宣称真实模型画质已验证", "\n".join(claim["forbidden_public_claims"]))
         self.assertEqual(claim["evidence"]["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
         self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
+        research_claim_response = client.get("/api/demo/research/claim-report")
+        self.assertEqual(research_claim_response.status_code, 200)
+        research_claim = research_claim_response.json()
+        self.assertEqual(research_claim["claim_level"], "staged_research_demo")
+        self.assertFalse(research_claim["can_claim_full_automation"])
+        self.assertIn("自动登录飞瓜", "\n".join(research_claim["forbidden_public_claims"]))
         upgrade_path = embed["quality_upgrade_path"]
         self.assertEqual(upgrade_path["current_public_level"], "demo_structure_only")
         self.assertEqual(upgrade_path["current_image_evidence"], "fixture_only")

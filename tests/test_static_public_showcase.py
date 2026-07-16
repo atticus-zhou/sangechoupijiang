@@ -25,7 +25,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(summary["requires_backend"])
         self.assertFalse(summary["requires_api_key"])
         self.assertFalse(summary["calls_real_models"])
-        self.assertEqual(summary["download_count"], 5)
+        self.assertEqual(summary["download_count"], 6)
 
         manifest = json.loads((self.output_dir / "export-manifest.json").read_text(encoding="utf-8"))
         deploy_manifest = json.loads((self.output_dir / "portfolio-deploy-manifest.json").read_text(encoding="utf-8"))
@@ -34,10 +34,11 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(showcase["mode"], "public_no_key_static_showcase")
         self.assertIn('<link rel="icon" href="data:,">', index_text)
         self.assertFalse(showcase["static_export"]["requires_backend"])
-        self.assertEqual(showcase["static_export"]["reviewable_file_count"], 6)
+        self.assertEqual(showcase["static_export"]["reviewable_file_count"], 7)
         catalog = showcase["download_catalog"]
-        self.assertEqual(len(catalog), 6)
+        self.assertEqual(len(catalog), 7)
         self.assertIn("data/comic_production_claim_report.json", {item["local_uri"] for item in catalog})
+        self.assertIn("downloads/research/claim-report", {item["local_uri"] for item in catalog})
         self.assertTrue(all(item["title"] and item["sha256"] and item["bytes"] for item in catalog))
         self.assertTrue(all(item["proves"] or item["reader_guidance"] or item["look_for"] for item in catalog))
         demos = {item["office_id"]: item for item in showcase["featured_demos"]}
@@ -67,7 +68,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             item["product_response"] for item in showcase["portfolio_embed"]["interview_demo_script"]
         )
         self.assertIn("访客打开页面时只读取随包的 data.js", script_text)
-        self.assertIn("五份交付物已经随静态站点一起导出", script_text)
+        self.assertIn("六份交付物已经随静态站点一起导出", script_text)
         repro = showcase["portfolio_embed"]["reproducibility_checklist"]
         self.assertEqual(len(repro), 5)
         self.assertTrue(any("verify_release_readiness.py" in item["command"] for item in repro))
@@ -89,7 +90,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(deploy_manifest["requires_api_key"])
         self.assertFalse(deploy_manifest["calls_real_models"])
         self.assertFalse(deploy_manifest["allows_workspace_writes"])
-        self.assertEqual(deploy_manifest["sample_download_count"], 5)
+        self.assertEqual(deploy_manifest["sample_download_count"], 6)
         self.assertIn("downloads/", deploy_manifest["required_files"])
         self.assertIn("config.yaml", " ".join(deploy_manifest["forbidden_public_assets"]))
         self.assertTrue(any("verify_static_public_showcase.py" in item for item in deploy_manifest["verification_commands"]))
@@ -137,9 +138,9 @@ class StaticPublicShowcaseTests(unittest.TestCase):
 
         self.assertIn("Static Public Showcase Readiness", completed.stdout)
         self.assertIn("Status: `passed`", completed.stdout)
-        self.assertIn("Downloadable deliverables: 5", completed.stdout)
-        self.assertIn("Reviewable catalog: 6 files", completed.stdout)
-        self.assertIn("Reading guide: 5/5", completed.stdout)
+        self.assertIn("Downloadable deliverables: 6", completed.stdout)
+        self.assertIn("Reviewable catalog: 7 files", completed.stdout)
+        self.assertIn("Reading guide: 6/6", completed.stdout)
         self.assertIn("Downstream quick-start: 5 steps", completed.stdout)
         self.assertIn("Reproducibility checklist: 5 commands", completed.stdout)
         self.assertIn("Release badge: safe_public_demo", completed.stdout)

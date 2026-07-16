@@ -10,7 +10,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("dist/public-showcase", text)
         self.assertIn("handoff manifest", text)
         self.assertIn("AI 漫剧 Word 制片画布", text)
-        self.assertIn("五份下载物", text)
+        self.assertIn("六份下载物", text)
         self.assertIn("下游生产 quick-start", text)
         self.assertIn("待补证据交接表", text)
         self.assertIn("API Key", text)
