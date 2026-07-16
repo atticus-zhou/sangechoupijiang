@@ -26,6 +26,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 历史追溯会输出 `image_production_evidence`，用来说明图片证据到底强到什么程度。`demo_structure_only` 通常会对应 `fixture_only`：它可以证明结构和引用链，但不能证明真实模型画质。`missing_images` 表示 manifest 或 Word 画布存在，但图片文件或图片记录不完整；`model_partial` 表示有真实模型图片，但还没有形成完整视觉质检证据；`mixed_or_unknown` 表示图片来源混杂或缺少 provider/model/review 信息。
 
+历史追溯还会输出 `image_quality_summary`。它不是宣传分数，而是返工账本：总图片数、可用图片数、废片/返工图片数、返工率、失败图片 ID 和 `rework_instructions`。`rework_instructions` 会把每张失败图指向具体恢复方式，例如补跑视觉质检、保留提示词重新生图，或退回提示词重写。
+
 这些状态都不能公开宣称“真实模型画质已验证”。工作台或历史页应提示使用 `regenerate_images` 恢复动作：系统保留已确认故事、资产 manifest、提示词包和旧交付记录，只清理需要重建的图片生产证据，并把项目退回图片生成和视觉质检阶段。如果当前包连提示词包都缺失，则先回到提示词规划，而不是直接生图。恢复完成后，再重新运行：
 
 ```powershell

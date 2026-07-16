@@ -15,6 +15,7 @@
 - 机器可读导演执行合同：handoff manifest v3 的每个镜头都必须保留参考资产、首帧图片 ID、动作顺序、表演意图、景别、运镜、灯光、台词、声音和风格版本，不能只留一整段提示词。
 - 下游 quick-start：handoff manifest 必须提供 `downstream_quick_start`，按确认制片画布、锁定基础资产、逐镜头生成视频、执行质量复核、归档交付证据五步说明接手顺序。
 - 制片包质量基准：交叉检查故事证据、资产身份证、提示词专属性、导演执行合同、视觉质检和生产谱系，防止“字段齐全但内容仍是模板”的假完成。
+- 图片质量摘要：`image_quality_summary` 必须能说明总图片数、可用图片数、废片/返工图片数、返工率、失败图片 ID 和 `rework_instructions`，让下游知道哪些图能用、哪些图必须先修。
 
 ## 资产最低标准
 
@@ -82,13 +83,13 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 - 镜头视频提示词包含首帧参考、故事目的、动作链、表演意图、摄影和灯光；负面提示词单独成段，并用“禁止”表达。
 - production_lineage 覆盖故事、视觉、资产、提示词、图片、质检和交付阶段。
 
-第二条命令进一步检查内容质量：完整故事有没有被替换，资产和镜头能不能回指原文，不同资产是否复制同一提示词模板，每条图片提示词是否落实专属视觉锁定，镜头导演参数是否随剧情变化，以及真实图片是否保留七维视觉质检证据。
+第二条命令进一步检查内容质量：完整故事有没有被替换，资产和镜头能不能回指原文，不同资产是否复制同一提示词模板，每条图片提示词是否落实专属视觉锁定，镜头导演参数是否随剧情变化，以及真实图片是否保留七维视觉质检证据。它还会输出 `image_quality_summary`，把可用图、废片/返工图、返工率和失败图片 ID 单独列出来。
 
 第三条命令用于盘点已经生成过的本地交付物。它默认扫描 `output` 下的 AI 漫剧 V2 handoff manifest，不调用模型、不读取 API Key，并把结果分成 `production_quality_verified`、`demo_structure_verified`、`needs_review` 和 `legacy_unverifiable`。当本地有多次实验产物时，先看这份盘点，再决定展示哪一份、修复哪一份、丢弃哪一份。
 
 无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、且其他维度全部通过时，才会得到 `production_quality_verified`。
 
-历史追溯中的 `image_production_evidence` 是判断图片是否可交付的第一信号。如果它是 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown`，下游只能把当前包当作结构样例或待补证据包。此时使用质量恢复动作 `regenerate_images`，保留已确认故事、资产拆解、提示词包和旧版 Word/manifest 归档，重新生成图片并补视觉质检；补齐之前不要把包交给 Libtv、小云雀或其他视频平台当作最终生产素材。
+历史追溯中的 `image_production_evidence` 是判断图片是否可交付的第一信号。如果它是 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown`，下游只能把当前包当作结构样例或待补证据包。接着看 `image_quality_summary.rework_instructions`：它会按图片说明要补跑视觉质检、保留提示词重新生图，还是退回提示词重写，并给出操作步骤。此时使用质量恢复动作 `regenerate_images`，保留已确认故事、资产拆解、提示词包和旧版 Word/manifest 归档，重新生成图片并补视觉质检；补齐之前不要把包交给 Libtv、小云雀或其他视频平台当作最终生产素材。
 
 质量基准失败时会同时返回责任部门和恢复动作：确认故事缺失或版本哈希不一致时返回内阁/中书省；资产找不到故事依据、身份证或计划图组不完整时返回中书省/门下省；镜头找不到故事依据、提示词或导演执行不合格时返回工部/兵部/刑部；已批准资产缺图、版本绑定或图片质检有问题时返回工部/刑部；交付谱系问题返回礼部/刑部。工作台和历史页会把可自动恢复的项目退回对应阶段，并保留旧 Word 和旧 manifest，不覆盖历史。恢复接口只接受当前质量基准推荐的动作，不能由前端跳过真正的阻塞阶段；早期 V2 包缺少质量清单时，只允许退回礼部重新组装 V3 交付物。
 
