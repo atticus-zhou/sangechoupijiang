@@ -197,6 +197,58 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             f"window.__PUBLIC_SHOWCASE__ = {data_json};\n",
             encoding="utf-8",
         )
+        portfolio_integration = (static_showcase.get("portfolio_embed") or {}).get("portfolio_integration") or {}
+        deploy_manifest = {
+            "mode": "public_no_key_portfolio_deploy",
+            "recommended_path": "static_export",
+            "entrypoint": "index.html",
+            "source_dir": "dist/public-showcase",
+            "standalone_deploy_directory": ".",
+            "personal_site_target": "public/three-stooges/",
+            "personal_site_url_path": "/three-stooges/",
+            "requires_backend": False,
+            "requires_api_key": False,
+            "calls_real_models": False,
+            "allows_workspace_writes": False,
+            "required_files": [
+                "index.html",
+                "data.js",
+                "app.js",
+                "style.css",
+                "showcase.json",
+                "export-manifest.json",
+                "assets/public-showcase-desktop.png",
+                "data/comic_production.json",
+                "data/research.json",
+                "data/comic_production_claim_report.json",
+                "downloads/",
+            ],
+            "sample_download_count": len(download_records),
+            "verification_commands": [
+                "python scripts/verify_public_demo_mode.py --format markdown",
+                "python scripts/export_public_showcase.py",
+                "python scripts/verify_static_public_showcase.py --format markdown",
+                "python scripts/verify_release_readiness.py --format markdown",
+            ],
+            "forbidden_public_assets": [
+                "config.yaml",
+                ".env",
+                "API Key",
+                "Cookie",
+                "user_data/",
+                "output/",
+                "runtime_logs/",
+                "browser profile",
+            ],
+            "integration_options": portfolio_integration.get("integration_options") or [],
+            "operator_checklist": [
+                "确认只发布 dist/public-showcase 里的静态文件。",
+                "确认五份样例交付物都能从页面下载。",
+                "确认公开页面没有真实生产入口、API Key、Cookie、用户数据或运行产物。",
+                "确认页面仍显示 demo-only、safe_public_demo 和 demo_structure_only。",
+            ],
+        }
+        _write_json(staging / "portfolio-deploy-manifest.json", deploy_manifest)
 
         file_records = []
         for path in sorted(item for item in staging.rglob("*") if item.is_file()):

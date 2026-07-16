@@ -26,6 +26,7 @@ REQUIRED_FILES = {
     "data.js",
     "showcase.json",
     "export-manifest.json",
+    "portfolio-deploy-manifest.json",
     "assets/public-showcase-desktop.png",
     "data/comic_production.json",
     "data/comic_production_claim_report.json",
@@ -72,6 +73,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
     try:
         export_summary = export_public_showcase(temp_dir)
         manifest = json.loads((temp_dir / "export-manifest.json").read_text(encoding="utf-8"))
+        deploy_manifest = json.loads((temp_dir / "portfolio-deploy-manifest.json").read_text(encoding="utf-8"))
         showcase = json.loads((temp_dir / "showcase.json").read_text(encoding="utf-8"))
         files = {path.relative_to(temp_dir).as_posix() for path in temp_dir.rglob("*") if path.is_file()}
 
@@ -85,6 +87,40 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static showcase must not require an API Key")
         if manifest.get("calls_real_models") is not False:
             errors.append("static showcase must not call real models")
+        if deploy_manifest.get("mode") != "public_no_key_portfolio_deploy":
+            errors.append("portfolio deploy manifest has an unexpected mode")
+        if deploy_manifest.get("source_dir") != "dist/public-showcase":
+            errors.append("portfolio deploy manifest must preserve the static source directory")
+        if deploy_manifest.get("personal_site_target") != "public/three-stooges/":
+            errors.append("portfolio deploy manifest must expose the personal website copy target")
+        if deploy_manifest.get("personal_site_url_path") != "/three-stooges/":
+            errors.append("portfolio deploy manifest must expose the personal website URL path")
+        for flag in ("requires_backend", "requires_api_key", "calls_real_models", "allows_workspace_writes"):
+            if deploy_manifest.get(flag) is not False:
+                errors.append(f"portfolio deploy manifest must keep {flag}=False")
+        required_deploy_files = {
+            "index.html",
+            "data.js",
+            "app.js",
+            "style.css",
+            "showcase.json",
+            "export-manifest.json",
+            "assets/public-showcase-desktop.png",
+            "data/comic_production_claim_report.json",
+            "downloads/",
+        }
+        if required_deploy_files - set(deploy_manifest.get("required_files") or []):
+            errors.append("portfolio deploy manifest is missing required files")
+        if deploy_manifest.get("sample_download_count") != len(manifest.get("downloads") or []):
+            errors.append("portfolio deploy manifest download count does not match export downloads")
+        if not any("verify_static_public_showcase.py" in item for item in deploy_manifest.get("verification_commands") or []):
+            errors.append("portfolio deploy manifest must include the static showcase verifier")
+        forbidden_manifest_text = json.dumps(deploy_manifest.get("forbidden_public_assets") or [], ensure_ascii=False)
+        for marker in ("config.yaml", "API Key", "Cookie", "user_data/", "output/"):
+            if marker not in forbidden_manifest_text:
+                errors.append(f"portfolio deploy manifest must forbid {marker}")
+        if len(deploy_manifest.get("operator_checklist") or []) < 4:
+            errors.append("portfolio deploy manifest must include an operator checklist")
         if showcase.get("mode") != "public_no_key_static_showcase":
             errors.append("static showcase has an unexpected mode")
         if (showcase.get("static_export") or {}).get("requires_backend") is not False:
@@ -266,6 +302,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
             "portfolio_integration_option_count": len(integration_options),
             "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
+            "portfolio_deploy_manifest": "portfolio-deploy-manifest.json",
+            "portfolio_deploy_target": deploy_manifest.get("personal_site_target", ""),
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),
@@ -297,6 +335,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
+        f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",
         f"- Requires backend: {payload.get('requires_backend')}",
         f"- Requires API Key: {payload.get('requires_api_key')}",
         f"- Calls real models: {payload.get('calls_real_models')}",

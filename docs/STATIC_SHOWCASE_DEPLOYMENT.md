@@ -26,7 +26,7 @@ dist/public-showcase/index.html
 - 推荐路径是 `static_export`，源目录固定为 `dist/public-showcase`。
 - 独立部署时，把 `dist/public-showcase` 当作一个纯静态站点发布。
 - 嵌入已有个人网站时，把 `dist/public-showcase/*` 复制到个人网站仓库的 `public/three-stooges/`，再链接到 `/three-stooges/`。
-- 必须保留 `index.html`、`data.js`、`app.js`、`style.css`、`assets/public-showcase-desktop.png`、`downloads/`、`data/comic_production_claim_report.json` 和 `export-manifest.json`。
+- 必须保留 `index.html`、`data.js`、`app.js`、`style.css`、`assets/public-showcase-desktop.png`、`downloads/`、`data/comic_production_claim_report.json`、`export-manifest.json` 和 `portfolio-deploy-manifest.json`。
 - 禁止把 `config.yaml`、`.env`、API Key、Cookie、`user_data/`、`output/`、浏览器 Profile 或真实用户工作区复制进公开站点。
 
 `python scripts/verify_public_demo_mode.py --format markdown` 和 `python scripts/verify_static_public_showcase.py --format markdown` 都会检查这份接入协议。如果后续修改了个人网站接入方式，必须同时更新接口、静态页和验证器。
@@ -40,6 +40,7 @@ dist/public-showcase/index.html
 - 实际产品界面截图、交付物阅读顺序和 3 分钟面试演示脚本。
 - 复现与验收清单，列出公开 demo、静态导出、真实生产声明和 release readiness 的 no-key 检查命令，以及每条命令通过或失败时该怎么判断。
 - `export-manifest.json`，用于核对文件大小、哈希和安全标志。
+- `portfolio-deploy-manifest.json`，用于核对个人网站复制目标、入口路径、必需文件、禁止带入内容和发布前验证命令。
 
 ## 本机预览
 

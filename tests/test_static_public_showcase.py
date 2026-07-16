@@ -28,6 +28,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(summary["download_count"], 5)
 
         manifest = json.loads((self.output_dir / "export-manifest.json").read_text(encoding="utf-8"))
+        deploy_manifest = json.loads((self.output_dir / "portfolio-deploy-manifest.json").read_text(encoding="utf-8"))
         showcase = json.loads((self.output_dir / "showcase.json").read_text(encoding="utf-8"))
         index_text = (self.output_dir / "index.html").read_text(encoding="utf-8")
         self.assertEqual(showcase["mode"], "public_no_key_static_showcase")
@@ -74,6 +75,19 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         )
         self.assertIn("public/three-stooges/", json.dumps(integration["integration_options"], ensure_ascii=False))
         self.assertIn("config.yaml", " ".join(integration["must_not_include"]))
+        self.assertEqual(deploy_manifest["mode"], "public_no_key_portfolio_deploy")
+        self.assertEqual(deploy_manifest["source_dir"], "dist/public-showcase")
+        self.assertEqual(deploy_manifest["personal_site_target"], "public/three-stooges/")
+        self.assertEqual(deploy_manifest["personal_site_url_path"], "/three-stooges/")
+        self.assertFalse(deploy_manifest["requires_backend"])
+        self.assertFalse(deploy_manifest["requires_api_key"])
+        self.assertFalse(deploy_manifest["calls_real_models"])
+        self.assertFalse(deploy_manifest["allows_workspace_writes"])
+        self.assertEqual(deploy_manifest["sample_download_count"], 5)
+        self.assertIn("downloads/", deploy_manifest["required_files"])
+        self.assertIn("config.yaml", " ".join(deploy_manifest["forbidden_public_assets"]))
+        self.assertTrue(any("verify_static_public_showcase.py" in item for item in deploy_manifest["verification_commands"]))
+        self.assertGreaterEqual(len(deploy_manifest["operator_checklist"]), 4)
         quick_start = showcase["portfolio_embed"]["downstream_quick_start"]
         self.assertEqual([item["step"] for item in quick_start], [1, 2, 3, 4, 5])
         self.assertIn("逐镜头生成视频", json.dumps(quick_start, ensure_ascii=False))
@@ -126,6 +140,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Claim upgrade checklist: 3 items", completed.stdout)
         self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Portfolio integration: source=dist/public-showcase / options=2", completed.stdout)
+        self.assertIn("Portfolio deploy manifest: portfolio-deploy-manifest.json / target=public/three-stooges/", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
 
