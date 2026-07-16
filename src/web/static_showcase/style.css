@@ -259,6 +259,52 @@ a {
   padding: 44px 0;
 }
 
+.compact-section {
+  padding-top: 52px;
+  padding-bottom: 52px;
+}
+
+.fast-review-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fast-review-item {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  min-height: 100%;
+  padding: 18px;
+  border: 1px solid rgba(112, 210, 181, 0.24);
+  border-radius: 12px;
+  background: rgba(19, 25, 34, 0.76);
+}
+
+.fast-review-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(112, 210, 181, 0.16);
+  color: var(--green);
+  font-weight: 800;
+}
+
+.fast-review-copy h3 {
+  margin: 0 0 10px;
+}
+
+.fast-review-copy p {
+  margin: 8px 0;
+  color: var(--muted);
+}
+
 .status-layout,
 .safety-layout {
   display: grid;
@@ -661,6 +707,7 @@ noscript {
     .safety-layout,
     .card-grid.three,
     .claim-grid,
+    .fast-review-list,
     .catalog-grid,
     .office-grid,
     .script-list {

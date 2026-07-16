@@ -220,6 +220,30 @@
     });
   }
 
+  function renderFastReviewRoute() {
+    const portfolio = showcase.portfolio_embed || {};
+    const route = Array.isArray(portfolio.fast_review_route) ? portfolio.fast_review_route : [];
+    const count = document.getElementById('fast-review-count');
+    const list = document.getElementById('fast-review-route');
+    if (!count || !list) return;
+    count.textContent = route.length + ' 步';
+    route.forEach(function (item) {
+      const row = element('li', 'fast-review-item');
+      row.appendChild(element('span', 'fast-review-order', item.order));
+      const copy = element('div', 'fast-review-copy');
+      copy.appendChild(element('h3', '', item.title));
+      addTextRow(copy, '访客动作', item.viewer_action);
+      addTextRow(copy, '证明', item.proof);
+      row.appendChild(copy);
+      if (item.next_anchor) {
+        const link = element('a', 'button secondary', '跳到对应部分');
+        link.href = text(item.next_anchor);
+        row.appendChild(link);
+      }
+      list.appendChild(row);
+    });
+  }
+
   function renderDownloadCatalog() {
     const catalog = Array.isArray(showcase.download_catalog) ? showcase.download_catalog : [];
     const count = document.getElementById('catalog-count');
@@ -356,6 +380,7 @@
   renderAudiencePaths();
   renderReleaseBadge();
   renderClaimBoundary();
+  renderFastReviewRoute();
   renderOffices();
   renderReadingGuide();
   renderDownloadCatalog();

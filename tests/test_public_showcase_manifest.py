@@ -61,6 +61,13 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any(item["label"] == "真实画质声明" for item in release_badge["signals"]))
         self.assertGreaterEqual(len(embed["workflow_showcase"]), 4)
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
+        fast_review = embed["fast_review_route"]
+        self.assertEqual([item["order"] for item in fast_review], [1, 2, 3, 4])
+        fast_review_text = json.dumps(fast_review, ensure_ascii=False)
+        self.assertIn("Word 制片画布", fast_review_text)
+        self.assertIn("handoff manifest", fast_review_text)
+        self.assertIn("声明边界", fast_review_text)
+        self.assertTrue(all(item["viewer_action"] and item["proof"] and item["next_anchor"] for item in fast_review))
         self.assertGreaterEqual(len(embed["sample_deliverables"]), 6)
         self.assertTrue(all(item["uri"].startswith("/api/demo/") for item in embed["sample_deliverables"]))
         claim_deliverables = [
@@ -163,6 +170,9 @@ class PublicShowcaseManifestTests(unittest.TestCase):
 
         reproducibility = embed["reproducibility_checklist"]
         self.assertEqual([item["order"] for item in reproducibility], [1, 2, 3, 4, 5])
+        self.assertIn("6 个下载物", reproducibility[2]["expected"])
+        self.assertIn("7 个可复核文件", reproducibility[2]["expected"])
+        self.assertIn("6/6 阅读指南", reproducibility[2]["expected"])
         for item in reproducibility:
             self.assertTrue(item["command"])
             self.assertTrue(item["expected"])

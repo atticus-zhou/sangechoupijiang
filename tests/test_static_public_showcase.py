@@ -69,8 +69,13 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         )
         self.assertIn("访客打开页面时只读取随包的 data.js", script_text)
         self.assertIn("六份交付物已经随静态站点一起导出", script_text)
+        fast_review = showcase["portfolio_embed"]["fast_review_route"]
+        self.assertEqual([item["order"] for item in fast_review], [1, 2, 3, 4])
+        self.assertTrue(all(item["viewer_action"] and item["proof"] and item["next_anchor"] for item in fast_review))
         repro = showcase["portfolio_embed"]["reproducibility_checklist"]
         self.assertEqual(len(repro), 5)
+        self.assertIn("6 个下载物", repro[2]["expected"])
+        self.assertIn("7 个可复核文件", repro[2]["expected"])
         self.assertTrue(any("verify_release_readiness.py" in item["command"] for item in repro))
         self.assertTrue(all(item["expected"] and item["if_fails"] for item in repro))
         integration = showcase["portfolio_embed"]["portfolio_integration"]
@@ -118,8 +123,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         index_text = (self.output_dir / "index.html").read_text(encoding="utf-8")
         style_text = (self.output_dir / "style.css").read_text(encoding="utf-8")
         self.assertIn("可复核文件目录", index_text)
+        self.assertIn("最快验收路线", index_text)
         self.assertIn("未宣称真实画质", static_script)
         self.assertIn("claim.claim_upgrade_checklist", static_script)
+        self.assertIn("fast_review_route", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
+        self.assertIn("renderFastReviewRoute", static_script)
+        self.assertIn("fast-review-item", style_text)
         self.assertIn("showcase.download_catalog", static_script)
         self.assertIn("renderDownloadCatalog", static_script)
         self.assertIn("catalog-card", style_text)

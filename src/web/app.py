@@ -1214,6 +1214,39 @@ def _public_showcase_interview_demo_script() -> list[dict]:
     ]
 
 
+def _public_showcase_fast_review_route() -> list[dict]:
+    return [
+        {
+            "order": 1,
+            "title": "先确认这是安全公开页",
+            "viewer_action": "看首屏的无 Key、发布状态和真实生产声明边界。",
+            "proof": "页面只展示固定样例，不调用真实模型，不读取作者 API Key。",
+            "next_anchor": "#claim-title",
+        },
+        {
+            "order": 2,
+            "title": "再下载 Word 制片画布",
+            "viewer_action": "打开 AI 漫剧 Word 制片画布，检查故事、资产、镜头和提示词是否在同一份交付物里。",
+            "proof": "产品交付的是可继续生产的文件，不是一段聊天回答。",
+            "next_anchor": "#deliverables-title",
+        },
+        {
+            "order": 3,
+            "title": "然后核对 handoff manifest",
+            "viewer_action": "查看 story_version、asset_id、image_id、shot_id 和 production_lineage。",
+            "proof": "故事、资产、图片、镜头、提示词和 Word 画布之间有引用链路。",
+            "next_anchor": "#catalog-title",
+        },
+        {
+            "order": 4,
+            "title": "最后看声明边界和复现命令",
+            "viewer_action": "确认漫画和研究两个办公室哪些能公开证明、哪些还不能宣称，并看 release readiness 命令。",
+            "proof": "作品集展示不会夸大成真实 SaaS 或真实模型质量验证。",
+            "next_anchor": "#repro-title",
+        },
+    ]
+
+
 def _research_demo_evidence_handoff() -> list[dict]:
     return [
         {
@@ -1266,7 +1299,7 @@ def _public_showcase_reproducibility_checklist() -> list[dict]:
             "order": 3,
             "title": "导出可托管静态展示包",
             "command": "python scripts/export_public_showcase.py && python scripts/verify_static_public_showcase.py --format markdown",
-            "expected": "看到 dist/public-showcase/index.html、5 个下载物、5/5 阅读指南，并且 requires_backend=False。",
+            "expected": "看到 dist/public-showcase/index.html、6 个下载物、7 个可复核文件、6/6 阅读指南，并且 requires_backend=False。",
             "if_fails": "不要部署到 Vercel；先修复静态下载路径、data.js、截图资产或 claim report。",
         },
         {
@@ -1424,6 +1457,7 @@ async def get_public_showcase_demo_api():
             ],
             "sample_deliverables": sample_deliverables,
             "release_badge": _public_showcase_release_badge(comic_inventory, comic_claim),
+            "fast_review_route": _public_showcase_fast_review_route(),
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
