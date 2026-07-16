@@ -169,6 +169,12 @@ def _public_demo_path() -> dict[str, Any]:
                 "look_for": "claim_level、quality_claim、can_claim_real_quality、allowed_public_claims 和 forbidden_public_claims。",
                 "proves": "公开样例只能声明结构、谱系和交付链路通过，不能把固定样例冒充真实模型画质已验证。",
             },
+            {
+                "file": "研究办公室阶段性交付声明",
+                "uri": "/api/demo/research/claim-report",
+                "look_for": "claim_level、can_claim_full_automation、allowed_public_claims、forbidden_public_claims 和 claim_upgrade_checklist。",
+                "proves": "研究办公室能公开展示阶段性交付能力，但不能把固定样例、待补截图或权限缺口说成全自动平台采集。",
+            },
         ],
         "evidence": [
             "/api/demo/public-showcase",
@@ -176,6 +182,7 @@ def _public_demo_path() -> dict[str, Any]:
             "/api/demo/comic-production/files/handoff_manifest.json",
             "/api/demo/research/files/report.md",
             "/api/demo/research/files/evidence_manifest.json",
+            "/api/demo/research/claim-report",
             "dist/public-showcase/index.html",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
             "docs/COMIC_DOWNSTREAM_HANDOFF.md",
