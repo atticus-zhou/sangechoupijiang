@@ -147,6 +147,21 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertIn("prompt.executable_structure", issue_codes)
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_prompts")
 
+    def test_shot_prompt_requires_first_frame_and_reference_chain(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = fixture_manifest(Path(tmp))
+        manifest["shots"][0]["first_frame_reference_image"] = {}
+        manifest["shots"][0]["reference_asset_chain"] = []
+
+        audit = audit_handoff_manifest(manifest)
+
+        summary = audit["prompt_quality_summary"]
+        issue_codes = {item["code"] for item in audit["issues"]}
+        self.assertEqual(summary["status"], "needs_review")
+        self.assertGreater(summary["issue_count"], 0)
+        self.assertIn("prompt.executable_structure", issue_codes)
+        self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_prompts")
+
     def test_real_provider_requires_seven_dimension_visual_review(self):
         with tempfile.TemporaryDirectory() as tmp:
             manifest = fixture_manifest(Path(tmp))

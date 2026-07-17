@@ -283,6 +283,8 @@ def _prompt_quality_audit(
                 "shot_id": shot.get("shot_id", ""),
                 "generator_prompt": shot.get("video_prompt_block", ""),
                 "negative_prompt": _split_negative_block(shot.get("negative_prompt_block", "")),
+                "first_frame_reference_image": shot.get("first_frame_reference_image") or {},
+                "reference_asset_chain": shot.get("reference_asset_chain") or [],
             }
             for shot in shots
         ],

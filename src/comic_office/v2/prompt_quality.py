@@ -29,6 +29,7 @@ def audit_prompt_package(package: dict[str, Any] | None) -> dict[str, Any]:
             "人物和道具资产保持纯白或近白色干净背景",
             "场景资产保持空场景空间参考",
             "镜头视频提示词包含首帧参考、故事目的、动作链、表演意图、摄影和灯光",
+            "镜头提示词绑定首帧参考图片和机器可读资产引用链",
             "负面提示词单独成段，并用“禁止”表达",
         ],
     }
@@ -153,6 +154,8 @@ def _shot_prompt_issues(shots: list[dict[str, Any]]) -> list[dict[str, Any]]:
         shot_id = str(shot.get("shot_id") or "shot_prompt")
         generator = str(shot.get("generator_prompt") or "")
         negative_items = [str(item) for item in (shot.get("negative_prompt") or [])]
+        first_frame = shot.get("first_frame_reference_image") or {}
+        reference_chain = list(shot.get("reference_asset_chain") or [])
         negative_text = "；".join(negative_items)
         combined = f"{generator}；{negative_text}"
 
@@ -170,6 +173,13 @@ def _shot_prompt_issues(shots: list[dict[str, Any]]) -> list[dict[str, Any]]:
             add("镜头负面提示词每一项都应该用“禁止”开头。")
         if "严格继承参考资产" not in generator:
             add("镜头提示词必须明确继承参考资产身份。")
+        if not first_frame.get("image_id") or not first_frame.get("file") or not first_frame.get("asset_id"):
+            add("镜头提示词必须绑定首帧参考图片的 image_id、file 和 asset_id。")
+        if not reference_chain:
+            add("镜头提示词必须提供机器可读 reference_asset_chain。")
+        for reference in reference_chain:
+            if not reference.get("asset_id") or not reference.get("asset_type") or not reference.get("name"):
+                add("reference_asset_chain 每项都必须包含 asset_id、asset_type 和 name。")
         if "禁止资产身份漂移" not in negative_text or "禁止动作顺序混乱" not in negative_text:
             add("镜头负面提示词必须覆盖资产身份漂移和动作顺序混乱。")
     return issues

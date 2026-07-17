@@ -247,6 +247,8 @@ def _prompt_specificity(
                 "shot_id": item.get("shot_id", ""),
                 "generator_prompt": item.get("video_prompt_block", ""),
                 "negative_prompt": _split_negative(item.get("negative_prompt_block", "")),
+                "first_frame_reference_image": item.get("first_frame_reference_image") or {},
+                "reference_asset_chain": item.get("reference_asset_chain") or [],
             }
             for item in shots
         ],
@@ -310,6 +312,8 @@ def _prompt_quality_summary(images: list[dict[str, Any]], shots: list[dict[str, 
                 "shot_id": item.get("shot_id", ""),
                 "generator_prompt": item.get("video_prompt_block", ""),
                 "negative_prompt": _split_negative(item.get("negative_prompt_block", "")),
+                "first_frame_reference_image": item.get("first_frame_reference_image") or {},
+                "reference_asset_chain": item.get("reference_asset_chain") or [],
             }
             for item in shots
         ],

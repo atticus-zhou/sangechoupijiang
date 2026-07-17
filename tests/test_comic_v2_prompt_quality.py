@@ -51,6 +51,16 @@ class ComicV2PromptQualityTests(unittest.TestCase):
                 {
                     "shot_id": "SHOT-01",
                     "generator_prompt": "首帧参考：character_01、prop_01、scene_01。故事目的：发现真相。动作链：举起月灯。表演意图：克制震惊。摄影：固定特写。灯光：冷月光。严格继承参考资产的脸型、服装、道具形状和场景空间结构。",
+                    "first_frame_reference_image": {
+                        "image_id": "img_character_01_three_view",
+                        "file": "character_01_three_view.png",
+                        "asset_id": "character_01",
+                    },
+                    "reference_asset_chain": [
+                        {"asset_id": "character_01", "asset_type": "character", "name": "林昭"},
+                        {"asset_id": "prop_01", "asset_type": "prop", "name": "月灯"},
+                        {"asset_id": "scene_01", "asset_type": "scene", "name": "月塔"},
+                    ],
                     "negative_prompt": ["禁止资产身份漂移", "禁止动作顺序混乱", "禁止文字、标签、编号和水印"],
                 }
             ],
@@ -105,6 +115,21 @@ class ComicV2PromptQualityTests(unittest.TestCase):
         messages = " ".join(item["message"] for item in result["issues"])
         self.assertIn("不要", messages)
         self.assertIn("导演字段", messages)
+
+    def test_flags_shot_prompt_without_first_frame_and_asset_chain(self):
+        result = audit_prompt_package({
+            "prompts": [],
+            "shots": [{
+                "shot_id": "SHOT-01",
+                "generator_prompt": "首帧参考：character_01。故事目的：发现真相。动作链：停步、抬眼。表演意图：克制。摄影：固定特写。灯光：冷月光。严格继承参考资产身份。",
+                "negative_prompt": ["禁止资产身份漂移", "禁止动作顺序混乱"],
+            }],
+        })
+
+        self.assertEqual(result["status"], "needs_review")
+        messages = " ".join(item["message"] for item in result["issues"])
+        self.assertIn("首帧参考图片", messages)
+        self.assertIn("reference_asset_chain", messages)
 
 
 if __name__ == "__main__":
