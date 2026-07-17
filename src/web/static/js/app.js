@@ -4618,6 +4618,8 @@ function renderPublicShowcase(showcase) {
     const reproducibility = Array.isArray(portfolio.reproducibility_checklist) ? portfolio.reproducibility_checklist : [];
     const postRunValidation = Array.isArray(portfolio.post_run_validation) ? portfolio.post_run_validation : [];
     const downstreamQuickStart = Array.isArray(portfolio.downstream_quick_start) ? portfolio.downstream_quick_start : [];
+    const shotContract = portfolio.shot_contract || {};
+    const shotContractFields = Array.isArray(shotContract.required_fields) ? shotContract.required_fields : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
     const realProductionClaim = portfolio.real_production_claim || {};
@@ -4924,6 +4926,31 @@ function renderPublicShowcase(showcase) {
                                 <p><span>产出</span>${escapeHtml(item.output || '')}</p>
                                 <small>验收：${escapeHtml(item.acceptance || '')}</small>
                             </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
+        ${shotContractFields.length ? `
+            <section class="demo-section public-shot-contract-section">
+                <div class="demo-section-head">
+                    <h2>${escapeHtml(shotContract.title || '镜头合同可执行性')}</h2>
+                    <span>${shotContractFields.length} 项硬门禁</span>
+                </div>
+                <p>${escapeHtml(shotContract.summary || '')}</p>
+                <div class="public-shot-contract-grid">
+                    <article>
+                        <strong>交付清单</strong>
+                        <p>${escapeHtml(shotContract.manifest_uri || '')}</p>
+                        <small>${escapeHtml(shotContract.release_gate || '')}</small>
+                        <em>${escapeHtml(shotContract.failure_policy || '')}</em>
+                    </article>
+                    ${shotContractFields.map(item => `
+                        <article>
+                            <strong>${escapeHtml(item.label || item.field || '')}</strong>
+                            <code>${escapeHtml(item.field || '')}</code>
+                            <p>必须包含：${escapeHtml((item.must_include || []).join(' / '))}</p>
+                            <small>${escapeHtml(item.proves || '')}</small>
                         </article>
                     `).join('')}
                 </div>

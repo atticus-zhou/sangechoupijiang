@@ -678,6 +678,51 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     margin: 0;
 }
 
+.public-shot-contract-section > p {
+    margin: 0 0 16px;
+    color: var(--text2);
+    line-height: 1.65;
+}
+
+.public-shot-contract-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.public-shot-contract-grid article {
+    display: grid;
+    gap: 9px;
+    padding: 16px;
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.62);
+}
+
+.public-shot-contract-grid strong {
+    color: #e6edf3;
+}
+
+.public-shot-contract-grid code {
+    width: fit-content;
+    padding: 5px 8px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: 8px;
+    background: rgba(2, 6, 23, 0.42);
+    color: #dbeafe;
+    font-size: 12px;
+}
+
+.public-shot-contract-grid p,
+.public-shot-contract-grid small,
+.public-shot-contract-grid em {
+    margin: 0;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.55;
+    font-style: normal;
+}
+
 .public-interview-script {
     display: grid;
     gap: 12px;
