@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 from src.offices import audit_office_extension_governance
 
 PROTOCOL_DOC = REPO_ROOT / "docs" / "OFFICE_EXTENSION_PROTOCOL.md"
+STARTER_CHECKLIST_DOC = REPO_ROOT / "docs" / "NEW_OFFICE_STARTER_CHECKLIST.md"
 PROTOCOL_DOC_MARKERS = [
     "OfficeProfile",
     "office_id",
@@ -32,6 +33,16 @@ PROTOCOL_DOC_MARKERS = [
     "check_no_secrets.py",
     "API Key",
 ]
+REQUIRED_STARTER_CHECKLIST_PHASES = {
+    "product",
+    "safety",
+    "isolation",
+    "workflow",
+    "demo",
+    "quality",
+    "public_demo",
+    "release",
+}
 
 
 def audit_protocol_doc() -> dict[str, Any]:
@@ -48,6 +59,45 @@ def audit_protocol_doc() -> dict[str, Any]:
         "path": doc_path,
         "status": "passed" if not missing else "needs_work",
         "missing_markers": missing,
+    }
+
+
+def audit_starter_checklist(blueprint: dict[str, Any]) -> dict[str, Any]:
+    checklist = blueprint.get("starter_checklist") or []
+    phases = {str(item.get("phase") or "") for item in checklist}
+    missing_phases = sorted(REQUIRED_STARTER_CHECKLIST_PHASES - phases)
+    incomplete_items = [
+        str(item.get("id") or item.get("order") or index)
+        for index, item in enumerate(checklist, start=1)
+        if not item.get("id") or not item.get("question") or not item.get("evidence")
+    ]
+    doc_path = STARTER_CHECKLIST_DOC.relative_to(REPO_ROOT).as_posix()
+    doc_missing_markers = []
+    if STARTER_CHECKLIST_DOC.exists():
+        doc_text = STARTER_CHECKLIST_DOC.read_text(encoding="utf-8")
+        doc_markers = [
+            "New Office Starter Checklist",
+            "office_id",
+            "downloadable_deliverables",
+            "public_safety_boundaries",
+            "verify_release_readiness",
+            "check_no_secrets",
+        ]
+        doc_missing_markers = [marker for marker in doc_markers if marker not in doc_text]
+    else:
+        doc_missing_markers = ["missing file"]
+    return {
+        "status": (
+            "passed"
+            if checklist and not missing_phases and not incomplete_items and not doc_missing_markers
+            else "needs_work"
+        ),
+        "count": len(checklist),
+        "phases": sorted(phase for phase in phases if phase),
+        "missing_phases": missing_phases,
+        "incomplete_items": incomplete_items,
+        "doc_path": doc_path,
+        "doc_missing_markers": doc_missing_markers,
     }
 
 
@@ -109,11 +159,32 @@ def format_markdown(audit: dict[str, Any]) -> str:
         )
         for item in blueprint.get("minimum_implementation_package", []):
             lines.append(f"| {item.get('file', '')} | {item.get('proves', '')} |")
+    if blueprint.get("starter_checklist"):
+        lines.extend(
+            [
+                "",
+                "## New Office Starter Checklist",
+                "",
+                "| Step | Phase | Question | Evidence |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for item in blueprint.get("starter_checklist", []):
+            lines.append(
+                "| {order}. {id} | {phase} | {question} | {evidence} |".format(
+                    order=item.get("order", ""),
+                    id=item.get("id", ""),
+                    phase=item.get("phase", ""),
+                    question=item.get("question", ""),
+                    evidence=item.get("evidence", ""),
+                )
+            )
     if blueprint.get("required_verifiers"):
         lines.extend(["", "Required verifiers:"])
         lines.extend(f"- `{command}`" for command in blueprint["required_verifiers"])
 
     protocol_doc = audit.get("protocol_doc") or {}
+    starter = audit.get("starter_checklist_audit") or {}
     lines.extend(
         [
             "",
@@ -127,6 +198,23 @@ def format_markdown(audit: dict[str, Any]) -> str:
         lines.append(
             "Missing markers: `" + "`, `".join(protocol_doc.get("missing_markers", [])) + "`"
         )
+    lines.extend(
+        [
+            "",
+            "## Starter Checklist Audit",
+            "",
+            f"Status: `{starter.get('status', 'missing')}`",
+            f"Items: `{starter.get('count', 0)}`",
+            f"Phases: `{', '.join(starter.get('phases', []))}`",
+            f"Document: `{starter.get('doc_path', 'docs/NEW_OFFICE_STARTER_CHECKLIST.md')}`",
+        ]
+    )
+    if starter.get("missing_phases"):
+        lines.append("Missing phases: `" + "`, `".join(starter.get("missing_phases", [])) + "`")
+    if starter.get("incomplete_items"):
+        lines.append("Incomplete items: `" + "`, `".join(starter.get("incomplete_items", [])) + "`")
+    if starter.get("doc_missing_markers"):
+        lines.append("Document missing markers: `" + "`, `".join(starter.get("doc_missing_markers", [])) + "`")
 
     lines.extend(
         [
@@ -192,10 +280,17 @@ def main() -> int:
     audit = audit_office_extension_governance()
     protocol_doc = audit_protocol_doc()
     audit["protocol_doc"] = protocol_doc
+    starter_checklist = audit_starter_checklist(audit.get("extension_blueprint") or {})
+    audit["starter_checklist_audit"] = starter_checklist
     if protocol_doc.get("status") != "passed":
         audit["status"] = "failed"
         audit.setdefault("errors", {}).setdefault("protocol_doc_errors", []).append(
             f"{protocol_doc.get('path')} is {protocol_doc.get('status')}"
+        )
+    if starter_checklist.get("status") != "passed":
+        audit["status"] = "failed"
+        audit.setdefault("errors", {}).setdefault("starter_checklist_errors", []).append(
+            "starter_checklist is incomplete"
         )
     if args.format == "json":
         print(json.dumps(audit, ensure_ascii=False, indent=2))

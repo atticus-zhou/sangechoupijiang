@@ -22,6 +22,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "模型台阶可以这样理解",
             "AI 漫剧真实生产声明报告",
             "下游生产 quick-start",
+            "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
             "python scripts/verify_release_readiness.py --format markdown",
             "python scripts/verify_development_checklist.py --format markdown",
             "python scripts/verify_public_docs_readability.py --format markdown",
@@ -98,6 +99,19 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "image_quality_summary",
             "rework_instructions",
             "regenerate_images",
+        ],
+    },
+    {
+        "path": "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
+        "role": "new office starter checklist",
+        "required_markers": [
+            "New Office Starter Checklist",
+            "office_id",
+            "downloadable_deliverables",
+            "public_safety_boundaries",
+            "verify_office_extension_governance",
+            "verify_release_readiness",
+            "check_no_secrets",
         ],
     },
 ]

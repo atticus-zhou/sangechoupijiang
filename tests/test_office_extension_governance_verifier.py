@@ -27,6 +27,12 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("protocol_doc", audit)
         self.assertEqual(audit["protocol_doc"]["status"], "passed")
         self.assertEqual(audit["protocol_doc"]["path"], "docs/OFFICE_EXTENSION_PROTOCOL.md")
+        self.assertEqual(audit["starter_checklist_audit"]["status"], "passed")
+        self.assertEqual(audit["starter_checklist_audit"]["count"], 8)
+        self.assertEqual(audit["starter_checklist_audit"]["doc_path"], "docs/NEW_OFFICE_STARTER_CHECKLIST.md")
+        self.assertFalse(audit["starter_checklist_audit"]["doc_missing_markers"])
+        self.assertIn("isolation", audit["starter_checklist_audit"]["phases"])
+        self.assertIn("public_demo", audit["starter_checklist_audit"]["phases"])
         package_files = {
             item["file"] for item in audit["extension_blueprint"]["minimum_implementation_package"]
         }
@@ -66,6 +72,14 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("Required Demo Contract", completed.stdout)
         self.assertIn("Extension Blueprint", completed.stdout)
         self.assertIn("Minimum Implementation Package", completed.stdout)
+        self.assertIn("New Office Starter Checklist", completed.stdout)
+        self.assertIn("Starter Checklist Audit", completed.stdout)
+        self.assertIn("define_user_job", completed.stdout)
+        self.assertIn("scope_runtime_state", completed.stdout)
+        self.assertIn("wire_release_gate", completed.stdout)
+        self.assertIn("Status: `passed`", completed.stdout)
+        self.assertIn("Items: `8`", completed.stdout)
+        self.assertIn("Document: `docs/NEW_OFFICE_STARTER_CHECKLIST.md`", completed.stdout)
         self.assertIn("Register an OfficeProfile", completed.stdout)
         self.assertIn("src/office_preflight.py", completed.stdout)
         self.assertIn("Isolate runtime state", completed.stdout)

@@ -43,6 +43,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("产物完成度", text)
         self.assertIn("缺失产物", text)
         self.assertIn("creation_template", text)
+        self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", text)
         self.assertIn("required_demo_contract", text)
         self.assertIn("viewer_path", text)
         self.assertIn("interview_demo_script", text)

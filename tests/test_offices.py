@@ -85,6 +85,15 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("src/web/app.py", package_files)
         self.assertIn("src/office_preflight.py", package_files)
         self.assertIn("tests/", package_files)
+        self.assertEqual(blueprint["starter_checklist_doc"], "docs/NEW_OFFICE_STARTER_CHECKLIST.md")
+        self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", package_files)
+        checklist = blueprint["starter_checklist"]
+        checklist_ids = {item["id"] for item in checklist}
+        self.assertIn("define_user_job", checklist_ids)
+        self.assertIn("scope_runtime_state", checklist_ids)
+        self.assertIn("create_sample_deliverables", checklist_ids)
+        self.assertIn("wire_release_gate", checklist_ids)
+        self.assertTrue(all(item["question"] and item["evidence"] for item in checklist))
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", blueprint["required_verifiers"])
         self.assertTrue(any("office_id" in item for item in blueprint["non_negotiables"]))
 
@@ -203,6 +212,7 @@ class OfficeExtensionGovernanceTests(unittest.TestCase):
         self.assertIn("post_run_validation", audit["required_demo_contract"])
         self.assertIn("extension_blueprint", audit)
         self.assertIn("implementation_steps", audit["extension_blueprint"])
+        self.assertIn("starter_checklist", audit["extension_blueprint"])
         self.assertTrue(any(
             step["id"] == "isolate_runtime"
             for step in audit["extension_blueprint"]["implementation_steps"]

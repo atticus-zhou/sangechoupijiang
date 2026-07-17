@@ -376,6 +376,7 @@ def list_office_extension_blueprint() -> dict:
     """Return the repeatable implementation path for future offices."""
     return {
         "purpose": "Give future offices a concrete path from idea to public-demo-ready workflow without sharing model config, history, artifacts, or runtime output with existing offices.",
+        "starter_checklist_doc": "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
         "implementation_steps": [
             {
                 "order": 1,
@@ -438,6 +439,68 @@ def list_office_extension_blueprint() -> dict:
             {
                 "file": "README.md and docs/",
                 "proves": "A stranger can understand what the office does, what it can download, what is demo-only, which commands reproduce the result, and which checks prove a real run is safe to claim.",
+            },
+            {
+                "file": "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
+                "proves": "Future offices have a repeatable product, safety, isolation, workflow, demo, quality, public-demo, and release checklist before feature work starts.",
+            },
+        ],
+        "starter_checklist": [
+            {
+                "order": 1,
+                "id": "define_user_job",
+                "phase": "product",
+                "question": "What painful job does this office finish for a human user?",
+                "evidence": "A one-paragraph user job, expected input, expected output, and the reason this should be an office instead of a single prompt.",
+            },
+            {
+                "order": 2,
+                "id": "declare_boundaries",
+                "phase": "safety",
+                "question": "What must this office not claim or not touch?",
+                "evidence": "Public safety boundaries, forbidden claims, and the list of keys, cookies, browser profiles, runtime output, and user data that must stay out of public assets.",
+            },
+            {
+                "order": 3,
+                "id": "scope_runtime_state",
+                "phase": "isolation",
+                "question": "Which model config, workspace, history, artifacts, and output paths are scoped by office_id?",
+                "evidence": "Tests proving shared display department names do not share API keys, providers, workspace state, artifacts, or recovery actions.",
+            },
+            {
+                "order": 4,
+                "id": "design_human_checkpoints",
+                "phase": "workflow",
+                "question": "Where should the human review or correct the workflow before expensive generation continues?",
+                "evidence": "Named checkpoints, what is preserved when a user rejects a stage, and which recovery action restarts only the affected stage.",
+            },
+            {
+                "order": 5,
+                "id": "create_sample_deliverables",
+                "phase": "demo",
+                "question": "What downloadable sample proves the office produces more than UI text?",
+                "evidence": "At least one no-key sample deliverable, a manifest or audit file, and a reading guide explaining what each file proves.",
+            },
+            {
+                "order": 6,
+                "id": "add_schema_and_recovery_gates",
+                "phase": "quality",
+                "question": "How does the office prevent free-form model output from becoming an unverifiable blob?",
+                "evidence": "Schema gates, post-run validation commands, failure states, preserved fields, cleared fields, and retry endpoints.",
+            },
+            {
+                "order": 7,
+                "id": "ship_public_demo_contract",
+                "phase": "public_demo",
+                "question": "Can a stranger understand and verify the office without an API key?",
+                "evidence": "viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, and public_safety_boundaries.",
+            },
+            {
+                "order": 8,
+                "id": "wire_release_gate",
+                "phase": "release",
+                "question": "Which single command proves the office is safe to show or honestly blocked?",
+                "evidence": "Office-specific tests plus verify_office_isolation, verify_public_demo_mode, verify_office_extension_governance, verify_release_readiness, and check_no_secrets.",
             },
         ],
         "required_tests": [

@@ -30,6 +30,7 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         self.assertIn("docs/DEPLOYMENT_MODES.md", checked_paths)
         self.assertIn("docs/PUBLIC_RELEASE_HANDOFF.md", checked_paths)
         self.assertIn("docs/COMIC_DOWNSTREAM_HANDOFF.md", checked_paths)
+        self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", checked_paths)
         for item in payload["docs"]:
             self.assertEqual(item["status"], "passed")
             self.assertFalse(item["read_error"])
@@ -55,6 +56,8 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         self.assertIn("GitHub front door", completed.stdout)
         self.assertIn("deployment boundary", completed.stdout)
         self.assertIn("comic downstream handoff", completed.stdout)
+        self.assertIn("new office starter checklist", completed.stdout)
+        self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", completed.stdout)
         self.assertIn("Docs: `", completed.stdout)
 
 
