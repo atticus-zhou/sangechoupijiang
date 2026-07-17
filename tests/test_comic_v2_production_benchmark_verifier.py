@@ -63,6 +63,12 @@ class ComicV2ProductionBenchmarkVerifierTests(unittest.TestCase):
         self.assertIn("Asset prompts: `7/7 clean`", completed.stdout)
         self.assertIn("Director prompts: `2/2 ready`", completed.stdout)
         self.assertIn("Issues: `0`", completed.stdout)
+        self.assertIn("Prompt Gate Checks", completed.stdout)
+        self.assertIn("人物和道具资产保持纯白或近白色干净背景", completed.stdout)
+        self.assertIn("场景资产保持空场景空间参考", completed.stdout)
+        self.assertIn("首帧参考", completed.stdout)
+        self.assertIn("负面提示词单独成段", completed.stdout)
+        self.assertIn("禁止", completed.stdout)
         self.assertIn("不证明真实模型", completed.stdout)
 
 

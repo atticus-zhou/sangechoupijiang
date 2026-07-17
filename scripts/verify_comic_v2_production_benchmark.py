@@ -130,6 +130,11 @@ def format_markdown(result: dict[str, Any]) -> str:
                 f"- Recovery: `{recovery.get('department') or 'manual review'} / "
                 f"{recovery.get('action') or 'none'}`"
             )
+        prompt_checks = list(prompt_summary.get("checks") or [])
+        if prompt_checks:
+            lines.extend(["", "### Prompt Gate Checks", ""])
+            for check in prompt_checks[:8]:
+                lines.append(f"- {check}")
         prompt_issues = prompt_summary.get("issues") or []
         if prompt_issues:
             lines.extend(["", "### Prompt Issues", ""])
