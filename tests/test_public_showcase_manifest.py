@@ -41,6 +41,9 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(prompt_quality["clean_asset_prompt_count"], prompt_quality["asset_prompt_count"])
         self.assertEqual(prompt_quality["director_prompt_count"], prompt_quality["shot_prompt_count"])
         self.assertEqual(prompt_quality["issue_count"], 0)
+        self.assertIn("checks", prompt_quality)
+        self.assertIn("人物和道具资产保持纯白或近白色干净背景", prompt_quality["checks"])
+        self.assertIn("负面提示词单独成段，并用“禁止”表达", prompt_quality["checks"])
         self.assertIn(
             "honest_quality_claim",
             {item["id"] for item in demos["comic_production"]["quality_gates"]},

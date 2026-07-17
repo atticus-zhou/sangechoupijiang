@@ -276,6 +276,27 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     font-size: 12px;
 }
 
+.prompt-gate-checks {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(111, 191, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(10, 21, 34, 0.72);
+}
+
+.prompt-gate-checks strong {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.prompt-gate-checks span {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
 .public-release-badge {
     margin-top: 18px;
     padding: 16px;

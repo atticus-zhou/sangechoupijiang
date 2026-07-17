@@ -90,6 +90,14 @@
           '提示词问题 ' + text(promptQuality.issue_count || 0)
         ));
       }
+      if (benchmark.status && Array.isArray(promptQuality.checks) && promptQuality.checks.length) {
+        const checks = element('div', 'prompt-gate-checks');
+        checks.appendChild(element('strong', '', '提示词门禁'));
+        promptQuality.checks.slice(0, 5).forEach(function (item) {
+          checks.appendChild(element('span', '', text(item)));
+        });
+        card.appendChild(checks);
+      }
       const inventory = (showcase.portfolio_embed || {}).handoff_inventory || {};
       if (demo.office_id === 'comic_production' && inventory.uri) {
         meta.appendChild(element(

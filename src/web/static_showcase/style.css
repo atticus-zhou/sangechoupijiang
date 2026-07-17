@@ -574,6 +574,27 @@ h3 {
   color: var(--green);
 }
 
+.prompt-gate-checks {
+  display: grid;
+  gap: 8px;
+  margin: -4px 0 18px;
+  padding: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  border-radius: 12px;
+  background: rgba(11, 18, 32, 0.72);
+}
+
+.prompt-gate-checks strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.prompt-gate-checks span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .download-row .button {
   min-height: 40px;
   padding: 8px 13px;

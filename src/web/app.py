@@ -3575,6 +3575,7 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
             "director_prompt_count": int(prompt_quality.get("director_prompt_count") or 0),
             "issue_count": int(prompt_quality.get("issue_count") or 0),
             "summary": str(prompt_quality.get("summary") or ""),
+            "checks": [str(item) for item in (prompt_quality.get("checks") or []) if str(item).strip()],
         },
         "limitations": [str(item) for item in (benchmark.get("limitations") or []) if str(item).strip()],
         "recommended_recovery": recovery,

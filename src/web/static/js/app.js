@@ -4879,6 +4879,12 @@ function renderPublicShowcase(showcase) {
                                     <span>真实通过 ${escapeHtml(handoffInventory.production_verified_count || 0)} 份</span>
                                 ` : ''}
                             </div>
+                            ${demo.quality_benchmark.prompt_quality_summary?.checks?.length ? `
+                                <div class="prompt-gate-checks">
+                                    <strong>提示词门禁</strong>
+                                    ${(demo.quality_benchmark.prompt_quality_summary.checks || []).slice(0, 5).map(check => `<span>${escapeHtml(check)}</span>`).join('')}
+                                </div>
+                            ` : ''}
                         ` : ''}
                         <div class="demo-proof-points">
                             ${(demo.proof_points || []).slice(0, 4).map(point => `<span>${escapeHtml(point)}</span>`).join('')}
