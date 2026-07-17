@@ -185,6 +185,22 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("API Key", script_text)
         self.assertIn("demo-only", script_text)
 
+        first_run_paths = {item["id"]: item for item in embed["first_run_paths"]}
+        self.assertEqual(set(first_run_paths), {"public_demo", "local_real_use", "developer_extension"})
+        self.assertFalse(first_run_paths["public_demo"]["requires_api_key"])
+        self.assertTrue(first_run_paths["local_real_use"]["requires_api_key"])
+        self.assertIn("verify_public_demo_mode.py", first_run_paths["public_demo"]["verification"])
+        self.assertIn("doctor.py", first_run_paths["local_real_use"]["verification"])
+        self.assertIn(
+            "verify_office_extension_governance.py",
+            first_run_paths["developer_extension"]["verification"],
+        )
+        for item in first_run_paths.values():
+            self.assertGreaterEqual(len(item["do_first"]), 3)
+            self.assertTrue(item["for_user"])
+            self.assertTrue(item["start_here"])
+            self.assertTrue(item["success_signal"])
+
         reproducibility = embed["reproducibility_checklist"]
         self.assertEqual([item["order"] for item in reproducibility], [1, 2, 3, 4, 5])
         self.assertIn("6 个下载物", reproducibility[2]["expected"])

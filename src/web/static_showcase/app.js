@@ -373,6 +373,30 @@
     });
   }
 
+  function renderFirstRunPaths() {
+    const portfolio = showcase.portfolio_embed || {};
+    const paths = Array.isArray(portfolio.first_run_paths) ? portfolio.first_run_paths : [];
+    const grid = document.getElementById('first-run-paths');
+    if (!grid || !paths.length) return;
+    paths.forEach(function (item) {
+      const card = element('article', 'card first-run-card');
+      const head = element('div', 'first-run-card-head');
+      head.appendChild(element('h3', '', item.title || item.id));
+      head.appendChild(element('span', 'status-pill', item.requires_api_key ? '需要自己的 API Key' : '不需要 API Key'));
+      card.appendChild(head);
+      card.appendChild(element('p', '', item.for_user || ''));
+      addTextRow(card, '先做什么', item.start_here);
+      const steps = element('ol', 'compact-steps');
+      (item.do_first || []).forEach(function (step) {
+        steps.appendChild(element('li', '', step));
+      });
+      card.appendChild(steps);
+      card.appendChild(element('code', '', item.verification || ''));
+      addTextRow(card, '通过信号', item.success_signal);
+      grid.appendChild(card);
+    });
+  }
+
   function renderReproducibilityChecklist() {
     const portfolio = showcase.portfolio_embed || {};
     const checklist = Array.isArray(portfolio.reproducibility_checklist) ? portfolio.reproducibility_checklist : [];
@@ -538,6 +562,7 @@
   renderDownstreamQuickStart();
   renderShotContract();
   renderInterviewScript();
+  renderFirstRunPaths();
   renderReproducibilityChecklist();
   renderPostRunValidation();
   renderOfficeExtensionStory();

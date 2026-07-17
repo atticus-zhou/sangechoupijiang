@@ -260,6 +260,22 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             else:
                 errors.append(f"static reading guide item is not locally usable: {item.get('title') or uri}")
 
+        first_run_paths = portfolio.get("first_run_paths") or []
+        first_run_ids = {item.get("id") for item in first_run_paths}
+        if first_run_ids != {"public_demo", "local_real_use", "developer_extension"}:
+            errors.append("static showcase must expose the three first-run paths")
+        for item in first_run_paths:
+            if not item.get("title") or not item.get("for_user") or not item.get("start_here"):
+                errors.append(f"static first-run path is missing user guidance: {item.get('id')}")
+            if len(item.get("do_first") or []) < 3:
+                errors.append(f"static first-run path must include at least three first actions: {item.get('id')}")
+            if not item.get("verification") or not item.get("success_signal"):
+                errors.append(f"static first-run path is missing verification guidance: {item.get('id')}")
+        first_run_text = json.dumps(first_run_paths, ensure_ascii=False)
+        for marker in ("verify_public_demo_mode.py", "doctor.py", "verify_office_extension_governance.py"):
+            if marker not in first_run_text:
+                errors.append(f"static first-run paths are missing marker: {marker}")
+
         reproducibility = portfolio.get("reproducibility_checklist") or []
         if len(reproducibility) < 5:
             errors.append("static showcase must include a 5-step reproducibility checklist")
@@ -422,6 +438,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the reviewable download catalog")
         if "portfolio.post_run_validation" not in app_text or "renderPostRunValidation" not in app_text:
             errors.append("static showcase page must render the real output validation checklist")
+        if "portfolio.first_run_paths" not in app_text or "renderFirstRunPaths" not in app_text:
+            errors.append("static showcase page must render the first-run paths")
         if "portfolio.shot_contract" not in app_text or "renderShotContract" not in app_text:
             errors.append("static showcase page must render the shot contract")
         if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
@@ -432,6 +450,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
         if "extension-check-grid" not in style_text or "extension-panel" not in style_text:
             errors.append("static showcase stylesheet must style the office extension checklist")
+        if "first-run-grid" not in style_text or "first-run-card" not in style_text:
+            errors.append("static showcase stylesheet must style the first-run paths")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
             errors.append("static showcase stylesheet must style the reviewable download catalog")
         for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):
@@ -452,6 +472,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "download_catalog_count": len(download_catalog),
             "reading_guide_count": len(reading_guide),
             "reading_guide_ready_count": ready_reading_items,
+            "first_run_path_count": len(first_run_paths),
             "downstream_quick_start_count": len(downstream_quick_start),
             "downstream_quick_start_ready_count": ready_downstream_steps,
             "shot_contract_field_count": len(shot_contract.get("required_fields") or []),
@@ -518,6 +539,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Downloadable deliverables: {payload.get('download_count')}",
         f"- Reviewable catalog: {payload.get('download_catalog_count')} files",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
+        f"- First-run paths: {payload.get('first_run_path_count')}",
         f"- Downstream quick-start: {payload.get('downstream_quick_start_ready_count')} steps",
         f"- Shot contract: {payload.get('shot_contract_field_count')} fields",
         f"- Reproducibility checklist: {payload.get('reproducibility_count')} commands",

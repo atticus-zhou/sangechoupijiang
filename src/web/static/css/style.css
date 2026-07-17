@@ -628,6 +628,74 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     line-height: 1.65;
 }
 
+.public-first-run-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+}
+
+.public-first-run-grid article {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid rgba(88, 166, 255, 0.18);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(88, 166, 255, 0.1), rgba(15, 23, 42, 0.62));
+}
+
+.public-first-run-grid article > div {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.public-first-run-grid strong {
+    color: #f0f6fc;
+    font-size: 17px;
+}
+
+.public-first-run-grid span {
+    flex: 0 0 auto;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(139, 148, 158, 0.22);
+    color: #9fc9ff;
+    background: rgba(88, 166, 255, 0.08);
+    font-size: 12px;
+}
+
+.public-first-run-grid p,
+.public-first-run-grid b,
+.public-first-run-grid li,
+.public-first-run-grid small {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.public-first-run-grid b {
+    color: #dbe9ff;
+    font-weight: 700;
+}
+
+.public-first-run-grid ol {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.public-first-run-grid code {
+    display: block;
+    width: 100%;
+    white-space: normal;
+    word-break: break-word;
+    padding: 10px 12px;
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: 10px;
+    color: #b7d6ff;
+    background: rgba(4, 8, 16, 0.28);
+}
+
 .public-claim-upgrade {
     margin-top: 14px;
     padding: 16px;

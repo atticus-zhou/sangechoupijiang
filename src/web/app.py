@@ -1350,6 +1350,53 @@ def _public_showcase_reproducibility_checklist() -> list[dict]:
     ]
 
 
+def _public_showcase_first_run_paths() -> list[dict]:
+    return [
+        {
+            "id": "public_demo",
+            "title": "只看公开演示",
+            "for_user": "面试官、作品集访客、第一次打开项目的人。",
+            "requires_api_key": False,
+            "start_here": "打开公开展示页，先看两个 no-key 样例和可下载交付物。",
+            "do_first": [
+                "打开首页的公开展示入口。",
+                "下载 AI 漫剧 Word 制片画布和 handoff manifest。",
+                "确认页面声明 demo-only，不调用真实模型，也不读取本地 Key。",
+            ],
+            "verification": "python scripts/verify_public_demo_mode.py --format markdown",
+            "success_signal": "能看到固定样例、阅读指南、下载物和安全边界。",
+        },
+        {
+            "id": "local_real_use",
+            "title": "本地真实使用",
+            "for_user": "想用自己的模型 Key 生成真实报告或 AI 漫剧制片包的人。",
+            "requires_api_key": True,
+            "start_here": "先复制本机配置，再用 doctor 检查缺哪些模型。",
+            "do_first": [
+                "复制 config.example.yaml 为 config.yaml，或使用本机环境变量。",
+                "在模型页逐个测试部门 Key，先跑通文本部门，再补工部和刑部。",
+                "真实产物完成后，从历史页下载 Word、manifest、提示词包和 trace。",
+            ],
+            "verification": "python scripts/doctor.py --format markdown",
+            "success_signal": "doctor 显示 real_production.status=ready_for_real_run。",
+        },
+        {
+            "id": "developer_extension",
+            "title": "开发新办公室",
+            "for_user": "想新增短视频、电商、小说 IP 或技术项目办公室的开发者。",
+            "requires_api_key": False,
+            "start_here": "先读办公室协议，不要直接复制一个临时页面或共享配置。",
+            "do_first": [
+                "查看 /api/offices/protocols 和 docs/NEW_OFFICE_STARTER_CHECKLIST.md。",
+                "为新办公室声明独立 office_id、模型、工作区、历史和产物契约。",
+                "补齐 no-key 样例、schema gate、失败恢复和 launch gate 证据。",
+            ],
+            "verification": "python scripts/verify_office_extension_governance.py --format markdown",
+            "success_signal": "新办公室能说明参观路径、证明点、下载物、阅读指南和安全边界。",
+        },
+    ]
+
+
 def _public_showcase_post_run_validation() -> list[dict]:
     return [
         {
@@ -1578,6 +1625,7 @@ async def get_public_showcase_demo_api():
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
             "shot_contract": _public_showcase_shot_contract(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
+            "first_run_paths": _public_showcase_first_run_paths(),
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
             "post_run_validation": _public_showcase_post_run_validation(),
             "portfolio_integration": _public_showcase_portfolio_integration(),

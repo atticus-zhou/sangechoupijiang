@@ -4615,6 +4615,7 @@ function renderPublicShowcase(showcase) {
     const deliverables = Array.isArray(portfolio.sample_deliverables) ? portfolio.sample_deliverables : [];
     const readingGuide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
     const interviewScript = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
+    const firstRunPaths = Array.isArray(portfolio.first_run_paths) ? portfolio.first_run_paths : [];
     const reproducibility = Array.isArray(portfolio.reproducibility_checklist) ? portfolio.reproducibility_checklist : [];
     const postRunValidation = Array.isArray(portfolio.post_run_validation) ? portfolio.post_run_validation : [];
     const downstreamQuickStart = Array.isArray(portfolio.downstream_quick_start) ? portfolio.downstream_quick_start : [];
@@ -4757,6 +4758,31 @@ function renderPublicShowcase(showcase) {
                                 <p><span>证明什么</span>${escapeHtml(item.proof || '')}</p>
                                 <small>${escapeHtml(item.boundary || '')}</small>
                             </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
+        ${firstRunPaths.length ? `
+            <section class="demo-section public-first-run-section">
+                <div class="demo-section-head">
+                    <h2>第一次拿到项目怎么走</h2>
+                    <span>${firstRunPaths.length} 条入口</span>
+                </div>
+                <div class="public-first-run-grid">
+                    ${firstRunPaths.map(item => `
+                        <article>
+                            <div>
+                                <strong>${escapeHtml(item.title || item.id || '')}</strong>
+                                <span>${item.requires_api_key ? '需要自己的 API Key' : '不需要 API Key'}</span>
+                            </div>
+                            <p>${escapeHtml(item.for_user || '')}</p>
+                            <b>${escapeHtml(item.start_here || '')}</b>
+                            <ol>
+                                ${(item.do_first || []).map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+                            </ol>
+                            <code>${escapeHtml(item.verification || '')}</code>
+                            <small>${escapeHtml(item.success_signal || '')}</small>
                         </article>
                     `).join('')}
                 </div>
