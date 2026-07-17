@@ -69,11 +69,11 @@ python scripts/verify_static_public_showcase.py --format markdown
 python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
 ```
 
-The static showcase now exposes three first-run paths so visitors do not confuse demo mode with real local production:
+静态展示包现在会明确展示三条首次使用路径，避免访客把无 Key demo、本地真实生产和开发者扩展混在一起：
 
-- `public_demo`: no API key, safe for portfolio or interview viewing, backed by fixed sample deliverables and `python scripts/verify_public_demo_mode.py --format markdown`.
-- `local_real_use`: bring your own local API keys, configure `config.yaml`, test each office department model, then run real research or comic production locally.
-- `developer_extension`: no API key required for the first audit; start from office protocols, isolation checks, and `python scripts/verify_office_extension_governance.py --format markdown` before adding a new office.
+- `public_demo`：不需要 API Key，适合个人作品集、面试或公开网页展示；它只使用固定样例交付物，并由 `python scripts/verify_public_demo_mode.py --format markdown` 验证。
+- `local_real_use`：使用者填写自己的本地 API Key，配置 `config.yaml`，先在模型页测试每个办公室部门，再在本机运行真实调研或 AI 漫剧制片。
+- `developer_extension`：首次审计不需要 API Key；新增办公室前，先看办公室协议、隔离检查和 `python scripts/verify_office_extension_governance.py --format markdown`，确认不会和现有办公室串线。
 
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
 静态展示包会同时带上最快验收路线、六份下载物、七个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 查看声明边界和复现命令”的顺序判断产品价值。
