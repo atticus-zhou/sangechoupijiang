@@ -274,7 +274,11 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     result = {
         "path": str(build.path),
         "handoff_manifest_path": str(handoff_manifest_path),
+        "output_dir": str(output_dir),
+        "word_canvas_exists": build.path.is_file(),
+        "word_canvas_bytes": build.path.stat().st_size if build.path.is_file() else 0,
         "handoff_manifest_exists": True,
+        "handoff_manifest_bytes": handoff_manifest_path.stat().st_size if handoff_manifest_path.is_file() else 0,
         "handoff_manifest_assets": len(handoff_manifest.get("assets") or []),
         "handoff_manifest_images": len(handoff_manifest.get("images") or []),
         "handoff_manifest_shots": len(handoff_manifest.get("shots") or []),
@@ -318,12 +322,15 @@ def _write_placeholder_image(path: Path, name: str, image_kind: str, asset_type:
 
 
 def format_markdown(result: dict[str, Any]) -> str:
+    word_canvas_status = _file_status(result.get("word_canvas_exists"), result.get("word_canvas_bytes"))
+    manifest_status = _file_status(result.get("handoff_manifest_exists"), result.get("handoff_manifest_bytes"))
     lines = [
         "# Comic V2 Delivery Audit",
         "",
         f"Status: `{'passed' if result.get('handoff_ready') else 'failed'}`",
-        f"Word canvas: `{result.get('path')}`",
-        f"Handoff manifest: `{result.get('handoff_manifest_path')}`",
+        f"Output directory: `{_display_path(result.get('output_dir'))}`",
+        f"Word canvas: {word_canvas_status}",
+        f"Handoff manifest: {manifest_status}",
         "",
         "## Delivery Counts",
         "",
@@ -366,6 +373,22 @@ def format_markdown(result: dict[str, Any]) -> str:
         if result.get("missing_image_asset_ids"):
             lines.append("- Missing image assets: " + ", ".join(result["missing_image_asset_ids"]))
     return "\n".join(lines) + "\n"
+
+
+def _display_path(value: object) -> str:
+    if not value:
+        return ""
+    path = Path(str(value))
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.name or str(value)
+
+
+def _file_status(exists: object, size: object) -> str:
+    if not exists:
+        return "`missing`"
+    return f"`present` ({int(size or 0)} bytes)"
 
 
 def main() -> int:

@@ -89,6 +89,9 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
             )
 
         self.assertIn("Comic V2 Downstream Handoff Audit", completed.stdout)
+        self.assertIn("Output directory:", completed.stdout)
+        self.assertIn("Word canvas: `present`", completed.stdout)
+        self.assertIn("Handoff manifest: `present`", completed.stdout)
         self.assertIn("Downstream Readiness", completed.stdout)
         self.assertIn("Character identity sets", completed.stdout)
         self.assertIn("Shot video packages", completed.stdout)

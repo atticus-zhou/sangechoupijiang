@@ -94,6 +94,9 @@ class ComicV2DeliveryVerifierTests(unittest.TestCase):
             )
 
         self.assertIn("Comic V2 Delivery Audit", completed.stdout)
+        self.assertIn("Output directory:", completed.stdout)
+        self.assertIn("Word canvas: `present`", completed.stdout)
+        self.assertIn("Handoff manifest: `present`", completed.stdout)
         self.assertIn("Delivery Counts", completed.stdout)
         self.assertIn("Quality Gates", completed.stdout)
         self.assertIn("Downstream quick-start steps: 5", completed.stdout)

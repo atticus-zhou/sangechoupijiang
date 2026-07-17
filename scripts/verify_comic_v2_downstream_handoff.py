@@ -83,6 +83,11 @@ def verify_downstream_handoff(
         "delivery_status": "passed" if delivery.get("handoff_ready") else "failed",
         "word_canvas": delivery.get("path"),
         "handoff_manifest": str(manifest_path),
+        "output_dir": delivery.get("output_dir") or str(output_dir),
+        "word_canvas_exists": delivery.get("word_canvas_exists"),
+        "word_canvas_bytes": delivery.get("word_canvas_bytes", 0),
+        "handoff_manifest_exists": manifest_path.is_file(),
+        "handoff_manifest_bytes": manifest_path.stat().st_size if manifest_path.is_file() else 0,
         "story_id": story.get("story_id"),
         "story_version": story.get("story_version"),
         "style_id": style.get("style_id"),
@@ -303,13 +308,16 @@ def _count_assets_with_images(
 
 
 def format_markdown(result: dict[str, Any]) -> str:
+    word_canvas_status = _file_status(result.get("word_canvas_exists"), result.get("word_canvas_bytes"))
+    manifest_status = _file_status(result.get("handoff_manifest_exists"), result.get("handoff_manifest_bytes"))
     lines = [
         "# Comic V2 Downstream Handoff Audit",
         "",
         f"Status: `{result.get('status')}`",
         f"Downstream handoff ready: `{result.get('downstream_handoff_ready')}`",
-        f"Word canvas: `{result.get('word_canvas')}`",
-        f"Handoff manifest: `{result.get('handoff_manifest')}`",
+        f"Output directory: `{_display_path(result.get('output_dir'))}`",
+        f"Word canvas: {word_canvas_status}",
+        f"Handoff manifest: {manifest_status}",
         "",
         "## Package Shape",
         "",
@@ -336,6 +344,22 @@ def format_markdown(result: dict[str, Any]) -> str:
         lines.extend(["", "## Issues", ""])
         lines.extend(f"- {item}" for item in result["errors"])
     return "\n".join(lines) + "\n"
+
+
+def _display_path(value: object) -> str:
+    if not value:
+        return ""
+    path = Path(str(value))
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.name or str(value)
+
+
+def _file_status(exists: object, size: object) -> str:
+    if not exists:
+        return "`missing`"
+    return f"`present` ({int(size or 0)} bytes)"
 
 
 def main() -> int:
