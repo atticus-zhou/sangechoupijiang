@@ -213,6 +213,25 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 errors.append(f"static reproducibility item is incomplete: {item.get('title')}")
         if not any("verify_release_readiness.py" in str(item.get("command") or "") for item in reproducibility):
             errors.append("static reproducibility checklist must include the release readiness gate")
+        post_run_validation = portfolio.get("post_run_validation") or []
+        if [item.get("order") for item in post_run_validation] != [1, 2, 3]:
+            errors.append("static showcase must include a 3-step real output validation checklist")
+        ready_post_run_steps = 0
+        post_run_text = json.dumps(post_run_validation, ensure_ascii=False)
+        for marker in (
+            "audit_comic_v2_handoffs.py",
+            "verify_comic_real_production_claim.py",
+            "verify_comic_v2_production_benchmark.py",
+            "can_claim_real_quality=True",
+            "production_quality_verified",
+        ):
+            if marker not in post_run_text:
+                errors.append(f"static post-run validation is missing marker: {marker}")
+        for item in post_run_validation:
+            if item.get("command") and item.get("expected") and item.get("if_fails"):
+                ready_post_run_steps += 1
+            else:
+                errors.append(f"static post-run validation item is incomplete: {item.get('title')}")
         downstream_quick_start = portfolio.get("downstream_quick_start") or []
         if [item.get("step") for item in downstream_quick_start] != [1, 2, 3, 4, 5]:
             errors.append("static showcase must include a 5-step downstream quick-start")
@@ -294,11 +313,13 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static showcase page must render the claim upgrade checklist")
         if "showcase.download_catalog" not in app_text or "renderDownloadCatalog" not in app_text:
             errors.append("static showcase page must render the reviewable download catalog")
+        if "portfolio.post_run_validation" not in app_text or "renderPostRunValidation" not in app_text:
+            errors.append("static showcase page must render the real output validation checklist")
         if "claim-upgrade-item" not in style_text:
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
             errors.append("static showcase stylesheet must style the reviewable download catalog")
-        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "公开部署安全边界"):
+        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):
             if marker not in index_text and marker not in (temp_dir / "style.css").read_text(encoding="utf-8"):
                 errors.append(f"static showcase page is missing marker: {marker}")
 
@@ -318,6 +339,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "downstream_quick_start_count": len(downstream_quick_start),
             "downstream_quick_start_ready_count": ready_downstream_steps,
             "reproducibility_count": len(reproducibility),
+            "post_run_validation_count": len(post_run_validation),
+            "post_run_validation_ready_count": ready_post_run_steps,
             "release_badge_status": release_badge.get("status", ""),
             "release_badge_signal_count": len(release_badge.get("signals") or []),
             "featured_demo_count": len(demos),
@@ -359,6 +382,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- Downstream quick-start: {payload.get('downstream_quick_start_ready_count')} steps",
         f"- Reproducibility checklist: {payload.get('reproducibility_count')} commands",
+        f"- Real output validation: {payload.get('post_run_validation_ready_count')}/{payload.get('post_run_validation_count')} steps",
         f"- Release badge: {payload.get('release_badge_status')} / signals={payload.get('release_badge_signal_count')}",
         f"- Featured demos: {payload.get('featured_demo_count')}",
         f"- Real product screenshot: {payload.get('screenshot_ready')}",

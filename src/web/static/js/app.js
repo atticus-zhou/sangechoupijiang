@@ -4616,6 +4616,7 @@ function renderPublicShowcase(showcase) {
     const readingGuide = Array.isArray(portfolio.deliverable_reading_guide) ? portfolio.deliverable_reading_guide : [];
     const interviewScript = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
     const reproducibility = Array.isArray(portfolio.reproducibility_checklist) ? portfolio.reproducibility_checklist : [];
+    const postRunValidation = Array.isArray(portfolio.post_run_validation) ? portfolio.post_run_validation : [];
     const downstreamQuickStart = Array.isArray(portfolio.downstream_quick_start) ? portfolio.downstream_quick_start : [];
     const workflow = Array.isArray(portfolio.workflow_showcase) ? portfolio.workflow_showcase : [];
     const handoffInventory = portfolio.handoff_inventory || {};
@@ -4767,6 +4768,27 @@ function renderPublicShowcase(showcase) {
                 </div>
                 <div class="public-repro-list">
                     ${reproducibility.map(item => `
+                        <article>
+                            <b>${escapeHtml(item.order || '')}</b>
+                            <div>
+                                <strong>${escapeHtml(item.title || '')}</strong>
+                                <code>${escapeHtml(item.command || '')}</code>
+                                <p><span>通过时</span>${escapeHtml(item.expected || '')}</p>
+                                <small>失败时：${escapeHtml(item.if_fails || '')}</small>
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        ` : ''}
+        ${postRunValidation.length ? `
+            <section class="demo-section public-repro-section">
+                <div class="demo-section-head">
+                    <h2>真实产物验收</h2>
+                    <span>${postRunValidation.length} 步</span>
+                </div>
+                <div class="public-repro-list">
+                    ${postRunValidation.map(item => `
                         <article>
                             <b>${escapeHtml(item.order || '')}</b>
                             <div>

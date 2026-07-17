@@ -1319,6 +1319,32 @@ def _public_showcase_reproducibility_checklist() -> list[dict]:
     ]
 
 
+def _public_showcase_post_run_validation() -> list[dict]:
+    return [
+        {
+            "order": 1,
+            "title": "交付物清点",
+            "command": "python scripts/audit_comic_v2_handoffs.py --format markdown",
+            "expected": "Word 画布、handoff manifest、prompt package、image records 和 trace JSON 都能找到，并且引用链路没有断。",
+            "if_fails": "先不要对外交付；回到历史页下载缺失文件，或按 trace 里的恢复动作补齐产物。",
+        },
+        {
+            "order": 2,
+            "title": "真实生产声明",
+            "command": "python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown",
+            "expected": "看到 can_claim_real_quality=True；如果仍是 demo_structure_only，就只能说结构样例通过，不能说真实画质通过。",
+            "if_fails": "先补跑真实模型生图和刑部视觉质检，不要把 fixture、缺图或部分模型结果写成生产级。",
+        },
+        {
+            "order": 3,
+            "title": "制片质量基准",
+            "command": "python scripts/verify_comic_v2_production_benchmark.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown",
+            "expected": "看到 production_quality_verified 或等价通过状态，且故事、资产、图片、镜头、提示词和 Word 引用链路互相对得上。",
+            "if_fails": "按失败项修复资产 ID、图片记录、提示词引用或 Word 画布，再重新生成交付包。",
+        },
+    ]
+
+
 def _public_showcase_release_badge(comic_inventory: dict, comic_claim: dict) -> dict:
     return {
         "status": "safe_public_demo",
@@ -1462,6 +1488,7 @@ async def get_public_showcase_demo_api():
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
+            "post_run_validation": _public_showcase_post_run_validation(),
             "portfolio_integration": _public_showcase_portfolio_integration(),
             "handoff_inventory": {
                 "uri": "/api/demo/comic-production/handoff-inventory",

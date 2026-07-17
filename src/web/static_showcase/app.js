@@ -328,6 +328,26 @@
     });
   }
 
+  function renderPostRunValidation() {
+    const portfolio = showcase.portfolio_embed || {};
+    const checklist = Array.isArray(portfolio.post_run_validation) ? portfolio.post_run_validation : [];
+    const count = document.getElementById('post-run-count');
+    const list = document.getElementById('post-run-validation');
+    if (!count || !list) return;
+    count.textContent = checklist.length + ' 步';
+    checklist.forEach(function (item) {
+      const row = element('li', 'repro-item post-run-item');
+      row.appendChild(element('span', 'repro-order', item.order));
+      const copy = element('div', 'repro-copy');
+      copy.appendChild(element('h3', '', item.title));
+      copy.appendChild(element('code', '', item.command));
+      addTextRow(copy, '通过时', item.expected);
+      addTextRow(copy, '失败时', item.if_fails);
+      row.appendChild(copy);
+      list.appendChild(row);
+    });
+  }
+
   function renderPortfolioIntegration() {
     const portfolio = showcase.portfolio_embed || {};
     const integration = portfolio.portfolio_integration || {};
@@ -387,6 +407,7 @@
   renderDownstreamQuickStart();
   renderInterviewScript();
   renderReproducibilityChecklist();
+  renderPostRunValidation();
   renderPortfolioIntegration();
   renderSafety();
 })();

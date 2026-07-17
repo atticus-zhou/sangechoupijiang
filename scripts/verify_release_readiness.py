@@ -150,6 +150,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"catalog={parsed.get('download_catalog_count')}; "
                 f"reading_guide={parsed.get('reading_guide_ready_count')}/{parsed.get('reading_guide_count')}; "
                 f"quick_start={parsed.get('downstream_quick_start_ready_count')}/{parsed.get('downstream_quick_start_count')}; "
+                f"post_run={parsed.get('post_run_validation_ready_count')}/{parsed.get('post_run_validation_count')}; "
                 f"backend={parsed.get('requires_backend')}"
             )
         if check_id == "comic_delivery":

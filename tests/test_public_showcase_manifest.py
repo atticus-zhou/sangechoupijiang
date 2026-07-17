@@ -181,6 +181,16 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("verify_public_demo_mode.py", repro_commands)
         self.assertIn("verify_static_public_showcase.py", repro_commands)
         self.assertIn("verify_release_readiness.py", repro_commands)
+        post_run_validation = embed["post_run_validation"]
+        self.assertEqual([item["order"] for item in post_run_validation], [1, 2, 3])
+        post_run_text = json.dumps(post_run_validation, ensure_ascii=False)
+        self.assertIn("交付物清点", post_run_text)
+        self.assertIn("audit_comic_v2_handoffs.py", post_run_text)
+        self.assertIn("verify_comic_real_production_claim.py", post_run_text)
+        self.assertIn("verify_comic_v2_production_benchmark.py", post_run_text)
+        self.assertIn("can_claim_real_quality=True", post_run_text)
+        self.assertIn("production_quality_verified", post_run_text)
+        self.assertTrue(all(item["command"] and item["expected"] and item["if_fails"] for item in post_run_validation))
         integration = embed["portfolio_integration"]
         self.assertEqual(integration["recommended_path"], "static_export")
         self.assertEqual(integration["static_export"]["source_dir"], "dist/public-showcase")
