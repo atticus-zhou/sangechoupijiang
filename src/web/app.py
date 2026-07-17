@@ -8,6 +8,7 @@ import uuid
 import json
 import os
 import re
+import threading
 import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -122,6 +123,8 @@ active_ws: dict[str, list[WebSocket]] = {}  # task_id → [ws, ...]
 court_ws: list[WebSocket] = []  # 朝堂报告的 WebSocket 订阅者
 AGENT_WORKFLOW_TIMEOUT_SECONDS = 420
 APP_BASE_DIR = Path(__file__).parent.parent.parent
+_demo_delivery_thread_locks: dict[str, threading.RLock] = {}
+_demo_delivery_thread_locks_guard = threading.Lock()
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -134,28 +137,32 @@ async def favicon_api():
 def _demo_delivery_lock(lock_path: Path):
     """Serialize deterministic demo delivery writes across local verifier processes."""
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a+b") as lock_file:
-        if lock_file.tell() == 0:
-            lock_file.write(b"0")
-            lock_file.flush()
-        lock_file.seek(0)
-        if os.name == "nt":
-            import msvcrt
+    lock_key = str(lock_path.resolve())
+    with _demo_delivery_thread_locks_guard:
+        thread_lock = _demo_delivery_thread_locks.setdefault(lock_key, threading.RLock())
+    with thread_lock:
+        with lock_path.open("a+b") as lock_file:
+            if lock_file.tell() == 0:
+                lock_file.write(b"0")
+                lock_file.flush()
+            lock_file.seek(0)
+            if os.name == "nt":
+                import msvcrt
 
-            msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
-            try:
-                yield
-            finally:
-                lock_file.seek(0)
-                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
-        else:
-            import fcntl
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+                try:
+                    yield
+                finally:
+                    lock_file.seek(0)
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
 
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-            try:
-                yield
-            finally:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                try:
+                    yield
+                finally:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 @app.on_event("startup")

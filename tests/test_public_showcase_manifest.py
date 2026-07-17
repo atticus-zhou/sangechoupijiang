@@ -1,9 +1,13 @@
 import json
+import tempfile
+import threading
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from fastapi.testclient import TestClient
 
-from src.web.app import app
+from src.web.app import app, _demo_delivery_lock
 
 
 class PublicShowcaseManifestTests(unittest.TestCase):
@@ -315,6 +319,31 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("def _demo_delivery_lock", source)
         self.assertIn("demo_delivery.lock", source)
         self.assertIn("with _demo_delivery_lock", source)
+        self.assertIn("_demo_delivery_thread_locks", source)
+
+    def test_demo_delivery_lock_serializes_threads_before_file_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock_path = Path(tmp) / "demo_delivery.lock"
+            barrier = threading.Barrier(2)
+            order: list[str] = []
+
+            def worker(name: str) -> str:
+                barrier.wait(timeout=5)
+                with _demo_delivery_lock(lock_path):
+                    order.append(f"enter-{name}")
+                    time.sleep(0.05)
+                    order.append(f"exit-{name}")
+                return name
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(worker, ["a", "b"]))
+
+        self.assertEqual(sorted(results), ["a", "b"])
+        self.assertEqual(len(order), 4)
+        self.assertIn(order, [
+            ["enter-a", "exit-a", "enter-b", "exit-b"],
+            ["enter-b", "exit-b", "enter-a", "exit-a"],
+        ])
 
 if __name__ == "__main__":
     unittest.main()
