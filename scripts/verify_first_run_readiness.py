@@ -24,6 +24,15 @@ LOCAL_DOCTOR_COMMAND = "python scripts/doctor.py --format markdown"
 PRODUCT_READINESS_COMMAND = "python scripts/verify_product_readiness.py --format markdown"
 OFFICE_ISOLATION_COMMAND = "python scripts/verify_office_isolation.py --format markdown"
 SERVER_COMMAND = "python run.py --port 8080"
+HANDOFF_AUDIT_COMMAND = "python scripts/audit_comic_v2_handoffs.py --format markdown"
+REAL_CLAIM_COMMAND = (
+    "python scripts/verify_comic_real_production_claim.py "
+    "--manifest output/your_project/xxx_handoff_manifest.json --format markdown"
+)
+PRODUCTION_BENCHMARK_COMMAND = (
+    "python scripts/verify_comic_v2_production_benchmark.py "
+    "--manifest output/your_project/xxx_handoff_manifest.json --format markdown"
+)
 
 
 def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any]:
@@ -54,6 +63,9 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
             "static_showcase_verify": STATIC_SHOWCASE_COMMAND,
             "comic_downstream_handoff": DOWNSTREAM_HANDOFF_COMMAND,
             "local_doctor": LOCAL_DOCTOR_COMMAND,
+            "comic_handoff_audit": HANDOFF_AUDIT_COMMAND,
+            "comic_real_claim": REAL_CLAIM_COMMAND,
+            "comic_production_benchmark": PRODUCTION_BENCHMARK_COMMAND,
             "product_readiness": PRODUCT_READINESS_COMMAND,
             "office_isolation": OFFICE_ISOLATION_COMMAND,
             "server": SERVER_COMMAND,
@@ -209,6 +221,9 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
             f"Run `{LOCAL_DOCTOR_COMMAND}` and fix every blocked item it reports.",
             "Check the doctor section `真实生产前检查`; only start full AI comic production when it says `ready_for_real_run`.",
             f"Start the app with `{SERVER_COMMAND}` and test each department from the model page.",
+            "After a real run finishes, download the Word canvas, handoff manifest, prompt package, image records, and trace JSON from History.",
+            f"Run `{HANDOFF_AUDIT_COMMAND}` to verify the output package is visible and traceable.",
+            f"Run `{REAL_CLAIM_COMMAND}` and `{PRODUCTION_BENCHMARK_COMMAND}` before claiming production quality.",
         ],
         "model_setup_ladder": [
             {
@@ -239,6 +254,23 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
             f"comic_production.status={doctor.get('office', {}).get('status', '')}",
             f"real_production.status={real.get('status', '')}",
             f"real_production.full={real.get('can_start_full_production')}",
+        ],
+        "post_run_validation": [
+            {
+                "name": "交付物清点",
+                "command": HANDOFF_AUDIT_COMMAND,
+                "pass_when": "Word canvas、handoff manifest、prompt package、image records 和 trace JSON 都能在输出目录或历史页找到。",
+            },
+            {
+                "name": "真实生产声明",
+                "command": REAL_CLAIM_COMMAND,
+                "pass_when": "`can_claim_real_quality=True`，并且声明报告没有把 fixture 或缺图产物当成真实画质证据。",
+            },
+            {
+                "name": "制片质量基准",
+                "command": PRODUCTION_BENCHMARK_COMMAND,
+                "pass_when": "`production_quality_verified` 或等价通过状态，且故事、资产、图片、镜头、提示词和 Word 引用链路互相对得上。",
+            },
         ],
         "blocking_reasons": blocking,
     }
@@ -314,6 +346,13 @@ def format_markdown(payload: dict[str, Any]) -> str:
                 lines.append(
                     f"  - `{ladder.get('level')}` {ladder.get('title')}: "
                     f"需要 {required_models}；能做：{ladder.get('can_do')}；验收：{ladder.get('ready_when')}"
+                )
+        if item.get("post_run_validation"):
+            lines.append("- Post-run validation:")
+            for validation in item.get("post_run_validation", []):
+                lines.append(
+                    f"  - {validation.get('name')}: `{validation.get('command')}`；"
+                    f"通过标准：{validation.get('pass_when')}"
                 )
         if item.get("blocking_reasons"):
             lines.append("- Blocking reasons:")

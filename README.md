@@ -103,6 +103,16 @@ http://127.0.0.1:8080/
 6. 生成后去历史页下载 Word、图片、清单、提示词包和追溯记录。
 7. 如果历史追溯显示图片证据仍是 fixture、缺图或未完整质检，不要把它当成真实画质样例；先看 `image_quality_summary` 里的废片/返工数量和 `rework_instructions`，再用历史页推荐的 `regenerate_images`、重新质检或重写提示词恢复动作补跑真实图片和视觉质检。
 
+真实项目跑完后，再做三步验收：
+
+```powershell
+python scripts/audit_comic_v2_handoffs.py --format markdown
+python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
+python scripts/verify_comic_v2_production_benchmark.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
+```
+
+只有交付物清点可追溯、真实生产声明显示 `can_claim_real_quality=True`，并且制片质量基准显示 `production_quality_verified` 或等价通过状态时，才把这次产物对外描述为真实生产质量。否则只能说它完成了结构、流程或部分模型验证。
+
 常见首次运行问题可以直接看：
 
 ```powershell

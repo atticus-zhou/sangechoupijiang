@@ -69,6 +69,19 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("最小可跑配置", text)
         self.assertIn("完整制片配置", text)
         self.assertIn("工部生图模型 + 刑部视觉理解模型", text)
+        self.assertIn("真实项目跑完后，再做三步验收", text)
+        self.assertIn("python scripts/audit_comic_v2_handoffs.py --format markdown", text)
+        self.assertIn(
+            "python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown",
+            text,
+        )
+        self.assertIn(
+            "python scripts/verify_comic_v2_production_benchmark.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown",
+            text,
+        )
+        self.assertIn("can_claim_real_quality=True", text)
+        self.assertIn("production_quality_verified", text)
+        self.assertIn("否则只能说它完成了结构、流程或部分模型验证", text)
         self.assertIn("### 样例交付物怎么看", text)
         self.assertIn("AI 漫剧 Word 制片画布", text)
         self.assertIn("handoff_manifest.json", text)
