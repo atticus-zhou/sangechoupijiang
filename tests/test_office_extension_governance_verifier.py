@@ -27,6 +27,12 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("protocol_doc", audit)
         self.assertEqual(audit["protocol_doc"]["status"], "passed")
         self.assertEqual(audit["protocol_doc"]["path"], "docs/OFFICE_EXTENSION_PROTOCOL.md")
+        package_files = {
+            item["file"] for item in audit["extension_blueprint"]["minimum_implementation_package"]
+        }
+        self.assertIn("src/offices.py", package_files)
+        self.assertIn("src/web/app.py", package_files)
+        self.assertIn("src/office_preflight.py", package_files)
         self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
         self.assertIn("interview_demo_script", audit["required_demo_contract"])
         self.assertIn("public_safety_boundaries", audit["required_demo_contract"])
@@ -58,7 +64,9 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("Office Extension Governance Audit", completed.stdout)
         self.assertIn("Required Demo Contract", completed.stdout)
         self.assertIn("Extension Blueprint", completed.stdout)
+        self.assertIn("Minimum Implementation Package", completed.stdout)
         self.assertIn("Register an OfficeProfile", completed.stdout)
+        self.assertIn("src/office_preflight.py", completed.stdout)
         self.assertIn("Isolate runtime state", completed.stdout)
         self.assertIn("Build a no-key demo contract", completed.stdout)
         self.assertIn("verify_release_readiness.py", completed.stdout)

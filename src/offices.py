@@ -417,6 +417,28 @@ def list_office_extension_blueprint() -> dict:
                 "done_when": "README explains the office, launch-gates are ready or honestly blocked, no-key demo verifies, release readiness passes, and secret scan is clean.",
             },
         ],
+        "minimum_implementation_package": [
+            {
+                "file": "src/offices.py",
+                "proves": "The office has a unique OfficeProfile, declared model requirements, human checkpoints, artifact contract, schema gates, recovery actions, and acceptance criteria.",
+            },
+            {
+                "file": "src/web/app.py",
+                "proves": "The office exposes no-key demo endpoints, launch-gate evidence, model preflight, runtime status, and downloadable sample artifacts without sharing another office's routes.",
+            },
+            {
+                "file": "src/office_preflight.py",
+                "proves": "The office explains missing text, image, vision, data, or tool capabilities before a user starts an expensive task.",
+            },
+            {
+                "file": "tests/",
+                "proves": "The new workflow has API, schema gate, recovery, history, and no-key demo coverage before it is shown as available.",
+            },
+            {
+                "file": "README.md and docs/",
+                "proves": "A stranger can understand what the office does, what it can download, what is demo-only, and which commands reproduce the result.",
+            },
+        ],
         "required_tests": [
             "tests.test_offices",
             "tests.test_office_preflight",

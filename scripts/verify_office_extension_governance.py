@@ -18,6 +18,8 @@ PROTOCOL_DOC = REPO_ROOT / "docs" / "OFFICE_EXTENSION_PROTOCOL.md"
 PROTOCOL_DOC_MARKERS = [
     "OfficeProfile",
     "office_id",
+    "最小实现包",
+    "src/office_preflight.py",
     "verify_office_isolation.py",
     "no-key demo",
     "downloadable_deliverables",
@@ -91,6 +93,18 @@ def format_markdown(audit: dict[str, Any]) -> str:
                 files=", ".join(step.get("files", [])) or "-",
             )
         )
+    if blueprint.get("minimum_implementation_package"):
+        lines.extend(
+            [
+                "",
+                "## Minimum Implementation Package",
+                "",
+                "| File or directory | Proves |",
+                "| --- | --- |",
+            ]
+        )
+        for item in blueprint.get("minimum_implementation_package", []):
+            lines.append(f"| {item.get('file', '')} | {item.get('proves', '')} |")
     if blueprint.get("required_verifiers"):
         lines.extend(["", "Required verifiers:"])
         lines.extend(f"- `{command}`" for command in blueprint["required_verifiers"])

@@ -79,6 +79,11 @@ class OfficeProfileTests(unittest.TestCase):
         for step in blueprint["implementation_steps"]:
             self.assertTrue(step["files"])
             self.assertTrue(step["done_when"])
+        package_files = {item["file"] for item in blueprint["minimum_implementation_package"]}
+        self.assertIn("src/offices.py", package_files)
+        self.assertIn("src/web/app.py", package_files)
+        self.assertIn("src/office_preflight.py", package_files)
+        self.assertIn("tests/", package_files)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", blueprint["required_verifiers"])
         self.assertTrue(any("office_id" in item for item in blueprint["non_negotiables"]))
 

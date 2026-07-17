@@ -64,7 +64,21 @@ python scripts/verify_office_isolation.py --format markdown
 
 `schema_gates` 用来保护 Agent 输出不要变成散文式文本；`recovery_actions` 用来避免用户在失败后只能重新开始。
 
-## 5. 准备公开上线门禁
+## 5. 最小实现包
+
+新增办公室不要从一个空页面开始，也不要复制研究办公室或 AI 漫剧制片办公室的旧代码。最小实现包必须同时覆盖这些文件：
+
+| 文件或目录 | 需要证明什么 |
+| --- | --- |
+| `src/offices.py` | 注册唯一 `OfficeProfile`，声明模型需求、人工审核节点、artifact contract、schema gates、recovery_actions 和验收标准。 |
+| `src/web/app.py` | 暴露无 Key demo、上线门禁证据、模型预检、运行状态和可下载样例交付物，并且不复用其他办公室的业务路由。 |
+| `src/office_preflight.py` | 在用户开工前说明缺少哪些文本、生图、视觉、数据或工具能力，以及缺失后还能做什么、不能做什么。 |
+| `tests/` | 覆盖 API、schema gate、失败恢复、历史追溯、无 Key demo 和样例下载，不能只测页面能打开。 |
+| `README.md` 和 `docs/` | 让陌生用户看懂这个办公室解决什么、能下载什么、哪些只是 demo、哪些命令可以复现。 |
+
+如果一个办公室没有这组最小实现包，它只能作为内部草稿，不允许出现在公开展示主路径。
+
+## 6. 准备公开上线门禁
 
 新办公室成为公开演示或主力办公室前，必须满足以下门禁：
 
@@ -87,7 +101,7 @@ python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
 ```
 
-## 6. 禁止事项
+## 7. 禁止事项
 
 新办公室扩展时禁止：
 
@@ -96,7 +110,7 @@ python scripts/check_no_secrets.py
 - 在没有样例交付物、历史追踪、schema gate 和失败恢复的情况下标记为主力办公室。
 - 只做 UI，不提供可下载、可复核的交付物。
 
-## 7. 最小交付定义
+## 8. 最小交付定义
 
 一个新办公室至少要做到：
 
