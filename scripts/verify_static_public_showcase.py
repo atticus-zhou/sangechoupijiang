@@ -168,6 +168,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
         portfolio = showcase.get("portfolio_embed") or {}
         release_badge = portfolio.get("release_badge") or {}
         real_production_claim = portfolio.get("real_production_claim") or {}
+        research_claim_boundary = portfolio.get("research_claim_boundary") or {}
         quality_upgrade_path = portfolio.get("quality_upgrade_path") or {}
         portfolio_integration = portfolio.get("portfolio_integration") or {}
         claim_uri = str(real_production_claim.get("uri") or "")
@@ -195,6 +196,35 @@ def verify_static_public_showcase() -> dict[str, Any]:
                     errors.append(f"static claim upgrade checklist item is incomplete: {item.get('id') or item.get('title')}")
         if not claim_payload:
             claim_upgrade_checklist = []
+
+        research_claim_uri = str(research_claim_boundary.get("uri") or "")
+        research_claim_path = temp_dir / research_claim_uri
+        research_claim_payload = {}
+        if research_claim_uri != "downloads/research/claim-report.json" or not research_claim_path.is_file():
+            errors.append("static showcase must expose a local research office claim report")
+        else:
+            research_claim_payload = json.loads(research_claim_path.read_text(encoding="utf-8"))
+            if research_claim_payload.get("claim_level") != "staged_research_demo":
+                errors.append("static research claim report must remain staged_research_demo")
+            if research_claim_payload.get("can_claim_full_automation") is not False:
+                errors.append("static research claim report must not claim full automation")
+            if research_claim_payload.get("calls_real_models") is not False:
+                errors.append("static research claim report must not call real models")
+            if research_claim_payload.get("requires_api_key") is not False:
+                errors.append("static research claim report must not require an API Key")
+            if "E:\\" in json.dumps(research_claim_payload, ensure_ascii=False):
+                errors.append("static research claim report leaks a local Windows path")
+            if len(research_claim_payload.get("claim_upgrade_checklist") or []) < 3:
+                errors.append("static research claim report must include a claim upgrade checklist")
+            if len(research_claim_payload.get("evidence_handoff") or []) < 3:
+                errors.append("static research claim report must include evidence handoff items")
+        if research_claim_boundary.get("claim_level") != "staged_research_demo":
+            errors.append("static portfolio embed must expose the research staged claim level")
+        if research_claim_boundary.get("can_claim_full_automation") is not False:
+            errors.append("static portfolio embed must not claim research full automation")
+        if research_claim_boundary.get("requires_api_key") is not False or research_claim_boundary.get("calls_real_models") is not False:
+            errors.append("static portfolio embed must keep the research claim no-key and no-model")
+        research_claim_upgrade_checklist = research_claim_payload.get("claim_upgrade_checklist") or []
 
         reading_guide = portfolio.get("deliverable_reading_guide") or []
         ready_reading_items = 0
@@ -323,6 +353,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
         style_text = (temp_dir / "style.css").read_text(encoding="utf-8")
         if "claim.claim_upgrade_checklist" not in app_text or "claim-upgrade-card" not in app_text:
             errors.append("static showcase page must render the claim upgrade checklist")
+        if "portfolio.research_claim_boundary" not in app_text or "research-claim-card" not in app_text:
+            errors.append("static showcase page must render the research claim boundary")
         if "showcase.download_catalog" not in app_text or "renderDownloadCatalog" not in app_text:
             errors.append("static showcase page must render the reviewable download catalog")
         if "portfolio.post_run_validation" not in app_text or "renderPostRunValidation" not in app_text:
@@ -363,6 +395,15 @@ def verify_static_public_showcase() -> dict[str, Any]:
             ),
             "claim_report_uri": claim_uri,
             "claim_upgrade_checklist_count": len(claim_upgrade_checklist),
+            "research_claim_report_ready": bool(
+                research_claim_payload.get("claim_level") == "staged_research_demo"
+                and research_claim_payload.get("can_claim_full_automation") is False
+            ),
+            "research_claim_report_uri": research_claim_uri,
+            "research_claim_level": research_claim_payload.get("claim_level", ""),
+            "research_can_claim_full_automation": research_claim_payload.get("can_claim_full_automation"),
+            "research_claim_upgrade_checklist_count": len(research_claim_upgrade_checklist),
+            "research_evidence_handoff_count": len(research_claim_payload.get("evidence_handoff") or []),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
             "comic_prompt_quality_status": comic_prompt_quality.get("status", ""),
@@ -406,6 +447,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Real product screenshot: {payload.get('screenshot_ready')}",
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
+        f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
+        f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- Prompt quality: {payload.get('comic_prompt_quality_status')} / assets={payload.get('comic_prompt_asset_clean_count')}/{payload.get('comic_prompt_asset_count')} / directors={payload.get('comic_prompt_director_ready_count')}/{payload.get('comic_prompt_shot_count')} / issues={payload.get('comic_prompt_issue_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",

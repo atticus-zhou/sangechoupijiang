@@ -1382,6 +1382,7 @@ async def get_public_showcase_demo_api():
     comic_inventory = await get_comic_production_handoff_inventory_demo_api()
     comic_claim = await get_comic_production_claim_report_demo_api()
     research_demo = await get_research_demo_api()
+    research_claim = _research_claim_report_from_demo(research_demo)
     featured_demos = [
         _public_showcase_demo(
             comic_demo,
@@ -1503,6 +1504,19 @@ async def get_public_showcase_demo_api():
                 "next_action": comic_inventory.get("next_action", ""),
             },
             "quality_upgrade_path": _public_showcase_quality_upgrade_path(comic_claim),
+            "research_claim_boundary": {
+                "uri": research_claim.get("uri", "/api/demo/research/claim-report"),
+                "claim_level": research_claim.get("claim_level", ""),
+                "can_publicly_show": research_claim.get("can_publicly_show", False),
+                "can_claim_full_automation": research_claim.get("can_claim_full_automation", False),
+                "requires_api_key": research_claim.get("requires_api_key", False),
+                "calls_real_models": research_claim.get("calls_real_models", False),
+                "allowed_public_claims": research_claim.get("allowed_public_claims", [])[:3],
+                "forbidden_public_claims": research_claim.get("forbidden_public_claims", [])[:3],
+                "claim_upgrade_checklist": research_claim.get("claim_upgrade_checklist", [])[:3],
+                "evidence_handoff_count": len(research_claim.get("evidence_handoff") or []),
+                "next_action": research_claim.get("next_action", ""),
+            },
             "real_production_claim": {
                 "uri": comic_claim.get("uri", "/api/demo/comic-production/claim-report"),
                 "claim_level": comic_claim.get("claim_level", ""),

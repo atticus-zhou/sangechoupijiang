@@ -123,6 +123,7 @@
   function renderClaimBoundary() {
     const portfolio = showcase.portfolio_embed || {};
     const claim = portfolio.real_production_claim || {};
+    const researchClaim = portfolio.research_claim_boundary || {};
     const qualityUpgradePath = portfolio.quality_upgrade_path || {};
     const grid = document.getElementById('claim-grid');
     const level = document.getElementById('claim-level');
@@ -157,6 +158,25 @@
       status.appendChild(link);
     }
     grid.appendChild(status);
+
+    if (researchClaim.claim_level) {
+      const researchCard = element('article', 'card claim-card research-claim-card');
+      researchCard.appendChild(element('h3', '', '\u7814\u7a76\u529e\u516c\u5ba4\u8fb9\u754c'));
+      addTextRow(researchCard, '\u58f0\u660e\u7b49\u7ea7', researchClaim.claim_level);
+      addTextRow(researchCard, '\u5168\u81ea\u52a8\u91c7\u96c6', researchClaim.can_claim_full_automation ? '\u5df2\u9a8c\u8bc1' : '\u672a\u9a8c\u8bc1');
+      addTextRow(researchCard, '\u8bc1\u636e\u4ea4\u63a5\u9879', researchClaim.evidence_handoff_count);
+      const forbidden = element('ul', 'proof-list');
+      (researchClaim.forbidden_public_claims || []).slice(0, 3).forEach(function (item) {
+        forbidden.appendChild(element('li', '', item));
+      });
+      researchCard.appendChild(forbidden);
+      if (researchClaim.uri) {
+        const link = element('a', 'button secondary', '\u67e5\u770b\u7814\u7a76\u58f0\u660e');
+        link.href = text(researchClaim.uri);
+        researchCard.appendChild(link);
+      }
+      grid.appendChild(researchCard);
+    }
 
     const upgrade = Array.isArray(claim.claim_upgrade_checklist) ? claim.claim_upgrade_checklist : [];
     if (upgrade.length) {

@@ -153,7 +153,9 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"post_run={parsed.get('post_run_validation_ready_count')}/{parsed.get('post_run_validation_count')}; "
                 f"backend={parsed.get('requires_backend')}; "
                 f"prompt_quality={parsed.get('comic_prompt_quality_status')}; "
-                f"prompt_issues={parsed.get('comic_prompt_issue_count')}"
+                f"prompt_issues={parsed.get('comic_prompt_issue_count')}; "
+                f"research_claim={parsed.get('research_claim_level')}; "
+                f"research_full_auto={parsed.get('research_can_claim_full_automation')}"
             )
         if check_id == "comic_delivery":
             return (
@@ -205,7 +207,10 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"quality={quality.get('status')}:{quality.get('score')}; "
                 f"downloads={demo.get('download_count')}; "
                 f"reading_guide={demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}; "
-                f"handoff={demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}"
+                f"handoff={demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}; "
+                f"claim={demo.get('claim_level')}; "
+                f"full_auto={demo.get('can_claim_full_automation')}; "
+                f"upgrade_checklist={demo.get('claim_upgrade_checklist_count')}"
             )
         if check_id == "office_governance":
             demo_contract = parsed.get("required_demo_contract") or []
