@@ -96,6 +96,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("upgrade_checklist=3", research_readiness["summary"])
         office_governance = next(item for item in payload["checks"] if item["id"] == "office_governance")
         self.assertIn("demo_contract=", office_governance["summary"])
+        self.assertIn("starter=passed", office_governance["summary"])
+        self.assertIn("starter_items=8", office_governance["summary"])
         office_isolation = next(item for item in payload["checks"] if item["id"] == "office_isolation")
         self.assertIn("checks=5", office_isolation["summary"])
         self.assertIn("failures=0", office_isolation["summary"])
@@ -152,6 +154,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("claim=staged_research_demo", completed.stdout)
         self.assertIn("full_auto=False", completed.stdout)
         self.assertIn("demo_contract=7", completed.stdout)
+        self.assertIn("starter=passed", completed.stdout)
+        self.assertIn("starter_items=8", completed.stdout)
         self.assertIn("checks=5; failures=0", completed.stdout)
 
 

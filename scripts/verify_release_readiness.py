@@ -214,10 +214,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             )
         if check_id == "office_governance":
             demo_contract = parsed.get("required_demo_contract") or []
+            starter = parsed.get("starter_checklist_audit") or {}
             return (
                 f"primary={','.join(parsed.get('primary_office_ids') or [])}; "
                 f"offices={len(parsed.get('offices') or [])}; "
-                f"demo_contract={len(demo_contract)}"
+                f"demo_contract={len(demo_contract)}; "
+                f"starter={starter.get('status')}; "
+                f"starter_items={starter.get('count')}"
             )
         if check_id == "office_isolation":
             checks = parsed.get("checks") or []

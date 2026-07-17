@@ -25,6 +25,9 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertTrue(payload["readme_links_status"])
         office_governance = next(item for item in module.REQUIREMENTS if item["id"] == "P7")
         self.assertIn("required_demo_contract", office_governance["markers"])
+        self.assertIn("starter checklist", office_governance["markers"])
+        self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", office_governance["markers"])
+        self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", office_governance["files"])
         self.assertIn("参观路径、证明点、下载物、阅读指南、面试脚本和公开安全边界", office_governance["markers"])
         comic_quality = next(item for item in module.REQUIREMENTS if item["id"] == "P10")
         self.assertIn("python scripts/verify_comic_v2_production_benchmark.py --format markdown", comic_quality["markers"])
@@ -46,6 +49,7 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertIn("AI comic production handoff", result.stdout)
         self.assertIn("Model configuration guidance", result.stdout)
         self.assertIn("Downstream comic handoff readiness", result.stdout)
+        self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", result.stdout)
 
 
 if __name__ == "__main__":
