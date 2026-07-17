@@ -96,6 +96,18 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertTrue(all(item["question"] and item["evidence"] for item in checklist))
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", blueprint["required_verifiers"])
         self.assertTrue(any("office_id" in item for item in blueprint["non_negotiables"]))
+        candidate_ids = {item["id"] for item in blueprint["future_office_candidates"]}
+        self.assertEqual(
+            candidate_ids,
+            {"short_video_ads", "ecommerce_selection", "story_ip", "technical_project"},
+        )
+        for candidate in blueprint["future_office_candidates"]:
+            self.assertTrue(candidate["user_job"])
+            self.assertTrue(candidate["not_ready_reason"])
+            self.assertIn("schema_gate", candidate["required_before_public"])
+        backlog_ids = {item["id"] for item in blueprint["future_platform_backlog"]}
+        self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
+        self.assertTrue(all(item["evidence_required"] for item in blueprint["future_platform_backlog"]))
 
     def test_comic_production_launch_gate_audit_covers_required_gates(self):
         template = list_office_creation_template()

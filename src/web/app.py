@@ -1349,6 +1349,8 @@ def _public_showcase_post_run_validation() -> list[dict]:
 def _public_showcase_office_extension_story(blueprint: dict) -> dict:
     starter = list(blueprint.get("starter_checklist") or [])
     steps = list(blueprint.get("implementation_steps") or [])
+    candidates = list(blueprint.get("future_office_candidates") or [])
+    backlog = list(blueprint.get("future_platform_backlog") or [])
     return {
         "title": "新办公室扩展路径",
         "summary": "未来任何办公室都不能只做一个入口就出现在公开产品里；它必须先证明产品价值、安全边界、office_id 隔离、人工确认节点、样例交付物、结构与失败恢复、无 Key 演示行为和发布检查。",
@@ -1376,6 +1378,25 @@ def _public_showcase_office_extension_story(blueprint: dict) -> dict:
                 "files": item.get("files", []),
             }
             for item in steps[:5]
+        ],
+        "future_office_candidates": [
+            {
+                "id": item.get("id", ""),
+                "name": item.get("name", ""),
+                "user_job": item.get("user_job", ""),
+                "not_ready_reason": item.get("not_ready_reason", ""),
+                "required_before_public": item.get("required_before_public", []),
+            }
+            for item in candidates
+        ],
+        "future_platform_backlog": [
+            {
+                "id": item.get("id", ""),
+                "status": item.get("status", ""),
+                "description": item.get("description", ""),
+                "evidence_required": item.get("evidence_required", ""),
+            }
+            for item in backlog
         ],
         "required_verifiers": blueprint.get("required_verifiers", []),
         "public_boundary": "公开展示可以说明如何扩展办公室，但不能暴露 API keys、cookies、浏览器配置、运行产物或用户工作区数据。",

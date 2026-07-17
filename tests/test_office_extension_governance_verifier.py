@@ -33,6 +33,11 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertFalse(audit["starter_checklist_audit"]["doc_missing_markers"])
         self.assertIn("isolation", audit["starter_checklist_audit"]["phases"])
         self.assertIn("public_demo", audit["starter_checklist_audit"]["phases"])
+        self.assertEqual(audit["future_extension_audit"]["status"], "passed")
+        self.assertEqual(audit["future_extension_audit"]["candidate_count"], 4)
+        self.assertEqual(audit["future_extension_audit"]["backlog_count"], 2)
+        self.assertIn("short_video_ads", audit["future_extension_audit"]["candidate_ids"])
+        self.assertIn("future_schema_validators", audit["future_extension_audit"]["backlog_ids"])
         package_files = {
             item["file"] for item in audit["extension_blueprint"]["minimum_implementation_package"]
         }
@@ -73,6 +78,10 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("Extension Blueprint", completed.stdout)
         self.assertIn("Minimum Implementation Package", completed.stdout)
         self.assertIn("New Office Starter Checklist", completed.stdout)
+        self.assertIn("Future Office Candidates", completed.stdout)
+        self.assertIn("Future Backlog Audit", completed.stdout)
+        self.assertIn("short_video_ads", completed.stdout)
+        self.assertIn("future_schema_validators", completed.stdout)
         self.assertIn("Starter Checklist Audit", completed.stdout)
         self.assertIn("define_user_job", completed.stdout)
         self.assertIn("scope_runtime_state", completed.stdout)

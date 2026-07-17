@@ -222,6 +222,14 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(all(item["question"] and item["evidence"] for item in extension_story["starter_checklist"]))
         self.assertIn("verify_office_extension_governance.py", "\n".join(extension_story["required_verifiers"]))
         self.assertIn("API keys", extension_story["public_boundary"])
+        candidate_ids = {item["id"] for item in extension_story["future_office_candidates"]}
+        self.assertEqual(
+            candidate_ids,
+            {"short_video_ads", "ecommerce_selection", "story_ip", "technical_project"},
+        )
+        self.assertTrue(all(item["not_ready_reason"] for item in extension_story["future_office_candidates"]))
+        backlog_ids = {item["id"] for item in extension_story["future_platform_backlog"]}
+        self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
 
         public_deployment = payload["public_deployment"]
         self.assertEqual(public_deployment["mode"], "demo_only")

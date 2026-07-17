@@ -410,6 +410,36 @@
     });
     target.appendChild(grid);
 
+    const candidates = Array.isArray(story.future_office_candidates) ? story.future_office_candidates : [];
+    if (candidates.length) {
+      const candidateGrid = element('div', 'extension-check-grid');
+      candidates.forEach(function (candidate) {
+        const card = element('article', 'card extension-check-card');
+        card.appendChild(element('span', 'status-pill', '未来候选'));
+        card.appendChild(element('h3', '', candidate.name || candidate.id));
+        card.appendChild(element('p', '', candidate.user_job));
+        addTextRow(card, '暂不开放原因', candidate.not_ready_reason);
+        addTextRow(card, '上线前证据', (candidate.required_before_public || []).join(' / '));
+        candidateGrid.appendChild(card);
+      });
+      target.appendChild(candidateGrid);
+    }
+
+    const backlog = Array.isArray(story.future_platform_backlog) ? story.future_platform_backlog : [];
+    if (backlog.length) {
+      const backlogCard = element('article', 'card extension-verifier-card');
+      backlogCard.appendChild(element('h3', '', '未来办公室必须补的平台证据'));
+      const list = element('ul', 'proof-list');
+      backlog.forEach(function (item) {
+        const li = element('li', '');
+        li.appendChild(element('strong', '', item.id || 'backlog'));
+        li.appendChild(document.createTextNode('：' + text(item.description || item.evidence_required || '')));
+        list.appendChild(li);
+      });
+      backlogCard.appendChild(list);
+      target.appendChild(backlogCard);
+    }
+
     const verifierCard = element('article', 'card extension-verifier-card');
     verifierCard.appendChild(element('h3', '', '发布验证命令'));
     const list = element('ul', 'proof-list');

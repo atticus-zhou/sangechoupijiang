@@ -191,6 +191,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         if marker not in commands:
             errors.append(f"portfolio integration must include verifier command: {marker}")
     starter_checklist = office_extension_story.get("starter_checklist") or []
+    future_candidates = office_extension_story.get("future_office_candidates") or []
+    future_backlog = office_extension_story.get("future_platform_backlog") or []
     if office_extension_story.get("starter_checklist_doc") != "docs/NEW_OFFICE_STARTER_CHECKLIST.md":
         errors.append("portfolio embed must expose the new office starter checklist document")
     if len(starter_checklist) != 8:
@@ -206,6 +208,20 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("verify_office_isolation.py", "verify_office_extension_governance.py", "verify_release_readiness.py", "check_no_secrets.py"):
         if marker not in extension_commands:
             errors.append(f"office extension story must include verifier command: {marker}")
+    candidate_ids = {item.get("id") for item in future_candidates}
+    for candidate_id in ("short_video_ads", "ecommerce_selection", "story_ip", "technical_project"):
+        if candidate_id not in candidate_ids:
+            errors.append(f"office extension story is missing future office candidate: {candidate_id}")
+    for item in future_candidates:
+        if not item.get("user_job") or not item.get("not_ready_reason") or not item.get("required_before_public"):
+            errors.append(f"future office candidate is incomplete: {item.get('id')}")
+    backlog_ids = {item.get("id") for item in future_backlog}
+    for backlog_id in ("future_schema_validators", "future_recovery_events"):
+        if backlog_id not in backlog_ids:
+            errors.append(f"office extension story is missing future platform backlog: {backlog_id}")
+    for item in future_backlog:
+        if not item.get("description") or not item.get("evidence_required"):
+            errors.append(f"future platform backlog item is incomplete: {item.get('id')}")
     if len(interview_script) < 4:
         errors.append("portfolio embed must expose a 4-step interview demo script")
     for item in interview_script:
@@ -282,6 +298,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "office_extension_checklist_count": len(starter_checklist),
         "office_extension_phase_count": len(starter_phases),
         "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
+        "office_extension_candidate_count": len(future_candidates),
+        "office_extension_backlog_count": len(future_backlog),
         "public_deployment_mode": public_deployment.get("mode", ""),
         "static_export_command": static_export.get("command", ""),
         "static_export_entrypoint": static_export.get("entrypoint", ""),
@@ -473,6 +491,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
         f"- New office extension: checklist={manifest.get('office_extension_checklist_count')} / phases={manifest.get('office_extension_phase_count')} / doc={manifest.get('office_extension_doc')}",
+        f"- Future office candidates: {manifest.get('office_extension_candidate_count')} / backlog={manifest.get('office_extension_backlog_count')}",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]

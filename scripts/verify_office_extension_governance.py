@@ -101,6 +101,42 @@ def audit_starter_checklist(blueprint: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def audit_future_extension_backlog(blueprint: dict[str, Any]) -> dict[str, Any]:
+    candidates = blueprint.get("future_office_candidates") or []
+    backlog = blueprint.get("future_platform_backlog") or []
+    expected_candidates = {"short_video_ads", "ecommerce_selection", "story_ip", "technical_project"}
+    expected_backlog = {"future_schema_validators", "future_recovery_events"}
+    candidate_ids = {str(item.get("id") or "") for item in candidates}
+    backlog_ids = {str(item.get("id") or "") for item in backlog}
+    incomplete_candidates = [
+        str(item.get("id") or index)
+        for index, item in enumerate(candidates, start=1)
+        if not item.get("user_job") or not item.get("not_ready_reason") or not item.get("required_before_public")
+    ]
+    incomplete_backlog = [
+        str(item.get("id") or index)
+        for index, item in enumerate(backlog, start=1)
+        if not item.get("description") or not item.get("evidence_required")
+    ]
+    missing_candidates = sorted(expected_candidates - candidate_ids)
+    missing_backlog = sorted(expected_backlog - backlog_ids)
+    return {
+        "status": (
+            "passed"
+            if not missing_candidates and not missing_backlog and not incomplete_candidates and not incomplete_backlog
+            else "needs_work"
+        ),
+        "candidate_count": len(candidates),
+        "candidate_ids": sorted(candidate_id for candidate_id in candidate_ids if candidate_id),
+        "missing_candidates": missing_candidates,
+        "incomplete_candidates": incomplete_candidates,
+        "backlog_count": len(backlog),
+        "backlog_ids": sorted(backlog_id for backlog_id in backlog_ids if backlog_id),
+        "missing_backlog": missing_backlog,
+        "incomplete_backlog": incomplete_backlog,
+    }
+
+
 def format_markdown(audit: dict[str, Any]) -> str:
     lines = [
         "# Office Extension Governance Audit",
@@ -179,12 +215,32 @@ def format_markdown(audit: dict[str, Any]) -> str:
                     evidence=item.get("evidence", ""),
                 )
             )
+    if blueprint.get("future_office_candidates"):
+        lines.extend(
+            [
+                "",
+                "## Future Office Candidates",
+                "",
+                "| Candidate | User job | Why not public yet | Required before public |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for item in blueprint.get("future_office_candidates", []):
+            lines.append(
+                "| {name} | {user_job} | {reason} | {required} |".format(
+                    name=f"{item.get('id', '')} / {item.get('name', '')}".strip(" /"),
+                    user_job=item.get("user_job", ""),
+                    reason=item.get("not_ready_reason", ""),
+                    required=", ".join(item.get("required_before_public", [])) or "-",
+                )
+            )
     if blueprint.get("required_verifiers"):
         lines.extend(["", "Required verifiers:"])
         lines.extend(f"- `{command}`" for command in blueprint["required_verifiers"])
 
     protocol_doc = audit.get("protocol_doc") or {}
     starter = audit.get("starter_checklist_audit") or {}
+    future = audit.get("future_extension_audit") or {}
     lines.extend(
         [
             "",
@@ -215,6 +271,25 @@ def format_markdown(audit: dict[str, Any]) -> str:
         lines.append("Incomplete items: `" + "`, `".join(starter.get("incomplete_items", [])) + "`")
     if starter.get("doc_missing_markers"):
         lines.append("Document missing markers: `" + "`, `".join(starter.get("doc_missing_markers", [])) + "`")
+    lines.extend(
+        [
+            "",
+            "## Future Backlog Audit",
+            "",
+            f"Status: `{future.get('status', 'missing')}`",
+            f"Candidates: `{future.get('candidate_count', 0)}`",
+            f"Backlog items: `{future.get('backlog_count', 0)}`",
+            f"Backlog IDs: `{', '.join(future.get('backlog_ids', []))}`",
+        ]
+    )
+    if future.get("missing_candidates"):
+        lines.append("Missing candidates: `" + "`, `".join(future.get("missing_candidates", [])) + "`")
+    if future.get("missing_backlog"):
+        lines.append("Missing backlog: `" + "`, `".join(future.get("missing_backlog", [])) + "`")
+    if future.get("incomplete_candidates"):
+        lines.append("Incomplete candidates: `" + "`, `".join(future.get("incomplete_candidates", [])) + "`")
+    if future.get("incomplete_backlog"):
+        lines.append("Incomplete backlog: `" + "`, `".join(future.get("incomplete_backlog", [])) + "`")
 
     lines.extend(
         [
@@ -282,6 +357,8 @@ def main() -> int:
     audit["protocol_doc"] = protocol_doc
     starter_checklist = audit_starter_checklist(audit.get("extension_blueprint") or {})
     audit["starter_checklist_audit"] = starter_checklist
+    future_extension = audit_future_extension_backlog(audit.get("extension_blueprint") or {})
+    audit["future_extension_audit"] = future_extension
     if protocol_doc.get("status") != "passed":
         audit["status"] = "failed"
         audit.setdefault("errors", {}).setdefault("protocol_doc_errors", []).append(
@@ -291,6 +368,11 @@ def main() -> int:
         audit["status"] = "failed"
         audit.setdefault("errors", {}).setdefault("starter_checklist_errors", []).append(
             "starter_checklist is incomplete"
+        )
+    if future_extension.get("status") != "passed":
+        audit["status"] = "failed"
+        audit.setdefault("errors", {}).setdefault("future_extension_errors", []).append(
+            "future office candidates or platform backlog are incomplete"
         )
     if args.format == "json":
         print(json.dumps(audit, ensure_ascii=False, indent=2))

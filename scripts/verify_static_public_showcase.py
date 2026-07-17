@@ -315,6 +315,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             if marker not in forbidden:
                 errors.append(f"static portfolio integration must forbid {marker}")
         extension_checklist = office_extension_story.get("starter_checklist") or []
+        future_candidates = office_extension_story.get("future_office_candidates") or []
+        future_backlog = office_extension_story.get("future_platform_backlog") or []
         if office_extension_story.get("starter_checklist_doc") != "docs/NEW_OFFICE_STARTER_CHECKLIST.md":
             errors.append("static showcase must expose the new office starter checklist document")
         if len(extension_checklist) != 8:
@@ -327,6 +329,20 @@ def verify_static_public_showcase() -> dict[str, Any]:
         for marker in ("verify_office_isolation.py", "verify_office_extension_governance.py", "verify_release_readiness.py", "check_no_secrets.py"):
             if marker not in extension_commands:
                 errors.append(f"static office extension story must include verifier command: {marker}")
+        candidate_ids = {item.get("id") for item in future_candidates}
+        for candidate_id in ("short_video_ads", "ecommerce_selection", "story_ip", "technical_project"):
+            if candidate_id not in candidate_ids:
+                errors.append(f"static showcase is missing future office candidate: {candidate_id}")
+        for item in future_candidates:
+            if not item.get("user_job") or not item.get("not_ready_reason") or not item.get("required_before_public"):
+                errors.append(f"static showcase future office candidate is incomplete: {item.get('id')}")
+        backlog_ids = {item.get("id") for item in future_backlog}
+        for backlog_id in ("future_schema_validators", "future_recovery_events"):
+            if backlog_id not in backlog_ids:
+                errors.append(f"static showcase is missing future platform backlog: {backlog_id}")
+        for item in future_backlog:
+            if not item.get("description") or not item.get("evidence_required"):
+                errors.append(f"static showcase future platform backlog item is incomplete: {item.get('id')}")
 
         demos = showcase.get("featured_demos") or []
         comic_prompt_quality: dict[str, Any] = {}
@@ -375,6 +391,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static showcase page must render the real output validation checklist")
         if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
             errors.append("static showcase page must render the office extension story")
+        if "future_office_candidates" not in app_text or "future_platform_backlog" not in app_text:
+            errors.append("static showcase page must render future office candidates and platform backlog")
         if "claim-upgrade-item" not in style_text:
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
         if "extension-check-grid" not in style_text or "extension-panel" not in style_text:
@@ -427,6 +445,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "office_extension_checklist_count": len(extension_checklist),
             "office_extension_phase_count": len(extension_phases),
             "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
+            "office_extension_candidate_count": len(future_candidates),
+            "office_extension_backlog_count": len(future_backlog),
             "comic_prompt_quality_status": comic_prompt_quality.get("status", ""),
             "comic_prompt_asset_clean_count": comic_prompt_quality.get("clean_asset_prompt_count", 0),
             "comic_prompt_asset_count": comic_prompt_quality.get("asset_prompt_count", 0),
@@ -472,6 +492,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- New office extension: checklist={payload.get('office_extension_checklist_count')} / phases={payload.get('office_extension_phase_count')} / doc={payload.get('office_extension_doc')}",
+        f"- Future office candidates: {payload.get('office_extension_candidate_count')} / backlog={payload.get('office_extension_backlog_count')}",
         f"- Prompt quality: {payload.get('comic_prompt_quality_status')} / assets={payload.get('comic_prompt_asset_clean_count')}/{payload.get('comic_prompt_asset_count')} / directors={payload.get('comic_prompt_director_ready_count')}/{payload.get('comic_prompt_shot_count')} / issues={payload.get('comic_prompt_issue_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",
