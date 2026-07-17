@@ -302,6 +302,15 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 ready_downstream_steps += 1
             else:
                 errors.append(f"static downstream quick-start item is incomplete: {item.get('title') or item.get('step')}")
+        shot_contract = portfolio.get("shot_contract") or {}
+        shot_contract_text = json.dumps(shot_contract, ensure_ascii=False)
+        for marker in ("first_frame_reference_image", "reference_asset_chain", "director_execution"):
+            if marker not in shot_contract_text:
+                errors.append(f"static shot contract is missing marker: {marker}")
+        if shot_contract.get("manifest_uri") != "downloads/comic-production/files/handoff_manifest.json":
+            errors.append("static shot contract must point to the local handoff manifest download")
+        if "verify_comic_v2_downstream_handoff.py" not in str(shot_contract.get("release_gate") or ""):
+            errors.append("static shot contract must link to the downstream handoff verifier")
         if release_badge.get("status") != "safe_public_demo":
             errors.append("static showcase must include a safe_public_demo release badge")
         if release_badge.get("mode") != "demo_only":
@@ -413,6 +422,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the reviewable download catalog")
         if "portfolio.post_run_validation" not in app_text or "renderPostRunValidation" not in app_text:
             errors.append("static showcase page must render the real output validation checklist")
+        if "portfolio.shot_contract" not in app_text or "renderShotContract" not in app_text:
+            errors.append("static showcase page must render the shot contract")
         if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
             errors.append("static showcase page must render the office extension story")
         if "future_office_candidates" not in app_text or "future_platform_backlog" not in app_text:
@@ -443,6 +454,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "reading_guide_ready_count": ready_reading_items,
             "downstream_quick_start_count": len(downstream_quick_start),
             "downstream_quick_start_ready_count": ready_downstream_steps,
+            "shot_contract_field_count": len(shot_contract.get("required_fields") or []),
             "reproducibility_count": len(reproducibility),
             "post_run_validation_count": len(post_run_validation),
             "post_run_validation_ready_count": ready_post_run_steps,
@@ -507,6 +519,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Reviewable catalog: {payload.get('download_catalog_count')} files",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- Downstream quick-start: {payload.get('downstream_quick_start_ready_count')} steps",
+        f"- Shot contract: {payload.get('shot_contract_field_count')} fields",
         f"- Reproducibility checklist: {payload.get('reproducibility_count')} commands",
         f"- Real output validation: {payload.get('post_run_validation_ready_count')}/{payload.get('post_run_validation_count')} steps",
         f"- Release badge: {payload.get('release_badge_status')} / signals={payload.get('release_badge_signal_count')}",

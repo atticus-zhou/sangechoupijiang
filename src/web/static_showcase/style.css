@@ -229,6 +229,25 @@ a {
   overflow-wrap: anywhere;
 }
 
+.shot-contract-grid {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.shot-contract-summary {
+  border-color: rgba(112, 210, 181, 0.26);
+}
+
+.shot-contract-card {
+  border-color: rgba(99, 167, 255, 0.24);
+}
+
+.shot-contract-card .status-pill {
+  width: fit-content;
+  margin-bottom: 14px;
+}
+
 .integration-panel .lead.compact {
   margin: 0;
   max-width: 860px;
@@ -749,6 +768,7 @@ noscript {
     .fast-review-list,
     .catalog-grid,
     .extension-check-grid,
+    .shot-contract-grid,
     .office-grid,
     .script-list {
     grid-template-columns: 1fr;

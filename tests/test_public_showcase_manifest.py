@@ -111,6 +111,18 @@ class PublicShowcaseManifestTests(unittest.TestCase):
             self.assertTrue(item["action"])
             self.assertTrue(item["output"])
             self.assertTrue(item["acceptance"])
+        shot_contract = embed["shot_contract"]
+        self.assertEqual(shot_contract["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
+        self.assertIn("verify_comic_v2_downstream_handoff.py", shot_contract["release_gate"])
+        required_fields = {item["field"]: item for item in shot_contract["required_fields"]}
+        self.assertEqual(
+            set(required_fields),
+            {"first_frame_reference_image", "reference_asset_chain", "director_execution"},
+        )
+        self.assertIn("image_id", required_fields["first_frame_reference_image"]["must_include"])
+        self.assertIn("asset_id", required_fields["reference_asset_chain"]["must_include"])
+        self.assertIn("action_chain", required_fields["director_execution"]["must_include"])
+        self.assertIn("needs_review", shot_contract["failure_policy"])
         inventory = embed["handoff_inventory"]
         self.assertEqual(inventory["uri"], "/api/demo/comic-production/handoff-inventory")
         self.assertGreaterEqual(inventory["manifest_count"], 1)

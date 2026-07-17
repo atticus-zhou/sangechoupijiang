@@ -327,6 +327,33 @@
     });
   }
 
+  function renderShotContract() {
+    const portfolio = showcase.portfolio_embed || {};
+    const contract = portfolio.shot_contract || {};
+    const fields = Array.isArray(contract.required_fields) ? contract.required_fields : [];
+    const count = document.getElementById('shot-contract-count');
+    const target = document.getElementById('shot-contract');
+    if (!count || !target || !fields.length) return;
+    count.textContent = fields.length + ' 项硬门禁';
+
+    const intro = element('article', 'card shot-contract-summary');
+    intro.appendChild(element('h3', '', contract.title || '镜头合同可执行性'));
+    intro.appendChild(element('p', '', contract.summary || '每个镜头必须保留机器可读引用和导演执行参数。'));
+    addTextRow(intro, 'Manifest', contract.manifest_uri);
+    addTextRow(intro, '发布门禁', contract.release_gate);
+    addTextRow(intro, '失败策略', contract.failure_policy);
+    target.appendChild(intro);
+
+    fields.forEach(function (item) {
+      const card = element('article', 'card shot-contract-card');
+      card.appendChild(element('span', 'status-pill', item.label || item.field));
+      card.appendChild(element('h3', '', item.field));
+      addTextRow(card, '必须包含', (item.must_include || []).join(' / '));
+      addTextRow(card, '证明', item.proves);
+      target.appendChild(card);
+    });
+  }
+
   function renderInterviewScript() {
     const portfolio = showcase.portfolio_embed || {};
     const script = Array.isArray(portfolio.interview_demo_script) ? portfolio.interview_demo_script : [];
@@ -509,6 +536,7 @@
   renderReadingGuide();
   renderDownloadCatalog();
   renderDownstreamQuickStart();
+  renderShotContract();
   renderInterviewScript();
   renderReproducibilityChecklist();
   renderPostRunValidation();

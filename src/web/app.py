@@ -1178,6 +1178,36 @@ def _public_showcase_downstream_quick_start() -> list[dict]:
     ]
 
 
+def _public_showcase_shot_contract() -> dict:
+    return {
+        "title": "镜头合同可执行性",
+        "summary": "AI 漫剧制片包不是只给一段视频提示词；每个镜头都必须把首帧参考图、资产引用链和导演执行参数写成机器可读合同。",
+        "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
+        "required_fields": [
+            {
+                "field": "first_frame_reference_image",
+                "label": "首帧参考图",
+                "must_include": ["image_id", "file", "asset_id"],
+                "proves": "下游视频工具知道第一帧应该绑定哪张已批准图片，而不是重新猜角色或场景。",
+            },
+            {
+                "field": "reference_asset_chain",
+                "label": "资产引用链",
+                "must_include": ["asset_id", "asset_type", "name"],
+                "proves": "每个镜头都能机器核对引用了哪些人物、道具和场景，避免自然语言提示词和资产表脱节。",
+            },
+            {
+                "field": "director_execution",
+                "label": "导演执行合同",
+                "must_include": ["action_chain", "performance_intent", "framing", "camera_movement", "lighting", "dialogue", "sound"],
+                "proves": "动作、表演、景别、运镜、灯光和声音被结构化保存，失败时可以定位到具体镜头重新生成。",
+            },
+        ],
+        "release_gate": "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
+        "failure_policy": "缺少任一字段时，制片包只能停在 needs_review，不能交给 Libtv、小云雀或其他视频平台当作最终生产素材。",
+    }
+
+
 def _public_showcase_interview_demo_script() -> list[dict]:
     return [
         {
@@ -1546,6 +1576,7 @@ async def get_public_showcase_demo_api():
             "fast_review_route": _public_showcase_fast_review_route(),
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
+            "shot_contract": _public_showcase_shot_contract(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
             "post_run_validation": _public_showcase_post_run_validation(),
