@@ -185,12 +185,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"prompt_issues={prompt_quality.get('issue_count')}"
             )
         if check_id == "comic_real_production_claim":
+            recovery = parsed.get("claim_upgrade_recovery") or {}
             return (
                 f"claim_level={parsed.get('claim_level')}; "
                 f"public_show={parsed.get('can_publicly_show')}; "
                 f"real_quality={parsed.get('can_claim_real_quality')}; "
                 f"downstream={parsed.get('downstream_status')}; "
-                f"upgrade_checklist={len(parsed.get('claim_upgrade_checklist') or [])}"
+                f"upgrade_checklist={len(parsed.get('claim_upgrade_checklist') or [])}; "
+                f"recovery={recovery.get('recovery_action')}; "
+                f"recovery_steps={len(recovery.get('steps') or [])}"
             )
         if check_id == "comic_handoff_inventory":
             return (

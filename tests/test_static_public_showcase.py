@@ -68,6 +68,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(claim_payload["requires_api_key"])
         self.assertGreaterEqual(len(claim_payload["claim_upgrade_checklist"]), 3)
         self.assertTrue(all(item["required_evidence"] for item in claim_payload["claim_upgrade_checklist"]))
+        self.assertEqual(claim_payload["claim_upgrade_recovery"]["recovery_action"], "regenerate_images")
+        self.assertTrue(claim_payload["claim_upgrade_recovery"]["required"])
+        self.assertIn("prompt_package", claim_payload["claim_upgrade_recovery"]["preserves"])
+        self.assertIn("visual_review", claim_payload["claim_upgrade_recovery"]["rebuilds"])
         self.assertNotIn("E:\\", json.dumps(claim_payload, ensure_ascii=False))
         research_claim = showcase["portfolio_embed"]["research_claim_boundary"]
         self.assertEqual(research_claim["uri"], "downloads/research/claim-report.json")
@@ -255,6 +259,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Release badge: safe_public_demo", completed.stdout)
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
         self.assertIn("Claim upgrade checklist: 3 items", completed.stdout)
+        self.assertIn("Claim upgrade recovery: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Research claim report: downloads/research/claim-report.json / ready=True / level=staged_research_demo / full_automation=False", completed.stdout)
         self.assertIn("Research claim upgrade checklist: 3 items / evidence_handoff=3", completed.stdout)

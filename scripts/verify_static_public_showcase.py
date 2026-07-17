@@ -199,6 +199,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         claim_uri = str(real_production_claim.get("uri") or "")
         claim_path = temp_dir / claim_uri
         claim_payload = {}
+        claim_upgrade_checklist = []
+        claim_upgrade_recovery = {}
         if claim_uri != "data/comic_production_claim_report.json" or not claim_path.is_file():
             errors.append("static showcase must expose a local comic production claim report")
         else:
@@ -219,9 +221,13 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             for item in claim_upgrade_checklist:
                 if not item.get("id") or not item.get("status") or not item.get("required_evidence") or not item.get("why_it_matters"):
                     errors.append(f"static claim upgrade checklist item is incomplete: {item.get('id') or item.get('title')}")
-        if not claim_payload:
-            claim_upgrade_checklist = []
-
+            claim_upgrade_recovery = claim_payload.get("claim_upgrade_recovery") or {}
+            if claim_upgrade_recovery.get("recovery_action") != "regenerate_images":
+                errors.append("static claim report must include regenerate_images recovery action")
+            if claim_upgrade_recovery.get("required") is not True:
+                errors.append("static claim report must mark recovery as required")
+            if len(claim_upgrade_recovery.get("steps") or []) < 3:
+                errors.append("static claim report must include recovery steps")
         research_claim_uri = str(research_claim_boundary.get("uri") or "")
         research_claim_path = temp_dir / research_claim_uri
         research_claim_payload = {}
@@ -489,6 +495,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             ),
             "claim_report_uri": claim_uri,
             "claim_upgrade_checklist_count": len(claim_upgrade_checklist),
+            "claim_upgrade_recovery_action": claim_upgrade_recovery.get("recovery_action", ""),
+            "claim_upgrade_recovery_step_count": len(claim_upgrade_recovery.get("steps") or []),
             "research_claim_report_ready": bool(
                 research_claim_payload.get("claim_level") == "staged_research_demo"
                 and research_claim_payload.get("can_claim_full_automation") is False
@@ -549,6 +557,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Real product screenshot: {payload.get('screenshot_ready')}",
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
+        f"- Claim upgrade recovery: action={payload.get('claim_upgrade_recovery_action')} / steps={payload.get('claim_upgrade_recovery_step_count')}",
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",

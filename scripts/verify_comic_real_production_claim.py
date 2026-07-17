@@ -19,7 +19,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.verify_comic_v2_production_benchmark import verify_production_benchmark
-from src.comic_office.v2.claim_report import claim_upgrade_checklist
+from src.comic_office.v2.claim_report import claim_upgrade_checklist, claim_upgrade_recovery
 
 
 def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
@@ -77,6 +77,7 @@ def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
         downstream_status = "blocked"
 
     upgrade_checklist = claim_upgrade_checklist(claim_level, benchmark)
+    upgrade_recovery = claim_upgrade_recovery(claim_level, benchmark)
     return {
         "status": "passed",
         "mode": "comic_real_production_claim",
@@ -90,6 +91,7 @@ def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
         "allowed_public_claims": allowed_claims,
         "forbidden_public_claims": forbidden_claims,
         "claim_upgrade_checklist": upgrade_checklist,
+        "claim_upgrade_recovery": upgrade_recovery,
         "next_action": next_action,
         "evidence": {
             "manifest_path": benchmark.get("manifest_path", ""),
@@ -141,6 +143,32 @@ def format_markdown(report: dict[str, Any]) -> str:
                 f"- Required evidence: {evidence}",
                 f"- Why it matters: {item.get('why_it_matters')}",
                 "",
+            ]
+        )
+    recovery = report.get("claim_upgrade_recovery") or {}
+    lines.extend(
+        [
+            "",
+            "## Claim Upgrade Recovery",
+            "",
+            f"- Required: `{recovery.get('required')}`",
+            f"- Recovery action: `{recovery.get('recovery_action')}`",
+            f"- Recovery endpoint: `{recovery.get('recovery_endpoint')}`",
+            f"- Reason: {recovery.get('reason')}",
+            f"- Next action: {recovery.get('next_action')}",
+            f"- Preserves: {', '.join(recovery.get('preserves') or [])}",
+            f"- Rebuilds: {', '.join(recovery.get('rebuilds') or [])}",
+            "",
+            "### Steps",
+            "",
+        ]
+    )
+    for step in recovery.get("steps") or []:
+        lines.extend(
+            [
+                f"{step.get('order')}. **{step.get('owner')}**: {step.get('action')}",
+                f"   - Evidence: {step.get('evidence')}",
+                f"   - Expected: {step.get('expected')}",
             ]
         )
     lines.extend(["", "## Next Action", "", str(report.get("next_action") or "")])

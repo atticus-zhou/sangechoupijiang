@@ -152,3 +152,112 @@ def claim_upgrade_checklist(claim_level: str, benchmark: dict[str, Any]) -> list
             ),
         },
     ]
+
+
+def claim_upgrade_recovery(claim_level: str, benchmark: dict[str, Any]) -> dict[str, Any]:
+    """Return an operator playbook for moving a demo claim toward real quality evidence."""
+    visual_level = str(benchmark.get("visual_evidence_level") or "unknown")
+    if claim_level == "real_quality_verified":
+        return {
+            "required": False,
+            "reason": "当前 handoff manifest 已经具备真实模型图片和视觉质检证据。",
+            "next_action": "保留 Word、handoff manifest、质量基准和 claim report 作为公开证据包。",
+            "recovery_action": "",
+            "recovery_endpoint": "",
+            "preserves": [
+                "confirmed_story",
+                "asset_manifest",
+                "prompt_package",
+                "image_production_evidence",
+                "visual_review",
+                "word_canvas",
+                "handoff_manifest",
+            ],
+            "rebuilds": [],
+            "steps": [
+                {
+                    "order": 1,
+                    "owner": "礼部 / 刑部",
+                    "action": "归档当前 Word、handoff manifest、质量基准和 claim report。",
+                    "evidence": "production_quality_verified=true 且 visual_evidence_level=model_reviewed。",
+                    "expected": "后续公开展示和下游交接使用同一份证据包。",
+                }
+            ],
+        }
+
+    recovery = benchmark.get("recommended_recovery") or {}
+    if claim_level == "needs_review" and recovery:
+        return {
+            "required": True,
+            "reason": str(recovery.get("description") or "当前制片包仍有质量阻塞项，必须先按责任部门修复。"),
+            "next_action": "按 recommended_recovery 退回对应阶段，修复阻塞项后重新生成质量基准和 claim report。",
+            "recovery_action": str(recovery.get("action") or "review_package"),
+            "recovery_endpoint": "/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            "preserves": list(recovery.get("preserves") or []),
+            "rebuilds": list(recovery.get("clears") or []),
+            "steps": [
+                {
+                    "order": 1,
+                    "owner": str(recovery.get("department") or "责任部门"),
+                    "action": str(recovery.get("label") or recovery.get("action") or "按质量问题退回处理"),
+                    "evidence": str(recovery.get("reason_code") or "quality_benchmark.issues"),
+                    "expected": f"回到 {recovery.get('expected_stage') or 'manual_review'} 阶段。",
+                },
+                {
+                    "order": 2,
+                    "owner": "尚书省 / 刑部",
+                    "action": "重新运行交付质量基准并确认 blocker_count=0。",
+                    "evidence": "quality_benchmark.package_quality_ready=true。",
+                    "expected": "制片包从 needs_review 回到可展示或可继续生产状态。",
+                },
+            ],
+        }
+
+    return {
+        "required": True,
+        "reason": (
+            "当前公开样例只证明结构和引用链；"
+            f"视觉证据仍是 {visual_level}，不能宣称真实模型画质或人物一致性已验证。"
+        ),
+        "next_action": "保留已确认故事、资产和提示词包，用真实模型重跑图片、补视觉质检，再重建 Word、handoff manifest 和 claim report。",
+        "recovery_action": "regenerate_images",
+        "recovery_endpoint": "/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+        "preserves": [
+            "confirmed_story",
+            "asset_manifest",
+            "prompt_package",
+            "old_word_canvas",
+            "old_handoff_manifest",
+        ],
+        "rebuilds": [
+            "image_production_evidence",
+            "visual_review",
+            "quality_benchmark",
+            "word_canvas",
+            "handoff_manifest",
+            "claim_report",
+        ],
+        "steps": [
+            {
+                "order": 1,
+                "owner": "使用者",
+                "action": "在本地模型页配置并测试文本模型、生图模型和视觉理解模型。",
+                "evidence": "模型预检通过；API Key 只留在本机 config.yaml 或本地环境变量。",
+                "expected": "真实生产可以开始，公开 demo 仍保持 no-key。",
+            },
+            {
+                "order": 2,
+                "owner": "工部 / 刑部",
+                "action": "使用已确认故事、资产拆解和提示词包重新生成图片，并执行视觉质检。",
+                "evidence": "图片记录包含 provider、model、非 fixture 标记和 review.status=pass。",
+                "expected": "image_production_evidence 从 fixture_only 升级为 model_reviewed。",
+            },
+            {
+                "order": 3,
+                "owner": "礼部 / 刑部",
+                "action": "重新生成 Word 画布、handoff manifest 和 claim report，并保留旧交付物归档。",
+                "evidence": "stored_benchmark_matches=true 且 production_quality_verified=true。",
+                "expected": "claim_level 才能从 demo_structure_only 升级为 real_quality_verified。",
+            },
+        ],
+    }

@@ -341,6 +341,13 @@ def verify_public_demo_mode() -> dict[str, Any]:
     for item in claim_upgrade_checklist:
         if not item.get("id") or not item.get("status") or not item.get("required_evidence") or not item.get("why_it_matters"):
             errors.append(f"claim upgrade checklist item is incomplete: {item.get('id') or item.get('title')}")
+    claim_upgrade_recovery = claim_payload.get("claim_upgrade_recovery") or {}
+    if claim_upgrade_recovery.get("recovery_action") != "regenerate_images":
+        errors.append("fixed comic claim report must include regenerate_images recovery action")
+    if claim_upgrade_recovery.get("required") is not True:
+        errors.append("fixed comic claim report must mark recovery as required")
+    if len(claim_upgrade_recovery.get("steps") or []) < 3:
+        errors.append("fixed comic claim report must include recovery steps")
 
     for office_id, meta in DEMO_ENDPOINTS.items():
         response = client.get(meta["endpoint"])
@@ -451,6 +458,8 @@ def verify_public_demo_mode() -> dict[str, Any]:
             "can_claim_real_quality": claim_payload.get("can_claim_real_quality"),
             "downstream_status": claim_payload.get("downstream_status", ""),
             "upgrade_checklist_count": len(claim_upgrade_checklist),
+            "recovery_action": claim_upgrade_recovery.get("recovery_action", ""),
+            "recovery_step_count": len(claim_upgrade_recovery.get("steps") or []),
         },
         "demos": demos,
         "launch_gate_links": sorted(set(all_links)),
@@ -497,7 +506,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
     ]
     lines.insert(
         -1,
-        f"- AI comic claim report: {claim.get('claim_level')} / real_quality={claim.get('can_claim_real_quality')} / downstream={claim.get('downstream_status')} / upgrade_checklist={claim.get('upgrade_checklist_count')}",
+        f"- AI comic claim report: {claim.get('claim_level')} / real_quality={claim.get('can_claim_real_quality')} / downstream={claim.get('downstream_status')} / upgrade_checklist={claim.get('upgrade_checklist_count')} / recovery={claim.get('recovery_action')} / recovery_steps={claim.get('recovery_step_count')}",
     )
     for demo in payload["demos"].values():
         lines.extend([

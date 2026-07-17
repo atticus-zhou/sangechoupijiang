@@ -145,6 +145,9 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertGreaterEqual(len(claim["claim_upgrade_checklist"]), 3)
         self.assertTrue(any(item["id"] == "run_real_models" for item in claim["claim_upgrade_checklist"]))
         self.assertTrue(all(item["required_evidence"] for item in claim["claim_upgrade_checklist"]))
+        self.assertEqual(claim["claim_upgrade_recovery"]["recovery_action"], "regenerate_images")
+        self.assertIn("prompt_package", claim["claim_upgrade_recovery"]["preserves"])
+        self.assertIn("visual_review", claim["claim_upgrade_recovery"]["rebuilds"])
         self.assertIn("不能宣称真实模型画质已验证", "\n".join(claim["forbidden_public_claims"]))
         self.assertEqual(claim["evidence"]["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
         self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
@@ -303,6 +306,8 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertFalse(claim["can_claim_real_quality"])
         self.assertGreaterEqual(len(claim["claim_upgrade_checklist"]), 3)
         self.assertTrue(any(item["id"] == "run_real_models" for item in claim["claim_upgrade_checklist"]))
+        self.assertEqual(claim["claim_upgrade_recovery"]["recovery_action"], "regenerate_images")
+        self.assertTrue(claim["claim_upgrade_recovery"]["required"])
         self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
 
     def test_favicon_request_does_not_create_browser_console_noise(self):

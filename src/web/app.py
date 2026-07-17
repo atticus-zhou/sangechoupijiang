@@ -608,6 +608,7 @@ async def get_comic_production_claim_report_demo_api():
 
 def _public_claim_report(report: dict) -> dict:
     evidence = report.get("evidence") or {}
+    recovery = report.get("claim_upgrade_recovery") or {}
     return {
         "mode": "no_key_demo_claim_report",
         "office_id": "comic_production",
@@ -633,6 +634,25 @@ def _public_claim_report(report: dict) -> dict:
             }
             for item in (report.get("claim_upgrade_checklist") or [])
         ],
+        "claim_upgrade_recovery": {
+            "required": bool(recovery.get("required")),
+            "reason": recovery.get("reason", ""),
+            "next_action": recovery.get("next_action", ""),
+            "recovery_action": recovery.get("recovery_action", ""),
+            "recovery_endpoint": recovery.get("recovery_endpoint", ""),
+            "preserves": list(recovery.get("preserves") or []),
+            "rebuilds": list(recovery.get("rebuilds") or []),
+            "steps": [
+                {
+                    "order": step.get("order"),
+                    "owner": step.get("owner", ""),
+                    "action": step.get("action", ""),
+                    "evidence": step.get("evidence", ""),
+                    "expected": step.get("expected", ""),
+                }
+                for step in (recovery.get("steps") or [])
+            ],
+        },
         "next_action": report.get("next_action", ""),
         "evidence": {
             "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
@@ -1672,6 +1692,7 @@ async def get_public_showcase_demo_api():
                 "allowed_public_claims": comic_claim.get("allowed_public_claims", [])[:3],
                 "forbidden_public_claims": comic_claim.get("forbidden_public_claims", [])[:3],
                 "claim_upgrade_checklist": comic_claim.get("claim_upgrade_checklist", [])[:3],
+                "claim_upgrade_recovery": comic_claim.get("claim_upgrade_recovery", {}),
                 "next_action": comic_claim.get("next_action", ""),
                 "evidence": comic_claim.get("evidence", {}),
             },
