@@ -170,6 +170,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
         real_production_claim = portfolio.get("real_production_claim") or {}
         research_claim_boundary = portfolio.get("research_claim_boundary") or {}
         quality_upgrade_path = portfolio.get("quality_upgrade_path") or {}
+        office_extension_story = portfolio.get("office_extension_story") or {}
         portfolio_integration = portfolio.get("portfolio_integration") or {}
         claim_uri = str(real_production_claim.get("uri") or "")
         claim_path = temp_dir / claim_uri
@@ -313,6 +314,19 @@ def verify_static_public_showcase() -> dict[str, Any]:
         for marker in ("config.yaml", "API Key", "Cookie", "user_data/", "output/"):
             if marker not in forbidden:
                 errors.append(f"static portfolio integration must forbid {marker}")
+        extension_checklist = office_extension_story.get("starter_checklist") or []
+        if office_extension_story.get("starter_checklist_doc") != "docs/NEW_OFFICE_STARTER_CHECKLIST.md":
+            errors.append("static showcase must expose the new office starter checklist document")
+        if len(extension_checklist) != 8:
+            errors.append("static showcase must expose the 8-step office extension checklist")
+        extension_phases = {item.get("phase") for item in extension_checklist}
+        for phase in ("product", "safety", "isolation", "workflow", "demo", "quality", "public_demo", "release"):
+            if phase not in extension_phases:
+                errors.append(f"static office extension story is missing phase: {phase}")
+        extension_commands = "\n".join(office_extension_story.get("required_verifiers") or [])
+        for marker in ("verify_office_isolation.py", "verify_office_extension_governance.py", "verify_release_readiness.py", "check_no_secrets.py"):
+            if marker not in extension_commands:
+                errors.append(f"static office extension story must include verifier command: {marker}")
 
         demos = showcase.get("featured_demos") or []
         comic_prompt_quality: dict[str, Any] = {}
@@ -359,8 +373,12 @@ def verify_static_public_showcase() -> dict[str, Any]:
             errors.append("static showcase page must render the reviewable download catalog")
         if "portfolio.post_run_validation" not in app_text or "renderPostRunValidation" not in app_text:
             errors.append("static showcase page must render the real output validation checklist")
+        if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
+            errors.append("static showcase page must render the office extension story")
         if "claim-upgrade-item" not in style_text:
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
+        if "extension-check-grid" not in style_text or "extension-panel" not in style_text:
+            errors.append("static showcase stylesheet must style the office extension checklist")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
             errors.append("static showcase stylesheet must style the reviewable download catalog")
         for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):
@@ -406,6 +424,9 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "research_evidence_handoff_count": len(research_claim_payload.get("evidence_handoff") or []),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
+            "office_extension_checklist_count": len(extension_checklist),
+            "office_extension_phase_count": len(extension_phases),
+            "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
             "comic_prompt_quality_status": comic_prompt_quality.get("status", ""),
             "comic_prompt_asset_clean_count": comic_prompt_quality.get("clean_asset_prompt_count", 0),
             "comic_prompt_asset_count": comic_prompt_quality.get("asset_prompt_count", 0),
@@ -450,6 +471,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
+        f"- New office extension: checklist={payload.get('office_extension_checklist_count')} / phases={payload.get('office_extension_phase_count')} / doc={payload.get('office_extension_doc')}",
         f"- Prompt quality: {payload.get('comic_prompt_quality_status')} / assets={payload.get('comic_prompt_asset_clean_count')}/{payload.get('comic_prompt_asset_count')} / directors={payload.get('comic_prompt_director_ready_count')}/{payload.get('comic_prompt_shot_count')} / issues={payload.get('comic_prompt_issue_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",

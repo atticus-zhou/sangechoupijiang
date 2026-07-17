@@ -1346,6 +1346,42 @@ def _public_showcase_post_run_validation() -> list[dict]:
     ]
 
 
+def _public_showcase_office_extension_story(blueprint: dict) -> dict:
+    starter = list(blueprint.get("starter_checklist") or [])
+    steps = list(blueprint.get("implementation_steps") or [])
+    return {
+        "title": "新办公室扩展路径",
+        "summary": "未来任何办公室都不能只做一个入口就出现在公开产品里；它必须先证明产品价值、安全边界、office_id 隔离、人工确认节点、样例交付物、结构与失败恢复、无 Key 演示行为和发布检查。",
+        "starter_checklist_doc": blueprint.get("starter_checklist_doc", "docs/NEW_OFFICE_STARTER_CHECKLIST.md"),
+        "purpose": blueprint.get("purpose", ""),
+        "starter_item_count": len(starter),
+        "starter_phases": [item.get("phase", "") for item in starter if item.get("phase")],
+        "starter_checklist": [
+            {
+                "order": item.get("order"),
+                "id": item.get("id", ""),
+                "phase": item.get("phase", ""),
+                "question": item.get("question", ""),
+                "evidence": item.get("evidence", ""),
+            }
+            for item in starter[:8]
+        ],
+        "implementation_steps": [
+            {
+                "order": item.get("order"),
+                "id": item.get("id", ""),
+                "title": item.get("title", ""),
+                "owner": item.get("owner", ""),
+                "done_when": item.get("done_when", ""),
+                "files": item.get("files", []),
+            }
+            for item in steps[:5]
+        ],
+        "required_verifiers": blueprint.get("required_verifiers", []),
+        "public_boundary": "公开展示可以说明如何扩展办公室，但不能暴露 API keys、cookies、浏览器配置、运行产物或用户工作区数据。",
+    }
+
+
 def _public_showcase_release_badge(comic_inventory: dict, comic_claim: dict) -> dict:
     return {
         "status": "safe_public_demo",
@@ -1383,6 +1419,7 @@ async def get_public_showcase_demo_api():
     comic_claim = await get_comic_production_claim_report_demo_api()
     research_demo = await get_research_demo_api()
     research_claim = _research_claim_report_from_demo(research_demo)
+    extension_blueprint = list_office_extension_blueprint()
     featured_demos = [
         _public_showcase_demo(
             comic_demo,
@@ -1492,6 +1529,7 @@ async def get_public_showcase_demo_api():
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
             "post_run_validation": _public_showcase_post_run_validation(),
             "portfolio_integration": _public_showcase_portfolio_integration(),
+            "office_extension_story": _public_showcase_office_extension_story(extension_blueprint),
             "handoff_inventory": {
                 "uri": "/api/demo/comic-production/handoff-inventory",
                 "status": comic_inventory.get("status", ""),

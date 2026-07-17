@@ -384,6 +384,44 @@
     });
   }
 
+  function renderOfficeExtensionStory() {
+    const portfolio = showcase.portfolio_embed || {};
+    const story = portfolio.office_extension_story || {};
+    const target = document.getElementById('office-extension-story');
+    const count = document.getElementById('extension-count');
+    if (!target || !count || !story.starter_checklist) return;
+    const checklist = Array.isArray(story.starter_checklist) ? story.starter_checklist : [];
+    count.textContent = text(story.starter_item_count || checklist.length) + ' 项检查';
+    const intro = element('article', 'card extension-summary-card');
+    intro.appendChild(element('h3', '', story.title || '新办公室扩展路径'));
+    intro.appendChild(element('p', '', story.summary || '未来办公室必须先证明隔离、演示、交付物、失败恢复和发布门禁，再进入公开展示。'));
+    addTextRow(intro, '检查清单', story.starter_checklist_doc);
+    addTextRow(intro, '公开边界', story.public_boundary);
+    target.appendChild(intro);
+
+    const grid = element('div', 'extension-check-grid');
+    checklist.forEach(function (item) {
+      const card = element('article', 'card extension-check-card');
+      card.appendChild(element('span', 'status-pill', text(item.phase || 'phase')));
+      card.appendChild(element('h3', '', text(item.order || '') + '. ' + text(item.id || 'check')));
+      card.appendChild(element('p', '', item.question));
+      addTextRow(card, '验收证据', item.evidence);
+      grid.appendChild(card);
+    });
+    target.appendChild(grid);
+
+    const verifierCard = element('article', 'card extension-verifier-card');
+    verifierCard.appendChild(element('h3', '', '发布验证命令'));
+    const list = element('ul', 'proof-list');
+    (story.required_verifiers || []).forEach(function (command) {
+      const li = element('li', '');
+      li.appendChild(element('code', '', command));
+      list.appendChild(li);
+    });
+    verifierCard.appendChild(list);
+    target.appendChild(verifierCard);
+  }
+
   function renderPortfolioIntegration() {
     const portfolio = showcase.portfolio_embed || {};
     const integration = portfolio.portfolio_integration || {};
@@ -444,6 +482,7 @@
   renderInterviewScript();
   renderReproducibilityChecklist();
   renderPostRunValidation();
+  renderOfficeExtensionStory();
   renderPortfolioIntegration();
   renderSafety();
 })();

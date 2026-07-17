@@ -211,6 +211,17 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("output/", " ".join(integration["must_not_include"]))
         self.assertIn("verify_release_readiness.py", "\n".join(integration["verification_commands"]))
         self.assertIn("check_no_secrets.py", "\n".join(payload["verification_commands"]))
+        extension_story = embed["office_extension_story"]
+        self.assertEqual(extension_story["starter_checklist_doc"], "docs/NEW_OFFICE_STARTER_CHECKLIST.md")
+        self.assertEqual(extension_story["starter_item_count"], 8)
+        self.assertEqual(len(extension_story["starter_checklist"]), 8)
+        self.assertEqual(
+            set(extension_story["starter_phases"]),
+            {"product", "safety", "isolation", "workflow", "demo", "quality", "public_demo", "release"},
+        )
+        self.assertTrue(all(item["question"] and item["evidence"] for item in extension_story["starter_checklist"]))
+        self.assertIn("verify_office_extension_governance.py", "\n".join(extension_story["required_verifiers"]))
+        self.assertIn("API keys", extension_story["public_boundary"])
 
         public_deployment = payload["public_deployment"]
         self.assertEqual(public_deployment["mode"], "demo_only")

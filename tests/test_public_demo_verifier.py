@@ -44,6 +44,12 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertEqual(payload["showcase_manifest"]["release_badge_status"], "safe_public_demo")
         self.assertGreaterEqual(payload["showcase_manifest"]["release_badge_signal_count"], 5)
         self.assertFalse(payload["showcase_manifest"]["release_badge_claim_real_quality"])
+        self.assertEqual(payload["showcase_manifest"]["office_extension_checklist_count"], 8)
+        self.assertEqual(payload["showcase_manifest"]["office_extension_phase_count"], 8)
+        self.assertEqual(
+            payload["showcase_manifest"]["office_extension_doc"],
+            "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
+        )
         self.assertEqual(
             payload["showcase_manifest"]["handoff_inventory_uri"],
             "/api/demo/comic-production/handoff-inventory",
@@ -125,6 +131,7 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("upgrade_checklist=3", result.stdout)
         self.assertIn("action=regenerate_images", result.stdout)
         self.assertIn("source=dist/public-showcase", result.stdout)
+        self.assertIn("New office extension: checklist=8 / phases=8 / doc=docs/NEW_OFFICE_STARTER_CHECKLIST.md", result.stdout)
         self.assertIn("demo_structure_only", result.stdout)
         self.assertIn("demo_structure_verified", result.stdout)
         self.assertIn("Prompt quality: ready / assets=7/7 / directors=2/2 / issues=0", result.stdout)

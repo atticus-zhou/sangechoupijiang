@@ -82,6 +82,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
     quality_upgrade_path = portfolio_embed.get("quality_upgrade_path") or {}
     portfolio_integration = portfolio_embed.get("portfolio_integration") or {}
+    office_extension_story = portfolio_embed.get("office_extension_story") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
     if payload.get("requires_api_key") is not False:
@@ -189,6 +190,22 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("export_public_showcase.py", "verify_static_public_showcase.py", "verify_release_readiness.py", "check_no_secrets.py"):
         if marker not in commands:
             errors.append(f"portfolio integration must include verifier command: {marker}")
+    starter_checklist = office_extension_story.get("starter_checklist") or []
+    if office_extension_story.get("starter_checklist_doc") != "docs/NEW_OFFICE_STARTER_CHECKLIST.md":
+        errors.append("portfolio embed must expose the new office starter checklist document")
+    if len(starter_checklist) != 8:
+        errors.append("portfolio embed must expose the 8-step new office starter checklist")
+    starter_phases = {item.get("phase") for item in starter_checklist}
+    for phase in ("product", "safety", "isolation", "workflow", "demo", "quality", "public_demo", "release"):
+        if phase not in starter_phases:
+            errors.append(f"office extension story is missing phase: {phase}")
+    for item in starter_checklist:
+        if not item.get("id") or not item.get("question") or not item.get("evidence"):
+            errors.append(f"office extension checklist item is incomplete: {item.get('id') or item.get('order')}")
+    extension_commands = "\n".join(office_extension_story.get("required_verifiers") or [])
+    for marker in ("verify_office_isolation.py", "verify_office_extension_governance.py", "verify_release_readiness.py", "check_no_secrets.py"):
+        if marker not in extension_commands:
+            errors.append(f"office extension story must include verifier command: {marker}")
     if len(interview_script) < 4:
         errors.append("portfolio embed must expose a 4-step interview demo script")
     for item in interview_script:
@@ -262,6 +279,9 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
         "portfolio_integration_option_count": len(integration_options),
         "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
+        "office_extension_checklist_count": len(starter_checklist),
+        "office_extension_phase_count": len(starter_phases),
+        "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
         "public_deployment_mode": public_deployment.get("mode", ""),
         "static_export_command": static_export.get("command", ""),
         "static_export_entrypoint": static_export.get("entrypoint", ""),
@@ -452,6 +472,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
+        f"- New office extension: checklist={manifest.get('office_extension_checklist_count')} / phases={manifest.get('office_extension_phase_count')} / doc={manifest.get('office_extension_doc')}",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]
