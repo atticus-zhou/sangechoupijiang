@@ -63,6 +63,7 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("downloadable_deliverables", template["required_demo_contract"])
         self.assertIn("deliverable_reading_guide", template["required_demo_contract"])
         self.assertIn("interview_demo_script", template["required_demo_contract"])
+        self.assertIn("post_run_validation", template["required_demo_contract"])
         self.assertIn("public_safety_boundaries", template["required_demo_contract"])
 
     def test_office_extension_blueprint_is_actionable_for_future_offices(self):
@@ -199,6 +200,7 @@ class OfficeExtensionGovernanceTests(unittest.TestCase):
         self.assertIn("required_demo_contract", audit)
         self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
         self.assertIn("interview_demo_script", audit["required_demo_contract"])
+        self.assertIn("post_run_validation", audit["required_demo_contract"])
         self.assertIn("extension_blueprint", audit)
         self.assertIn("implementation_steps", audit["extension_blueprint"])
         self.assertTrue(any(

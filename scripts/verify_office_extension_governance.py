@@ -23,6 +23,9 @@ PROTOCOL_DOC_MARKERS = [
     "verify_office_isolation.py",
     "no-key demo",
     "downloadable_deliverables",
+    "post_run_validation",
+    "跑后验收",
+    "真实任务跑完后",
     "schema gates",
     "recovery_actions",
     "verify_release_readiness.py",
@@ -67,6 +70,7 @@ def format_markdown(audit: dict[str, Any]) -> str:
         "downloadable_deliverables": "提供可下载、可复核的样例交付物。",
         "deliverable_reading_guide": "解释每个交付物应该怎么看、证明什么。",
         "interview_demo_script": "给面试官或作品集访客一条 3 分钟演示路线。",
+        "post_run_validation": "说明真实任务跑完后，哪些命令或证据能支撑对外声明。",
         "public_safety_boundaries": "说明公开模式不读取 Key、不调用真实模型、不写用户工作区。",
     }
     for field in audit.get("required_demo_contract", []):

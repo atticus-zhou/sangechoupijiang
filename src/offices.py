@@ -361,12 +361,13 @@ def list_office_creation_template() -> dict:
             "downloadable_deliverables",
             "deliverable_reading_guide",
             "interview_demo_script",
+            "post_run_validation",
             "public_safety_boundaries",
         ],
         "minimum_artifact_contract": _default_artifact_contract(),
         "notes": [
             "New offices must reuse the OfficeProfile protocol instead of copying one-off routes.",
-            "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, failure recovery, history traceability, and a visitor-readable demo contract.",
+            "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, post-run validation, failure recovery, history traceability, and a visitor-readable demo contract.",
         ],
     }
 
@@ -398,7 +399,7 @@ def list_office_extension_blueprint() -> dict:
                 "title": "Build a no-key demo contract",
                 "owner": "office",
                 "files": ["src/web/app.py", "tests/fixtures/"],
-                "done_when": "The demo returns viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, and public_safety_boundaries without calling real models.",
+                "done_when": "The demo returns viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, and public_safety_boundaries without calling real models.",
             },
             {
                 "order": 4,
@@ -424,7 +425,7 @@ def list_office_extension_blueprint() -> dict:
             },
             {
                 "file": "src/web/app.py",
-                "proves": "The office exposes no-key demo endpoints, launch-gate evidence, model preflight, runtime status, and downloadable sample artifacts without sharing another office's routes.",
+                "proves": "The office exposes no-key demo endpoints, launch-gate evidence, model preflight, runtime status, post-run validation, and downloadable sample artifacts without sharing another office's routes.",
             },
             {
                 "file": "src/office_preflight.py",
@@ -432,11 +433,11 @@ def list_office_extension_blueprint() -> dict:
             },
             {
                 "file": "tests/",
-                "proves": "The new workflow has API, schema gate, recovery, history, and no-key demo coverage before it is shown as available.",
+                "proves": "The new workflow has API, schema gate, post-run validation, recovery, history, and no-key demo coverage before it is shown as available.",
             },
             {
                 "file": "README.md and docs/",
-                "proves": "A stranger can understand what the office does, what it can download, what is demo-only, and which commands reproduce the result.",
+                "proves": "A stranger can understand what the office does, what it can download, what is demo-only, which commands reproduce the result, and which checks prove a real run is safe to claim.",
             },
         ],
         "required_tests": [

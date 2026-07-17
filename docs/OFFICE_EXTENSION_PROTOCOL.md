@@ -49,6 +49,7 @@ python scripts/verify_office_isolation.py --format markdown
 - `downloadable_deliverables`：可下载、可复核的样例交付物。
 - `deliverable_reading_guide`：说明每个交付物怎么看。
 - `interview_demo_script`：面试官或作品集访客的 3 分钟演示路线。
+- `post_run_validation`：真实任务跑完后，用户用哪些命令或检查判断产物是否可以对外声明。
 - `public_safety_boundaries`：公开模式的安全边界。
 
 只有能下载交付物的演示，才算可展示。只有 UI 截图或空页面不算。
@@ -71,10 +72,10 @@ python scripts/verify_office_isolation.py --format markdown
 | 文件或目录 | 需要证明什么 |
 | --- | --- |
 | `src/offices.py` | 注册唯一 `OfficeProfile`，声明模型需求、人工审核节点、artifact contract、schema gates、recovery_actions 和验收标准。 |
-| `src/web/app.py` | 暴露无 Key demo、上线门禁证据、模型预检、运行状态和可下载样例交付物，并且不复用其他办公室的业务路由。 |
+| `src/web/app.py` | 暴露无 Key demo、上线门禁证据、模型预检、运行状态、跑后验收和可下载样例交付物，并且不复用其他办公室的业务路由。 |
 | `src/office_preflight.py` | 在用户开工前说明缺少哪些文本、生图、视觉、数据或工具能力，以及缺失后还能做什么、不能做什么。 |
-| `tests/` | 覆盖 API、schema gate、失败恢复、历史追溯、无 Key demo 和样例下载，不能只测页面能打开。 |
-| `README.md` 和 `docs/` | 让陌生用户看懂这个办公室解决什么、能下载什么、哪些只是 demo、哪些命令可以复现。 |
+| `tests/` | 覆盖 API、schema gate、跑后验收、失败恢复、历史追溯、无 Key demo 和样例下载，不能只测页面能打开。 |
+| `README.md` 和 `docs/` | 让陌生用户看懂这个办公室解决什么、能下载什么、哪些只是 demo、哪些命令可以复现，以及真实跑完后凭什么可以对外声明。 |
 
 如果一个办公室没有这组最小实现包，它只能作为内部草稿，不允许出现在公开展示主路径。
 
@@ -118,6 +119,7 @@ python scripts/check_no_secrets.py
 - 用户能在无 Key 模式看懂一个完整样例。
 - 用户能下载样例交付物。
 - 开发者能运行验证命令复现结果。
+- 用户知道真实任务跑完后要看哪些验收命令或证据，不能把 demo 结构样例说成真实生产质量。
 - 失败时用户能看到原因和下一步。
 - 公开仓库不包含敏感信息。
 
