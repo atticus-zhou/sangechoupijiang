@@ -29,6 +29,12 @@ class ComicV2ProductionBenchmarkVerifierTests(unittest.TestCase):
         self.assertEqual(payload["image_quality_summary"]["total_images"], 7)
         self.assertEqual(payload["image_quality_summary"]["usable_images"], 7)
         self.assertEqual(payload["image_quality_summary"]["waste_or_rework_images"], 0)
+        self.assertEqual(payload["prompt_quality_summary"]["status"], "ready")
+        self.assertEqual(payload["prompt_quality_summary"]["clean_asset_prompt_count"], 7)
+        self.assertEqual(payload["prompt_quality_summary"]["asset_prompt_count"], 7)
+        self.assertEqual(payload["prompt_quality_summary"]["director_prompt_count"], 2)
+        self.assertEqual(payload["prompt_quality_summary"]["shot_prompt_count"], 2)
+        self.assertEqual(payload["prompt_quality_summary"]["issue_count"], 0)
         self.assertTrue(payload["stored_benchmark_matches"])
         self.assertEqual(payload["manifest_schema_version"], 3)
 
@@ -53,6 +59,10 @@ class ComicV2ProductionBenchmarkVerifierTests(unittest.TestCase):
         self.assertIn("Image Quality Summary", completed.stdout)
         self.assertIn("Total images: `7`", completed.stdout)
         self.assertIn("Waste/rework images: `0`", completed.stdout)
+        self.assertIn("Prompt Quality Summary", completed.stdout)
+        self.assertIn("Asset prompts: `7/7 clean`", completed.stdout)
+        self.assertIn("Director prompts: `2/2 ready`", completed.stdout)
+        self.assertIn("Issues: `0`", completed.stdout)
         self.assertIn("不证明真实模型", completed.stdout)
 
 

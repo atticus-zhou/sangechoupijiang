@@ -171,11 +171,14 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"quick_start={parsed.get('quick_start_step_count')}"
             )
         if check_id == "comic_production_benchmark":
+            prompt_quality = parsed.get("prompt_quality_summary") or {}
             return (
                 f"score={parsed.get('package_quality_score')}; "
                 f"claim={parsed.get('quality_claim')}; "
                 f"visual_evidence={parsed.get('visual_evidence_level')}; "
-                f"real_quality_verified={parsed.get('production_quality_verified')}"
+                f"real_quality_verified={parsed.get('production_quality_verified')}; "
+                f"prompt_quality={prompt_quality.get('status')}; "
+                f"prompt_issues={prompt_quality.get('issue_count')}"
             )
         if check_id == "comic_real_production_claim":
             return (

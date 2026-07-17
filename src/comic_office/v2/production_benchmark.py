@@ -47,6 +47,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
     lineage = list(manifest.get("production_lineage") or [])
     visual_evidence = _visual_evidence_level(images)
     image_quality_summary = _image_quality_summary(images)
+    prompt_quality_summary = _prompt_quality_summary(images, shots)
 
     dimensions = [
         _story_grounding(story, assets, shots),
@@ -104,6 +105,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         "production_quality_verified": production_quality_verified,
         "visual_evidence_level": visual_evidence,
         "image_quality_summary": image_quality_summary,
+        "prompt_quality_summary": prompt_quality_summary,
         "summary": _summary(claim, score),
         "dimensions": dimensions,
         "issue_count": len(issues),
@@ -286,6 +288,44 @@ def _prompt_specificity(
         ),
     ]
     return _dimension("prompt_specificity", "提示词专属性", checks)
+
+
+def _prompt_quality_summary(images: list[dict[str, Any]], shots: list[dict[str, Any]]) -> dict[str, Any]:
+    audit = audit_prompt_package({
+        "prompts": [
+            {
+                "object_id": item.get("asset_id", ""),
+                "image_kind": item.get("image_kind", ""),
+                "production_role": item.get("production_role", ""),
+                "clean_background_required": item.get("clean_background_required"),
+                "usage_contract": item.get("usage_contract") or [],
+                "reference_policy": item.get("reference_policy", ""),
+                "generator_prompt": item.get("generator_prompt", ""),
+                "negative_prompt": item.get("negative_prompt") or [],
+            }
+            for item in images
+        ],
+        "shots": [
+            {
+                "shot_id": item.get("shot_id", ""),
+                "generator_prompt": item.get("video_prompt_block", ""),
+                "negative_prompt": _split_negative(item.get("negative_prompt_block", "")),
+            }
+            for item in shots
+        ],
+    })
+    return {
+        "status": audit.get("status", "waiting"),
+        "summary": audit.get("summary", ""),
+        "asset_prompt_count": audit.get("asset_prompt_count", 0),
+        "clean_asset_prompt_count": audit.get("clean_asset_prompt_count", 0),
+        "shot_prompt_count": audit.get("shot_prompt_count", 0),
+        "director_prompt_count": audit.get("director_prompt_count", 0),
+        "issue_count": audit.get("issue_count", 0),
+        "issues": list(audit.get("issues") or [])[:10],
+        "recovery": audit.get("recovery") or {},
+        "checks": audit.get("checks") or [],
+    }
 
 
 def _director_execution(

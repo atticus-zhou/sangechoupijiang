@@ -113,6 +113,31 @@ def format_markdown(result: dict[str, Any]) -> str:
                 )
                 for step in item.get("operator_steps") or []:
                     lines.append(f"  - {step}")
+    prompt_summary = result.get("prompt_quality_summary") or {}
+    if prompt_summary:
+        lines.extend([
+            "",
+            "## Prompt Quality Summary",
+            "",
+            f"- Status: `{prompt_summary.get('status')}`",
+            f"- Asset prompts: `{prompt_summary.get('clean_asset_prompt_count', 0)}/{prompt_summary.get('asset_prompt_count', 0)} clean`",
+            f"- Director prompts: `{prompt_summary.get('director_prompt_count', 0)}/{prompt_summary.get('shot_prompt_count', 0)} ready`",
+            f"- Issues: `{prompt_summary.get('issue_count', 0)}`",
+        ])
+        recovery = prompt_summary.get("recovery") or {}
+        if int(prompt_summary.get("issue_count") or 0) and recovery:
+            lines.append(
+                f"- Recovery: `{recovery.get('department') or 'manual review'} / "
+                f"{recovery.get('action') or 'none'}`"
+            )
+        prompt_issues = prompt_summary.get("issues") or []
+        if prompt_issues:
+            lines.extend(["", "### Prompt Issues", ""])
+            for issue in prompt_issues[:8]:
+                lines.append(
+                    f"- `{issue.get('scope') or 'prompt'}:{issue.get('object_id') or issue.get('shot_id') or ''}` "
+                    f"{issue.get('message') or issue}"
+                )
     if result.get("issues"):
         lines.extend(["", "## Issues", ""])
         for issue in result["issues"]:
