@@ -96,3 +96,15 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 旧版制片画布如果没有 handoff manifest v3，历史页会标记为“旧版不可审计”。它仍可下载留档，但不能证明故事、资产、图片、镜头和质检来自同一版本；继续生产时应使用当前 V2 流程重新生成，而不是为旧文件伪造质量通过结论。
 
 如果任一命令失败，不能把当前制片包说成“可交给下游视频平台继续生产”。真实模型产物没有得到 `production_quality_verified` 时，也不能宣称画风和人物一致性已经被完整验证。
+
+## 机器可读镜头合同
+
+每个镜头不能只留下自然语言提示词。`handoff_manifest.json` 的 `shots` 数组里，每一项至少要同时保留三层信息：
+
+- `first_frame_reference_image`：明确第一帧应该绑定哪张已批准图片，至少包含 `image_id`、`file` 和 `asset_id`。这解决“视频平台第一帧到底该参考哪张图”的问题。
+- `reference_asset_chain`：明确这个镜头引用了哪些人物、道具和场景，至少包含 `asset_id`、`asset_type` 和 `name`。这解决“镜头提示词写了角色名，但下游无法机器核对资产”的问题。
+- `director_execution`：明确镜头执行参数，包括动作链、表演意图、景别、运镜、灯光、台词、声音和风格版本。它让下游工具不必重新理解整段自然语言。
+
+这三层信息缺一不可。`video_prompt_block` 负责给生图/图生视频平台复制执行，`first_frame_reference_image` 和 `reference_asset_chain` 负责让系统验证它有没有真正继承已批准资产，`director_execution` 负责让二次工具、历史追溯和失败恢复知道应该从哪一步重试。
+
+因此，下游交付审计会把“首帧参考图”和“机器可读资产引用链”当成硬门禁：如果某个镜头没有 `first_frame_reference_image.image_id`、`first_frame_reference_image.file`、`first_frame_reference_image.asset_id`，或没有完整的 `reference_asset_chain`，这个制片包只能停在 `needs_review`，不能交给 Libtv、小云雀或其他视频平台当作最终生产素材。

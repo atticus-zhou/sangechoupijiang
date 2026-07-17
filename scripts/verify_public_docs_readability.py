@@ -102,6 +102,9 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "image_quality_summary",
             "rework_instructions",
             "regenerate_images",
+            "first_frame_reference_image",
+            "reference_asset_chain",
+            "director_execution",
         ],
     },
     {
