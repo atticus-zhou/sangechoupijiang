@@ -38,7 +38,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         catalog = showcase["download_catalog"]
         self.assertEqual(len(catalog), 7)
         self.assertIn("data/comic_production_claim_report.json", {item["local_uri"] for item in catalog})
-        self.assertIn("downloads/research/claim-report", {item["local_uri"] for item in catalog})
+        self.assertIn("downloads/comic-production/handoff-inventory.json", {item["local_uri"] for item in catalog})
+        self.assertIn("downloads/research/claim-report.json", {item["local_uri"] for item in catalog})
         self.assertTrue(all(item["title"] and item["sha256"] and item["bytes"] for item in catalog))
         self.assertTrue(all(item["proves"] or item["reader_guidance"] or item["look_for"] for item in catalog))
         demos = {item["office_id"]: item for item in showcase["featured_demos"]}
@@ -116,7 +117,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertGreater((self.output_dir / "assets" / "public-showcase-desktop.png").stat().st_size, 100_000)
         for item in manifest["downloads"]:
             self.assertFalse(item["local_uri"].startswith("/"))
+            self.assertTrue(Path(item["local_uri"]).suffix, item["local_uri"])
             self.assertGreater((self.output_dir / item["local_uri"]).stat().st_size, 20)
+        for item in catalog:
+            self.assertTrue(Path(item["local_uri"]).suffix, item["local_uri"])
         for item in showcase["portfolio_embed"]["deliverable_reading_guide"]:
             self.assertTrue((self.output_dir / item["uri"]).is_file())
         static_script = (self.output_dir / "app.js").read_text(encoding="utf-8")

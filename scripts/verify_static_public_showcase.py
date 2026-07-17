@@ -135,6 +135,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             if not local_uri or local_uri.startswith("/") or not path.is_file():
                 errors.append(f"static download is missing or non-local: {local_uri}")
                 continue
+            if path.suffix == "":
+                errors.append(f"static download must have a reviewer-friendly file extension: {local_uri}")
             if path.stat().st_size <= 20:
                 errors.append(f"static download is too small: {local_uri}")
             if item.get("sha256") != _sha256(path):
@@ -154,6 +156,8 @@ def verify_static_public_showcase() -> dict[str, Any]:
             if not local_uri or local_uri.startswith("/") or not path.is_file():
                 errors.append(f"download_catalog item is not local: {local_uri}")
                 continue
+            if path.suffix == "":
+                errors.append(f"download_catalog item must have a reviewer-friendly file extension: {local_uri}")
             if not item.get("title") or not item.get("sha256") or item.get("sha256") != _sha256(path):
                 errors.append(f"download_catalog item is missing title or valid hash: {local_uri}")
             if int(item.get("bytes") or 0) != path.stat().st_size:

@@ -43,7 +43,11 @@ def _download_path(uri: str) -> Path:
     relative = PurePosixPath(uri[len(prefix):])
     if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
         raise ValueError(f"Public download has an unsafe path: {uri}")
-    return Path("downloads", *relative.parts)
+    parts = list(relative.parts)
+    leaf = parts[-1]
+    if "." not in leaf:
+        parts[-1] = f"{leaf}.json"
+    return Path("downloads", *parts)
 
 
 def _rewrite_uris(value: Any, uri_map: dict[str, str]) -> Any:
