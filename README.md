@@ -203,6 +203,15 @@ office_models:
 
 同一个接口还会返回 `extension_blueprint`，把新办公室从注册到上线拆成可执行步骤：注册 `OfficeProfile`、隔离运行时状态、建立无 Key demo、接入 schema/recovery、补文档和验证命令。新增办公室时先按这份蓝图走，不要直接复制研究办公室或漫剧办公室的临时代码。完整执行协议见 `docs/OFFICE_EXTENSION_PROTOCOL.md`，启动检查清单见 `docs/NEW_OFFICE_STARTER_CHECKLIST.md`；扩展治理脚本会检查这些文档没有丢失关键边界。
 
+`extension_blueprint` 还会列出未来办公室候选和暂不开放原因。当前候选包括：
+
+- `short_video_ads` / 短视频投放办公室：还缺可复现投放样例、平台数据边界、素材审核规则和失败恢复动作。
+- `ecommerce_selection` / 电商选品办公室：还缺真实数据来源边界、证据缺口标注、表格 schema 和可下载样例交付物。
+- `story_ip` / 小说或短剧 IP 办公室：还缺版权/素材边界、故事评审 schema、人工确认节点和作品集级样例。
+- `technical_project` / 技术项目办公室：还缺代码仓库权限边界、测试证据采集、变更审计和失败恢复协议。
+
+这些候选办公室不能先做 UI 再补底层。进入公开展示前，必须先补 `future_schema_validators` 和 `future_recovery_events` 两类平台证据：每个办公室自己的 schema 校验器、运行状态、任务时间线、历史追溯、恢复接口，以及说明哪些产物会保留、哪些产物会清理的测试。
+
 查看单个办公室的上线门禁：
 
 ```text

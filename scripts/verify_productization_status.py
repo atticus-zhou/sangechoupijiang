@@ -128,6 +128,12 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
             "starter checklist",
             "参观路径、证明点、下载物、阅读指南、面试脚本和公开安全边界",
+            "short_video_ads",
+            "ecommerce_selection",
+            "story_ip",
+            "technical_project",
+            "future_schema_validators",
+            "future_recovery_events",
         ],
         "files": [
             "scripts/verify_office_isolation.py",
