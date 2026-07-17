@@ -74,6 +74,22 @@
           benchmark.production_quality_verified ? '真实画质已验证' : '未宣称真实画质'
         ));
       }
+      const promptQuality = benchmark.prompt_quality_summary || {};
+      if (benchmark.status && promptQuality.status) {
+        meta.appendChild(element(
+          'span',
+          'status-pill',
+          '提示词 ' + text(promptQuality.clean_asset_prompt_count || 0) + '/'
+            + text(promptQuality.asset_prompt_count || 0) + ' 资产，'
+            + text(promptQuality.director_prompt_count || 0) + '/'
+            + text(promptQuality.shot_prompt_count || 0) + ' 镜头'
+        ));
+        meta.appendChild(element(
+          'span',
+          'status-pill',
+          '提示词问题 ' + text(promptQuality.issue_count || 0)
+        ));
+      }
       const inventory = (showcase.portfolio_embed || {}).handoff_inventory || {};
       if (demo.office_id === 'comic_production' && inventory.uri) {
         meta.appendChild(element(

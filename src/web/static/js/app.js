@@ -4841,6 +4841,11 @@ function renderPublicShowcase(showcase) {
                             <div class="showcase-badges">
                                 <span>固定样例质量基准 ${escapeHtml(demo.quality_benchmark.package_quality_score || 0)}/100</span>
                                 <span>${demo.quality_benchmark.production_quality_verified ? '真实画质已验证' : '仅结构验证，未验证真实画质'}</span>
+                                ${demo.quality_benchmark.prompt_quality_summary?.status ? `
+                                    <span>提示词 ${escapeHtml(demo.quality_benchmark.prompt_quality_summary.clean_asset_prompt_count || 0)}/${escapeHtml(demo.quality_benchmark.prompt_quality_summary.asset_prompt_count || 0)} 资产</span>
+                                    <span>导演提示词 ${escapeHtml(demo.quality_benchmark.prompt_quality_summary.director_prompt_count || 0)}/${escapeHtml(demo.quality_benchmark.prompt_quality_summary.shot_prompt_count || 0)} 镜头</span>
+                                    <span>提示词问题 ${escapeHtml(demo.quality_benchmark.prompt_quality_summary.issue_count || 0)}</span>
+                                ` : ''}
                                 ${demo.office_id === 'comic_production' && handoffInventory.uri ? `
                                     <span>交付盘点 ${escapeHtml(handoffInventory.manifest_count || 0)} 份</span>
                                     <span>真实通过 ${escapeHtml(handoffInventory.production_verified_count || 0)} 份</span>

@@ -76,6 +76,8 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
         self.assertEqual(comic_benchmark["package_quality_score"], 100)
         self.assertFalse(comic_benchmark["production_quality_verified"])
+        self.assertEqual(comic_benchmark["prompt_quality_summary"]["status"], "ready")
+        self.assertEqual(comic_benchmark["prompt_quality_summary"]["issue_count"], 0)
         self.assertEqual(
             payload["demos"]["comic_production"]["honest_quality_gate"]["status"],
             "passed",
@@ -125,6 +127,7 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("source=dist/public-showcase", result.stdout)
         self.assertIn("demo_structure_only", result.stdout)
         self.assertIn("demo_structure_verified", result.stdout)
+        self.assertIn("Prompt quality: ready / assets=7/7 / directors=2/2 / issues=0", result.stdout)
         self.assertIn("已验证真实模型画质：False", result.stdout)
 
 

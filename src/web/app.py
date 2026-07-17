@@ -62,6 +62,7 @@ from src.comic_office.v2.production import (
     prompt_package_from_dict,
 )
 from src.comic_office.v2.prompt_quality import audit_prompt_package
+from src.comic_office.v2.production_benchmark import audit_handoff_manifest
 from src.research_artifacts import build_research_artifacts
 from src.research_quality import assess_research_package
 from src.evidence_artifacts import build_evidence_artifacts
@@ -3377,6 +3378,9 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
     benchmark = payload.get("quality_benchmark")
     if not isinstance(benchmark, dict):
         return {}
+    prompt_quality = benchmark.get("prompt_quality_summary")
+    if not isinstance(prompt_quality, dict):
+        prompt_quality = (audit_handoff_manifest(payload).get("prompt_quality_summary") or {})
     dimensions = []
     for item in benchmark.get("dimensions") or []:
         if not isinstance(item, dict):
@@ -3411,6 +3415,15 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
         "issue_count": int(benchmark.get("issue_count") or 0),
         "blocker_count": int(benchmark.get("blocker_count") or 0),
         "dimensions": dimensions,
+        "prompt_quality_summary": {
+            "status": str(prompt_quality.get("status") or ""),
+            "asset_prompt_count": int(prompt_quality.get("asset_prompt_count") or 0),
+            "clean_asset_prompt_count": int(prompt_quality.get("clean_asset_prompt_count") or 0),
+            "shot_prompt_count": int(prompt_quality.get("shot_prompt_count") or 0),
+            "director_prompt_count": int(prompt_quality.get("director_prompt_count") or 0),
+            "issue_count": int(prompt_quality.get("issue_count") or 0),
+            "summary": str(prompt_quality.get("summary") or ""),
+        },
         "limitations": [str(item) for item in (benchmark.get("limitations") or []) if str(item).strip()],
         "recommended_recovery": recovery,
         "next_action": str(benchmark.get("next_action") or ""),

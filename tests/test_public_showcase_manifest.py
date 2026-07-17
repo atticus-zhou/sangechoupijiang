@@ -36,6 +36,11 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
         self.assertEqual(comic_benchmark["package_quality_score"], 100)
         self.assertFalse(comic_benchmark["production_quality_verified"])
+        prompt_quality = comic_benchmark["prompt_quality_summary"]
+        self.assertEqual(prompt_quality["status"], "ready")
+        self.assertEqual(prompt_quality["clean_asset_prompt_count"], prompt_quality["asset_prompt_count"])
+        self.assertEqual(prompt_quality["director_prompt_count"], prompt_quality["shot_prompt_count"])
+        self.assertEqual(prompt_quality["issue_count"], 0)
         self.assertIn(
             "honest_quality_claim",
             {item["id"] for item in demos["comic_production"]["quality_gates"]},

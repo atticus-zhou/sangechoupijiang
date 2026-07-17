@@ -46,6 +46,13 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         comic_benchmark = demos["comic_production"]["quality_benchmark"]
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
         self.assertFalse(comic_benchmark["production_quality_verified"])
+        prompt_quality = comic_benchmark["prompt_quality_summary"]
+        self.assertEqual(prompt_quality["status"], "ready")
+        self.assertEqual(prompt_quality["clean_asset_prompt_count"], 7)
+        self.assertEqual(prompt_quality["asset_prompt_count"], 7)
+        self.assertEqual(prompt_quality["director_prompt_count"], 2)
+        self.assertEqual(prompt_quality["shot_prompt_count"], 2)
+        self.assertEqual(prompt_quality["issue_count"], 0)
         claim = showcase["portfolio_embed"]["real_production_claim"]
         self.assertEqual(claim["uri"], "data/comic_production_claim_report.json")
         self.assertEqual(claim["claim_level"], "demo_structure_only")
@@ -155,6 +162,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("真实产物验收", index_text)
         self.assertIn("renderPostRunValidation", static_script)
         self.assertIn("portfolio.post_run_validation", static_script)
+        self.assertIn("prompt_quality_summary", static_script)
+        self.assertIn("提示词问题", static_script)
         self.assertIn("renderPortfolioIntegration", static_script)
         self.assertIn("handoff_inventory", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
         self.assertIn("portfolio_integration", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
@@ -180,6 +189,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
         self.assertIn("Claim upgrade checklist: 3 items", completed.stdout)
         self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
+        self.assertIn("Prompt quality: ready / assets=7/7 / directors=2/2 / issues=0", completed.stdout)
         self.assertIn("Portfolio integration: source=dist/public-showcase / options=2", completed.stdout)
         self.assertIn("Portfolio deploy manifest: portfolio-deploy-manifest.json / target=public/three-stooges/", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)

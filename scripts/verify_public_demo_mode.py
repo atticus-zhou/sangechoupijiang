@@ -334,6 +334,15 @@ def verify_public_demo_mode() -> dict[str, Any]:
                 errors.append("comic production fixed demo must not claim real production image quality")
             if quality_benchmark.get("recommended_recovery"):
                 errors.append("comic production passing demo must not expose a recovery action")
+            prompt_quality = quality_benchmark.get("prompt_quality_summary") or {}
+            if prompt_quality.get("status") != "ready":
+                errors.append("comic production fixed demo must expose ready prompt quality")
+            if prompt_quality.get("asset_prompt_count") != prompt_quality.get("clean_asset_prompt_count"):
+                errors.append("comic production fixed demo must expose all asset prompts as clean")
+            if prompt_quality.get("shot_prompt_count") != prompt_quality.get("director_prompt_count"):
+                errors.append("comic production fixed demo must expose all director prompts as ready")
+            if prompt_quality.get("issue_count") != 0:
+                errors.append("comic production fixed demo must expose zero prompt quality issues")
             if honest_quality_gate.get("status") != "passed":
                 errors.append("comic production demo honest quality gate must pass")
 
@@ -472,6 +481,15 @@ def format_markdown(payload: dict[str, Any]) -> str:
                 f"- 质量声明：`{benchmark.get('status', '')}`",
                 f"- 已验证真实模型画质：{benchmark.get('production_quality_verified')}",
             ])
+            prompt_quality = benchmark.get("prompt_quality_summary") or {}
+            if prompt_quality:
+                lines.append(
+                    "- Prompt quality: "
+                    f"{prompt_quality.get('status')} / "
+                    f"assets={prompt_quality.get('clean_asset_prompt_count')}/{prompt_quality.get('asset_prompt_count')} / "
+                    f"directors={prompt_quality.get('director_prompt_count')}/{prompt_quality.get('shot_prompt_count')} / "
+                    f"issues={prompt_quality.get('issue_count')}"
+                )
         lines.append("")
     if payload.get("errors"):
         lines.append("## 问题")

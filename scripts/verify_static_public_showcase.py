@@ -285,9 +285,21 @@ def verify_static_public_showcase() -> dict[str, Any]:
                 errors.append(f"static portfolio integration must forbid {marker}")
 
         demos = showcase.get("featured_demos") or []
+        comic_prompt_quality: dict[str, Any] = {}
         for demo in demos:
             if demo.get("demo_uri") != f"#office-{demo.get('office_id')}":
                 errors.append(f"featured demo does not use a local anchor: {demo.get('office_id')}")
+            if demo.get("office_id") == "comic_production":
+                prompt_quality = ((demo.get("quality_benchmark") or {}).get("prompt_quality_summary") or {})
+                comic_prompt_quality = prompt_quality
+                if prompt_quality.get("status") != "ready":
+                    errors.append("static comic demo must expose ready prompt quality")
+                if prompt_quality.get("asset_prompt_count") != prompt_quality.get("clean_asset_prompt_count"):
+                    errors.append("static comic demo must expose all asset prompts as clean")
+                if prompt_quality.get("shot_prompt_count") != prompt_quality.get("director_prompt_count"):
+                    errors.append("static comic demo must expose all director prompts as ready")
+                if prompt_quality.get("issue_count") != 0:
+                    errors.append("static comic demo must expose zero prompt quality issues")
 
         screenshot = temp_dir / "assets" / "public-showcase-desktop.png"
         screenshot_ready = screenshot.is_file() and screenshot.stat().st_size > 100_000
@@ -353,6 +365,12 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "claim_upgrade_checklist_count": len(claim_upgrade_checklist),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
+            "comic_prompt_quality_status": comic_prompt_quality.get("status", ""),
+            "comic_prompt_asset_clean_count": comic_prompt_quality.get("clean_asset_prompt_count", 0),
+            "comic_prompt_asset_count": comic_prompt_quality.get("asset_prompt_count", 0),
+            "comic_prompt_director_ready_count": comic_prompt_quality.get("director_prompt_count", 0),
+            "comic_prompt_shot_count": comic_prompt_quality.get("shot_prompt_count", 0),
+            "comic_prompt_issue_count": comic_prompt_quality.get("issue_count", 0),
             "portfolio_integration_option_count": len(integration_options),
             "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
             "portfolio_deploy_manifest": "portfolio-deploy-manifest.json",
@@ -389,6 +407,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
+        f"- Prompt quality: {payload.get('comic_prompt_quality_status')} / assets={payload.get('comic_prompt_asset_clean_count')}/{payload.get('comic_prompt_asset_count')} / directors={payload.get('comic_prompt_director_ready_count')}/{payload.get('comic_prompt_shot_count')} / issues={payload.get('comic_prompt_issue_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",
         f"- Requires backend: {payload.get('requires_backend')}",
