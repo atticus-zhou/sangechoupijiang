@@ -26,6 +26,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "python scripts/verify_release_readiness.py --format markdown",
             "python scripts/verify_development_checklist.py --format markdown",
             "python scripts/verify_public_docs_readability.py --format markdown",
+            "python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase",
         ],
     },
     {
@@ -47,6 +48,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "dist/public-showcase",
             "python scripts/verify_first_run_readiness.py --format markdown",
             "python scripts/verify_release_readiness.py --format markdown",
+            "python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase",
             "六份下载物",
             "下游生产 quick-start",
         ],
@@ -67,6 +69,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
         "required_markers": [
             "python scripts/export_public_showcase.py",
             "python scripts/verify_static_public_showcase.py --format markdown",
+            "python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase",
             "dist/public-showcase/index.html",
             "npx vercel --prod --cwd dist/public-showcase",
             "六份样例交付物",

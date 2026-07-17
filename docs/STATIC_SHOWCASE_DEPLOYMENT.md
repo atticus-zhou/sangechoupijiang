@@ -11,6 +11,7 @@
 ```powershell
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
+python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
 ```
 
 生成入口：
@@ -30,6 +31,8 @@ dist/public-showcase/index.html
 - 禁止把 `config.yaml`、`.env`、API Key、Cookie、`user_data/`、`output/`、浏览器 Profile 或真实用户工作区复制进公开站点。
 
 `python scripts/verify_public_demo_mode.py --format markdown` 和 `python scripts/verify_static_public_showcase.py --format markdown` 都会检查这份接入协议。如果后续修改了个人网站接入方式，必须同时更新接口、静态页和验证器。
+
+注意：不带 `--existing-dir` 时，验证器会临时导出一份新包再检查；带 `--existing-dir dist/public-showcase` 时，它检查的是你即将复制到个人网站或部署到 Vercel 的现有目录。部署前建议两条都跑，前者证明导出链路可复现，后者证明当前目录不是旧包。
 
 静态包包含：
 
@@ -85,11 +88,12 @@ Netlify 的发布目录选择 `dist/public-showcase`。GitHub Pages 需要把该
 ```powershell
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
+python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
 python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
 ```
 
-只有四条命令全部通过，才发布新的静态包。
+只有这些命令全部通过，才发布新的静态包。
 
 ## 安全边界
 

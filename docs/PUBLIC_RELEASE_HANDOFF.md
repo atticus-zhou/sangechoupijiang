@@ -57,6 +57,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_public_demo_mode.py --format markdown
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
+python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
 python scripts/verify_comic_v2_downstream_handoff.py --format markdown
 python scripts/verify_comic_v2_production_benchmark.py --format markdown
 python scripts/verify_research_office_readiness.py --format markdown

@@ -235,6 +235,29 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Portfolio deploy manifest: portfolio-deploy-manifest.json / target=public/three-stooges/", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
+    def test_static_readiness_verifier_can_check_existing_export(self):
+        export_public_showcase(self.output_dir)
+
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "scripts/verify_static_public_showcase.py",
+                "--format",
+                "markdown",
+                "--existing-dir",
+                str(self.output_dir),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertIn("Status: `passed`", completed.stdout)
+        self.assertIn("Verification source: `existing_dir`", completed.stdout)
+        self.assertIn("Future office candidates: 4 / backlog=2", completed.stdout)
+        self.assertIn("Requires API Key: False", completed.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

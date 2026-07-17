@@ -66,6 +66,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 ```powershell
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
+python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
 ```
 
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。

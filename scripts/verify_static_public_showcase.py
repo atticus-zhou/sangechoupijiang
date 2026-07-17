@@ -65,13 +65,37 @@ def _scan_text_files(root: Path) -> list[str]:
     return findings
 
 
-def verify_static_public_showcase() -> dict[str, Any]:
+def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dict[str, Any]:
     errors: list[str] = []
     build_root = REPO_ROOT / "dist"
     build_root.mkdir(parents=True, exist_ok=True)
-    temp_dir = Path(tempfile.mkdtemp(prefix=".verify-public-showcase-", dir=build_root))
+    should_cleanup = existing_dir is None
+    if existing_dir is None:
+        temp_dir = Path(tempfile.mkdtemp(prefix=".verify-public-showcase-", dir=build_root))
+    else:
+        temp_dir = Path(existing_dir)
+        if not temp_dir.is_absolute():
+            temp_dir = REPO_ROOT / temp_dir
+        temp_dir = temp_dir.resolve()
     try:
-        export_summary = export_public_showcase(temp_dir)
+        if existing_dir is None:
+            export_summary = export_public_showcase(temp_dir)
+        else:
+            export_summary = {
+                "status": "existing_export",
+                "output_dir": str(temp_dir),
+                "requires_backend": False,
+                "requires_api_key": False,
+                "calls_real_models": False,
+            }
+            if not temp_dir.is_dir():
+                return {
+                    "status": "failed",
+                    "mode": "public_no_key_static_showcase_readiness",
+                    "summary": f"Existing static showcase directory is missing: {temp_dir}",
+                    "verification_source": "existing_dir",
+                    "errors": [f"missing existing directory: {temp_dir}"],
+                }
         manifest = json.loads((temp_dir / "export-manifest.json").read_text(encoding="utf-8"))
         deploy_manifest = json.loads((temp_dir / "portfolio-deploy-manifest.json").read_text(encoding="utf-8"))
         showcase = json.loads((temp_dir / "showcase.json").read_text(encoding="utf-8"))
@@ -406,6 +430,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
         return {
             "status": "passed" if not errors else "failed",
             "mode": "public_no_key_static_showcase_readiness",
+            "verification_source": "fresh_export" if existing_dir is None else "existing_dir",
             "summary": (
                 "Static showcase is self-contained, backend-free, downloadable, and safe for public hosting."
                 if not errors
@@ -464,7 +489,7 @@ def verify_static_public_showcase() -> dict[str, Any]:
             "errors": errors,
         }
     finally:
-        if temp_dir.exists():
+        if should_cleanup and temp_dir.exists():
             shutil.rmtree(temp_dir)
 
 
@@ -474,6 +499,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
         f"Status: `{payload.get('status')}`",
         f"Mode: `{payload.get('mode')}`",
+        f"Verification source: `{payload.get('verification_source', 'fresh_export')}`",
         f"Summary: {payload.get('summary')}",
         "",
         f"- Files: {payload.get('file_count')}",
@@ -511,8 +537,13 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Verify the backend-free public showcase export.")
     parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
+    parser.add_argument(
+        "--existing-dir",
+        default=None,
+        help="Verify an already exported static showcase directory, for example dist/public-showcase.",
+    )
     args = parser.parse_args()
-    payload = verify_static_public_showcase()
+    payload = verify_static_public_showcase(args.existing_dir)
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:

@@ -137,6 +137,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("docs/REAL_PRODUCTION_CLAIMS.md", text)
         self.assertIn("python scripts/export_public_showcase.py", text)
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", text)
+        self.assertIn("python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase", text)
         self.assertIn("dist/public-showcase/index.html", text)
         self.assertIn("最快验收路线", text)
         self.assertIn("六份下载物", text)
