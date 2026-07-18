@@ -4626,6 +4626,7 @@ function renderPublicShowcase(showcase) {
     const realProductionClaim = portfolio.real_production_claim || {};
     const qualityUpgradePath = portfolio.quality_upgrade_path || {};
     const claimUpgradeChecklist = Array.isArray(realProductionClaim.claim_upgrade_checklist) ? realProductionClaim.claim_upgrade_checklist : [];
+    const claimUpgradeRecovery = realProductionClaim.claim_upgrade_recovery || {};
     const releaseBadge = portfolio.release_badge || {};
     const portfolioIntegration = portfolio.portfolio_integration || {};
     const deployment = showcase.public_deployment || {};
@@ -4700,6 +4701,33 @@ function renderPublicShowcase(showcase) {
                                     <b>${escapeHtml(item.title || item.id || '')}</b>
                                     <p>\u9700\u8981\uff1a${escapeHtml((item.required_evidence || []).join('\u3001'))}</p>
                                     <small>${escapeHtml(item.why_it_matters || '')}</small>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${claimUpgradeRecovery.recovery_action ? `
+                    <div class="public-claim-upgrade public-claim-recovery">
+                        <strong>\u5931\u8d25\u540e\u5982\u4f55\u6062\u590d</strong>
+                        <p>${escapeHtml(claimUpgradeRecovery.reason || '\u5f53\u524d\u6837\u4f8b\u53ea\u80fd\u8bc1\u660e\u7ed3\u6784\uff0c\u771f\u5b9e\u753b\u8d28\u9700\u8981\u91cd\u65b0\u751f\u56fe\u5e76\u8d28\u68c0\u3002')}</p>
+                        <small>action=${escapeHtml(claimUpgradeRecovery.recovery_action || '')} · endpoint=${escapeHtml(claimUpgradeRecovery.recovery_endpoint || '')}</small>
+                        <div>
+                            <article>
+                                <span>\u4fdd\u7559</span>
+                                <b>${escapeHtml((claimUpgradeRecovery.preserves || []).join('\u3001'))}</b>
+                                <p>${escapeHtml(claimUpgradeRecovery.next_action || '')}</p>
+                            </article>
+                            <article>
+                                <span>\u91cd\u5efa</span>
+                                <b>${escapeHtml((claimUpgradeRecovery.rebuilds || []).join('\u3001'))}</b>
+                                <p>\u53ea\u6709\u91cd\u5efa\u540e\u7684\u8d28\u91cf\u57fa\u51c6\u901a\u8fc7\uff0c\u624d\u80fd\u5ba3\u79f0\u771f\u5b9e\u753b\u8d28\u5df2\u9a8c\u8bc1\u3002</p>
+                            </article>
+                            ${(claimUpgradeRecovery.steps || []).map(item => `
+                                <article>
+                                    <span>${escapeHtml(item.owner || '')}</span>
+                                    <b>${escapeHtml(item.action || '')}</b>
+                                    <p>\u9a8c\u6536\uff1a${escapeHtml(item.evidence || '')}</p>
+                                    <small>\u7ed3\u679c\uff1a${escapeHtml(item.expected || '')}</small>
                                 </article>
                             `).join('')}
                         </div>

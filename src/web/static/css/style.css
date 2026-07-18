@@ -725,6 +725,27 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     background: rgba(88, 166, 255, 0.06);
 }
 
+.public-claim-recovery {
+    border-color: rgba(88, 166, 255, 0.34);
+    background: linear-gradient(180deg, rgba(88, 166, 255, 0.1), rgba(15, 23, 42, 0.62));
+}
+
+.public-claim-recovery > small {
+    display: block;
+    margin-bottom: 12px;
+    padding: 9px 10px;
+    border: 1px solid rgba(88, 166, 255, 0.22);
+    border-radius: 10px;
+    color: #cfe2ff;
+    background: rgba(8, 14, 22, 0.48);
+    overflow-wrap: anywhere;
+}
+
+.public-claim-recovery article:first-child,
+.public-claim-recovery article:nth-child(2) {
+    border-color: rgba(63, 185, 80, 0.22);
+}
+
 .public-claim-upgrade > strong {
     display: block;
     color: #e6edf3;
