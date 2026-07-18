@@ -111,3 +111,17 @@ python scripts/check_no_secrets.py
 - Cookie、第三方平台登录态、真实客户资料和本地创作历史。
 
 `dist/` 已被 Git 忽略。静态包是部署产物，不应混入源码提交；源码仓库只提交导出器、模板、固定样例和验证器。
+
+## Personal Website Vercel Handoff
+
+The main product repository owns the no-key static export at `dist/public-showcase`. The personal website repository owns the public route `/three-stooges/`.
+
+Current handoff contract:
+
+- Copy `dist/public-showcase/*` into the personal website repository at `public/three-stooges/`.
+- The personal website must expose a link to `/three-stooges/` and keep the copied static files backend-free.
+- The personal website has its own deployment helpers: `npm run check:showcase`, `npm run prepare:vercel-prebuilt`, `npm run ship:vercel`, and `npm run check:online`.
+- `npm run check:online` is the authority for the live site. If it reports `/three-stooges/` as 404, the static package is prepared but Vercel is still serving an older deployment.
+- When Vercel CLI asks for device authorization, complete `vercel login`, then rerun `npm run ship:vercel`.
+
+Do not describe the personal website as live until `npm run check:online` passes against the production domain.

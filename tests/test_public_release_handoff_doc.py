@@ -22,6 +22,9 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("API Key", text)
         self.assertIn("SaaS", text)
         self.assertIn("FastAPI", text)
+        self.assertIn("npm run check:online", text)
+        self.assertIn("https://www.atticus.asia/three-stooges/", text)
+        self.assertIn("Vercel authorization/redeploy", text)
 
     def test_public_release_handoff_doc_lists_required_release_gates(self):
         text = Path("docs/PUBLIC_RELEASE_HANDOFF.md").read_text(encoding="utf-8")
@@ -37,6 +40,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("python scripts/verify_research_office_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
         self.assertIn("python scripts/check_no_secrets.py", text)
+        self.assertIn("npm run prepare:vercel-prebuilt", text)
 
     def test_readme_links_public_release_handoff_doc(self):
         text = Path("README.md").read_text(encoding="utf-8")

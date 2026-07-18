@@ -87,6 +87,23 @@ python scripts/check_no_secrets.py
 
 如果其中任一项失败，不要把当前版本描述为公开发布就绪。
 
+## Personal Website Live Verification
+
+The public repository can be ready before the production domain has refreshed.
+Do not treat `https://www.atticus.asia/three-stooges/` as live until the
+personal website repository passes `npm run check:online`.
+
+Current live verification contract:
+
+- Main repo evidence: `python scripts/verify_static_public_showcase.py --format markdown`.
+- Personal website local evidence: `npm run check:showcase`, `npm run lint`,
+  and `npm run prepare:vercel-prebuilt`.
+- Personal website production evidence: `npm run check:online`.
+- If the production route returns 404 but the local checks pass, the remaining
+  action is Vercel authorization/redeploy, not a product-code claim.
+- Do not put API keys, cookies, `config.yaml`, `.env`, local workspaces, or real
+  run output into the personal website static directory.
+
 ## 相关证据
 
 - [README](../README.md)
