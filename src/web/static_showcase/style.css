@@ -497,6 +497,28 @@ h3 {
   min-height: auto;
 }
 
+.claim-recovery-card {
+  border-color: rgba(88, 166, 255, 0.35);
+  background: linear-gradient(180deg, rgba(24, 36, 56, 0.92), rgba(16, 23, 34, 0.96));
+}
+
+.claim-recovery-card .text-row {
+  background: rgba(8, 14, 22, 0.42);
+}
+
+.claim-recovery-next {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(88, 166, 255, 0.28);
+  border-radius: 6px;
+  background: rgba(88, 166, 255, 0.08);
+  color: #cfe2ff;
+}
+
+.claim-recovery-steps {
+  margin-top: 16px;
+}
+
 .claim-upgrade-item {
   display: grid;
   gap: 6px;

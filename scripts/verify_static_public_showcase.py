@@ -438,6 +438,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         style_text = (temp_dir / "style.css").read_text(encoding="utf-8")
         if "claim.claim_upgrade_checklist" not in app_text or "claim-upgrade-card" not in app_text:
             errors.append("static showcase page must render the claim upgrade checklist")
+        if "claim.claim_upgrade_recovery" not in app_text or "claim-recovery-card" not in app_text:
+            errors.append("static showcase page must render the claim recovery playbook")
         if "portfolio.research_claim_boundary" not in app_text or "research-claim-card" not in app_text:
             errors.append("static showcase page must render the research claim boundary")
         if "showcase.download_catalog" not in app_text or "renderDownloadCatalog" not in app_text:

@@ -202,7 +202,32 @@
       grid.appendChild(upgradeCard);
     }
 
+    renderClaimUpgradeRecovery(grid, claim.claim_upgrade_recovery || {});
     renderQualityUpgradePath(grid, qualityUpgradePath);
+  }
+
+  function renderClaimUpgradeRecovery(grid, recovery) {
+    if (!grid || !recovery || !recovery.recovery_action) return;
+    const card = element('article', 'card claim-card claim-upgrade-card claim-recovery-card');
+    card.appendChild(element('h3', '', '\u5931\u8d25\u540e\u5982\u4f55\u6062\u590d'));
+    card.appendChild(element('p', '', text(recovery.reason || '\u5f53\u524d\u6837\u4f8b\u53ea\u80fd\u8bc1\u660e\u7ed3\u6784\uff0c\u771f\u5b9e\u753b\u8d28\u9700\u8981\u91cd\u65b0\u751f\u56fe\u5e76\u8d28\u68c0\u3002')));
+    addTextRow(card, '\u6062\u590d\u52a8\u4f5c', recovery.recovery_action);
+    addTextRow(card, '\u6062\u590d\u63a5\u53e3', recovery.recovery_endpoint);
+    addTextRow(card, '\u4fdd\u7559', Array.isArray(recovery.preserves) ? recovery.preserves.join('\u3001') : '');
+    addTextRow(card, '\u91cd\u5efa', Array.isArray(recovery.rebuilds) ? recovery.rebuilds.join('\u3001') : '');
+    if (recovery.next_action) {
+      card.appendChild(element('p', 'claim-recovery-next', text(recovery.next_action)));
+    }
+    const steps = element('ol', 'quality-upgrade-steps claim-recovery-steps');
+    (Array.isArray(recovery.steps) ? recovery.steps : []).forEach(function (item) {
+      const li = element('li', '');
+      li.appendChild(element('strong', '', text(item.owner || 'operator')));
+      li.appendChild(element('p', '', text(item.action || '')));
+      li.appendChild(element('small', '', '\u9a8c\u6536\uff1a' + text(item.evidence || '') + '\uff1b\u7ed3\u679c\uff1a' + text(item.expected || '')));
+      steps.appendChild(li);
+    });
+    card.appendChild(steps);
+    grid.appendChild(card);
   }
 
   function renderQualityUpgradePath(grid, path) {
