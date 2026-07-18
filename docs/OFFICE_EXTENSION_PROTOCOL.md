@@ -50,6 +50,7 @@ python scripts/verify_office_isolation.py --format markdown
 - `deliverable_reading_guide`：说明每个交付物怎么看。
 - `interview_demo_script`：面试官或作品集访客的 3 分钟演示路线。
 - `post_run_validation`：真实任务跑完后，用户用哪些命令或检查判断产物是否可以对外声明。
+- `public_claim_report`：公开页面能宣称什么、不能宣称什么、缺什么证据，以及如何把 demo 证据升级成真实任务证据。
 - `public_safety_boundaries`：公开模式的安全边界。
 
 只有能下载交付物的演示，才算可展示。只有 UI 截图或空页面不算。
@@ -91,6 +92,7 @@ python scripts/verify_office_isolation.py --format markdown
 - `history_trace`
 - `schema_gate`
 - `readme_documentation`
+- `public_claim_report`
 - `secret_scan`
 
 运行：

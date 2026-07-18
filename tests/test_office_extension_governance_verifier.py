@@ -47,6 +47,7 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
         self.assertIn("interview_demo_script", audit["required_demo_contract"])
         self.assertIn("post_run_validation", audit["required_demo_contract"])
+        self.assertIn("public_claim_report", audit["required_demo_contract"])
         self.assertIn("public_safety_boundaries", audit["required_demo_contract"])
         step_ids = {step["id"] for step in audit["extension_blueprint"]["implementation_steps"]}
         self.assertIn("register_profile", step_ids)
@@ -101,6 +102,7 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("deliverable_reading_guide", completed.stdout)
         self.assertIn("interview_demo_script", completed.stdout)
         self.assertIn("post_run_validation", completed.stdout)
+        self.assertIn("public_claim_report", completed.stdout)
         self.assertIn("真实任务跑完后", completed.stdout)
         self.assertIn("public_safety_boundaries", completed.stdout)
         self.assertIn("可展示", completed.stdout)

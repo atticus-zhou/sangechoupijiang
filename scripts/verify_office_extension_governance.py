@@ -25,6 +25,7 @@ PROTOCOL_DOC_MARKERS = [
     "no-key demo",
     "downloadable_deliverables",
     "post_run_validation",
+    "public_claim_report",
     "跑后验收",
     "真实任务跑完后",
     "schema gates",
@@ -79,6 +80,7 @@ def audit_starter_checklist(blueprint: dict[str, Any]) -> dict[str, Any]:
             "New Office Starter Checklist",
             "office_id",
             "downloadable_deliverables",
+            "public_claim_report",
             "public_safety_boundaries",
             "verify_release_readiness",
             "check_no_secrets",
@@ -157,6 +159,7 @@ def format_markdown(audit: dict[str, Any]) -> str:
         "deliverable_reading_guide": "解释每个交付物应该怎么看、证明什么。",
         "interview_demo_script": "给面试官或作品集访客一条 3 分钟演示路线。",
         "post_run_validation": "说明真实任务跑完后，哪些命令或证据能支撑对外声明。",
+        "public_claim_report": "说明公开页面能宣称什么、不能宣称什么、缺什么证据，以及如何升级为真实任务证据。",
         "public_safety_boundaries": "说明公开模式不读取 Key、不调用真实模型、不写用户工作区。",
     }
     for field in audit.get("required_demo_contract", []):

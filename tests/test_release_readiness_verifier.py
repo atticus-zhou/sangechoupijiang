@@ -156,7 +156,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("handoff=3/3", completed.stdout)
         self.assertIn("claim=staged_research_demo", completed.stdout)
         self.assertIn("full_auto=False", completed.stdout)
-        self.assertIn("demo_contract=7", completed.stdout)
+        self.assertIn("demo_contract=8", completed.stdout)
         self.assertIn("starter=passed", completed.stdout)
         self.assertIn("starter_items=8", completed.stdout)
         self.assertIn("checks=5; failures=0", completed.stdout)

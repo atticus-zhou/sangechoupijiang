@@ -64,6 +64,7 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("deliverable_reading_guide", template["required_demo_contract"])
         self.assertIn("interview_demo_script", template["required_demo_contract"])
         self.assertIn("post_run_validation", template["required_demo_contract"])
+        self.assertIn("public_claim_report", template["required_demo_contract"])
         self.assertIn("public_safety_boundaries", template["required_demo_contract"])
 
     def test_office_extension_blueprint_is_actionable_for_future_offices(self):
@@ -105,6 +106,7 @@ class OfficeProfileTests(unittest.TestCase):
             self.assertTrue(candidate["user_job"])
             self.assertTrue(candidate["not_ready_reason"])
             self.assertIn("schema_gate", candidate["required_before_public"])
+            self.assertIn("public_claim_report", candidate["required_before_public"])
         backlog_ids = {item["id"] for item in blueprint["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
         self.assertTrue(all(item["evidence_required"] for item in blueprint["future_platform_backlog"]))
@@ -222,6 +224,7 @@ class OfficeExtensionGovernanceTests(unittest.TestCase):
         self.assertIn("deliverable_reading_guide", audit["required_demo_contract"])
         self.assertIn("interview_demo_script", audit["required_demo_contract"])
         self.assertIn("post_run_validation", audit["required_demo_contract"])
+        self.assertIn("public_claim_report", audit["required_demo_contract"])
         self.assertIn("extension_blueprint", audit)
         self.assertIn("implementation_steps", audit["extension_blueprint"])
         self.assertIn("starter_checklist", audit["extension_blueprint"])

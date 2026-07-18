@@ -16,7 +16,7 @@ evidence.
 | 4 | workflow | Where should the human review or correct the workflow before expensive generation continues? | Named checkpoints, preserved fields, cleared fields, and recovery action per rejected stage. |
 | 5 | demo | What downloadable sample proves the office produces more than UI text? | At least one no-key sample deliverable, a manifest or audit file, and a reading guide explaining what each file proves. |
 | 6 | quality | How does the office prevent free-form model output from becoming an unverifiable blob? | Schema gates, post-run validation commands, failure states, preserved fields, cleared fields, and retry endpoints. |
-| 7 | public_demo | Can a stranger understand and verify the office without an API key? | `viewer_path`, `proof_points`, `downloadable_deliverables`, `deliverable_reading_guide`, `interview_demo_script`, `post_run_validation`, and `public_safety_boundaries`. |
+| 7 | public_demo | Can a stranger understand and verify the office without an API key? | `viewer_path`, `proof_points`, `downloadable_deliverables`, `deliverable_reading_guide`, `interview_demo_script`, `post_run_validation`, `public_claim_report`, and `public_safety_boundaries`. |
 | 8 | release | Which single command proves the office is safe to show or honestly blocked? | Office-specific tests plus `verify_office_isolation`, `verify_public_demo_mode`, `verify_office_extension_governance`, `verify_release_readiness`, and `check_no_secrets`. |
 
 ## Promotion Rule
@@ -27,6 +27,7 @@ An office can be visible in the public product story only when it has:
 - Office-scoped model configuration under `office_models.<office_id>`.
 - A no-key demo that calls no real models and writes no user workspace files.
 - Downloadable sample deliverables with a reading guide.
+- A public claim report that separates allowed claims, forbidden claims, missing evidence, and the recovery path for upgrading a demo claim into a real-run claim.
 - Schema or artifact gates for long-running stages.
 - Human-readable failure and recovery states.
 - History or lineage evidence for the final deliverable.

@@ -362,12 +362,13 @@ def list_office_creation_template() -> dict:
             "deliverable_reading_guide",
             "interview_demo_script",
             "post_run_validation",
+            "public_claim_report",
             "public_safety_boundaries",
         ],
         "minimum_artifact_contract": _default_artifact_contract(),
         "notes": [
             "New offices must reuse the OfficeProfile protocol instead of copying one-off routes.",
-            "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, post-run validation, failure recovery, history traceability, and a visitor-readable demo contract.",
+            "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, post-run validation, a public claim report, failure recovery, history traceability, and a visitor-readable demo contract.",
         ],
     }
 
@@ -400,7 +401,7 @@ def list_office_extension_blueprint() -> dict:
                 "title": "Build a no-key demo contract",
                 "owner": "office",
                 "files": ["src/web/app.py", "tests/fixtures/"],
-                "done_when": "The demo returns viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, and public_safety_boundaries without calling real models.",
+                "done_when": "The demo returns viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, public_claim_report, and public_safety_boundaries without calling real models.",
             },
             {
                 "order": 4,
@@ -426,7 +427,7 @@ def list_office_extension_blueprint() -> dict:
             },
             {
                 "file": "src/web/app.py",
-                "proves": "The office exposes no-key demo endpoints, launch-gate evidence, model preflight, runtime status, post-run validation, and downloadable sample artifacts without sharing another office's routes.",
+                "proves": "The office exposes no-key demo endpoints, launch-gate evidence, model preflight, runtime status, post-run validation, public claim reporting, and downloadable sample artifacts without sharing another office's routes.",
             },
             {
                 "file": "src/office_preflight.py",
@@ -438,7 +439,7 @@ def list_office_extension_blueprint() -> dict:
             },
             {
                 "file": "README.md and docs/",
-                "proves": "A stranger can understand what the office does, what it can download, what is demo-only, which commands reproduce the result, and which checks prove a real run is safe to claim.",
+                "proves": "A stranger can understand what the office does, what it can download, what is demo-only, which claims are allowed or forbidden, which commands reproduce the result, and which checks prove a real run is safe to claim.",
             },
             {
                 "file": "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
@@ -493,7 +494,7 @@ def list_office_extension_blueprint() -> dict:
                 "id": "ship_public_demo_contract",
                 "phase": "public_demo",
                 "question": "Can a stranger understand and verify the office without an API key?",
-                "evidence": "viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, and public_safety_boundaries.",
+                "evidence": "viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, public_claim_report, and public_safety_boundaries.",
             },
             {
                 "order": 8,
@@ -515,6 +516,7 @@ def list_office_extension_blueprint() -> dict:
                     "sample_delivery",
                     "schema_gate",
                     "failure_recovery",
+                    "public_claim_report",
                     "public_safety_boundaries",
                 ],
             },
@@ -529,6 +531,7 @@ def list_office_extension_blueprint() -> dict:
                     "sample_delivery",
                     "schema_gate",
                     "history_trace",
+                    "public_claim_report",
                     "release_gate",
                 ],
             },
@@ -543,6 +546,7 @@ def list_office_extension_blueprint() -> dict:
                     "sample_delivery",
                     "schema_gate",
                     "recovery_actions",
+                    "public_claim_report",
                     "public_safety_boundaries",
                 ],
             },
@@ -557,6 +561,7 @@ def list_office_extension_blueprint() -> dict:
                     "sample_delivery",
                     "schema_gate",
                     "failure_recovery",
+                    "public_claim_report",
                     "secret_scan",
                 ],
             },
