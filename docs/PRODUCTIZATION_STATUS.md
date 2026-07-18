@@ -95,4 +95,20 @@ python -m unittest discover -s tests -q
 python scripts/check_no_secrets.py
 ```
 
+## Personal Website Online Boundary
+
+This repository can prove `local_static_showcase_ready` by generating and
+verifying `dist/public-showcase`. It cannot prove that the production Vercel
+domain has refreshed unless the personal website repository passes its live
+online check.
+
+Current deployment boundary:
+
+- `local_static_showcase_ready`: proved by `python scripts/verify_static_public_showcase.py --format markdown`.
+- `live_domain_verification_external`: proved only by the personal website command `npm run check:online`.
+- `external_vercel_redeploy_required`: if `https://www.atticus.asia/three-stooges/` returns 404 or stale content, complete Vercel authorization and run `npm run ship:vercel` from the personal website repository.
+
+Do not describe the personal website route as live until
+`npm run check:online` passes for `https://www.atticus.asia/three-stooges/`.
+
 当这些命令没有通过时，不要把当前状态说成产品化完成。

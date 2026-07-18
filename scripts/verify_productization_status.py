@@ -49,6 +49,23 @@ REQUIREMENTS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "P11",
+        "title": "Personal website online verification boundary",
+        "markers": [
+            "external_vercel_redeploy_required",
+            "npm run check:online",
+            "npm run ship:vercel",
+            "https://www.atticus.asia/three-stooges/",
+            "local_static_showcase_ready",
+            "live_domain_verification_external",
+        ],
+        "files": [
+            "docs/PRODUCTIZATION_STATUS.md",
+            "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
+            "docs/PUBLIC_RELEASE_HANDOFF.md",
+        ],
+    },
+    {
         "id": "P3",
         "title": "Reproducible first run",
         "markers": [

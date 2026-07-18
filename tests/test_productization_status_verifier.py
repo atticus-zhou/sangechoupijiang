@@ -20,7 +20,7 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         module = self._module()
         payload = module.verify_productization_status()
         self.assertEqual(payload["status"], "passed", payload.get("errors"))
-        self.assertEqual(len(payload["requirements"]), 10)
+        self.assertEqual(len(payload["requirements"]), 11)
         self.assertTrue(payload["release_gate_includes_status"])
         self.assertTrue(payload["readme_links_status"])
         office_governance = next(item for item in module.REQUIREMENTS if item["id"] == "P7")
@@ -42,6 +42,13 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertIn("部门级恢复路由", comic_recovery["markers"])
         self.assertIn("旧版不可审计标记", comic_recovery["markers"])
 
+        website_boundary = next(item for item in module.REQUIREMENTS if item["id"] == "P11")
+        self.assertIn("external_vercel_redeploy_required", website_boundary["markers"])
+        self.assertIn("npm run check:online", website_boundary["markers"])
+        self.assertIn("npm run ship:vercel", website_boundary["markers"])
+        self.assertIn("https://www.atticus.asia/three-stooges/", website_boundary["markers"])
+        self.assertIn("docs/PUBLIC_RELEASE_HANDOFF.md", website_boundary["files"])
+
     def test_markdown_output_is_readable(self):
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--format", "markdown"],
@@ -55,6 +62,7 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertIn("AI comic production handoff", result.stdout)
         self.assertIn("Model configuration guidance", result.stdout)
         self.assertIn("Downstream comic handoff readiness", result.stdout)
+        self.assertIn("Personal website online verification boundary", result.stdout)
         self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", result.stdout)
 
 
