@@ -121,6 +121,67 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
 
         self.assertTrue(any("structured director execution missing fields" in item for item in failures))
 
+    def test_incomplete_first_frame_reference_blocks_handoff(self):
+        module = self._module()
+        shot = {
+            "shot_id": "SHOT-01",
+            "reference_asset_ids": ["character_01"],
+            "first_frame_reference_image": {"image_id": "image_01"},
+            "reference_asset_chain": [
+                {
+                    "asset_id": "character_01",
+                    "asset_type": "character",
+                    "name": "林昭",
+                    "first_frame_image_id": "image_01",
+                    "first_frame_file": "character_01_three_view.png",
+                }
+            ],
+            "video_prompt_block": "首帧参考、故事目的、动作链、表演意图、摄影、灯光。严格继承参考资产。",
+            "negative_prompt_block": "禁止资产身份漂移；禁止动作顺序混乱",
+            "execution_steps": ["绑定首帧", "粘贴提示词", "检查结果"],
+            "acceptance_criteria": ["资产一致", "动作正确", "镜头可用"],
+            "retry_strategy": "减少角色数量后重试",
+        }
+
+        failures = module._shot_handoff_failures([shot], {"character_01"}, {"image_01"})
+
+        self.assertTrue(any("first-frame reference image missing fields" in item for item in failures))
+
+    def test_incomplete_reference_asset_chain_blocks_handoff(self):
+        module = self._module()
+        shot = {
+            "shot_id": "SHOT-02",
+            "reference_asset_ids": ["character_01", "scene_01"],
+            "first_frame_reference_image": {
+                "image_id": "image_01",
+                "asset_id": "character_01",
+                "file": "character_01_three_view.png",
+                "image_kind": "three_view",
+            },
+            "reference_asset_chain": [
+                {
+                    "asset_id": "character_01",
+                    "asset_type": "character",
+                    "name": "林昭",
+                    "first_frame_image_id": "image_01",
+                    "first_frame_file": "character_01_three_view.png",
+                }
+            ],
+            "video_prompt_block": "首帧参考、故事目的、动作链、表演意图、摄影、灯光。严格继承参考资产。",
+            "negative_prompt_block": "禁止资产身份漂移；禁止动作顺序混乱",
+            "execution_steps": ["绑定首帧", "粘贴提示词", "检查结果"],
+            "acceptance_criteria": ["资产一致", "动作正确", "镜头可用"],
+            "retry_strategy": "减少角色数量后重试",
+        }
+
+        failures = module._shot_handoff_failures(
+            [shot],
+            {"character_01", "scene_01"},
+            {"image_01", "image_02"},
+        )
+
+        self.assertTrue(any("reference_asset_chain missing assets" in item for item in failures))
+
     def test_missing_quick_start_steps_block_handoff(self):
         module = self._module()
 

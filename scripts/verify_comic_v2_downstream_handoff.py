@@ -162,6 +162,8 @@ def _shot_handoff_failures(
         first_frame = shot.get("first_frame_reference_image") or {}
         if first_frame.get("image_id") not in image_ids:
             failures.append(f"{shot_id}: first-frame reference image is not in approved images")
+        failures.extend(_first_frame_reference_failures(shot, asset_ids, image_ids))
+        failures.extend(_reference_asset_chain_failures(shot, asset_ids, image_ids))
         if not shot.get("video_prompt_block") or not shot.get("negative_prompt_block"):
             failures.append(f"{shot_id}: missing copyable video prompt blocks")
         if len(shot.get("execution_steps") or []) < 3:
@@ -171,6 +173,62 @@ def _shot_handoff_failures(
         if not shot.get("retry_strategy"):
             failures.append(f"{shot_id}: missing retry strategy")
         failures.extend(_director_execution_failures(shot))
+    return failures
+
+
+def _first_frame_reference_failures(
+    shot: dict[str, Any],
+    asset_ids: set[str],
+    image_ids: set[str],
+) -> list[str]:
+    shot_id = shot.get("shot_id") or "<missing_shot_id>"
+    first_frame = shot.get("first_frame_reference_image") or {}
+    failures = []
+    required_fields = ("image_id", "asset_id", "file", "image_kind")
+    missing = [field for field in required_fields if not str(first_frame.get(field) or "").strip()]
+    if missing:
+        failures.append(f"{shot_id}: first-frame reference image missing fields {missing}")
+        return failures
+    if first_frame.get("image_id") not in image_ids:
+        failures.append(f"{shot_id}: first-frame reference image_id is not approved")
+    if first_frame.get("asset_id") not in asset_ids:
+        failures.append(f"{shot_id}: first-frame reference asset_id is not approved")
+    if first_frame.get("asset_id") not in set(shot.get("reference_asset_ids") or []):
+        failures.append(f"{shot_id}: first-frame asset is not part of shot reference assets")
+    if not str(first_frame.get("file") or "").lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+        failures.append(f"{shot_id}: first-frame reference file must be an image file")
+    return failures
+
+
+def _reference_asset_chain_failures(
+    shot: dict[str, Any],
+    asset_ids: set[str],
+    image_ids: set[str],
+) -> list[str]:
+    shot_id = shot.get("shot_id") or "<missing_shot_id>"
+    refs = list(shot.get("reference_asset_ids") or [])
+    chain = list(shot.get("reference_asset_chain") or [])
+    failures = []
+    if not chain:
+        return [f"{shot_id}: missing machine-readable reference_asset_chain"]
+    chain_ids = [item.get("asset_id") for item in chain if item.get("asset_id")]
+    missing_from_chain = [asset_id for asset_id in refs if asset_id not in chain_ids]
+    if missing_from_chain:
+        failures.append(f"{shot_id}: reference_asset_chain missing assets {missing_from_chain}")
+    unknown_chain_assets = [asset_id for asset_id in chain_ids if asset_id not in asset_ids]
+    if unknown_chain_assets:
+        failures.append(f"{shot_id}: reference_asset_chain includes unknown assets {unknown_chain_assets}")
+    for index, item in enumerate(chain, start=1):
+        label = f"{shot_id}: reference_asset_chain[{index}]"
+        required_fields = ("asset_id", "asset_type", "name", "first_frame_image_id", "first_frame_file")
+        missing = [field for field in required_fields if not str(item.get(field) or "").strip()]
+        if missing:
+            failures.append(f"{label} missing fields {missing}")
+            continue
+        if item.get("first_frame_image_id") not in image_ids:
+            failures.append(f"{label} first_frame_image_id is not approved")
+        if not str(item.get("first_frame_file") or "").lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+            failures.append(f"{label} first_frame_file must be an image file")
     return failures
 
 
