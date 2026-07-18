@@ -24,6 +24,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 ## 图片证据恢复路径
 
+`claim_upgrade_recovery` 是公开 claim report 里的恢复路线字段。它会用 `preserves` 说明故事、资产拆解、提示词包和旧交付记录等哪些内容应该保留，用 `rebuilds` 说明图片生产证据、视觉质检、Word 画布、handoff manifest 和 claim report 等哪些内容必须重建，并用 `steps` 把 `regenerate_images` 这类动作拆成可执行、可验收的步骤。公开页面可以展示这份恢复路线，但不能把它说成真实质量已经完成。
+
 历史追溯会输出 `image_production_evidence`，用来说明图片证据到底强到什么程度。`demo_structure_only` 通常会对应 `fixture_only`：它可以证明结构和引用链，但不能证明真实模型画质。`missing_images` 表示 manifest 或 Word 画布存在，但图片文件或图片记录不完整；`model_partial` 表示有真实模型图片，但还没有形成完整视觉质检证据；`mixed_or_unknown` 表示图片来源混杂或缺少 provider/model/review 信息。
 
 历史追溯还会输出 `image_quality_summary`。它不是宣传分数，而是返工账本：总图片数、可用图片数、废片/返工图片数、返工率、失败图片 ID 和 `rework_instructions`。`rework_instructions` 会把每张失败图指向具体恢复方式，例如补跑视觉质检、保留提示词重新生图，或退回提示词重写。

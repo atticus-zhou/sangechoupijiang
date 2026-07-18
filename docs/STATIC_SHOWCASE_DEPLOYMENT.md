@@ -28,6 +28,7 @@ dist/public-showcase/index.html
 - 独立部署时，把 `dist/public-showcase` 当作一个纯静态站点发布。
 - 嵌入已有个人网站时，把 `dist/public-showcase/*` 复制到个人网站仓库的 `public/three-stooges/`，再链接到 `/three-stooges/`。
 - 必须保留 `index.html`、`data.js`、`app.js`、`style.css`、`assets/public-showcase-desktop.png`、`downloads/`、`data/comic_production_claim_report.json`、`export-manifest.json` 和 `portfolio-deploy-manifest.json`。
+- `data/comic_production_claim_report.json` 必须保留 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺哪些证据，后者说明失败后如何保留 story/asset/prompt、用 `regenerate_images` 重建图片证据和视觉质检，再重建 Word、handoff manifest 和 claim report。
 - 禁止把 `config.yaml`、`.env`、API Key、Cookie、`user_data/`、`output/`、浏览器 Profile 或真实用户工作区复制进公开站点。
 
 `python scripts/verify_public_demo_mode.py --format markdown` 和 `python scripts/verify_static_public_showcase.py --format markdown` 都会检查这份接入协议。如果后续修改了个人网站接入方式，必须同时更新接口、静态页和验证器。
@@ -45,6 +46,7 @@ dist/public-showcase/index.html
 - AI 漫剧制片办公室与研究办公室的固定样例说明。
 - 样例 Word 制片画布、handoff manifest、阶段调研报告和证据清单。
 - 六份下载物和七个可复核文件目录，包含研究办公室阶段性交付声明和 AI 漫剧真实生产声明报告。
+- AI 漫剧真实生产声明报告里的 `claim_upgrade_recovery` 卡片，明确公开样例只证明结构；如果要升级为真实质量证据，需要本地配置模型、重新生成图片、执行视觉质检，并重新写入质量基准。
 - AI 漫剧下游生产 quick-start，说明 Word 画布之后如何确认资产、逐镜头生成、复核和归档。
 - 实际产品界面截图、交付物阅读顺序和 3 分钟面试演示脚本。
 - 复现与验收清单，列出公开 demo、静态导出、真实生产声明和 release readiness 的 no-key 检查命令，以及每条命令通过或失败时该怎么判断。
@@ -93,6 +95,7 @@ Netlify 的发布目录选择 `dist/public-showcase`。GitHub Pages 需要把该
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
 python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
+python scripts/verify_comic_real_production_claim.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
 ```

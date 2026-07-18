@@ -11,6 +11,9 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("dist/public-showcase/index.html", text)
         self.assertIn("npx vercel --prod --cwd dist/public-showcase", text)
         self.assertIn("portfolio-deploy-manifest.json", text)
+        self.assertIn("data/comic_production_claim_report.json", text)
+        self.assertIn("claim_upgrade_recovery", text)
+        self.assertIn("regenerate_images", text)
         self.assertIn("三条首次使用路径", text)
         self.assertIn("public_demo", text)
         self.assertIn("local_real_use", text)
@@ -32,6 +35,7 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("docs/STATIC_SHOWCASE_DEPLOYMENT.md", text)
         self.assertIn("python scripts/export_public_showcase.py", text)
         self.assertIn("dist/public-showcase/index.html", text)
+        self.assertIn("claim_upgrade_recovery", text)
 
 
 if __name__ == "__main__":

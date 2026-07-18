@@ -76,7 +76,7 @@ python scripts/verify_static_public_showcase.py --format markdown --existing-dir
 - `developer_extension`：首次审计不需要 API Key；新增办公室前，先看办公室协议、隔离检查和 `python scripts/verify_office_extension_governance.py --format markdown`，确认不会和现有办公室串线。
 
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
-静态展示包会同时带上最快验收路线、六份下载物、七个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 查看声明边界和复现命令”的顺序判断产品价值。
+静态展示包会同时带上最快验收路线、六份下载物、七个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据。
 
 本地真实使用路径：
 

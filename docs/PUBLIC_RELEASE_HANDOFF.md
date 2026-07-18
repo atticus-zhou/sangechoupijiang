@@ -9,6 +9,7 @@
 - 首页公开展示页和 `/api/demo/public-showcase` 清单。
 - 由 `python scripts/export_public_showcase.py` 生成的 `dist/public-showcase` 静态站点；它可以在没有 FastAPI 后端的情况下托管到个人网站或 Vercel。
 - AI 漫剧制片办公室固定样例：故事、资产引用链路、样例 Word 制片画布、handoff manifest、下游交接门禁。
+- AI 漫剧真实生产声明报告：`data/comic_production_claim_report.json` 会公开 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`，说明当前 demo 为什么不能宣称真实画质、后续要保留什么、重建什么，以及如何用 `regenerate_images` 补齐真实图片和视觉质检证据。
 - 下游生产 quick-start：从确认制片画布、锁定基础资产、逐镜头生成视频、质量复核到归档证据的 5 步接手顺序。
 - 研究办公室固定样例：阶段报告、来源清单、数据表、截图计划和证据缺口说明。
 - 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、查看声明边界和复现命令。
@@ -41,6 +42,7 @@
 
 - AI 漫剧 Word 制片画布：确认故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单处在同一套制片包里。
 - AI 漫剧 handoff manifest：确认 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考和 `production_lineage` 能追踪每个素材和镜头的来源。
+- AI 漫剧真实生产声明：确认 `claim_upgrade_recovery.recovery_action=regenerate_images`，并核对 `preserves`、`rebuilds` 和 `steps` 是否清楚说明从结构 demo 升级到真实模型质量证据的恢复路线。
 - 下游生产 quick-start：确认接手顺序不是一句“可交给下游”，而是明确了负责人、输入、动作、产出和验收标准。
 - 研究办公室阶段报告：确认结论、来源、数据表、截图计划和证据缺口分开呈现。
 - 研究办公室证据清单：确认来源、数据、截图计划、缺口、待补证据交接表和人工确认项没有被伪装成已完成采集。
@@ -75,6 +77,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_first_run_readiness.py --format markdown` 能说明公开演示、本地真实使用和开发者扩展三条路径。
 - `python scripts/verify_public_demo_mode.py --format markdown` 能证明公开展示清单、demo 端点和样例下载可用。
 - `python scripts/verify_static_public_showcase.py --format markdown` 能证明静态作品集不依赖后端，六份下载物、阅读指南、下游生产 quick-start 和真实产品截图都可用。
+- `python scripts/verify_comic_real_production_claim.py --format markdown` 能证明公开 claim report 诚实区分 demo 结构样例和真实模型质量证据，并输出 `claim_upgrade_recovery` 恢复路线。
 - `python scripts/verify_comic_v2_delivery.py --format markdown` 能证明 AI 漫剧 Word 画布结构、资产 ID、镜头 ID、图片记录和交付审计可用。
 - `python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 能证明人物三视图、表情、道具、场景广角/俯视图、镜头视频包、首帧参考图和失败重试策略可交接。
 - `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 能证明故事、资产、提示词、镜头、视觉质检和谱系已经交叉校验，并明确区分无 Key 结构样例与真实模型质量证据。

@@ -9,6 +9,9 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("/api/demo/public-showcase", text)
         self.assertIn("dist/public-showcase", text)
         self.assertIn("handoff manifest", text)
+        self.assertIn("data/comic_production_claim_report.json", text)
+        self.assertIn("claim_upgrade_recovery", text)
+        self.assertIn("regenerate_images", text)
         self.assertIn("AI 漫剧 Word 制片画布", text)
         self.assertIn("六份下载物", text)
         self.assertIn("最快验收路线", text)
@@ -28,6 +31,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
         self.assertIn("python scripts/export_public_showcase.py", text)
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", text)
+        self.assertIn("python scripts/verify_comic_real_production_claim.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", text)
         self.assertIn("python scripts/verify_research_office_readiness.py --format markdown", text)
@@ -38,6 +42,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         text = Path("README.md").read_text(encoding="utf-8")
 
         self.assertIn("docs/PUBLIC_RELEASE_HANDOFF.md", text)
+        self.assertIn("claim_upgrade_recovery", text)
         self.assertIn("公开演示和部署边界", text)
         self.assertIn("不要把自己的 API Key 暴露给访问者", text)
 
