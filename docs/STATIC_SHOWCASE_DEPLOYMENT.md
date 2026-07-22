@@ -126,3 +126,31 @@ Current handoff contract:
 - When Vercel CLI asks for device authorization, complete `vercel login`, then rerun `npm run ship:vercel`.
 
 Do not describe the personal website as live until `npm run check:online` passes against the production domain.
+
+## Asset Requirement Matrix In The Static Package
+
+The static package must carry the same `asset_requirement_matrix` that the API
+demo exposes. This matrix is part of the public handoff story, not decoration:
+
+- it proves that characters, props, and scenes have different image
+  requirements;
+- it makes clean white-background requirements visible for character and prop
+  base assets;
+- it makes scene `wide` and `top_down` spatial references visible before any
+  downstream video generation;
+- it lets a reviewer compare the page, `showcase.json`,
+  `data/comic_production.json`, and the downloadable handoff manifest.
+
+After copying `dist/public-showcase/*` into `public/three-stooges/`, verify the
+matrix in the personal website repository:
+
+```powershell
+npm run check:showcase
+Select-String -Path public\three-stooges\index.html -Pattern "资产图片规格矩阵|ASSET REQUIREMENTS"
+Select-String -Path public\three-stooges\showcase.json -Pattern "asset_requirement_matrix|three_view|top_down"
+```
+
+If the local static package is ready but `https://www.atticus.asia/three-stooges/`
+returns 404, do not edit the product code to hide the failure. Finish Vercel
+authorization or redeploy the personal website, then use `npm run check:online`
+as the live evidence.

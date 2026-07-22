@@ -25,6 +25,13 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("npm run check:online", text)
         self.assertIn("https://www.atticus.asia/three-stooges/", text)
         self.assertIn("Vercel authorization/redeploy", text)
+        self.assertIn("Public Asset Requirement Matrix", text)
+        self.assertIn("portfolio_embed.asset_requirement_matrix", text)
+        self.assertIn("three_view", text)
+        self.assertIn("expression_sheet", text)
+        self.assertIn("turnaround", text)
+        self.assertIn("top_down", text)
+        self.assertIn("npm run check:showcase", text)
 
     def test_public_release_handoff_doc_lists_required_release_gates(self):
         text = Path("docs/PUBLIC_RELEASE_HANDOFF.md").read_text(encoding="utf-8")

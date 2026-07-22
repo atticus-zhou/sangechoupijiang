@@ -105,6 +105,33 @@ Current live verification contract:
 - Do not put API keys, cookies, `config.yaml`, `.env`, local workspaces, or real
   run output into the personal website static directory.
 
+## Public Asset Requirement Matrix
+
+The public comic-production demo must expose `portfolio_embed.asset_requirement_matrix`.
+This is the reviewer-facing proof that the Word canvas and handoff manifest are
+not just loose files. It tells a downstream video operator exactly which base
+images are required before production can continue:
+
+- characters require `three_view` and `expression_sheet` images, with
+  `clean_background_required=true`;
+- props require `turnaround` reference images, also with
+  `clean_background_required=true`;
+- scenes require `wide` and `top_down` spatial references, where the goal is an
+  empty environment layout rather than a white-background object sheet.
+
+The matrix must stay consistent across `/api/demo/comic-production`,
+`/api/demo/public-showcase`, `dist/public-showcase/showcase.json`, and the
+personal website copy under `public/three-stooges/`. If any asset is missing a
+required image kind, the public package can still be useful for diagnosis, but it
+should not be described as downstream-handoff ready.
+
+Validation authority:
+
+- `python scripts/verify_comic_v2_downstream_handoff.py --format markdown`
+- `python scripts/verify_public_demo_mode.py --format markdown`
+- `python scripts/verify_static_public_showcase.py --format markdown`
+- personal website: `npm run check:showcase`
+
 ## 相关证据
 
 - [README](../README.md)
