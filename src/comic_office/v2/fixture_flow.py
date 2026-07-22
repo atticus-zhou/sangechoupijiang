@@ -78,6 +78,7 @@ def fixture_prompt_package(bundle: ContractBundle, manifest: AssetManifest) -> P
             "shot_id": raw["shot_id"],
             "scene_id": raw["scene_id"],
             "story_beat": raw["story_beat"],
+            "story_purpose": raw.get("story_purpose") or raw["story_beat"],
             "scene_asset_id": scene.asset_id,
             "character_asset_ids": [item.asset_id for item in characters],
             "prop_asset_ids": [item.asset_id for item in props],

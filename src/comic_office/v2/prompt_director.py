@@ -42,6 +42,7 @@ class ShotCard:
     shot_id: str
     scene_id: str
     story_beat: str
+    story_purpose: str
     reference_asset_ids: tuple[str, ...]
     action_chain: tuple[str, ...]
     performance_intent: str
@@ -191,13 +192,14 @@ def build_shot_card(
         + [scene.asset_id]
     )
     action_chain = _string_tuple(payload["action_chain"], "action_chain")
+    story_purpose = str(payload.get("story_purpose") or payload["story_beat"]).strip()
     first_frame = "、".join(reference_assets)
     action_text = "，随后".join(action_chain)
     dialogue = str(payload.get("dialogue") or "无台词，后期以表演和声音完成叙事").strip()
     sound = str(payload.get("sound") or "保留环境声和动作声音").strip()
     generator_prompt = (
         f"{_style_clause(visual)}。首帧参考：{first_frame}。"
-        f"故事目的：{str(payload['story_beat']).strip()}。"
+        f"故事目的：{story_purpose}。"
         f"动作链：{action_text}。表演意图：{str(payload['performance_intent']).strip()}。"
         f"摄影：{str(payload['framing']).strip()}，{str(payload['camera_movement']).strip()}。"
         f"灯光：{str(payload['lighting']).strip()}。台词：{dialogue}。声音：{sound}。"
@@ -219,6 +221,7 @@ def build_shot_card(
         shot_id=str(payload["shot_id"]).strip(),
         scene_id=str(payload["scene_id"]).strip(),
         story_beat=str(payload["story_beat"]).strip(),
+        story_purpose=story_purpose,
         reference_asset_ids=reference_assets,
         action_chain=action_chain,
         performance_intent=str(payload["performance_intent"]).strip(),

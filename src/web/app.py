@@ -1221,7 +1221,7 @@ def _public_showcase_downstream_quick_start() -> list[dict]:
 def _public_showcase_shot_contract() -> dict:
     return {
         "title": "镜头合同可执行性",
-        "summary": "AI 漫剧制片包不是只给一段视频提示词；每个镜头都必须把首帧参考图、资产引用链和导演执行参数写成机器可读合同。",
+        "summary": "AI 漫剧制片包不是只给一段视频提示词；每个镜头都必须把叙事目的、首帧参考图、资产引用链和导演执行参数写成机器可读合同。",
         "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
         "required_fields": [
             {
@@ -1237,10 +1237,16 @@ def _public_showcase_shot_contract() -> dict:
                 "proves": "每个镜头都能机器核对引用了哪些人物、道具和场景，避免自然语言提示词和资产表脱节。",
             },
             {
+                "field": "story_purpose",
+                "label": "叙事目的",
+                "must_include": ["story_purpose"],
+                "proves": "下游知道这一镜头要推进哪条故事信息、情绪或反转，不会只照着资产摆拍。",
+            },
+            {
                 "field": "director_execution",
                 "label": "导演执行合同",
-                "must_include": ["action_chain", "performance_intent", "framing", "camera_movement", "lighting", "dialogue", "sound"],
-                "proves": "动作、表演、景别、运镜、灯光和声音被结构化保存，失败时可以定位到具体镜头重新生成。",
+                "must_include": ["story_purpose", "action_chain", "performance_intent", "framing", "camera_movement", "lighting", "dialogue", "sound"],
+                "proves": "叙事目的、动作、表演、景别、运镜、灯光和声音被结构化保存，失败时可以定位到具体镜头重新生成。",
             },
         ],
         "release_gate": "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
@@ -3618,6 +3624,7 @@ def _comic_v2_handoff_shot_production_packages(path: Path | None) -> list[dict]:
             "shot_id": shot_id,
             "scene_id": str(item.get("scene_id") or ""),
             "story_beat": str(item.get("story_beat") or ""),
+            "story_purpose": str(item.get("story_purpose") or ""),
             "first_frame_reference_image": {
                 "asset_id": str(first_frame.get("asset_id") or ""),
                 "image_id": str(first_frame.get("image_id") or ""),

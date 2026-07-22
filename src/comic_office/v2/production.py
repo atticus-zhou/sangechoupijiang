@@ -109,6 +109,7 @@ def prompt_package_from_dict(payload: dict[str, Any]) -> PromptPackage:
             shot_id=str(item.get("shot_id") or ""),
             scene_id=str(item.get("scene_id") or ""),
             story_beat=str(item.get("story_beat") or ""),
+            story_purpose=str(item.get("story_purpose") or item.get("story_beat") or ""),
             reference_asset_ids=tuple(item.get("reference_asset_ids") or ()),
             action_chain=tuple(item.get("action_chain") or ()),
             performance_intent=str(item.get("performance_intent") or ""),
@@ -483,7 +484,7 @@ def _shot_director_system_prompt() -> str:
             "每个镜头必须引用已审核资产ID，并用 evidence_quote 逐字引用确认故事中的依据。",
             "动作链按发生顺序写清，表演意图、景别、机位或运动、灯光、台词和声音必须随剧情变化，禁止批量套同一模板。",
             "固定镜头也要明确写 camera_movement 为固定机位；有对白时逐字写 dialogue。",
-            "只输出 JSON 对象，根字段 shots。每项字段：shot_id, scene_id, scene_asset_id, character_asset_ids, prop_asset_ids, evidence_quote, story_beat, action_chain, performance_intent, framing, camera_movement, lighting, dialogue, sound, retry_strategy, acceptance_criteria, platform_note。",
+            "只输出 JSON 对象，根字段 shots。每项字段：shot_id, scene_id, scene_asset_id, character_asset_ids, prop_asset_ids, evidence_quote, story_beat, story_purpose, action_chain, performance_intent, framing, camera_movement, lighting, dialogue, sound, retry_strategy, acceptance_criteria, platform_note。",
             "禁止 Markdown 和额外解释。",
         ]
     )

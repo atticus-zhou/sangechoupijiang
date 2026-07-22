@@ -26,6 +26,7 @@ DIRECTOR_EXECUTION_REQUIRED_FIELDS = {
     "contract_version",
     "style_id",
     "style_version",
+    "story_purpose",
     "first_frame_image_id",
     "reference_asset_ids",
     "action_chain",
@@ -164,6 +165,7 @@ def _shot_handoff_failures(
             failures.append(f"{shot_id}: first-frame reference image is not in approved images")
         failures.extend(_first_frame_reference_failures(shot, asset_ids, image_ids))
         failures.extend(_reference_asset_chain_failures(shot, asset_ids, image_ids))
+        failures.extend(_shot_story_purpose_failures(shot))
         if not shot.get("video_prompt_block") or not shot.get("negative_prompt_block"):
             failures.append(f"{shot_id}: missing copyable video prompt blocks")
         if len(shot.get("execution_steps") or []) < 3:
@@ -173,6 +175,19 @@ def _shot_handoff_failures(
         if not shot.get("retry_strategy"):
             failures.append(f"{shot_id}: missing retry strategy")
         failures.extend(_director_execution_failures(shot))
+    return failures
+
+
+def _shot_story_purpose_failures(shot: dict[str, Any]) -> list[str]:
+    shot_id = shot.get("shot_id") or "<missing_shot_id>"
+    story_purpose = str(shot.get("story_purpose") or "").strip()
+    video_prompt = str(shot.get("video_prompt_block") or "")
+    failures: list[str] = []
+    if not story_purpose:
+        failures.append(f"{shot_id}: missing shot story_purpose")
+        return failures
+    if story_purpose not in video_prompt:
+        failures.append(f"{shot_id}: video prompt does not include shot story_purpose")
     return failures
 
 
@@ -250,6 +265,8 @@ def _director_execution_failures(shot: dict[str, Any]) -> list[str]:
         failures.append(f"{shot_id}: director execution reference assets do not match shot references")
     if director.get("action_chain") != shot.get("action_chain"):
         failures.append(f"{shot_id}: director execution action chain does not match shot action chain")
+    if director.get("story_purpose") != shot.get("story_purpose"):
+        failures.append(f"{shot_id}: director execution story_purpose does not match shot story_purpose")
     if len(director.get("action_chain") or []) < 2:
         failures.append(f"{shot_id}: director execution action chain needs at least two ordered steps")
     first_frame = shot.get("first_frame_reference_image") or {}

@@ -1955,6 +1955,7 @@ function renderComicV2ShotPromptCards(status) {
                     const dialogue = shot.dialogue || '';
                     const prompt = shot.generator_prompt || shot.prompt || '';
                     const negative = shot.negative_prompt || '';
+                    const storyPurpose = shot.story_purpose || shot.story_beat || '';
                     return `
                         <article class="v2-shot-card">
                             <div class="v2-shot-card-top">
@@ -1967,6 +1968,7 @@ function renderComicV2ShotPromptCards(status) {
                                     ? referenceLabels.map(label => `<b>${escapeHtml(label)}</b>`).join('')
                                     : '<em>暂无引用资产</em>'}
                             </div>
+                            <p><b>叙事目的</b>${escapeHtml(storyPurpose || '待补充这个镜头要推进的故事信息')}</p>
                             <p><b>动作链</b>${escapeHtml(actionChain || '待补充角色动作与状态变化')}</p>
                             <p><b>运镜</b>${escapeHtml(camera || '待补充镜头运动')}</p>
                             ${dialogue ? `<p><b>台词</b>${escapeHtml(dialogue)}</p>` : ''}
@@ -4507,6 +4509,7 @@ function renderComicV2HistoryShotPackages(shots) {
                                 <span>${escapeHtml(shot.scene_id || '')}</span>
                             </div>
                             <p><b>故事节点</b>${escapeHtml(shot.story_beat || '待补充镜头故事节点')}</p>
+                            <p><b>叙事目的</b>${escapeHtml(shot.story_purpose || '待补充这个镜头要推进的故事信息')}</p>
                             <div class="v2-shot-assets">
                                 <small>首帧参考</small>
                                 ${firstFrame.file

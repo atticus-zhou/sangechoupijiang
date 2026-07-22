@@ -79,6 +79,7 @@ def parts(image_dir: Path):
         shot_id="shot_01",
         scene_id="scene_01",
         story_beat="林昭走进月塔",
+        story_purpose="让林昭第一次主动进入真相空间，推动她从恐惧转向决绝",
         reference_asset_ids=(asset.asset_id,),
         action_chain=("林昭推开塔门", "她抬头望向塔心"),
         performance_intent="恐惧逐渐转为决绝",

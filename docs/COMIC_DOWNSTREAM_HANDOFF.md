@@ -11,8 +11,8 @@
 - Word 制片画布：给人看的主交付物，按故事、风格、资产、镜头、提示词和下游生产清单组织。
 - handoff manifest：给系统或二次工具读取的 JSON，记录完整确认故事、完整视觉母版、资产身份证、图片质检、镜头导演合同、production_lineage 和质量基准。
 - 图片资产：人物、道具、场景的批准图片文件，文件名必须能被 Word 和 manifest 同时引用。
-- 镜头视频包：每个镜头必须有参考资产、首帧参考图片、视频提示词、负面提示词、执行步骤、验收标准和失败重试策略。
-- 机器可读导演执行合同：handoff manifest v3 的每个镜头都必须保留参考资产、首帧图片 ID、动作顺序、表演意图、景别、运镜、灯光、台词、声音和风格版本，不能只留一整段提示词。
+- 镜头视频包：每个镜头必须有叙事目的、参考资产、首帧参考图片、视频提示词、负面提示词、执行步骤、验收标准和失败重试策略。
+- 机器可读导演执行合同：handoff manifest v3 的每个镜头都必须保留叙事目的、参考资产、首帧图片 ID、动作顺序、表演意图、景别、运镜、灯光、台词、声音和风格版本，不能只留一整段提示词。
 - 下游 quick-start：handoff manifest 必须提供 `downstream_quick_start`，按确认制片画布、锁定基础资产、逐镜头生成视频、执行质量复核、归档交付证据五步说明接手顺序。
 - 制片包质量基准：交叉检查故事证据、资产身份证、提示词专属性、导演执行合同、视觉质检和生产谱系，防止“字段齐全但内容仍是模板”的假完成。
 - 图片质量摘要：`image_quality_summary` 必须能说明总图片数、可用图片数、废片/返工图片数、返工率、失败图片 ID 和 `rework_instructions`，让下游知道哪些图能用、哪些图必须先修。
@@ -43,6 +43,7 @@
 每个镜头必须能回答：
 
 - 这条镜头引用了哪些资产。
+- 这条镜头在故事里承担什么叙事目的。
 - 第一个首帧参考图是哪张。
 - 复制到视频平台的提示词是哪段。
 - 负面提示词是哪段。
@@ -75,8 +76,8 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 - story、style、manifest 和 word_canvas 元数据完整。
 - 人物三视图、人物表情表、道具参考图、场景广角图和俯视图存在。
-- 每个镜头都有首帧参考图、视频提示词、负面提示词、执行步骤、验收标准和失败重试策略。
-- 每个镜头都有 `director_execution`，下游工具可以直接读取动作、表演、摄影、灯光、台词和声音，不必重新拆解自然语言提示词。
+- 每个镜头都有叙事目的、首帧参考图、视频提示词、负面提示词、执行步骤、验收标准和失败重试策略。
+- 每个镜头都有 `director_execution`，下游工具可以直接读取叙事目的、动作、表演、摄影、灯光、台词和声音，不必重新拆解自然语言提示词。
 - `downstream_quick_start` 至少 5 步，且视频生成步骤必须引用每个镜头 ID，方便二次工具按固定顺序执行。
 - 人物和道具资产提示词要求纯白或近白色干净背景，只建立基础身份、形体、材质和一致性参考，不表现剧情动作。
 - 场景资产提示词要求广角空间图、俯视图或机位参考，保持空场景，不把剧情事件画进基础资产。
@@ -103,8 +104,9 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 - `first_frame_reference_image`：明确第一帧应该绑定哪张已批准图片，至少包含 `image_id`、`file` 和 `asset_id`。这解决“视频平台第一帧到底该参考哪张图”的问题。
 - `reference_asset_chain`：明确这个镜头引用了哪些人物、道具和场景，至少包含 `asset_id`、`asset_type` 和 `name`。这解决“镜头提示词写了角色名，但下游无法机器核对资产”的问题。
-- `director_execution`：明确镜头执行参数，包括动作链、表演意图、景别、运镜、灯光、台词、声音和风格版本。它让下游工具不必重新理解整段自然语言。
+- `story_purpose`：明确这个镜头为什么必须存在，它要推进哪一个故事信息、情绪或反转。`video_prompt_block` 和 `director_execution.story_purpose` 必须同时保留同一条叙事目的。
+- `director_execution`：明确镜头执行参数，包括叙事目的、动作链、表演意图、景别、运镜、灯光、台词、声音和风格版本。它让下游工具不必重新理解整段自然语言。
 
-这三层信息缺一不可。`video_prompt_block` 负责给生图/图生视频平台复制执行，`first_frame_reference_image` 和 `reference_asset_chain` 负责让系统验证它有没有真正继承已批准资产，`director_execution` 负责让二次工具、历史追溯和失败恢复知道应该从哪一步重试。
+这些信息缺一不可。`video_prompt_block` 负责给生图/图生视频平台复制执行，`story_purpose` 负责说明镜头在故事里的存在理由，`first_frame_reference_image` 和 `reference_asset_chain` 负责让系统验证它有没有真正继承已批准资产，`director_execution` 负责让二次工具、历史追溯和失败恢复知道应该从哪一步重试。
 
-因此，下游交付审计会把“首帧参考图”和“机器可读资产引用链”当成硬门禁：如果某个镜头没有 `first_frame_reference_image.image_id`、`first_frame_reference_image.file`、`first_frame_reference_image.asset_id`，或没有完整的 `reference_asset_chain`，这个制片包只能停在 `needs_review`，不能交给 Libtv、小云雀或其他视频平台当作最终生产素材。
+因此，下游交付审计会把“叙事目的”“首帧参考图”和“机器可读资产引用链”当成硬门禁：如果某个镜头没有 `story_purpose`、`first_frame_reference_image.image_id`、`first_frame_reference_image.file`、`first_frame_reference_image.asset_id`，或没有完整的 `reference_asset_chain`，这个制片包只能停在 `needs_review`，不能交给 Libtv、小云雀或其他视频平台当作最终生产素材。
