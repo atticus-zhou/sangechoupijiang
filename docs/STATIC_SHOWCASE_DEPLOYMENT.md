@@ -131,7 +131,7 @@ Do not describe the personal website as live until `npm run check:online` passes
 
 The static package must also keep `data/visitor_acceptance_guide.json`.
 This file is the reviewer-facing route for the public demo: it records the
-five-step visitor path, the seven reviewable downloads, the demo-only claim
+seven-step visitor route, the seven reviewable downloads, the demo-only claim
 boundaries, and the live-site rule that `/three-stooges/` is not public evidence
 until `npm run check:online` passes.
 
