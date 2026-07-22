@@ -245,6 +245,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         integration_live = integration["live_verification"]
         self.assertEqual(integration_live["status"], "external_required")
         self.assertEqual(integration_live["live_url"], "https://www.atticus.asia/three-stooges/")
+        self.assertEqual(integration_live["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(integration_live["check_command"], "npm run check:online")
         self.assertEqual(integration_live["ship_command"], "npm run ship:vercel")
         self.assertIn("check:online", integration_live["do_not_claim_live_until"])
@@ -256,6 +257,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("API Key", " ".join(integration["must_not_include"]))
         self.assertIn("output/", " ".join(integration["must_not_include"]))
         self.assertIn("verify_release_readiness.py", "\n".join(integration["verification_commands"]))
+        self.assertIn("npm run doctor:deploy", "\n".join(integration["verification_commands"]))
         self.assertIn("npm run check:online", "\n".join(integration["verification_commands"]))
         self.assertIn("check_no_secrets.py", "\n".join(payload["verification_commands"]))
         extension_story = embed["office_extension_story"]
@@ -291,6 +293,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         deployment_live = public_deployment["live_verification"]
         self.assertEqual(deployment_live["status"], "external_required")
         self.assertEqual(deployment_live["live_url"], "https://www.atticus.asia/three-stooges/")
+        self.assertEqual(deployment_live["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(deployment_live["check_command"], "npm run check:online")
         self.assertEqual(deployment_live["ship_command"], "npm run ship:vercel")
         self.assertIn("config.yaml", " ".join(public_deployment["forbidden_public_assets"]))

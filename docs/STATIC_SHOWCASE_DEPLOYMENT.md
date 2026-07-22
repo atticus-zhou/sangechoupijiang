@@ -120,7 +120,8 @@ Current handoff contract:
 
 - Copy `dist/public-showcase/*` into the personal website repository at `public/three-stooges/`.
 - The personal website must expose a link to `/three-stooges/` and keep the copied static files backend-free.
-- The personal website has its own deployment helpers: `npm run check:showcase`, `npm run prepare:vercel-prebuilt`, `npm run ship:vercel`, and `npm run check:online`.
+- The personal website has its own deployment helpers: `npm run doctor:deploy`, `npm run check:showcase`, `npm run prepare:vercel-prebuilt`, `npm run ship:vercel`, and `npm run check:online`.
+- Run `npm run doctor:deploy` first when you are unsure whether the current blocker is local package readiness, Vercel authorization, prebuilt output, or the live production route.
 - `npm run check:online` is the authority for the live site. If it reports `/three-stooges/` as 404, the static package is prepared but Vercel is still serving an older deployment.
 - When Vercel CLI asks for device authorization, complete `vercel login`, then rerun `npm run ship:vercel`.
 

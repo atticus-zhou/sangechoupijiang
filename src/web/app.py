@@ -1071,6 +1071,7 @@ def _public_showcase_portfolio_integration() -> dict:
             "status": "external_required",
             "live_url": "https://www.atticus.asia/three-stooges/",
             "authority": "personal_website_check_online",
+            "doctor_command": "npm run doctor:deploy",
             "check_command": "npm run check:online",
             "ship_command": "npm run ship:vercel",
             "do_not_claim_live_until": "npm run check:online passes",
@@ -1120,6 +1121,7 @@ def _public_showcase_portfolio_integration() -> dict:
             "python scripts/verify_static_public_showcase.py --format markdown",
             "python scripts/verify_release_readiness.py --format markdown",
             "python scripts/check_no_secrets.py",
+            "cd E:/trae/me/personal-website-v2 && npm run doctor:deploy",
             "cd E:/trae/me/personal-website-v2 && npm run check:online",
         ],
     }
@@ -1800,6 +1802,7 @@ async def get_public_showcase_demo_api():
                 "status": "external_required",
                 "live_url": "https://www.atticus.asia/three-stooges/",
                 "authority": "personal_website_check_online",
+                "doctor_command": "npm run doctor:deploy",
                 "check_command": "npm run check:online",
                 "ship_command": "npm run ship:vercel",
                 "do_not_claim_live_until": "npm run check:online passes",

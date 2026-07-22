@@ -164,6 +164,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(deploy_manifest["allows_workspace_writes"])
         live_verification = deploy_manifest["live_verification"]
         self.assertEqual(live_verification["status"], "external_required")
+        self.assertEqual(live_verification["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(live_verification["check_command"], "npm run check:online")
         self.assertEqual(live_verification["ship_command"], "npm run ship:vercel")
         self.assertTrue(live_verification["requires_vercel_authorization"])
@@ -172,10 +173,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("downloads/", deploy_manifest["required_files"])
         self.assertIn("config.yaml", " ".join(deploy_manifest["forbidden_public_assets"]))
         self.assertTrue(any("verify_static_public_showcase.py" in item for item in deploy_manifest["verification_commands"]))
+        self.assertTrue(any("doctor:deploy" in item for item in deploy_manifest["operator_checklist"]))
         self.assertTrue(any("check:online" in item for item in deploy_manifest["operator_checklist"]))
         self.assertGreaterEqual(len(deploy_manifest["operator_checklist"]), 5)
         showcase_live_verification = showcase["public_deployment"]["live_verification"]
         self.assertEqual(showcase_live_verification["status"], "external_required")
+        self.assertEqual(showcase_live_verification["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(showcase_live_verification["check_command"], "npm run check:online")
         self.assertEqual(showcase_live_verification["live_url"], "https://www.atticus.asia/three-stooges/")
         quick_start = showcase["portfolio_embed"]["downstream_quick_start"]

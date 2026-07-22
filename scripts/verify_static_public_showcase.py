@@ -127,6 +127,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         live_verification = deploy_manifest.get("live_verification") or {}
         if live_verification.get("status") != "external_required":
             errors.append("portfolio deploy manifest must mark live verification as external_required")
+        if live_verification.get("doctor_command") != "npm run doctor:deploy":
+            errors.append("portfolio deploy manifest must point to the personal website deployment doctor")
         if live_verification.get("check_command") != "npm run check:online":
             errors.append("portfolio deploy manifest must point to the personal website online check")
         if live_verification.get("ship_command") != "npm run ship:vercel":
@@ -160,6 +162,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("portfolio deploy manifest must include an operator checklist")
         if not any("check:online" in item for item in deploy_manifest.get("operator_checklist") or []):
             errors.append("portfolio deploy manifest checklist must include online verification")
+        if not any("doctor:deploy" in item for item in deploy_manifest.get("operator_checklist") or []):
+            errors.append("portfolio deploy manifest checklist must include deployment doctor")
         if showcase.get("mode") != "public_no_key_static_showcase":
             errors.append("static showcase has an unexpected mode")
         if (showcase.get("static_export") or {}).get("requires_backend") is not False:
@@ -167,6 +171,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         showcase_live_verification = (showcase.get("public_deployment") or {}).get("live_verification") or {}
         if showcase_live_verification.get("status") != "external_required":
             errors.append("static showcase must mark live deployment verification as external_required")
+        if showcase_live_verification.get("doctor_command") != "npm run doctor:deploy":
+            errors.append("static showcase must expose the deployment doctor command")
         if showcase_live_verification.get("check_command") != "npm run check:online":
             errors.append("static showcase must expose the personal website online check command")
         if showcase_live_verification.get("live_url") != "https://www.atticus.asia/three-stooges/":

@@ -98,6 +98,7 @@ Current live verification contract:
 - Main repo evidence: `python scripts/verify_static_public_showcase.py --format markdown`.
 - Personal website local evidence: `npm run check:showcase`, `npm run lint`,
   and `npm run prepare:vercel-prebuilt`.
+- Personal website production diagnosis: `npm run doctor:deploy`.
 - Personal website production evidence: `npm run check:online`.
 - If the production route returns 404 but the local checks pass, the remaining
   action is Vercel authorization/redeploy, not a product-code claim.

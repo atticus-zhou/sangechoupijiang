@@ -44,6 +44,7 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
 
         website_boundary = next(item for item in module.REQUIREMENTS if item["id"] == "P11")
         self.assertIn("external_vercel_redeploy_required", website_boundary["markers"])
+        self.assertIn("npm run doctor:deploy", website_boundary["markers"])
         self.assertIn("npm run check:online", website_boundary["markers"])
         self.assertIn("npm run ship:vercel", website_boundary["markers"])
         self.assertIn("https://www.atticus.asia/three-stooges/", website_boundary["markers"])

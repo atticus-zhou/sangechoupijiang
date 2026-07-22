@@ -105,7 +105,7 @@ online check.
 Current deployment boundary:
 
 - `local_static_showcase_ready`: proved by `python scripts/verify_static_public_showcase.py --format markdown`.
-- `live_domain_verification_external`: proved only by the personal website command `npm run check:online`.
+- `live_domain_verification_external`: diagnosed by `npm run doctor:deploy` and proved only by the personal website command `npm run check:online`.
 - `external_vercel_redeploy_required`: if `https://www.atticus.asia/three-stooges/` returns 404 or stale content, complete Vercel authorization and run `npm run ship:vercel` from the personal website repository.
 
 Do not describe the personal website route as live until

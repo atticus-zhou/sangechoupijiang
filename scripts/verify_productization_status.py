@@ -53,6 +53,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
         "title": "Personal website online verification boundary",
         "markers": [
             "external_vercel_redeploy_required",
+            "npm run doctor:deploy",
             "npm run check:online",
             "npm run ship:vercel",
             "https://www.atticus.asia/three-stooges/",
