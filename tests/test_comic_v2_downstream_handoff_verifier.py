@@ -44,6 +44,20 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(result["first_frame_bound_shots"], 2)
         self.assertEqual(result["complete_reference_chain_shots"], 2)
         self.assertGreaterEqual(result["reference_asset_links"], 4)
+        self.assertEqual(result["asset_image_requirement_ready"], 3)
+        self.assertEqual(result["asset_image_requirement_total"], 3)
+        self.assertEqual(result["asset_image_requirement_missing"], 0)
+        matrix = result["asset_image_requirement_matrix"]
+        character = next(item for item in matrix if item["asset_type"] == "character")
+        prop = next(item for item in matrix if item["asset_type"] == "prop")
+        scene = next(item for item in matrix if item["asset_type"] == "scene")
+        self.assertEqual(character["required_image_kinds"], ["three_view", "expression_sheet"])
+        self.assertTrue(character["clean_background_required"])
+        self.assertIn("three_view", character["available_image_kinds"])
+        self.assertEqual(prop["required_image_kinds"], ["turnaround"])
+        self.assertTrue(prop["clean_background_required"])
+        self.assertEqual(scene["required_image_kinds"], ["wide", "top_down"])
+        self.assertTrue(scene["scene_spatial_required"])
         self.assertGreaterEqual(result["lineage_stage_count"], 7)
         self.assertEqual(result["quick_start_step_count"], 5)
 
@@ -75,6 +89,9 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(payload["first_frame_bound_shots"], payload["shot_count"])
         self.assertEqual(payload["complete_reference_chain_shots"], payload["shot_count"])
         self.assertEqual(payload["image_usage_contracts"], payload["image_count"])
+        self.assertEqual(payload["asset_image_requirement_ready"], payload["asset_image_requirement_total"])
+        self.assertEqual(payload["asset_image_requirement_missing"], 0)
+        self.assertTrue(payload["asset_image_requirement_matrix"])
         self.assertEqual(payload["errors"], [])
 
     def test_cli_markdown_is_readable_for_reviewers(self):
@@ -111,6 +128,11 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertIn("Image usage contracts: 7/7", completed.stdout)
         self.assertIn("First-frame bound shots: 2/2", completed.stdout)
         self.assertIn("Complete reference-chain shots: 2/2", completed.stdout)
+        self.assertIn("Asset Image Requirement Matrix", completed.stdout)
+        self.assertIn("Ready assets: 3/3", completed.stdout)
+        self.assertIn("林昭", completed.stdout)
+        self.assertIn("three_view, expression_sheet", completed.stdout)
+        self.assertIn("wide, top_down", completed.stdout)
 
     def test_missing_structured_director_fields_block_handoff(self):
         module = self._module()

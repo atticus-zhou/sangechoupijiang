@@ -22,6 +22,44 @@ DEFAULT_OUTPUT = REPO_ROOT / "output" / "comic_v2_downstream_handoff"
 CHARACTER_REQUIRED_IMAGES = {"three_view", "expression_sheet"}
 PROP_REQUIRED_IMAGES = {"turnaround"}
 SCENE_REQUIRED_IMAGES = {"wide", "top_down"}
+ASSET_IMAGE_REQUIREMENTS = {
+    "character": [
+        {
+            "image_kind": "three_view",
+            "label": "character three-view identity sheet",
+            "background_rule": "clean white background",
+            "purpose": "Lock face, hair, body, costume, palette, and age consistency.",
+        },
+        {
+            "image_kind": "expression_sheet",
+            "label": "character expression sheet",
+            "background_rule": "clean white background",
+            "purpose": "Lock repeatable expressions without changing the identity design.",
+        },
+    ],
+    "prop": [
+        {
+            "image_kind": "turnaround",
+            "label": "prop turnaround reference",
+            "background_rule": "clean white background",
+            "purpose": "Lock silhouette, material, scale, and usable states for the prop.",
+        },
+    ],
+    "scene": [
+        {
+            "image_kind": "wide",
+            "label": "scene wide spatial reference",
+            "background_rule": "empty environment, not white background",
+            "purpose": "Lock the environment look, depth, entrances, exits, and key set pieces.",
+        },
+        {
+            "image_kind": "top_down",
+            "label": "scene top-down layout",
+            "background_rule": "empty environment, not white background",
+            "purpose": "Lock floor plan, actor movement paths, camera positions, and geography.",
+        },
+    ],
+}
 DIRECTOR_EXECUTION_REQUIRED_FIELDS = {
     "contract_version",
     "style_id",
@@ -70,6 +108,8 @@ def verify_downstream_handoff(
     prompt_quality = _prompt_quality_audit(images, shots)
     image_contracts = _image_contract_counts(images)
     shot_references = _shot_reference_counts(shots, asset_ids, image_ids)
+    asset_requirement_matrix = _asset_image_requirement_matrix(assets, images)
+    asset_requirement_summary = _asset_image_requirement_summary(asset_requirement_matrix)
     prompt_quality_failures = [
         f"{item.get('id', '<unknown>')}: {item.get('message', '')}"
         for item in prompt_quality.get("issues", [])
@@ -111,6 +151,10 @@ def verify_downstream_handoff(
         "first_frame_bound_shots": shot_references["first_frame_bound_shots"],
         "complete_reference_chain_shots": shot_references["complete_reference_chain_shots"],
         "reference_asset_links": shot_references["reference_asset_links"],
+        "asset_image_requirement_matrix": asset_requirement_matrix,
+        "asset_image_requirement_ready": asset_requirement_summary["ready"],
+        "asset_image_requirement_total": asset_requirement_summary["total"],
+        "asset_image_requirement_missing": asset_requirement_summary["missing"],
         "lineage_stage_count": len(manifest.get("production_lineage") or []),
         "quick_start_step_count": len(manifest.get("downstream_quick_start") or []),
         "errors": errors,
@@ -152,6 +196,64 @@ def _required_images_for_asset(asset: dict[str, Any]) -> set[str]:
     if asset_type == "scene":
         return SCENE_REQUIRED_IMAGES
     return set()
+
+
+def _asset_image_requirement_matrix(
+    assets: list[dict[str, Any]],
+    images: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    images_by_id = {
+        image.get("image_id"): image
+        for image in images
+        if image.get("image_id")
+    }
+    rows: list[dict[str, Any]] = []
+    for asset in assets:
+        asset_type = str(asset.get("asset_type") or "")
+        image_ids_by_kind = asset.get("image_ids_by_kind") or {}
+        requirement_specs = ASSET_IMAGE_REQUIREMENTS.get(asset_type, [])
+        required_kinds = [item["image_kind"] for item in requirement_specs]
+        available_kinds = sorted(kind for kind in image_ids_by_kind if image_ids_by_kind.get(kind))
+        missing_kinds = [kind for kind in required_kinds if kind not in image_ids_by_kind]
+        image_refs = []
+        for spec in requirement_specs:
+            image_kind = spec["image_kind"]
+            image_id = image_ids_by_kind.get(image_kind)
+            image = images_by_id.get(image_id, {}) if image_id else {}
+            image_refs.append({
+                "image_kind": image_kind,
+                "label": spec["label"],
+                "purpose": spec["purpose"],
+                "background_rule": spec["background_rule"],
+                "image_id": image_id or "",
+                "file": image.get("file") or "",
+                "production_role": image.get("production_role") or "",
+                "clean_background_required": image.get("clean_background_required"),
+                "usage_contract_count": len(image.get("usage_contract") or []),
+                "reference_policy": image.get("reference_policy") or "",
+                "available": bool(image_id and image),
+            })
+        rows.append({
+            "asset_id": asset.get("asset_id") or "",
+            "asset_type": asset_type,
+            "name": asset.get("name") or asset.get("asset_id") or "",
+            "required_image_kinds": required_kinds,
+            "available_image_kinds": available_kinds,
+            "missing_image_kinds": missing_kinds,
+            "clean_background_required": asset_type in {"character", "prop"},
+            "scene_spatial_required": asset_type == "scene",
+            "identity_baseline_image_id": asset.get("identity_baseline_image_id") or "",
+            "handoff_ready": not missing_kinds and all(ref["available"] for ref in image_refs),
+            "image_refs": image_refs,
+        })
+    return rows
+
+
+def _asset_image_requirement_summary(matrix: list[dict[str, Any]]) -> dict[str, int]:
+    total = len(matrix)
+    ready = sum(1 for row in matrix if row.get("handoff_ready"))
+    missing = sum(len(row.get("missing_image_kinds") or []) for row in matrix)
+    return {"ready": ready, "total": total, "missing": missing}
 
 
 def _shot_handoff_failures(
@@ -478,11 +580,55 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- First-frame bound shots: {result.get('first_frame_bound_shots')}/{result.get('shot_count')}",
         f"- Complete reference-chain shots: {result.get('complete_reference_chain_shots')}/{result.get('shot_count')}",
         f"- Machine-readable reference asset links: {result.get('reference_asset_links')}",
+        "",
+        "## Asset Image Requirement Matrix",
+        "",
+        (
+            f"- Ready assets: {result.get('asset_image_requirement_ready')}/"
+            f"{result.get('asset_image_requirement_total')}"
+        ),
+        f"- Missing required image kinds: {result.get('asset_image_requirement_missing')}",
+        "",
+        "| Asset | Type | Required Images | Available | Missing | Background Rule | Ready |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
+    lines.extend(_format_asset_requirement_rows(result.get("asset_image_requirement_matrix") or []))
     if result.get("errors"):
         lines.extend(["", "## Issues", ""])
         lines.extend(f"- {item}" for item in result["errors"])
     return "\n".join(lines) + "\n"
+
+
+def _format_asset_requirement_rows(matrix: list[dict[str, Any]]) -> list[str]:
+    rows = []
+    for item in matrix:
+        required = ", ".join(item.get("required_image_kinds") or []) or "-"
+        available = ", ".join(item.get("available_image_kinds") or []) or "-"
+        missing = ", ".join(item.get("missing_image_kinds") or []) or "-"
+        if item.get("clean_background_required"):
+            background = "clean white background"
+        elif item.get("scene_spatial_required"):
+            background = "empty scene spatial refs"
+        else:
+            background = "-"
+        rows.append(
+            "| "
+            + " | ".join([
+                _table_cell(item.get("name") or item.get("asset_id") or "-"),
+                _table_cell(item.get("asset_type") or "-"),
+                _table_cell(required),
+                _table_cell(available),
+                _table_cell(missing),
+                _table_cell(background),
+                "yes" if item.get("handoff_ready") else "no",
+            ])
+            + " |"
+        )
+    return rows
+
+
+def _table_cell(value: object) -> str:
+    return str(value or "").replace("|", "/").replace("\n", " ").strip()
 
 
 def _display_path(value: object) -> str:
