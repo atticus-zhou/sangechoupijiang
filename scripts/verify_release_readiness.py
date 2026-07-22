@@ -40,9 +40,14 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_public_demo_mode.py", "--format", "json"],
     },
     {
+        "id": "static_showcase_export",
+        "title": "Export backend-free static showcase",
+        "command": ["scripts/export_public_showcase.py", "--output", "dist/public-showcase", "--format", "json"],
+    },
+    {
         "id": "static_showcase",
         "title": "Backend-free static showcase export",
-        "command": ["scripts/verify_static_public_showcase.py", "--format", "json"],
+        "command": ["scripts/verify_static_public_showcase.py", "--format", "json", "--existing-dir", "dist/public-showcase"],
     },
     {
         "id": "portfolio_showcase_sync",
@@ -166,6 +171,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"prompt_issues={parsed.get('comic_prompt_issue_count')}; "
                 f"research_claim={parsed.get('research_claim_level')}; "
                 f"research_full_auto={parsed.get('research_can_claim_full_automation')}"
+            )
+        if check_id == "static_showcase_export":
+            return (
+                f"files={parsed.get('file_count')}; "
+                f"downloads={parsed.get('download_count')}; "
+                f"entrypoint={parsed.get('entrypoint')}; "
+                f"backend={parsed.get('requires_backend')}; "
+                f"api_key={parsed.get('requires_api_key')}; "
+                f"real_models={parsed.get('calls_real_models')}"
             )
         if check_id == "portfolio_showcase_sync":
             return (

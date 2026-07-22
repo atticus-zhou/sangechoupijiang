@@ -5,7 +5,9 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import zipfile
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -107,7 +109,9 @@ def build_word_canvas_v2(
     for shot in shots:
         _add_shot_page(doc, shot, manifest, image_paths)
     _add_handoff_page(doc, manifest, shots)
+    _set_stable_core_properties(doc)
     doc.save(path)
+    _normalize_docx_package(path)
     visual_qa = (
         (visual_qa_renderer or _render_docx_visual_qa)(path, output_dir / "preview")
         if render_visual_qa
@@ -157,6 +161,39 @@ def _configure_document(doc: Document) -> None:
         style.paragraph_format.space_before = Pt(before)
         style.paragraph_format.space_after = Pt(after)
         style.paragraph_format.keep_with_next = True
+
+
+def _set_stable_core_properties(doc: Document) -> None:
+    """Keep deterministic demo Word canvas hashes across clean exports."""
+    stable_time = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    props = doc.core_properties
+    props.author = "三个臭皮匠"
+    props.last_modified_by = "三个臭皮匠"
+    props.created = stable_time
+    props.modified = stable_time
+    props.revision = 1
+
+
+def _normalize_docx_package(path: Path) -> None:
+    fixed_date = (2026, 1, 1, 0, 0, 0)
+    original = path.read_bytes()
+    temp_path = path.with_suffix(path.suffix + ".normalized")
+    with zipfile.ZipFile(path, "r") as source, zipfile.ZipFile(
+        temp_path,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as target:
+        for name in sorted(source.namelist()):
+            info = source.getinfo(name)
+            normalized = zipfile.ZipInfo(filename=name, date_time=fixed_date)
+            normalized.compress_type = zipfile.ZIP_DEFLATED
+            normalized.external_attr = info.external_attr
+            target.writestr(normalized, source.read(name))
+    if temp_path.read_bytes() != original:
+        temp_path.replace(path)
+    else:
+        temp_path.unlink(missing_ok=True)
 
 
 def _add_running_furniture(doc: Document, title: str) -> None:
