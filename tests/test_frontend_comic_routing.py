@@ -59,6 +59,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("需要：${escapeHtml(requirement.type || '文本模型')}", js)
         self.assertIn("豆包 Seedream / 火山方舟等生图 API Key", js)
         self.assertIn("千问 VL / GPT 多模态等图片理解 API Key", js)
+        self.assertIn("Word 制片画布会复用已确认文本、提示词包和本地组装链路", js)
         self.assertIn("requirement.test", js)
         self.assertIn("requirement.impact", js)
         self.assertIn("测试方式", js)
@@ -72,7 +73,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
         example = Path("config.example.yaml").read_text(encoding="utf-8")
 
         self.assertIn("| 兵部 | 文本镜头 / 视频提示词 |", readme)
-        self.assertIn("| 工部 | 生图 + 文本组装，也就是图片生成模型加文本模型 |", readme)
+        self.assertIn("| 工部 | 生图模型，也就是图片生成模型 |", readme)
+        self.assertIn("Word 制片画布由已确认文本、提示词包和本地组装链路生成", readme)
         self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", readme)
         self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", readme)
         self.assertNotIn("| 兵部 | 生图模型 |", readme)

@@ -108,7 +108,8 @@ class ReadmeQualityTests(unittest.TestCase):
         example = Path("config.example.yaml").read_text(encoding="utf-8")
 
         self.assertIn("| 兵部 | 文本镜头 / 视频提示词 |", text)
-        self.assertIn("| 工部 | 生图 + 文本组装，也就是图片生成模型加文本模型 |", text)
+        self.assertIn("| 工部 | 生图模型，也就是图片生成模型 |", text)
+        self.assertIn("Word 制片画布由已确认文本、提示词包和本地组装链路生成", text)
         self.assertIn("    bingbu:\n      provider: deepseek\n      model: deepseek-chat", text)
         self.assertIn("    gongbu:\n      provider: doubao\n      model: doubao-seedream-5", text)
         self.assertNotIn("| 兵部 | 生图模型 |", text)

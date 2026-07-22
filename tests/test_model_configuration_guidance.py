@@ -48,6 +48,9 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertIn("office_models.comic_production.xingbu", text)
         self.assertIn("常见误填", text)
         self.assertIn("把豆包 Seedream 填到兵部", text)
+        self.assertIn("当前优先作为生图槽位使用", text)
+        self.assertIn("文本规划交给中书省、兵部等文本部门", text)
+        self.assertIn("不需要在工部同一槽位再填一个文本模型", text)
         self.assertIn("不要提交真实 Key", text)
 
 

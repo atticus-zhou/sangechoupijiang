@@ -3493,7 +3493,7 @@ const MODEL_REQUIREMENTS = {
         libu_comm: { type: '文本交付模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '整理给下游生图、视频和剪辑平台的交接说明。' },
         bingbu: { type: '文本镜头模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '生成镜头画面提示词和视频生成提示词，不负责生图。' },
         xingbu: { type: '视觉理解/质检模型', key: '千问 VL / GPT 多模态等图片理解 API Key', use: '检查生成图是否符合人物、道具、场景和画风一致性。' },
-        gongbu: { type: '生图模型 + 文本组装', key: '豆包 Seedream / 火山方舟等生图 API Key；文本组装可复用文本模型', use: '生成人物图、道具图、场景图，并组装 Word 制片画布。' },
+        gongbu: { type: '生图模型', key: '豆包 Seedream / 火山方舟等生图 API Key', use: '生成人物图、道具图、场景图；Word 制片画布会复用已确认文本、提示词包和本地组装链路。' },
     },
 };
 
