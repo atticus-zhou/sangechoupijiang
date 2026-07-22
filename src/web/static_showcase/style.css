@@ -459,6 +459,40 @@ h3 {
   margin-top: 18px;
 }
 
+.research-capture-playbook-card {
+  border-color: rgba(112, 210, 181, 0.26);
+  background: linear-gradient(180deg, rgba(112, 210, 181, 0.08), rgba(19, 25, 34, 0.84));
+}
+
+.mini-label {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.research-capture-commands {
+  margin-top: 8px;
+}
+
+.research-capture-commands li {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.research-capture-steps {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.research-capture-steps li::marker {
+  color: var(--green);
+  font-weight: 800;
+}
+
 .first-run-card {
   min-height: 0;
   border-color: rgba(99, 167, 255, 0.24);

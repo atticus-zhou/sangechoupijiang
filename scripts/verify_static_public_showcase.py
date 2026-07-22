@@ -477,6 +477,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the claim recovery playbook")
         if "portfolio.research_claim_boundary" not in app_text or "research-claim-card" not in app_text:
             errors.append("static showcase page must render the research claim boundary")
+        if "research-capture-playbook-card" not in app_text or "research-capture-steps" not in app_text:
+            errors.append("static showcase page must render the research evidence capture playbook")
         if "showcase.download_catalog" not in app_text or "renderDownloadCatalog" not in app_text:
             errors.append("static showcase page must render the reviewable download catalog")
         if "portfolio.post_run_validation" not in app_text or "renderPostRunValidation" not in app_text:
@@ -491,6 +493,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render future office candidates and platform backlog")
         if "claim-upgrade-item" not in style_text:
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
+        if "research-capture-playbook-card" not in style_text or "research-capture-steps" not in style_text:
+            errors.append("static showcase stylesheet must style the research evidence capture playbook")
         if "extension-check-grid" not in style_text or "extension-panel" not in style_text:
             errors.append("static showcase stylesheet must style the office extension checklist")
         if "first-run-grid" not in style_text or "first-run-card" not in style_text:

@@ -184,6 +184,33 @@
         researchCard.appendChild(link);
       }
       grid.appendChild(researchCard);
+
+      const playbook = researchClaim.evidence_capture_playbook || {};
+      if (playbook.status) {
+        const playbookCard = element('article', 'card claim-card research-capture-playbook-card');
+        playbookCard.appendChild(element('h3', '', '\u4eba\u5de5\u8865\u8bc1\u6d41\u7a0b'));
+        addTextRow(playbookCard, '\u72b6\u6001', playbook.status);
+        addTextRow(playbookCard, '\u6b65\u9aa4\u6570', playbook.step_count);
+        addTextRow(playbookCard, '\u6587\u4ef6\u547d\u540d', playbook.file_naming_rule);
+        const commandList = element('ul', 'proof-list research-capture-commands');
+        (playbook.after_capture_commands || []).slice(0, 3).forEach(function (command) {
+          commandList.appendChild(element('li', '', command));
+        });
+        if (commandList.children.length) {
+          playbookCard.appendChild(element('p', 'mini-label', '\u8865\u8bc1\u540e\u590d\u6838\u547d\u4ee4'));
+          playbookCard.appendChild(commandList);
+        }
+        const steps = element('ol', 'research-capture-steps');
+        [
+          '\u4eba\u53ea\u5728\u81ea\u5df1\u7684\u6d4f\u89c8\u5668\u5b8c\u6210\u7b2c\u4e09\u65b9\u5e73\u53f0\u767b\u5f55\u3002',
+          '\u6309\u4ea4\u63a5\u9879\u622a\u53d6\u4ef7\u683c\u5e26\u3001\u7ade\u54c1\u6392\u884c\u548c\u8bc4\u8bba\u75db\u70b9\u3002',
+          '\u7814\u7a76\u529e\u516c\u5ba4\u628a\u622a\u56fe\u3001\u6765\u6e90\u8bf4\u660e\u548c\u5f85\u6838\u9a8c\u9879\u91cd\u65b0\u7ec4\u88c5\u8fdb\u62a5\u544a\u3002',
+        ].forEach(function (step) {
+          steps.appendChild(element('li', '', step));
+        });
+        playbookCard.appendChild(steps);
+        grid.appendChild(playbookCard);
+      }
     }
 
     const upgrade = Array.isArray(claim.claim_upgrade_checklist) ? claim.claim_upgrade_checklist : [];
