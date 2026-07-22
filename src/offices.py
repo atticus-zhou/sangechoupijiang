@@ -366,6 +366,125 @@ def list_office_creation_template() -> dict:
             "public_safety_boundaries",
         ],
         "minimum_artifact_contract": _default_artifact_contract(),
+        "office_profile_skeleton": {
+            "id": "new_office_id",
+            "name": "新办公室名称",
+            "description": "一句话说明这个办公室替人完成什么工作，以及不能宣称什么。",
+            "input_types": ["用户可提交的输入类型"],
+            "output_types": ["用户最终拿到的交付物类型"],
+            "agent_duties": {
+                "zhongshu": "拆解用户目标和生产计划。",
+                "menxia": "审核计划、缺口、风险和是否可以继续。",
+                "shangshu": "调度各部门执行并跟踪阶段状态。",
+                "libu": "维护上下文、版本、历史和连续性。",
+                "hubu": "维护结构化资源、表格、成本或资产台账。",
+                "libu_comm": "整理用户可读进度、交接说明和对外摘要。",
+                "bingbu": "准备采集、执行、镜头、素材或外部证据任务。",
+                "xingbu": "质检来源、结构、视觉、声明边界和失败风险。",
+                "gongbu": "组装最终交付物、下载包和可复核清单。",
+            },
+            "artifact_types": ["sample_artifact"],
+            "model_requirements": [
+                {
+                    "agent": "zhongshu",
+                    "model_kind": "text",
+                    "purpose": "说明这个部门需要文本、视觉、图片、数据或工具能力中的哪一种。",
+                }
+            ],
+            "human_checkpoints": [
+                {
+                    "id": "checkpoint_id",
+                    "title": "人类需要确认的节点",
+                    "owner": "menxia",
+                    "required": True,
+                }
+            ],
+            "artifact_contract": _default_artifact_contract(),
+            "schema_gates": [
+                {
+                    "schema_id": "new_office_sample_schema",
+                    "owner_agent": "gongbu",
+                    "stage": "sample_stage",
+                    "artifact_type": "sample_artifact",
+                }
+            ],
+            "recovery_actions": [
+                {
+                    "stage": "sample_stage",
+                    "label": "按退回意见重试当前阶段",
+                    "method": "POST",
+                    "path_template": "/api/tasks/{task_id}/new-office/retry-sample-stage",
+                    "preserves": ["workspace_id", "user_confirmed_inputs"],
+                    "clears": ["sample_artifact", "downstream_outputs"],
+                }
+            ],
+            "acceptance_criteria": [
+                "交付物必须能下载或复核，不能只停留在页面文本。",
+                "公开演示必须说明 demo-only 边界、禁止声明和真实任务升级路径。",
+            ],
+            "default_template": "Use this office workflow for: {user_input}",
+        },
+        "public_demo_contract_skeleton": {
+            "viewer_path": [
+                {
+                    "title": "访客第一步应该看什么",
+                    "body": "解释这个页面如何读，而不是介绍抽象功能。",
+                    "focus": "用户目标、证据、交付物或声明边界",
+                }
+            ],
+            "proof_points": ["这个 demo 实际证明了什么"],
+            "downloadable_deliverables": [
+                {
+                    "type": "sample_delivery",
+                    "title": "样例交付物",
+                    "uri": "/api/demo/new-office/files/sample.ext",
+                    "status": "downloadable",
+                }
+            ],
+            "deliverable_reading_guide": [
+                {
+                    "order": 1,
+                    "title": "先看哪份文件",
+                    "uri": "/api/demo/new-office/files/sample.ext",
+                    "look_for": "用户应该核对的字段、表格、图片、证据或声明。",
+                    "proves": "这份文件证明的产品能力边界。",
+                }
+            ],
+            "interview_demo_script": [
+                {
+                    "order": 1,
+                    "visitor_action": "面试官或访客点击什么。",
+                    "product_response": "产品给出什么反馈。",
+                    "proof": "这一步证明什么。",
+                    "boundary": "这一步不能被夸大成什么。",
+                }
+            ],
+            "post_run_validation": [
+                {
+                    "command": "python scripts/verify_new_office_readiness.py --format markdown",
+                    "expected": "说明真实任务跑完后哪些证据必须通过。",
+                }
+            ],
+            "public_claim_report": {
+                "claim_level": "demo_only",
+                "allowed_public_claims": ["可以公开说的能力"],
+                "forbidden_public_claims": ["不能公开说的能力"],
+                "claim_upgrade_checklist": [
+                    {
+                        "id": "run_real_task",
+                        "status": "missing",
+                        "required_evidence": ["真实任务产物", "审计报告", "无敏感信息扫描"],
+                        "why_it_matters": "说明为什么 demo 不能直接等同真实生产能力。",
+                    }
+                ],
+            },
+            "public_safety_boundaries": {
+                "requires_api_key": False,
+                "calls_real_models": False,
+                "writes_workspace": False,
+                "forbidden_assets": ["config.yaml", ".env", "cookies", "user_data", "output", "browser_profiles"],
+            },
+        },
         "notes": [
             "New offices must reuse the OfficeProfile protocol instead of copying one-off routes.",
             "Public showcase requires a no-key demo, model preflight, an end-to-end test, sample delivery files, post-run validation, a public claim report, failure recovery, history traceability, and a visitor-readable demo contract.",
@@ -847,6 +966,7 @@ def audit_office_extension_governance() -> dict:
         "required_profile_fields": required_profile_fields,
         "required_launch_gates": template["required_launch_gates"],
         "required_demo_contract": template["required_demo_contract"],
+        "creation_template": template,
         "extension_blueprint": list_office_extension_blueprint(),
         "primary_standards": PRIMARY_OFFICE_STANDARDS,
         "offices": office_audits,

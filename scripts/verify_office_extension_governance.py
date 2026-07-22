@@ -78,6 +78,8 @@ def audit_starter_checklist(blueprint: dict[str, Any]) -> dict[str, Any]:
         doc_text = STARTER_CHECKLIST_DOC.read_text(encoding="utf-8")
         doc_markers = [
             "New Office Starter Checklist",
+            "office_profile_skeleton",
+            "public_demo_contract_skeleton",
             "office_id",
             "downloadable_deliverables",
             "public_claim_report",
@@ -136,6 +138,61 @@ def audit_future_extension_backlog(blueprint: dict[str, Any]) -> dict[str, Any]:
         "backlog_ids": sorted(backlog_id for backlog_id in backlog_ids if backlog_id),
         "missing_backlog": missing_backlog,
         "incomplete_backlog": incomplete_backlog,
+    }
+
+
+def audit_creation_template_skeleton(template: dict[str, Any]) -> dict[str, Any]:
+    profile = template.get("office_profile_skeleton") or {}
+    demo = template.get("public_demo_contract_skeleton") or {}
+    required_profile_fields = set(template.get("required_profile_fields") or [])
+    profile_fields = set(profile)
+    missing_profile_fields = sorted(required_profile_fields - profile_fields)
+
+    recovery_actions = profile.get("recovery_actions") or []
+    recovery_has_preserve_clear = any(
+        action.get("preserves") and action.get("clears")
+        for action in recovery_actions
+        if isinstance(action, dict)
+    )
+
+    demo_fields = set(demo)
+    required_demo_fields = set(template.get("required_demo_contract") or [])
+    missing_demo_fields = sorted(required_demo_fields - demo_fields)
+    deliverables = demo.get("downloadable_deliverables") or []
+    reading_guide = demo.get("deliverable_reading_guide") or []
+    claim_report = demo.get("public_claim_report") or {}
+    safety = demo.get("public_safety_boundaries") or {}
+    forbidden_assets = set(safety.get("forbidden_assets") or [])
+    required_forbidden_assets = {"config.yaml", ".env", "cookies", "user_data", "output", "browser_profiles"}
+
+    errors: list[str] = []
+    if missing_profile_fields:
+        errors.append("profile skeleton missing required fields")
+    if not recovery_has_preserve_clear:
+        errors.append("profile skeleton recovery action must declare preserves and clears")
+    if missing_demo_fields:
+        errors.append("public demo skeleton missing required contract fields")
+    if not deliverables or not all(item.get("uri") and item.get("status") == "downloadable" for item in deliverables):
+        errors.append("public demo skeleton must include downloadable deliverables")
+    if not reading_guide or not all(item.get("look_for") and item.get("proves") for item in reading_guide):
+        errors.append("public demo skeleton must include deliverable reading guidance")
+    if not claim_report.get("allowed_public_claims") or not claim_report.get("forbidden_public_claims"):
+        errors.append("public demo skeleton must include allowed and forbidden claims")
+    if not required_forbidden_assets.issubset(forbidden_assets):
+        errors.append("public safety boundaries must forbid secrets and local runtime assets")
+
+    return {
+        "status": "passed" if not errors else "needs_work",
+        "profile_field_count": len(profile_fields),
+        "missing_profile_fields": missing_profile_fields,
+        "recovery_has_preserve_clear": recovery_has_preserve_clear,
+        "demo_field_count": len(demo_fields),
+        "missing_demo_fields": missing_demo_fields,
+        "downloadable_deliverable_count": len(deliverables),
+        "reading_guide_count": len(reading_guide),
+        "claim_report_ready": bool(claim_report.get("allowed_public_claims") and claim_report.get("forbidden_public_claims")),
+        "forbidden_asset_count": len(forbidden_assets),
+        "errors": errors,
     }
 
 
@@ -242,6 +299,7 @@ def format_markdown(audit: dict[str, Any]) -> str:
         lines.extend(f"- `{command}`" for command in blueprint["required_verifiers"])
 
     protocol_doc = audit.get("protocol_doc") or {}
+    skeleton = audit.get("creation_template_skeleton_audit") or {}
     starter = audit.get("starter_checklist_audit") or {}
     future = audit.get("future_extension_audit") or {}
     lines.extend(
@@ -257,6 +315,27 @@ def format_markdown(audit: dict[str, Any]) -> str:
         lines.append(
             "Missing markers: `" + "`, `".join(protocol_doc.get("missing_markers", [])) + "`"
         )
+    lines.extend(
+        [
+            "",
+            "## Creation Template Skeleton Audit",
+            "",
+            f"Status: `{skeleton.get('status', 'missing')}`",
+            f"Profile fields: `{skeleton.get('profile_field_count', 0)}`",
+            f"Demo fields: `{skeleton.get('demo_field_count', 0)}`",
+            f"Downloadable deliverables: `{skeleton.get('downloadable_deliverable_count', 0)}`",
+            f"Reading guide items: `{skeleton.get('reading_guide_count', 0)}`",
+            f"Recovery preserves/clears: `{skeleton.get('recovery_has_preserve_clear')}`",
+            f"Claim report ready: `{skeleton.get('claim_report_ready')}`",
+            f"Forbidden assets: `{skeleton.get('forbidden_asset_count', 0)}`",
+        ]
+    )
+    if skeleton.get("missing_profile_fields"):
+        lines.append("Missing profile fields: `" + "`, `".join(skeleton.get("missing_profile_fields", [])) + "`")
+    if skeleton.get("missing_demo_fields"):
+        lines.append("Missing demo fields: `" + "`, `".join(skeleton.get("missing_demo_fields", [])) + "`")
+    if skeleton.get("errors"):
+        lines.append("Skeleton errors: `" + "`, `".join(skeleton.get("errors", [])) + "`")
     lines.extend(
         [
             "",
@@ -358,6 +437,8 @@ def main() -> int:
     audit = audit_office_extension_governance()
     protocol_doc = audit_protocol_doc()
     audit["protocol_doc"] = protocol_doc
+    template_skeleton = audit_creation_template_skeleton(audit.get("creation_template") or {})
+    audit["creation_template_skeleton_audit"] = template_skeleton
     starter_checklist = audit_starter_checklist(audit.get("extension_blueprint") or {})
     audit["starter_checklist_audit"] = starter_checklist
     future_extension = audit_future_extension_backlog(audit.get("extension_blueprint") or {})
@@ -366,6 +447,11 @@ def main() -> int:
         audit["status"] = "failed"
         audit.setdefault("errors", {}).setdefault("protocol_doc_errors", []).append(
             f"{protocol_doc.get('path')} is {protocol_doc.get('status')}"
+        )
+    if template_skeleton.get("status") != "passed":
+        audit["status"] = "failed"
+        audit.setdefault("errors", {}).setdefault("creation_template_errors", []).append(
+            "creation_template skeleton is incomplete"
         )
     if starter_checklist.get("status") != "passed":
         audit["status"] = "failed"

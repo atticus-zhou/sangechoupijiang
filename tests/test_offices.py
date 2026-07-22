@@ -66,6 +66,18 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("post_run_validation", template["required_demo_contract"])
         self.assertIn("public_claim_report", template["required_demo_contract"])
         self.assertIn("public_safety_boundaries", template["required_demo_contract"])
+        profile_skeleton = template["office_profile_skeleton"]
+        demo_skeleton = template["public_demo_contract_skeleton"]
+        for field in template["required_profile_fields"]:
+            self.assertIn(field, profile_skeleton)
+        self.assertEqual(profile_skeleton["artifact_contract"], template["minimum_artifact_contract"])
+        self.assertIn("preserves", profile_skeleton["recovery_actions"][0])
+        self.assertIn("clears", profile_skeleton["recovery_actions"][0])
+        for field in template["required_demo_contract"]:
+            self.assertIn(field, demo_skeleton)
+        self.assertEqual(demo_skeleton["downloadable_deliverables"][0]["status"], "downloadable")
+        self.assertTrue(demo_skeleton["public_claim_report"]["forbidden_public_claims"])
+        self.assertIn("config.yaml", demo_skeleton["public_safety_boundaries"]["forbidden_assets"])
 
     def test_office_extension_blueprint_is_actionable_for_future_offices(self):
         blueprint = list_office_extension_blueprint()

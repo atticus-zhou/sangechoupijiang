@@ -8,6 +8,23 @@ reproducible, and isolated product surface. It is mirrored in
 Do not promote a new office to the main hall until every item has concrete
 evidence.
 
+## Start From The Empty Skeleton
+
+Before copying any existing office implementation, read `/api/offices/protocols`
+or call `list_office_creation_template()` and start from:
+
+- `office_profile_skeleton`: the minimum `OfficeProfile` shape for a new
+  office, including office-scoped duties, model requirements, schema gates,
+  recovery actions, and the `preserves` / `clears` contract for retries.
+- `public_demo_contract_skeleton`: the minimum no-key public demo shape,
+  including visitor path, proof points, downloadable deliverables, reading
+  guide, interview script, post-run validation, public claim report, and public
+  safety boundaries.
+
+The skeleton exists to prevent accidental reuse of another office's
+`office_id`, model config, workspace state, history, artifacts, recovery
+actions, or public claims. Fill the skeleton first, then implement code.
+
 | Step | Phase | Question | Evidence |
 | --- | --- | --- | --- |
 | 1 | product | What painful job does this office finish for a human user? | One-paragraph user job, expected input, expected output, and why this should be an office instead of one prompt. |
