@@ -118,6 +118,22 @@ class PublicShowcaseManifestTests(unittest.TestCase):
             self.assertTrue(item["action"])
             self.assertTrue(item["output"])
             self.assertTrue(item["acceptance"])
+        asset_matrix = embed["asset_requirement_matrix"]
+        self.assertEqual(asset_matrix["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
+        self.assertEqual(asset_matrix["ready_assets"], asset_matrix["total_assets"])
+        self.assertEqual(asset_matrix["missing_required_images"], 0)
+        asset_matrix_text = json.dumps(asset_matrix, ensure_ascii=False)
+        self.assertIn("three_view", asset_matrix_text)
+        self.assertIn("expression_sheet", asset_matrix_text)
+        self.assertIn("turnaround", asset_matrix_text)
+        self.assertIn("top_down", asset_matrix_text)
+        self.assertIn("clean_background_required", asset_matrix_text)
+        comic_demo_response = client.get("/api/demo/comic-production")
+        self.assertEqual(comic_demo_response.status_code, 200)
+        self.assertEqual(
+            comic_demo_response.json()["asset_requirement_matrix"]["ready_assets"],
+            asset_matrix["ready_assets"],
+        )
         shot_contract = embed["shot_contract"]
         self.assertEqual(shot_contract["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
         self.assertIn("verify_comic_v2_downstream_handoff.py", shot_contract["release_gate"])

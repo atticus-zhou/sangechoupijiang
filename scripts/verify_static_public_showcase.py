@@ -365,6 +365,17 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 ready_downstream_steps += 1
             else:
                 errors.append(f"static downstream quick-start item is incomplete: {item.get('title') or item.get('step')}")
+        asset_requirement_matrix = portfolio.get("asset_requirement_matrix") or {}
+        if asset_requirement_matrix.get("manifest_uri") != "downloads/comic-production/files/handoff_manifest.json":
+            errors.append("static asset requirement matrix must point to the local handoff manifest download")
+        if asset_requirement_matrix.get("ready_assets") != asset_requirement_matrix.get("total_assets"):
+            errors.append("static asset requirement matrix must mark every demo asset ready")
+        if asset_requirement_matrix.get("missing_required_images") not in (0, None):
+            errors.append("static asset requirement matrix must not miss required images")
+        asset_matrix_text = json.dumps(asset_requirement_matrix, ensure_ascii=False)
+        for marker in ("three_view", "expression_sheet", "turnaround", "top_down", "clean_background_required"):
+            if marker not in asset_matrix_text:
+                errors.append(f"static asset requirement matrix is missing marker: {marker}")
         shot_contract = portfolio.get("shot_contract") or {}
         shot_contract_text = json.dumps(shot_contract, ensure_ascii=False)
         for marker in ("first_frame_reference_image", "reference_asset_chain", "director_execution"):

@@ -387,6 +387,62 @@
     });
   }
 
+  function renderAssetRequirementMatrix() {
+    const portfolio = showcase.portfolio_embed || {};
+    const matrix = portfolio.asset_requirement_matrix || {};
+    const items = Array.isArray(matrix.items) ? matrix.items : [];
+    const count = document.getElementById('asset-matrix-count');
+    const target = document.getElementById('asset-requirement-matrix');
+    if (!count || !target) return;
+    count.textContent = text(matrix.ready_assets || 0) + '/' + text(matrix.total_assets || items.length) + ' ready';
+    if (!items.length) {
+      target.appendChild(element('p', 'lead compact', matrix.summary || 'No asset requirement matrix is available yet.'));
+      return;
+    }
+    const intro = element('article', 'card asset-matrix-summary');
+    intro.appendChild(element('h3', '', matrix.title || 'Asset image requirement matrix'));
+    intro.appendChild(element('p', '', matrix.summary || ''));
+    addTextRow(intro, 'Manifest', matrix.manifest_uri);
+    addTextRow(intro, 'Release gate', matrix.release_gate);
+    addTextRow(intro, 'Missing', text(matrix.missing_required_images || 0));
+    target.appendChild(intro);
+
+    items.forEach(function (item) {
+      const card = element('article', 'card asset-matrix-card');
+      const head = element('div', 'asset-matrix-head');
+      head.appendChild(element('h3', '', item.name || item.asset_id));
+      head.appendChild(element('span', 'status-pill', item.asset_type_label || item.asset_type));
+      head.appendChild(element('span', 'status-pill', item.handoff_ready ? 'ready' : 'needs review'));
+      card.appendChild(head);
+      addTextRow(card, 'Required', (item.required_image_kinds || []).join(' / '));
+      addTextRow(card, 'Available', (item.available_image_kinds || []).join(' / '));
+      if ((item.missing_image_kinds || []).length) {
+        addTextRow(card, 'Missing', item.missing_image_kinds.join(' / '));
+      }
+      card.appendChild(element(
+        'p',
+        'asset-background-rule',
+        item.clean_background_required
+          ? '人物/道具基础资产：干净白底，不讲故事。'
+          : item.scene_spatial_required
+            ? '场景基础资产：空场景广角和俯视空间关系。'
+            : ''
+      ));
+      const refs = element('ul', 'asset-ref-list');
+      (item.image_refs || []).forEach(function (ref) {
+        const li = element('li', '');
+        li.appendChild(element('strong', '', ref.label || ref.image_kind));
+        li.appendChild(document.createTextNode(' · ' + text(ref.file || ref.image_id || 'missing')));
+        if (ref.purpose) {
+          li.appendChild(element('small', '', ref.purpose));
+        }
+        refs.appendChild(li);
+      });
+      card.appendChild(refs);
+      target.appendChild(card);
+    });
+  }
+
   function renderShotContract() {
     const portfolio = showcase.portfolio_embed || {};
     const contract = portfolio.shot_contract || {};
@@ -642,6 +698,7 @@
   renderReadingGuide();
   renderDownloadCatalog();
   renderDownstreamQuickStart();
+  renderAssetRequirementMatrix();
   renderShotContract();
   renderInterviewScript();
   renderFirstRunPaths();

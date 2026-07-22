@@ -77,6 +77,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     interview_script = portfolio_embed.get("interview_demo_script") or []
     reproducibility = portfolio_embed.get("reproducibility_checklist") or []
     downstream_quick_start = portfolio_embed.get("downstream_quick_start") or []
+    asset_requirement_matrix = portfolio_embed.get("asset_requirement_matrix") or {}
     release_badge = portfolio_embed.get("release_badge") or {}
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
@@ -128,6 +129,14 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             or not item.get("acceptance")
         ):
             errors.append(f"downstream quick-start item is incomplete: {item.get('title') or item.get('step')}")
+    if asset_requirement_matrix.get("ready_assets") != asset_requirement_matrix.get("total_assets"):
+        errors.append("portfolio asset requirement matrix must mark every demo asset ready")
+    if asset_requirement_matrix.get("missing_required_images") not in (0, None):
+        errors.append("portfolio asset requirement matrix must not miss required images")
+    asset_matrix_text = json.dumps(asset_requirement_matrix, ensure_ascii=False)
+    for marker in ("three_view", "expression_sheet", "turnaround", "top_down", "clean_background_required"):
+        if marker not in asset_matrix_text:
+            errors.append(f"portfolio asset requirement matrix is missing marker: {marker}")
     if release_badge.get("status") != "safe_public_demo":
         errors.append("portfolio embed must expose a safe_public_demo release badge")
     if release_badge.get("mode") != "demo_only":

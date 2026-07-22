@@ -442,6 +442,7 @@ async def get_comic_production_demo_api():
     planner = payload.get("planner_payload") or {}
     demo_delivery = _ensure_comic_production_demo_delivery()
     quality_benchmark = _comic_v2_handoff_quality_benchmark(demo_delivery["handoff_manifest"])
+    asset_requirement_matrix = _public_showcase_asset_requirement_matrix(demo_delivery["handoff_manifest"])
     return {
         "mode": "no_key_demo",
         "office_id": "comic_production",
@@ -477,6 +478,7 @@ async def get_comic_production_demo_api():
             "质量基准明确区分 demo_structure_verified 和 production_quality_verified，不把占位图冒充真实画质。",
         ],
         "quality_benchmark": quality_benchmark,
+        "asset_requirement_matrix": asset_requirement_matrix,
         "source_story_preview": story[:360],
         "asset_count": len(assets),
         "shot_count": len(shots),
@@ -1227,6 +1229,120 @@ def _public_showcase_downstream_quick_start() -> list[dict]:
     ]
 
 
+def _public_showcase_asset_requirement_matrix(manifest_path: Path | None) -> dict:
+    if not manifest_path or not manifest_path.exists():
+        return {
+            "title": "资产图片规格矩阵",
+            "summary": "公开样例还没有生成 handoff manifest，暂时无法展示资产规格。",
+            "ready_assets": 0,
+            "total_assets": 0,
+            "missing_required_images": 0,
+            "items": [],
+        }
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assets = payload.get("assets") or []
+    images = payload.get("images") or []
+    images_by_id = {
+        image.get("image_id"): image
+        for image in images
+        if image.get("image_id")
+    }
+    rows = []
+    for asset in assets:
+        asset_type = str(asset.get("asset_type") or "")
+        image_ids_by_kind = asset.get("image_ids_by_kind") or {}
+        required = _public_showcase_required_image_specs(asset_type)
+        required_kinds = [item["image_kind"] for item in required]
+        available_kinds = sorted(kind for kind in image_ids_by_kind if image_ids_by_kind.get(kind))
+        missing_kinds = [kind for kind in required_kinds if kind not in image_ids_by_kind]
+        rows.append({
+            "asset_id": asset.get("asset_id", ""),
+            "name": asset.get("name", "") or asset.get("asset_id", ""),
+            "asset_type": asset_type,
+            "asset_type_label": {
+                "character": "人物",
+                "prop": "道具",
+                "scene": "场景",
+            }.get(asset_type, asset_type or "资产"),
+            "required_image_kinds": required_kinds,
+            "available_image_kinds": available_kinds,
+            "missing_image_kinds": missing_kinds,
+            "clean_background_required": asset_type in {"character", "prop"},
+            "scene_spatial_required": asset_type == "scene",
+            "handoff_ready": not missing_kinds,
+            "image_refs": [
+                _public_showcase_image_requirement_ref(spec, image_ids_by_kind, images_by_id)
+                for spec in required
+            ],
+        })
+    return {
+        "title": "资产图片规格矩阵",
+        "summary": "下游接手前，先确认人物、道具、场景分别需要哪些基础资产图；人物和道具保持干净白底，场景保留空间广角和俯视关系。",
+        "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
+        "release_gate": "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
+        "ready_assets": sum(1 for item in rows if item.get("handoff_ready")),
+        "total_assets": len(rows),
+        "missing_required_images": sum(len(item.get("missing_image_kinds") or []) for item in rows),
+        "items": rows,
+    }
+
+
+def _public_showcase_required_image_specs(asset_type: str) -> list[dict]:
+    return {
+        "character": [
+            {
+                "image_kind": "three_view",
+                "label": "三视图",
+                "purpose": "锁定脸型、发型、体型、服装主色和年龄感。",
+            },
+            {
+                "image_kind": "expression_sheet",
+                "label": "表情表",
+                "purpose": "锁定可复用表情，避免后续镜头重新发明角色。",
+            },
+        ],
+        "prop": [
+            {
+                "image_kind": "turnaround",
+                "label": "道具转体参考",
+                "purpose": "锁定道具轮廓、比例、材质、磨损和可变化状态。",
+            },
+        ],
+        "scene": [
+            {
+                "image_kind": "wide",
+                "label": "场景广角图",
+                "purpose": "锁定空间风格、纵深、入口出口和关键陈设。",
+            },
+            {
+                "image_kind": "top_down",
+                "label": "场景俯视图",
+                "purpose": "锁定平面布局、角色动线、机位和空间地理。",
+            },
+        ],
+    }.get(asset_type, [])
+
+
+def _public_showcase_image_requirement_ref(
+    spec: dict,
+    image_ids_by_kind: dict,
+    images_by_id: dict,
+) -> dict:
+    image_kind = spec.get("image_kind", "")
+    image_id = image_ids_by_kind.get(image_kind, "")
+    image = images_by_id.get(image_id) or {}
+    return {
+        "image_kind": image_kind,
+        "label": spec.get("label", image_kind),
+        "purpose": spec.get("purpose", ""),
+        "image_id": image_id,
+        "file": image.get("file", ""),
+        "production_role": image.get("production_role", ""),
+        "clean_background_required": image.get("clean_background_required"),
+        "available": bool(image_id and image),
+    }
+
+
 def _public_showcase_shot_contract() -> dict:
     return {
         "title": "镜头合同可执行性",
@@ -1670,6 +1786,7 @@ async def get_public_showcase_demo_api():
     research_claim = _research_claim_report_from_demo(research_demo)
     extension_blueprint = list_office_extension_blueprint()
     office_governance = audit_office_extension_governance()
+    asset_requirement_matrix = comic_demo.get("asset_requirement_matrix") or {}
     featured_demos = [
         _public_showcase_demo(
             comic_demo,
@@ -1775,6 +1892,7 @@ async def get_public_showcase_demo_api():
             "fast_review_route": _public_showcase_fast_review_route(),
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
+            "asset_requirement_matrix": asset_requirement_matrix,
             "shot_contract": _public_showcase_shot_contract(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "first_run_paths": _public_showcase_first_run_paths(),

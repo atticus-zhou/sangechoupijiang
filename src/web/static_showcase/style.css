@@ -178,6 +178,68 @@ a {
   color: var(--text);
 }
 
+.asset-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.asset-matrix-summary {
+  grid-column: 1 / -1;
+  border-color: rgba(112, 210, 181, 0.28);
+}
+
+.asset-matrix-card {
+  min-height: 0;
+}
+
+.asset-matrix-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.asset-matrix-head h3 {
+  flex-basis: 100%;
+  margin-bottom: 2px;
+}
+
+.asset-background-rule {
+  margin: 12px 0;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.asset-ref-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asset-ref-list li {
+  padding-top: 10px;
+  border-top: 1px solid rgba(83, 97, 115, 0.35);
+  color: var(--muted);
+}
+
+.asset-ref-list strong,
+.asset-ref-list small {
+  display: block;
+}
+
+.asset-ref-list strong {
+  color: var(--text);
+}
+
+.asset-ref-list small {
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
 .quality-upgrade-steps p,
 .quality-upgrade-steps small {
   display: block;
@@ -916,6 +978,7 @@ noscript {
     .fast-review-list,
     .catalog-grid,
     .extension-check-grid,
+    .asset-matrix-grid,
     .shot-contract-grid,
     .first-run-grid,
     .office-grid,
