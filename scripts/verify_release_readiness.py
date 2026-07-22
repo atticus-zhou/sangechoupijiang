@@ -153,6 +153,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"reading_guide={parsed.get('reading_guide_ready_count')}/{parsed.get('reading_guide_count')}; "
                 f"quick_start={parsed.get('downstream_quick_start_ready_count')}/{parsed.get('downstream_quick_start_count')}; "
                 f"post_run={parsed.get('post_run_validation_ready_count')}/{parsed.get('post_run_validation_count')}; "
+                f"handoff_recovery={parsed.get('handoff_inventory_recovery_item_count')}:{','.join(parsed.get('handoff_inventory_recovery_actions') or [])}; "
                 f"backend={parsed.get('requires_backend')}; "
                 f"prompt_quality={parsed.get('comic_prompt_quality_status')}; "
                 f"prompt_issues={parsed.get('comic_prompt_issue_count')}; "
