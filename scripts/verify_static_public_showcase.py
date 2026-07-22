@@ -192,10 +192,16 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append(f"visitor acceptance guide must keep {flag}=False")
         if visitor_guide.get("safe_for_public_portfolio") is not True:
             errors.append("visitor acceptance guide must be safe for public portfolio")
-        if len(visitor_guide.get("visitor_route") or []) < 7:
-            errors.append("visitor acceptance guide must include at least seven route steps")
-        if len(visitor_guide.get("download_acceptance") or []) < 7:
-            errors.append("visitor acceptance guide must include every reviewable download")
+        visitor_route = visitor_guide.get("visitor_route") or []
+        download_acceptance = visitor_guide.get("download_acceptance") or []
+        if len(visitor_route) != 7:
+            errors.append("visitor acceptance guide must include exactly seven route steps")
+        if len(download_acceptance) != 7:
+            errors.append("visitor acceptance guide must include exactly seven reviewable downloads")
+        visitor_route_titles = {str(item.get("title") or "") for item in visitor_route}
+        for required_title in ("逐个检查可下载交付物", "最后确认线上状态不能跳过"):
+            if required_title not in visitor_route_titles:
+                errors.append(f"visitor acceptance guide must include reviewer step: {required_title}")
         if visitor_guide.get("live_verification", {}).get("check_command") != "npm run check:online":
             errors.append("visitor acceptance guide must expose the online check command")
         if "check:online" not in str(visitor_guide.get("live_verification", {}).get("do_not_claim_live_until") or ""):
