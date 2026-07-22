@@ -172,6 +172,12 @@ def _public_demo_path() -> dict[str, Any]:
                 "proves": "资产、图片、镜头、提示词和 Word 画布之间有引用链路，后续可以追溯和恢复。",
             },
             {
+                "file": "AI 漫剧资产规格矩阵",
+                "uri": "/api/demo/public-showcase",
+                "look_for": "portfolio_embed.asset_requirement_matrix 中的人物 three_view、expression_sheet，道具 turnaround，场景 wide、top_down，以及 clean_background_required。",
+                "proves": "公开样例不仅有 Word 和 manifest，还声明了下游继续制片前必须具备的基础资产图片标准。",
+            },
+            {
                 "file": "研究办公室阶段报告",
                 "uri": "/api/demo/research/files/report.md",
                 "look_for": "报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现。",
