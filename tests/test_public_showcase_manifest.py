@@ -279,6 +279,17 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(all(item["not_ready_reason"] for item in extension_story["future_office_candidates"]))
         backlog_ids = {item["id"] for item in extension_story["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
+        launch_matrix = embed["office_launch_matrix"]
+        self.assertEqual(launch_matrix["summary"]["office_count"], 3)
+        self.assertEqual(launch_matrix["summary"]["primary_allowed_count"], 1)
+        launch_by_office = {item["office_id"]: item for item in launch_matrix["offices"]}
+        self.assertEqual(launch_by_office["comic_production"]["visitor_label"], "主推办公室")
+        self.assertTrue(launch_by_office["comic_production"]["primary_allowed"])
+        self.assertEqual(launch_by_office["research"]["visitor_label"], "可展示办公室")
+        self.assertFalse(launch_by_office["research"]["primary_allowed"])
+        self.assertEqual(launch_by_office["comic"]["visitor_label"], "旧版兼容入口")
+        self.assertIn("legacy_migration_required", launch_by_office["comic"]["blocked_by"])
+        self.assertIn("未来新增办公室", launch_matrix["why_it_matters"])
 
         public_deployment = payload["public_deployment"]
         self.assertEqual(public_deployment["mode"], "demo_only")

@@ -153,6 +153,13 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertTrue(all(item["not_ready_reason"] for item in extension_story["future_office_candidates"]))
         backlog_ids = {item["id"] for item in extension_story["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
+        launch_matrix = showcase["portfolio_embed"]["office_launch_matrix"]
+        self.assertEqual(launch_matrix["summary"]["office_count"], 3)
+        self.assertEqual(launch_matrix["summary"]["primary_allowed_count"], 1)
+        launch_by_office = {item["office_id"]: item for item in launch_matrix["offices"]}
+        self.assertTrue(launch_by_office["comic_production"]["primary_allowed"])
+        self.assertEqual(launch_by_office["comic"]["visitor_label"], "旧版兼容入口")
+        self.assertIn("legacy_migration_required", launch_by_office["comic"]["blocked_by"])
         self.assertEqual(deploy_manifest["mode"], "public_no_key_portfolio_deploy")
         self.assertEqual(deploy_manifest["source_dir"], "dist/public-showcase")
         self.assertEqual(deploy_manifest["personal_site_target"], "public/three-stooges/")
@@ -252,6 +259,9 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("portfolio.office_extension_story", static_script)
         self.assertIn("renderOfficeExtensionStory", static_script)
         self.assertIn("extension-check-grid", style_text)
+        self.assertIn("portfolio.office_launch_matrix", static_script)
+        self.assertIn("办公室公开状态", static_script)
+        self.assertIn("launch-matrix-grid", style_text)
         self.assertIn("future_office_candidates", static_script)
         self.assertIn("future_platform_backlog", static_script)
         self.assertIn("prompt_quality_summary", static_script)
@@ -291,6 +301,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Research claim upgrade checklist: 3 items / evidence_handoff=3 / capture_steps=5", completed.stdout)
         self.assertIn("New office extension: checklist=8 / phases=8 / doc=docs/NEW_OFFICE_STARTER_CHECKLIST.md", completed.stdout)
         self.assertIn("Future office candidates: 4 / backlog=2", completed.stdout)
+        self.assertIn("Office launch matrix: public_ready=2/3 / primary=1 / legacy=1", completed.stdout)
         self.assertIn("Prompt quality: ready / assets=7/7 / directors=2/2 / issues=0", completed.stdout)
         self.assertIn("Portfolio integration: source=dist/public-showcase / options=2", completed.stdout)
         self.assertIn("Portfolio deploy manifest: portfolio-deploy-manifest.json / target=public/three-stooges/", completed.stdout)

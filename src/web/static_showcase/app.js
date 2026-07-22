@@ -510,6 +510,28 @@
     addTextRow(intro, '公开边界', story.public_boundary);
     target.appendChild(intro);
 
+    const launchMatrix = portfolio.office_launch_matrix || {};
+    const launchOffices = Array.isArray(launchMatrix.offices) ? launchMatrix.offices : [];
+    if (launchOffices.length) {
+      const matrixCard = element('article', 'card extension-verifier-card launch-matrix-card');
+      matrixCard.appendChild(element('h3', '', '办公室公开状态'));
+      matrixCard.appendChild(element('p', '', launchMatrix.why_it_matters || '外部访客需要知道哪个办公室能展示、哪个能主推、哪个只是兼容入口。'));
+      const launchGrid = element('div', 'launch-matrix-grid');
+      launchOffices.forEach(function (office) {
+        const item = element('div', 'launch-matrix-item');
+        item.appendChild(element('span', 'status-pill', office.visitor_label || office.role || 'office'));
+        item.appendChild(element('strong', '', office.office_name || office.office_id));
+        item.appendChild(element('p', '', office.visitor_meaning || office.recommended_action || ''));
+        const blocked = Array.isArray(office.blocked_by) && office.blocked_by.length
+          ? office.blocked_by.join(' / ')
+          : '无';
+        addTextRow(item, '阻塞项', blocked);
+        launchGrid.appendChild(item);
+      });
+      matrixCard.appendChild(launchGrid);
+      target.appendChild(matrixCard);
+    }
+
     const grid = element('div', 'extension-check-grid');
     checklist.forEach(function (item) {
       const card = element('article', 'card extension-check-card');

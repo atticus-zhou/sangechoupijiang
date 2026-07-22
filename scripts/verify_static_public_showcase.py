@@ -413,6 +413,9 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         extension_checklist = office_extension_story.get("starter_checklist") or []
         future_candidates = office_extension_story.get("future_office_candidates") or []
         future_backlog = office_extension_story.get("future_platform_backlog") or []
+        office_launch_matrix = portfolio.get("office_launch_matrix") or {}
+        launch_matrix_summary = office_launch_matrix.get("summary") or {}
+        launch_matrix_offices = office_launch_matrix.get("offices") or []
         if office_extension_story.get("starter_checklist_doc") != "docs/NEW_OFFICE_STARTER_CHECKLIST.md":
             errors.append("static showcase must expose the new office starter checklist document")
         if len(extension_checklist) != 8:
@@ -439,6 +442,17 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for item in future_backlog:
             if not item.get("description") or not item.get("evidence_required"):
                 errors.append(f"static showcase future platform backlog item is incomplete: {item.get('id')}")
+        if launch_matrix_summary.get("office_count") != 3:
+            errors.append("static showcase must expose all three current office launch states")
+        if launch_matrix_summary.get("primary_allowed_count") != 1:
+            errors.append("static showcase must expose exactly one primary office")
+        launch_by_office = {item.get("office_id"): item for item in launch_matrix_offices}
+        if launch_by_office.get("comic_production", {}).get("primary_allowed") is not True:
+            errors.append("static showcase must mark comic_production as the primary office")
+        if launch_by_office.get("comic", {}).get("visitor_label") != "旧版兼容入口":
+            errors.append("static showcase must explain that the legacy comic office is compatibility-only")
+        if "legacy_migration_required" not in (launch_by_office.get("comic", {}).get("blocked_by") or []):
+            errors.append("static showcase must expose the legacy comic migration blocker")
 
         demos = showcase.get("featured_demos") or []
         comic_prompt_quality: dict[str, Any] = {}
@@ -495,6 +509,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the shot contract")
         if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
             errors.append("static showcase page must render the office extension story")
+        if "portfolio.office_launch_matrix" not in app_text or "launch-matrix-card" not in app_text:
+            errors.append("static showcase page must render the office launch matrix")
         if "future_office_candidates" not in app_text or "future_platform_backlog" not in app_text:
             errors.append("static showcase page must render future office candidates and platform backlog")
         if "claim-upgrade-item" not in style_text:
@@ -503,6 +519,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase stylesheet must style the research evidence capture playbook")
         if "extension-check-grid" not in style_text or "extension-panel" not in style_text:
             errors.append("static showcase stylesheet must style the office extension checklist")
+        if "launch-matrix-grid" not in style_text or "launch-matrix-item" not in style_text:
+            errors.append("static showcase stylesheet must style the office launch matrix")
         if "first-run-grid" not in style_text or "first-run-card" not in style_text:
             errors.append("static showcase stylesheet must style the first-run paths")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
@@ -561,6 +579,10 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
             "office_extension_candidate_count": len(future_candidates),
             "office_extension_backlog_count": len(future_backlog),
+            "office_launch_public_ready_count": launch_matrix_summary.get("public_ready_count", 0),
+            "office_launch_office_count": launch_matrix_summary.get("office_count", 0),
+            "office_launch_primary_allowed_count": launch_matrix_summary.get("primary_allowed_count", 0),
+            "office_launch_legacy_count": launch_matrix_summary.get("legacy_count", 0),
             "comic_prompt_quality_status": comic_prompt_quality.get("status", ""),
             "comic_prompt_asset_clean_count": comic_prompt_quality.get("clean_asset_prompt_count", 0),
             "comic_prompt_asset_count": comic_prompt_quality.get("asset_prompt_count", 0),
@@ -614,6 +636,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- New office extension: checklist={payload.get('office_extension_checklist_count')} / phases={payload.get('office_extension_phase_count')} / doc={payload.get('office_extension_doc')}",
         f"- Future office candidates: {payload.get('office_extension_candidate_count')} / backlog={payload.get('office_extension_backlog_count')}",
+        f"- Office launch matrix: public_ready={payload.get('office_launch_public_ready_count')}/{payload.get('office_launch_office_count')} / primary={payload.get('office_launch_primary_allowed_count')} / legacy={payload.get('office_launch_legacy_count')}",
         f"- Prompt quality: {payload.get('comic_prompt_quality_status')} / assets={payload.get('comic_prompt_asset_clean_count')}/{payload.get('comic_prompt_asset_count')} / directors={payload.get('comic_prompt_director_ready_count')}/{payload.get('comic_prompt_shot_count')} / issues={payload.get('comic_prompt_issue_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",

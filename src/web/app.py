@@ -1621,6 +1621,45 @@ def _public_showcase_release_badge(comic_inventory: dict, comic_claim: dict) -> 
     }
 
 
+def _public_showcase_office_launch_matrix(governance: dict) -> dict:
+    matrix = []
+    for item in governance.get("launch_matrix", []):
+        matrix.append(
+            {
+                "office_id": item.get("office_id", ""),
+                "office_name": item.get("office_name", ""),
+                "role": item.get("role", ""),
+                "can_show_publicly": bool(item.get("can_show_publicly")),
+                "primary_allowed": bool(item.get("primary_allowed")),
+                "blocked_by": item.get("blocked_by", []),
+                "recommended_action": item.get("recommended_action", ""),
+                "visitor_label": (
+                    "主推办公室"
+                    if item.get("primary_allowed")
+                    else "可展示办公室"
+                    if item.get("can_show_publicly")
+                    else "旧版兼容入口"
+                    if item.get("role") == "legacy"
+                    else "暂不公开"
+                ),
+                "visitor_meaning": (
+                    "可以作为对外重点演示和后续真实使用的主入口。"
+                    if item.get("primary_allowed")
+                    else "可以公开展示固定样例，但还不是当前主推入口。"
+                    if item.get("can_show_publicly")
+                    else "保留给老数据或旧入口迁移，不建议新用户从这里开始。"
+                    if item.get("role") == "legacy"
+                    else "上线证据还不完整，暂时不应展示给外部访客。"
+                ),
+            }
+        )
+    return {
+        "summary": governance.get("launch_matrix_summary", {}),
+        "offices": matrix,
+        "why_it_matters": "避免公开展示时把旧办公室、样例办公室和主推办公室混在一起；未来新增办公室也必须先过隔离、样例、交付和发布门禁。",
+    }
+
+
 @app.get("/api/demo/public-showcase")
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
@@ -1630,6 +1669,7 @@ async def get_public_showcase_demo_api():
     research_demo = await get_research_demo_api()
     research_claim = _research_claim_report_from_demo(research_demo)
     extension_blueprint = list_office_extension_blueprint()
+    office_governance = audit_office_extension_governance()
     featured_demos = [
         _public_showcase_demo(
             comic_demo,
@@ -1742,6 +1782,7 @@ async def get_public_showcase_demo_api():
             "post_run_validation": _public_showcase_post_run_validation(),
             "portfolio_integration": _public_showcase_portfolio_integration(),
             "office_extension_story": _public_showcase_office_extension_story(extension_blueprint),
+            "office_launch_matrix": _public_showcase_office_launch_matrix(office_governance),
             "handoff_inventory": {
                 "uri": "/api/demo/comic-production/handoff-inventory",
                 "status": comic_inventory.get("status", ""),

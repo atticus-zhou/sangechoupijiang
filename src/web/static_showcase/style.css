@@ -229,6 +229,37 @@ a {
   overflow-wrap: anywhere;
 }
 
+.launch-matrix-card {
+  background: linear-gradient(180deg, rgba(112, 210, 181, 0.08), rgba(17, 24, 35, 0.92));
+}
+
+.launch-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.launch-matrix-item {
+  min-height: 180px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.launch-matrix-item strong {
+  display: block;
+  margin: 12px 0 8px;
+  color: #eef6ff;
+  font-size: 18px;
+}
+
+.launch-matrix-item p {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
 .shot-contract-grid {
   display: grid;
   grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
