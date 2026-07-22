@@ -133,12 +133,25 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
 
 SUSPICIOUS_TEXT_MARKERS = [
     "\ufffd",
-    "锟",
-    "閿",
-    "Ã",
-    "Â",
-    "ï¿½",
+    "\u951f",
+    "\u95bf",
+    "\u00c3",
+    "\u00c2",
+    "\u00ef\u00bf\u00bd",
+    "\u6d93\u5909\u91dc",
+    "\u9477",
+    "\u936b\u70b2",
+    "\u5a55\u65d7",
+    "\u9422\u7197",
+    "\u7a0b\u5b08",
+    "\u675e\u64b3",
+    "\u95c8\u5822",
+    "\u6d63\u8de8",
 ]
+
+
+def _find_suspicious_markers(text: str) -> list[str]:
+    return [marker for marker in SUSPICIOUS_TEXT_MARKERS if marker in text]
 
 
 def _read_doc(path: Path) -> tuple[str | None, str | None]:
@@ -163,7 +176,7 @@ def verify_public_docs_readability() -> dict[str, Any]:
         line_count = 0
 
         if text is not None:
-            suspicious = [marker for marker in SUSPICIOUS_TEXT_MARKERS if marker in text]
+            suspicious = _find_suspicious_markers(text)
             missing_markers = [marker for marker in spec["required_markers"] if marker not in text]
             line_count = len(text.splitlines())
             status = "passed" if not suspicious and not missing_markers else "failed"
