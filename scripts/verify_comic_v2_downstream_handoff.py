@@ -68,6 +68,8 @@ def verify_downstream_handoff(
     lineage_failures = _lineage_failures(manifest.get("production_lineage") or [])
     quick_start_failures = _quick_start_failures(manifest.get("downstream_quick_start") or [], shots)
     prompt_quality = _prompt_quality_audit(images, shots)
+    image_contracts = _image_contract_counts(images)
+    shot_references = _shot_reference_counts(shots, asset_ids, image_ids)
     prompt_quality_failures = [
         f"{item.get('id', '<unknown>')}: {item.get('message', '')}"
         for item in prompt_quality.get("issues", [])
@@ -103,6 +105,12 @@ def verify_downstream_handoff(
         "structured_director_shots": _count_structured_director_shots(shots),
         "clean_asset_prompt_sets": prompt_quality.get("clean_asset_prompt_count", 0),
         "director_prompt_sets": prompt_quality.get("director_prompt_count", 0),
+        "image_usage_contracts": image_contracts["usage_contracts"],
+        "image_reference_policies": image_contracts["reference_policies"],
+        "clean_background_asset_images": image_contracts["clean_background_asset_images"],
+        "first_frame_bound_shots": shot_references["first_frame_bound_shots"],
+        "complete_reference_chain_shots": shot_references["complete_reference_chain_shots"],
+        "reference_asset_links": shot_references["reference_asset_links"],
         "lineage_stage_count": len(manifest.get("production_lineage") or []),
         "quick_start_step_count": len(manifest.get("downstream_quick_start") or []),
         "errors": errors,
@@ -384,6 +392,54 @@ def _count_assets_with_images(
     return count
 
 
+def _image_contract_counts(images: list[dict[str, Any]]) -> dict[str, int]:
+    return {
+        "usage_contracts": sum(1 for image in images if image.get("usage_contract")),
+        "reference_policies": sum(1 for image in images if str(image.get("reference_policy") or "").strip()),
+        "clean_background_asset_images": sum(
+            1
+            for image in images
+            if image.get("clean_background_required") is True
+            and str(image.get("production_role") or "").startswith(("clean_character_", "clean_prop_"))
+        ),
+    }
+
+
+def _shot_reference_counts(
+    shots: list[dict[str, Any]],
+    asset_ids: set[str],
+    image_ids: set[str],
+) -> dict[str, int]:
+    first_frame_bound_shots = 0
+    complete_reference_chain_shots = 0
+    reference_asset_links = 0
+    for shot in shots:
+        first_frame = shot.get("first_frame_reference_image") or {}
+        if (
+            first_frame.get("image_id") in image_ids
+            and first_frame.get("asset_id") in asset_ids
+            and str(first_frame.get("file") or "").lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+        ):
+            first_frame_bound_shots += 1
+        chain = list(shot.get("reference_asset_chain") or [])
+        valid_links = [
+            item
+            for item in chain
+            if item.get("asset_id") in asset_ids
+            and item.get("first_frame_image_id") in image_ids
+            and str(item.get("name") or "").strip()
+        ]
+        reference_asset_links += len(valid_links)
+        refs = set(shot.get("reference_asset_ids") or [])
+        if refs and refs.issubset({item.get("asset_id") for item in valid_links}):
+            complete_reference_chain_shots += 1
+    return {
+        "first_frame_bound_shots": first_frame_bound_shots,
+        "complete_reference_chain_shots": complete_reference_chain_shots,
+        "reference_asset_links": reference_asset_links,
+    }
+
+
 def format_markdown(result: dict[str, Any]) -> str:
     word_canvas_status = _file_status(result.get("word_canvas_exists"), result.get("word_canvas_bytes"))
     manifest_status = _file_status(result.get("handoff_manifest_exists"), result.get("handoff_manifest_bytes"))
@@ -416,6 +472,12 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- Quick-start playbook: {result.get('quick_start_step_count')} steps",
         f"- Clean asset prompt sets: {result.get('clean_asset_prompt_sets')}",
         f"- Director prompt sets: {result.get('director_prompt_sets')}",
+        f"- Image usage contracts: {result.get('image_usage_contracts')}/{result.get('image_count')}",
+        f"- Image reference policies: {result.get('image_reference_policies')}/{result.get('image_count')}",
+        f"- Clean-background base asset images: {result.get('clean_background_asset_images')}",
+        f"- First-frame bound shots: {result.get('first_frame_bound_shots')}/{result.get('shot_count')}",
+        f"- Complete reference-chain shots: {result.get('complete_reference_chain_shots')}/{result.get('shot_count')}",
+        f"- Machine-readable reference asset links: {result.get('reference_asset_links')}",
     ]
     if result.get("errors"):
         lines.extend(["", "## Issues", ""])

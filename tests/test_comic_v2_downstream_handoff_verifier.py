@@ -38,6 +38,12 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(result["structured_director_shots"], 2)
         self.assertEqual(result["clean_asset_prompt_sets"], 7)
         self.assertEqual(result["director_prompt_sets"], 2)
+        self.assertEqual(result["image_usage_contracts"], 7)
+        self.assertEqual(result["image_reference_policies"], 7)
+        self.assertEqual(result["clean_background_asset_images"], 4)
+        self.assertEqual(result["first_frame_bound_shots"], 2)
+        self.assertEqual(result["complete_reference_chain_shots"], 2)
+        self.assertGreaterEqual(result["reference_asset_links"], 4)
         self.assertGreaterEqual(result["lineage_stage_count"], 7)
         self.assertEqual(result["quick_start_step_count"], 5)
 
@@ -66,6 +72,9 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertTrue(payload["downstream_handoff_ready"])
         self.assertIn("handoff_manifest", payload)
         self.assertEqual(payload["quick_start_step_count"], 5)
+        self.assertEqual(payload["first_frame_bound_shots"], payload["shot_count"])
+        self.assertEqual(payload["complete_reference_chain_shots"], payload["shot_count"])
+        self.assertEqual(payload["image_usage_contracts"], payload["image_count"])
         self.assertEqual(payload["errors"], [])
 
     def test_cli_markdown_is_readable_for_reviewers(self):
@@ -99,6 +108,9 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertIn("Director prompt sets", completed.stdout)
         self.assertIn("Structured director shots: 2", completed.stdout)
         self.assertIn("Quick-start playbook: 5 steps", completed.stdout)
+        self.assertIn("Image usage contracts: 7/7", completed.stdout)
+        self.assertIn("First-frame bound shots: 2/2", completed.stdout)
+        self.assertIn("Complete reference-chain shots: 2/2", completed.stdout)
 
     def test_missing_structured_director_fields_block_handoff(self):
         module = self._module()
