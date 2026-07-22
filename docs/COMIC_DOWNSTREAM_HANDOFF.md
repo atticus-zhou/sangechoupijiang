@@ -86,7 +86,7 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 第二条命令进一步检查内容质量：完整故事有没有被替换，资产和镜头能不能回指原文，不同资产是否复制同一提示词模板，每条图片提示词是否落实专属视觉锁定，镜头导演参数是否随剧情变化，以及真实图片是否保留七维视觉质检证据。它还会输出 `image_quality_summary`，把可用图、废片/返工图、返工率和失败图片 ID 单独列出来。
 
-第三条命令用于盘点已经生成过的本地交付物。它默认扫描 `output` 下的 AI 漫剧 V2 handoff manifest，不调用模型、不读取 API Key，并把结果分成 `production_quality_verified`、`demo_structure_verified`、`needs_review` 和 `legacy_unverifiable`。当本地有多次实验产物时，先看这份盘点，再决定展示哪一份、修复哪一份、丢弃哪一份。
+第三条命令用于盘点已经生成过的本地交付物。它默认扫描 `output` 下的 AI 漫剧 V2 handoff manifest，不调用模型、不读取 API Key，并把结果分成 `production_quality_verified`、`demo_structure_verified`、`needs_review` 和 `legacy_unverifiable`。当本地有多次实验产物时，先看这份盘点，再决定展示哪一份、修复哪一份、丢弃哪一份。即使是 `demo_structure_verified`，盘点表也必须显示恢复动作：保留故事合同、资产清单、提示词包和旧 Word 归档，清掉 fixture 图片证据，再从工部/刑部补跑真实图片生成与七维视觉质检。
 
 无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、且其他维度全部通过时，才会得到 `production_quality_verified`。
 

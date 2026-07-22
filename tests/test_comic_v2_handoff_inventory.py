@@ -37,8 +37,21 @@ class ComicV2HandoffInventoryTests(unittest.TestCase):
         self.assertEqual(inventory["manifest_count"], 2)
         self.assertGreaterEqual(inventory["demo_only_count"], 1)
         self.assertEqual(inventory["production_verified_count"], 0)
-        self.assertIn("不能宣称真实画质", inventory["next_action"])
+        self.assertIn("不能宣称真实画质已验证", inventory["next_action"])
         self.assertTrue(all(item["word_canvas_exists"] for item in inventory["manifests"]))
+        demo = next(item for item in inventory["manifests"] if item["quality_claim"] == "demo_structure_verified")
+        recovery = demo["recommended_recovery"]
+        self.assertEqual(recovery["action"], "regenerate_images")
+        self.assertEqual(recovery["department"], "工部 / 刑部")
+        self.assertEqual(recovery["expected_stage"], "image_generation")
+        self.assertIn("story_contract", recovery["preserves"])
+        self.assertIn("fixture_images", recovery["clears"])
+        self.assertIn("补跑真实生图和七维视觉质检", demo["next_action"])
+
+        markdown = format_markdown(inventory)
+        self.assertIn("补跑真实图片与视觉质检", markdown)
+        self.assertIn("image_generation", markdown)
+        self.assertIn("fixture_images", markdown)
 
     def test_inventory_rejects_real_provider_without_visual_review_dimensions(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -103,6 +116,9 @@ class ComicV2HandoffInventoryTests(unittest.TestCase):
 
         self.assertEqual(inventory["manifest_count"], 2)
         self.assertIn("legacy_unverifiable", {item["quality_claim"] for item in inventory["manifests"]})
+        legacy_item = next(item for item in inventory["manifests"] if item["quality_claim"] == "legacy_unverifiable")
+        self.assertEqual(legacy_item["recommended_recovery"]["action"], "rebuild_v3_handoff")
+        self.assertEqual(legacy_item["recommended_recovery"]["expected_stage"], "delivery_packaging")
         self.assertNotIn("not comic", markdown)
         self.assertIn("AI Comic V2 Handoff Inventory", markdown)
 

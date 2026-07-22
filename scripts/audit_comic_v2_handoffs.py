@@ -93,6 +93,11 @@ def _audit_manifest_path(path: Path) -> dict[str, Any] | None:
     word_canvas = payload.get("word_canvas") or {}
     word_path = _resolve_word_path(path, word_canvas)
     recovery = benchmark.get("recommended_recovery") or {}
+    if not recovery:
+        if claim == "demo_structure_verified":
+            recovery = _demo_only_recovery()
+        elif claim == "legacy_unverifiable":
+            recovery = _legacy_recovery()
     return {
         "path": str(path),
         "title": ((payload.get("story") or {}).get("title") or path.stem),
@@ -148,9 +153,15 @@ def _manifest_next_action(claim: str, benchmark: dict[str, Any], recovery: dict[
     if claim == "production_quality_verified":
         return "可以作为真实模型制片包交给下游图生视频或剪辑流程。"
     if claim == "demo_structure_verified":
-        return "只适合公开演示结构；真实创作后请重新审计非 fixture 产物。"
+        return str(
+            recovery.get("description")
+            or "只适合公开演示结构；真实创作后请补跑真实图片生成和视觉质检。"
+        )
     if claim == "legacy_unverifiable":
-        return "旧版包缺少 V3 质量清单；建议重新生成或补齐 V3 引用与质量基准。"
+        return str(
+            recovery.get("description")
+            or "旧版包缺少 V3 质量清单；建议重新生成或补齐 V3 引用与质量基准。"
+        )
     return str(
         recovery.get("description")
         or benchmark.get("next_action")
@@ -169,10 +180,44 @@ def _inventory_next_action(
     if needs_review:
         return "先按责任部门处理 needs_review 制片包，再重新生成 Word 和 handoff manifest。"
     if demo_only:
-        return "当前只有无 Key 结构样例；公开展示可以用，但不能宣称真实画质已验证。"
+        return "当前只有无 Key 结构样例；公开展示可以用，但不能宣称真实画质已验证。下一步应保留故事、资产和提示词，补跑真实图片生成与视觉质检。"
     if legacy:
         return "当前只有旧版不可审计包；请用 V2/V3 流程重新生产一份可追溯制片包。"
     return "没有找到可审计的 AI 漫剧 V2 handoff manifest。"
+
+
+def _demo_only_recovery() -> dict[str, Any]:
+    return {
+        "action": "regenerate_images",
+        "label": "补跑真实图片与视觉质检",
+        "department": "工部 / 刑部",
+        "expected_stage": "image_generation",
+        "description": "这份包是无 Key 结构样例，不能证明真实画质。保留已确认故事、资产清单和提示词包，清掉 fixture 图片证据后补跑真实生图和七维视觉质检。",
+        "preserves": ["story_contract", "asset_manifest", "prompt_package", "word_canvas_archive"],
+        "clears": ["fixture_images", "image_reviews", "real_quality_claim"],
+        "operator_steps": [
+            "确认工部已配置生图模型，刑部已配置视觉理解模型。",
+            "从历史页或恢复接口执行 regenerate_images，保留当前故事、资产和提示词版本。",
+            "重新运行质量基准；只有 production_quality_verified 通过后，才宣称真实画质已验证。",
+        ],
+    }
+
+
+def _legacy_recovery() -> dict[str, Any]:
+    return {
+        "action": "rebuild_v3_handoff",
+        "label": "重建 V3 制片包",
+        "department": "礼部 / 刑部",
+        "expected_stage": "delivery_packaging",
+        "description": "旧版包缺少 V3 handoff manifest 或质量基准，不能证明故事、资产、图片和 Word 来自同一版本。请重新组装 V3 交付物。",
+        "preserves": ["word_canvas_archive", "available_images"],
+        "clears": ["legacy_quality_claim"],
+        "operator_steps": [
+            "保留旧 Word 作为历史归档，不把它当作质量通过证据。",
+            "重新生成 V3 handoff manifest、production_lineage 和 quality_benchmark。",
+            "补齐后重新运行 handoff inventory 和 production benchmark。",
+        ],
+    }
 
 
 def format_markdown(result: dict[str, Any]) -> str:
