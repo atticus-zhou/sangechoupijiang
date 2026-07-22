@@ -131,6 +131,14 @@ def _common_first_run_failures() -> list[dict[str, Any]]:
             "recovery_action": f"运行 `{STATIC_EXPORT_COMMAND}` 导出 `dist/public-showcase`，再用 `{STATIC_SHOWCASE_COMMAND}` 验证；公开部署只上传这个静态目录，真实生产继续由使用者本地填写自己的 Key。",
             "requires_api_key": False,
         },
+        {
+            "id": "incomplete_handoff_download",
+            "symptom": "历史页或公开样例能看到项目，但下载的 Word、manifest、图片记录、提示词包或 trace JSON 不完整。",
+            "likely_cause": "产物没有完成归档，旧版 handoff 缺少 manifest v3，或者只下载了 Word 画布而没有下载机器可读引用清单。",
+            "check_command": HANDOFF_AUDIT_COMMAND,
+            "recovery_action": f"先运行 `{HANDOFF_AUDIT_COMMAND}` 清点本地输出；公开样例缺文件时重新运行 `{STATIC_EXPORT_COMMAND}` 和 `{STATIC_SHOWCASE_COMMAND}`；真实项目缺文件时回到历史页下载完整制片包，或按声明报告里的 recovery action 重新生成缺失阶段。",
+            "requires_api_key": False,
+        },
     ]
 
 

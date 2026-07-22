@@ -86,6 +86,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "port_in_use",
             "codex_windows_sandbox_setup_failed",
             "public_deploy_real_mode",
+            "incomplete_handoff_download",
         ]:
             self.assertIn(failure_id, failures)
             self.assertTrue(failures[failure_id]["symptom"])
@@ -97,6 +98,9 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("不是三个臭皮匠项目代码报错", failures["codex_windows_sandbox_setup_failed"]["likely_cause"])
         self.assertFalse(failures["codex_windows_sandbox_setup_failed"]["requires_api_key"])
         self.assertIn("dist/public-showcase", failures["public_deploy_real_mode"]["recovery_action"])
+        self.assertIn("audit_comic_v2_handoffs.py", failures["incomplete_handoff_download"]["check_command"])
+        self.assertIn("manifest v3", failures["incomplete_handoff_download"]["likely_cause"])
+        self.assertIn("重新生成缺失阶段", failures["incomplete_handoff_download"]["recovery_action"])
 
     def test_markdown_is_readable_as_a_github_first_run_checklist(self):
         result = subprocess.run(
@@ -138,6 +142,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("codex_windows_sandbox_setup_failed", result.stdout)
         self.assertIn("codex-windows-sandbox-setup.exe", result.stdout)
         self.assertIn("public_deploy_real_mode", result.stdout)
+        self.assertIn("incomplete_handoff_download", result.stdout)
+        self.assertIn("python scripts/audit_comic_v2_handoffs.py --format markdown", result.stdout)
 
 
 if __name__ == "__main__":
