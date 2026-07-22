@@ -192,8 +192,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append(f"visitor acceptance guide must keep {flag}=False")
         if visitor_guide.get("safe_for_public_portfolio") is not True:
             errors.append("visitor acceptance guide must be safe for public portfolio")
-        if len(visitor_guide.get("visitor_route") or []) < 5:
-            errors.append("visitor acceptance guide must include at least five route steps")
+        if len(visitor_guide.get("visitor_route") or []) < 7:
+            errors.append("visitor acceptance guide must include at least seven route steps")
         if len(visitor_guide.get("download_acceptance") or []) < 7:
             errors.append("visitor acceptance guide must include every reviewable download")
         if visitor_guide.get("live_verification", {}).get("check_command") != "npm run check:online":

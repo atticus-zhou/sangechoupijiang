@@ -159,14 +159,30 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
             "can_claim_real_quality": release_badge.get("can_claim_real_quality", False),
         },
         "visitor_route": [
+            *[
+                {
+                    "order": int(item.get("order") or index + 1),
+                    "title": item.get("title", ""),
+                    "viewer_action": item.get("viewer_action", ""),
+                    "proof": item.get("proof", ""),
+                    "next_anchor": item.get("next_anchor", ""),
+                }
+                for index, item in enumerate(fast_review)
+            ],
             {
-                "order": int(item.get("order") or index + 1),
-                "title": item.get("title", ""),
-                "viewer_action": item.get("viewer_action", ""),
-                "proof": item.get("proof", ""),
-                "next_anchor": item.get("next_anchor", ""),
-            }
-            for index, item in enumerate(fast_review)
+                "order": len(fast_review) + 1,
+                "title": "逐个检查可下载交付物",
+                "viewer_action": "按 download_acceptance 里的七个文件逐个打开，确认每个文件都有阅读重点、证明点和 sha256。",
+                "proof": "访客可以离开网页直接复核 Word 画布、handoff manifest、声明报告和研究材料，不需要相信页面文案。",
+                "next_anchor": "#catalog-title",
+            },
+            {
+                "order": len(fast_review) + 2,
+                "title": "最后确认线上状态不能跳过",
+                "viewer_action": "部署到个人网站后运行 npm run check:online，只有通过后才把 /three-stooges/ 发给面试官。",
+                "proof": "本地静态包准备好不等于线上 Vercel 已更新，公开链接必须由线上检查证明。",
+                "next_anchor": "#repro-title",
+            },
         ],
         "download_acceptance": [
             {
