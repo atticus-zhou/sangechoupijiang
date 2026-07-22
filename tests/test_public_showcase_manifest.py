@@ -240,6 +240,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(integration["static_export"]["entrypoint"], "dist/public-showcase/index.html")
         self.assertFalse(integration["static_export"]["requires_backend"])
         self.assertFalse(integration["static_export"]["requires_api_key"])
+        integration_live = integration["live_verification"]
+        self.assertEqual(integration_live["status"], "external_required")
+        self.assertEqual(integration_live["live_url"], "https://www.atticus.asia/three-stooges/")
+        self.assertEqual(integration_live["check_command"], "npm run check:online")
+        self.assertEqual(integration_live["ship_command"], "npm run ship:vercel")
+        self.assertIn("check:online", integration_live["do_not_claim_live_until"])
         self.assertEqual(
             {item["id"] for item in integration["integration_options"]},
             {"standalone_static_site", "personal_site_subdirectory"},
@@ -248,6 +254,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("API Key", " ".join(integration["must_not_include"]))
         self.assertIn("output/", " ".join(integration["must_not_include"]))
         self.assertIn("verify_release_readiness.py", "\n".join(integration["verification_commands"]))
+        self.assertIn("npm run check:online", "\n".join(integration["verification_commands"]))
         self.assertIn("check_no_secrets.py", "\n".join(payload["verification_commands"]))
         extension_story = embed["office_extension_story"]
         self.assertEqual(extension_story["starter_checklist_doc"], "docs/NEW_OFFICE_STARTER_CHECKLIST.md")
@@ -279,6 +286,11 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(static_export["entrypoint"], "dist/public-showcase/index.html")
         self.assertFalse(static_export["requires_backend"])
         self.assertFalse(static_export["requires_api_key"])
+        deployment_live = public_deployment["live_verification"]
+        self.assertEqual(deployment_live["status"], "external_required")
+        self.assertEqual(deployment_live["live_url"], "https://www.atticus.asia/three-stooges/")
+        self.assertEqual(deployment_live["check_command"], "npm run check:online")
+        self.assertEqual(deployment_live["ship_command"], "npm run ship:vercel")
         self.assertIn("config.yaml", " ".join(public_deployment["forbidden_public_assets"]))
         self.assertIn(
             "python scripts/verify_static_public_showcase.py --format markdown",

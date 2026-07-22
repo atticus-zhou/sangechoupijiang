@@ -262,6 +262,14 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
         deployment["allowed_route_prefixes"] = []
         deployment["requires_backend"] = False
         deployment["contains_api_keys"] = False
+        deployment["live_verification"] = {
+            "status": "external_required",
+            "live_url": "https://www.atticus.asia/three-stooges/",
+            "authority": "personal_website_check_online",
+            "check_command": "npm run check:online",
+            "ship_command": "npm run ship:vercel",
+            "failure_meaning": "The static package is ready, but the production Vercel domain may still be serving an older deployment.",
+        }
 
         _write_json(staging / "showcase.json", static_showcase)
         for office_id, payload in demo_payloads.items():
@@ -280,10 +288,20 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "standalone_deploy_directory": ".",
             "personal_site_target": "public/three-stooges/",
             "personal_site_url_path": "/three-stooges/",
+            "live_url": "https://www.atticus.asia/three-stooges/",
             "requires_backend": False,
             "requires_api_key": False,
             "calls_real_models": False,
             "allows_workspace_writes": False,
+            "live_verification": {
+                "status": "external_required",
+                "authority": "personal_website_check_online",
+                "check_command": "npm run check:online",
+                "ship_command": "npm run ship:vercel",
+                "requires_vercel_authorization": True,
+                "passes_when": "https://www.atticus.asia/three-stooges/ and sample downloads return HTTP 200 from the personal website repository check.",
+                "do_not_claim_live_until": "npm run check:online passes",
+            },
             "required_files": [
                 "index.html",
                 "data.js",
@@ -303,6 +321,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "python scripts/export_public_showcase.py",
                 "python scripts/verify_static_public_showcase.py --format markdown",
                 "python scripts/verify_release_readiness.py --format markdown",
+                "cd E:/trae/me/personal-website-v2 && npm run check:online",
             ],
             "forbidden_public_assets": [
                 "config.yaml",
@@ -320,6 +339,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "确认六份样例交付物都能从页面下载。",
                 "确认公开页面没有真实生产入口、API Key、Cookie、用户数据或运行产物。",
                 "确认页面仍显示 demo-only、safe_public_demo 和 demo_structure_only。",
+                "确认个人网站线上 /three-stooges/ 只有在 npm run check:online 通过后才对外宣称 live。",
             ],
         }
         _write_json(staging / "portfolio-deploy-manifest.json", deploy_manifest)

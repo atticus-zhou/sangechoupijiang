@@ -119,9 +119,22 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("portfolio deploy manifest must expose the personal website copy target")
         if deploy_manifest.get("personal_site_url_path") != "/three-stooges/":
             errors.append("portfolio deploy manifest must expose the personal website URL path")
+        if deploy_manifest.get("live_url") != "https://www.atticus.asia/three-stooges/":
+            errors.append("portfolio deploy manifest must expose the public live URL")
         for flag in ("requires_backend", "requires_api_key", "calls_real_models", "allows_workspace_writes"):
             if deploy_manifest.get(flag) is not False:
                 errors.append(f"portfolio deploy manifest must keep {flag}=False")
+        live_verification = deploy_manifest.get("live_verification") or {}
+        if live_verification.get("status") != "external_required":
+            errors.append("portfolio deploy manifest must mark live verification as external_required")
+        if live_verification.get("check_command") != "npm run check:online":
+            errors.append("portfolio deploy manifest must point to the personal website online check")
+        if live_verification.get("ship_command") != "npm run ship:vercel":
+            errors.append("portfolio deploy manifest must point to the Vercel shipping helper")
+        if live_verification.get("requires_vercel_authorization") is not True:
+            errors.append("portfolio deploy manifest must state that Vercel authorization is required")
+        if "check:online" not in str(live_verification.get("do_not_claim_live_until") or ""):
+            errors.append("portfolio deploy manifest must forbid live claims until check:online passes")
         required_deploy_files = {
             "index.html",
             "data.js",
@@ -145,10 +158,19 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append(f"portfolio deploy manifest must forbid {marker}")
         if len(deploy_manifest.get("operator_checklist") or []) < 4:
             errors.append("portfolio deploy manifest must include an operator checklist")
+        if not any("check:online" in item for item in deploy_manifest.get("operator_checklist") or []):
+            errors.append("portfolio deploy manifest checklist must include online verification")
         if showcase.get("mode") != "public_no_key_static_showcase":
             errors.append("static showcase has an unexpected mode")
         if (showcase.get("static_export") or {}).get("requires_backend") is not False:
             errors.append("showcase manifest does not declare the backend-free boundary")
+        showcase_live_verification = (showcase.get("public_deployment") or {}).get("live_verification") or {}
+        if showcase_live_verification.get("status") != "external_required":
+            errors.append("static showcase must mark live deployment verification as external_required")
+        if showcase_live_verification.get("check_command") != "npm run check:online":
+            errors.append("static showcase must expose the personal website online check command")
+        if showcase_live_verification.get("live_url") != "https://www.atticus.asia/three-stooges/":
+            errors.append("static showcase must expose the public live URL")
 
         downloads = manifest.get("downloads") or []
         if len(downloads) < 4:
@@ -525,6 +547,9 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
             "portfolio_deploy_manifest": "portfolio-deploy-manifest.json",
             "portfolio_deploy_target": deploy_manifest.get("personal_site_target", ""),
+            "portfolio_live_url": deploy_manifest.get("live_url", ""),
+            "portfolio_live_verification_status": (deploy_manifest.get("live_verification") or {}).get("status", ""),
+            "portfolio_live_check_command": (deploy_manifest.get("live_verification") or {}).get("check_command", ""),
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),
@@ -568,6 +593,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Prompt quality: {payload.get('comic_prompt_quality_status')} / assets={payload.get('comic_prompt_asset_clean_count')}/{payload.get('comic_prompt_asset_count')} / directors={payload.get('comic_prompt_director_ready_count')}/{payload.get('comic_prompt_shot_count')} / issues={payload.get('comic_prompt_issue_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",
+        f"- Portfolio live verification: {payload.get('portfolio_live_verification_status')} / url={payload.get('portfolio_live_url')} / check={payload.get('portfolio_live_check_command')}",
         f"- Requires backend: {payload.get('requires_backend')}",
         f"- Requires API Key: {payload.get('requires_api_key')}",
         f"- Calls real models: {payload.get('calls_real_models')}",

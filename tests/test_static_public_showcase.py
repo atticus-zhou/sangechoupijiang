@@ -153,15 +153,27 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(deploy_manifest["source_dir"], "dist/public-showcase")
         self.assertEqual(deploy_manifest["personal_site_target"], "public/three-stooges/")
         self.assertEqual(deploy_manifest["personal_site_url_path"], "/three-stooges/")
+        self.assertEqual(deploy_manifest["live_url"], "https://www.atticus.asia/three-stooges/")
         self.assertFalse(deploy_manifest["requires_backend"])
         self.assertFalse(deploy_manifest["requires_api_key"])
         self.assertFalse(deploy_manifest["calls_real_models"])
         self.assertFalse(deploy_manifest["allows_workspace_writes"])
+        live_verification = deploy_manifest["live_verification"]
+        self.assertEqual(live_verification["status"], "external_required")
+        self.assertEqual(live_verification["check_command"], "npm run check:online")
+        self.assertEqual(live_verification["ship_command"], "npm run ship:vercel")
+        self.assertTrue(live_verification["requires_vercel_authorization"])
+        self.assertIn("check:online", live_verification["do_not_claim_live_until"])
         self.assertEqual(deploy_manifest["sample_download_count"], 6)
         self.assertIn("downloads/", deploy_manifest["required_files"])
         self.assertIn("config.yaml", " ".join(deploy_manifest["forbidden_public_assets"]))
         self.assertTrue(any("verify_static_public_showcase.py" in item for item in deploy_manifest["verification_commands"]))
-        self.assertGreaterEqual(len(deploy_manifest["operator_checklist"]), 4)
+        self.assertTrue(any("check:online" in item for item in deploy_manifest["operator_checklist"]))
+        self.assertGreaterEqual(len(deploy_manifest["operator_checklist"]), 5)
+        showcase_live_verification = showcase["public_deployment"]["live_verification"]
+        self.assertEqual(showcase_live_verification["status"], "external_required")
+        self.assertEqual(showcase_live_verification["check_command"], "npm run check:online")
+        self.assertEqual(showcase_live_verification["live_url"], "https://www.atticus.asia/three-stooges/")
         quick_start = showcase["portfolio_embed"]["downstream_quick_start"]
         self.assertEqual([item["step"] for item in quick_start], [1, 2, 3, 4, 5])
         self.assertIn("逐镜头生成视频", json.dumps(quick_start, ensure_ascii=False))
@@ -272,6 +284,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Prompt quality: ready / assets=7/7 / directors=2/2 / issues=0", completed.stdout)
         self.assertIn("Portfolio integration: source=dist/public-showcase / options=2", completed.stdout)
         self.assertIn("Portfolio deploy manifest: portfolio-deploy-manifest.json / target=public/three-stooges/", completed.stdout)
+        self.assertIn("Portfolio live verification: external_required / url=https://www.atticus.asia/three-stooges/ / check=npm run check:online", completed.stdout)
         self.assertIn("Requires backend: False", completed.stdout)
 
     def test_static_readiness_verifier_can_check_existing_export(self):
