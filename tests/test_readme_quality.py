@@ -187,6 +187,25 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("fixture_only", text)
         self.assertIn("model_partial", text)
 
+    def test_readme_documents_public_asset_requirement_matrix(self):
+        text = Path("README.md").read_text(encoding="utf-8")
+
+        self.assertIn("Public Showcase Handoff Notes", text)
+        self.assertIn("asset requirement matrix", text)
+        self.assertIn("three_view", text)
+        self.assertIn("expression_sheet", text)
+        self.assertIn("turnaround", text)
+        self.assertIn("top_down", text)
+        self.assertIn("clean_background_required=true", text)
+        self.assertIn("/api/demo/comic-production", text)
+        self.assertIn("/api/demo/public-showcase", text)
+        self.assertIn("dist/public-showcase/showcase.json", text)
+        self.assertIn("public/three-stooges/", text)
+        self.assertIn("npm run check:showcase", text)
+        self.assertIn("npm run check:online", text)
+        self.assertIn("https://www.atticus.asia/three-stooges/", text)
+        self.assertIn("Vercel authorization or redeploy", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -373,3 +373,40 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 ## 当前方向
 
 三个臭皮匠希望成为一个“办公室式”的 AI 协作平台：用户不需要面对一堆模型参数，而是进入某个办公室，提交目标，和一组有分工的 Agent 一起把事情做完。
+## Public Showcase Handoff Notes
+
+The public no-key showcase now includes an asset requirement matrix for the AI
+comic-production office. Treat this matrix as part of the deliverable contract,
+not as page decoration:
+
+- character assets must expose `three_view` and `expression_sheet` requirements;
+- prop assets must expose a `turnaround` requirement;
+- scene assets must expose `wide` and `top_down` spatial reference requirements;
+- character and prop base assets must keep `clean_background_required=true`;
+- the same matrix must be visible through `/api/demo/comic-production`,
+  `/api/demo/public-showcase`, `dist/public-showcase/showcase.json`, and the
+  personal website copy at `public/three-stooges/`.
+
+Before claiming the showcase is ready for a reviewer, run:
+
+```powershell
+python scripts/verify_comic_v2_downstream_handoff.py --format markdown
+python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_static_public_showcase.py --format markdown
+python scripts/verify_release_readiness.py --format markdown
+```
+
+The production website route is a separate deployment fact. Do not describe
+`https://www.atticus.asia/three-stooges/` as live until the personal website
+repository passes:
+
+```powershell
+npm run check:showcase
+npm run check:online
+```
+
+If local checks pass but `/three-stooges/` returns 404, the remaining action is
+Vercel authorization or redeploy from the personal website repository, not a
+change to the product code. Never publish API keys, cookies, `config.yaml`,
+`.env`, `user_data/`, `output/`, browser profiles, or real user workspaces into
+the static showcase.
