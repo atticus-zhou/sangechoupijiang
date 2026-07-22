@@ -30,6 +30,7 @@ REQUIRED_FILES = {
     "assets/public-showcase-desktop.png",
     "data/comic_production.json",
     "data/comic_production_claim_report.json",
+    "data/visitor_acceptance_guide.json",
     "data/research.json",
 }
 
@@ -99,6 +100,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         manifest = json.loads((temp_dir / "export-manifest.json").read_text(encoding="utf-8"))
         deploy_manifest = json.loads((temp_dir / "portfolio-deploy-manifest.json").read_text(encoding="utf-8"))
         showcase = json.loads((temp_dir / "showcase.json").read_text(encoding="utf-8"))
+        visitor_guide = json.loads((temp_dir / "data" / "visitor_acceptance_guide.json").read_text(encoding="utf-8"))
         files = {path.relative_to(temp_dir).as_posix() for path in temp_dir.rglob("*") if path.is_file()}
 
         missing_files = sorted(REQUIRED_FILES - files)
@@ -146,6 +148,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "export-manifest.json",
             "assets/public-showcase-desktop.png",
             "data/comic_production_claim_report.json",
+            "data/visitor_acceptance_guide.json",
             "downloads/",
         }
         if required_deploy_files - set(deploy_manifest.get("required_files") or []):
@@ -177,6 +180,30 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase must expose the personal website online check command")
         if showcase_live_verification.get("live_url") != "https://www.atticus.asia/three-stooges/":
             errors.append("static showcase must expose the public live URL")
+        guide_summary = showcase.get("visitor_acceptance_guide") or {}
+        if guide_summary.get("uri") != "data/visitor_acceptance_guide.json":
+            errors.append("static showcase must link the visitor acceptance guide")
+        if guide_summary.get("live_verification_status") != "external_required":
+            errors.append("static showcase visitor guide summary must preserve live verification boundary")
+        if visitor_guide.get("mode") != "public_no_key_visitor_acceptance":
+            errors.append("visitor acceptance guide has an unexpected mode")
+        for flag in ("requires_backend", "requires_api_key", "calls_real_models"):
+            if visitor_guide.get(flag) is not False:
+                errors.append(f"visitor acceptance guide must keep {flag}=False")
+        if visitor_guide.get("safe_for_public_portfolio") is not True:
+            errors.append("visitor acceptance guide must be safe for public portfolio")
+        if len(visitor_guide.get("visitor_route") or []) < 5:
+            errors.append("visitor acceptance guide must include at least five route steps")
+        if len(visitor_guide.get("download_acceptance") or []) < 7:
+            errors.append("visitor acceptance guide must include every reviewable download")
+        if visitor_guide.get("live_verification", {}).get("check_command") != "npm run check:online":
+            errors.append("visitor acceptance guide must expose the online check command")
+        if "check:online" not in str(visitor_guide.get("live_verification", {}).get("do_not_claim_live_until") or ""):
+            errors.append("visitor acceptance guide must forbid live claims until online check passes")
+        guide_text = json.dumps(visitor_guide, ensure_ascii=False)
+        for marker in ("API Key", "config.yaml", "Cookie", "user_data/", "output/"):
+            if marker not in guide_text:
+                errors.append(f"visitor acceptance guide must preserve safety marker: {marker}")
 
         downloads = manifest.get("downloads") or []
         if len(downloads) < 4:
@@ -591,6 +618,9 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "file_count": len(files),
             "download_count": len(downloads),
             "download_catalog_count": len(download_catalog),
+            "visitor_acceptance_step_count": len(visitor_guide.get("visitor_route") or []),
+            "visitor_acceptance_download_count": len(visitor_guide.get("download_acceptance") or []),
+            "visitor_acceptance_live_status": (visitor_guide.get("live_verification") or {}).get("status", ""),
             "handoff_inventory_recovery_item_count": len(inventory_recovery_items),
             "handoff_inventory_recovery_actions": sorted({
                 str((item.get("recommended_recovery") or {}).get("action") or "")
@@ -677,6 +707,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Files: {payload.get('file_count')}",
         f"- Downloadable deliverables: {payload.get('download_count')}",
         f"- Reviewable catalog: {payload.get('download_catalog_count')} files",
+        f"- Visitor acceptance guide: {payload.get('visitor_acceptance_step_count')} steps / downloads={payload.get('visitor_acceptance_download_count')} / live={payload.get('visitor_acceptance_live_status')}",
         f"- Handoff recovery inventory: {payload.get('handoff_inventory_recovery_item_count')} items / actions={','.join(payload.get('handoff_inventory_recovery_actions') or []) or 'none'}",
         f"- Fast review route: {payload.get('fast_review_ready_count')}/{payload.get('fast_review_count')}",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",

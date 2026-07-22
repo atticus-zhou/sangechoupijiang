@@ -134,6 +134,84 @@ def _build_download_catalog(static_showcase: dict[str, Any], file_records: list[
     return sorted(catalog, key=lambda item: (int(item.get("order") or 99), str(item.get("local_uri") or "")))
 
 
+def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str, Any]:
+    portfolio = static_showcase.get("portfolio_embed") or {}
+    deployment = static_showcase.get("public_deployment") or {}
+    live_verification = deployment.get("live_verification") or {}
+    release_badge = portfolio.get("release_badge") or {}
+    claim = portfolio.get("real_production_claim") or {}
+    research_claim = portfolio.get("research_claim_boundary") or {}
+    fast_review = portfolio.get("fast_review_route") or []
+    download_catalog = static_showcase.get("download_catalog") or []
+
+    return {
+        "mode": "public_no_key_visitor_acceptance",
+        "title": "三个臭皮匠公开演示验收路线",
+        "safe_for_public_portfolio": static_showcase.get("safe_for_public_portfolio") is True,
+        "requires_backend": False,
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "recommended_minutes": 5,
+        "release_badge": {
+            "status": release_badge.get("status", ""),
+            "mode": release_badge.get("mode", ""),
+            "primary_gate": release_badge.get("primary_gate", ""),
+            "can_claim_real_quality": release_badge.get("can_claim_real_quality", False),
+        },
+        "visitor_route": [
+            {
+                "order": int(item.get("order") or index + 1),
+                "title": item.get("title", ""),
+                "viewer_action": item.get("viewer_action", ""),
+                "proof": item.get("proof", ""),
+                "next_anchor": item.get("next_anchor", ""),
+            }
+            for index, item in enumerate(fast_review)
+        ],
+        "download_acceptance": [
+            {
+                "order": item.get("order", 99),
+                "title": item.get("title", ""),
+                "local_uri": item.get("local_uri", ""),
+                "bytes": item.get("bytes", 0),
+                "sha256": item.get("sha256", ""),
+                "proves": item.get("proves") or item.get("reader_guidance") or item.get("look_for") or "",
+                "acceptance_signals": item.get("acceptance_signals") or [],
+            }
+            for item in download_catalog
+        ],
+        "claim_boundaries": {
+            "comic": {
+                "claim_level": claim.get("claim_level", ""),
+                "can_claim_real_quality": claim.get("can_claim_real_quality", False),
+                "allowed_public_claims": claim.get("allowed_public_claims", []),
+                "forbidden_public_claims": claim.get("forbidden_public_claims", []),
+            },
+            "research": {
+                "claim_level": research_claim.get("claim_level", ""),
+                "can_claim_full_automation": research_claim.get("can_claim_full_automation", False),
+                "forbidden_public_claims": research_claim.get("forbidden_public_claims", []),
+            },
+        },
+        "live_verification": {
+            "status": live_verification.get("status", "external_required"),
+            "live_url": live_verification.get("live_url", "https://www.atticus.asia/three-stooges/"),
+            "doctor_command": live_verification.get("doctor_command", "npm run doctor:deploy"),
+            "check_command": live_verification.get("check_command", "npm run check:online"),
+            "do_not_claim_live_until": "npm run check:online passes",
+        },
+        "must_not_include": [
+            "API Key",
+            "config.yaml",
+            ".env",
+            "Cookie",
+            "user_data/",
+            "output/",
+            "runtime_logs/",
+        ],
+    }
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -271,8 +349,18 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "ship_command": "npm run ship:vercel",
             "failure_meaning": "The static package is ready, but the production Vercel domain may still be serving an older deployment.",
         }
+        visitor_acceptance_guide = _build_visitor_acceptance_guide(static_showcase)
+        visitor_acceptance_path = "data/visitor_acceptance_guide.json"
+        static_showcase["visitor_acceptance_guide"] = {
+            "uri": visitor_acceptance_path,
+            "status": visitor_acceptance_guide["mode"],
+            "step_count": len(visitor_acceptance_guide["visitor_route"]),
+            "download_count": len(visitor_acceptance_guide["download_acceptance"]),
+            "live_verification_status": visitor_acceptance_guide["live_verification"]["status"],
+        }
 
         _write_json(staging / "showcase.json", static_showcase)
+        _write_json(staging / visitor_acceptance_path, visitor_acceptance_guide)
         for office_id, payload in demo_payloads.items():
             _write_json(staging / "data" / f"{office_id}.json", payload)
         data_json = json.dumps(static_showcase, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
@@ -315,6 +403,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "data/comic_production.json",
                 "data/research.json",
                 "data/comic_production_claim_report.json",
+                "data/visitor_acceptance_guide.json",
                 "downloads/",
             ],
             "sample_download_count": len(download_records),
