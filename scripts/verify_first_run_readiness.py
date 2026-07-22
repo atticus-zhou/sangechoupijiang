@@ -37,6 +37,7 @@ REQUIRED_PYTHON_PACKAGES = [
     "pillow",
     "requests",
     "beautifulsoup4",
+    "python-multipart",
 ]
 REAL_CLAIM_COMMAND = (
     "python scripts/verify_comic_real_production_claim.py "

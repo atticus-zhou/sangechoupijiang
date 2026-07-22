@@ -61,6 +61,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "pillow",
             "requests",
             "beautifulsoup4",
+            "python-multipart",
         ]:
             self.assertIn(package, checklist["present_python_packages"])
 

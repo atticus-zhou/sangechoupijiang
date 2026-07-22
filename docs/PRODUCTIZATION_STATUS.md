@@ -24,7 +24,7 @@ docs/REAL_PRODUCTION_CLAIMS.md
 
 | ID | 产品化承诺 | 当前状态 | 权威证据 |
 | --- | --- | --- | --- |
-| P1 | 个人网站和公开作品集可以展示产品，但不暴露真实 API Key | 已具备 demo-only 展示边界、发布状态铭牌、个人网站接入协议和后端无关的静态部署包 | `python scripts/verify_public_demo_mode.py --format markdown`、`python scripts/verify_static_public_showcase.py --format markdown`、`/api/demo/public-showcase` 的 `release_badge` 和 `portfolio_embed.portfolio_integration`、`docs/STATIC_SHOWCASE_DEPLOYMENT.md` |
+| P1 | 个人网站和公开作品集可以展示产品，但不暴露真实 API Key | 已具备 demo-only 展示边界、发布状态铭牌、个人网站接入协议、后端无关的静态部署包和个人网站本地拷贝同步检查 | `python scripts/verify_public_demo_mode.py --format markdown`、`python scripts/verify_static_public_showcase.py --format markdown`、`python scripts/verify_portfolio_showcase_sync.py --format markdown`、`/api/demo/public-showcase` 的 `release_badge` 和 `portfolio_embed.portfolio_integration`、`docs/STATIC_SHOWCASE_DEPLOYMENT.md` |
 | P2 | 面试官可以无 Key 看到固定样例、流程说明、样例交付物和下载物 | 已具备公开演示包，并提供复现与验收清单说明每条 no-key 检查命令证明什么 | `/api/demo/public-showcase` 的 `portfolio_embed`、样例 Word 画布、handoff manifest、`python scripts/verify_public_demo_mode.py --format markdown` |
 | P3 | 从 GitHub 下载项目后，开发者能复现本地运行路径 | 已具备第一次运行清单 | `python scripts/verify_first_run_readiness.py --format markdown`、`python scripts/doctor.py`、`README.md` |
 | P4 | AI 漫剧制片办公室输出不止聊天文本，而是可追溯制片包 | 已具备 deterministic 样例交付验证 | `python scripts/verify_comic_v2_delivery.py --format markdown`、`python scripts/verify_comic_v2_user_flow.py`、Word 制片画布、`*_handoff_manifest.json` |
@@ -105,6 +105,7 @@ online check.
 Current deployment boundary:
 
 - `local_static_showcase_ready`: proved by `python scripts/verify_static_public_showcase.py --format markdown`.
+- `portfolio_copy_sync_ready`: proved by `python scripts/verify_portfolio_showcase_sync.py --format markdown`; it compares `dist/public-showcase` against the personal website copy at `public/three-stooges/` by file hash.
 - `live_domain_verification_external`: diagnosed by `npm run doctor:deploy` and proved only by the personal website command `npm run check:online`.
 - `external_vercel_redeploy_required`: if `https://www.atticus.asia/three-stooges/` returns 404 or stale content, complete Vercel authorization and run `npm run ship:vercel` from the personal website repository.
 

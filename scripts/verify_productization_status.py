@@ -20,6 +20,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "个人网站和公开作品集",
             "python scripts/verify_public_demo_mode.py --format markdown",
             "python scripts/verify_static_public_showcase.py --format markdown",
+            "python scripts/verify_portfolio_showcase_sync.py --format markdown",
             "python scripts/verify_public_docs_readability.py --format markdown",
             "/api/demo/public-showcase",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
@@ -27,6 +28,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
         "files": [
             "scripts/verify_public_demo_mode.py",
             "scripts/verify_static_public_showcase.py",
+            "scripts/verify_portfolio_showcase_sync.py",
             "scripts/verify_public_docs_readability.py",
             "scripts/export_public_showcase.py",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
@@ -56,6 +58,8 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "npm run doctor:deploy",
             "npm run check:online",
             "npm run ship:vercel",
+            "portfolio_copy_sync_ready",
+            "python scripts/verify_portfolio_showcase_sync.py --format markdown",
             "https://www.atticus.asia/three-stooges/",
             "local_static_showcase_ready",
             "live_domain_verification_external",
@@ -64,6 +68,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "docs/PRODUCTIZATION_STATUS.md",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
             "docs/PUBLIC_RELEASE_HANDOFF.md",
+            "scripts/verify_portfolio_showcase_sync.py",
         ],
     },
     {
