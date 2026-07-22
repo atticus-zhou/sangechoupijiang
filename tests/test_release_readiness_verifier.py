@@ -50,6 +50,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
             self.assertEqual(check["status"], "passed")
             self.assertTrue(check["summary"])
             self.assertTrue(check["command"].startswith("python scripts/"))
+        first_run = next(item for item in payload["checks"] if item["id"] == "first_run")
+        self.assertIn("github_download=ready:12/12", first_run["summary"])
+        self.assertIn("private_boundaries=10", first_run["summary"])
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("fast_review=5/5", public_demo["summary"])
         self.assertIn("reading_guide=", public_demo["summary"])
@@ -125,6 +128,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
 
         self.assertIn("Release Readiness Audit", completed.stdout)
         self.assertIn("Safe for public release", completed.stdout)
+        self.assertIn("github_download=ready:12/12", completed.stdout)
+        self.assertIn("private_boundaries=10", completed.stdout)
         self.assertIn("Productization objective coverage", completed.stdout)
         self.assertIn("Model configuration guidance", completed.stdout)
         self.assertIn("Public docs readability", completed.stdout)

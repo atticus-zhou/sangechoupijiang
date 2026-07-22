@@ -57,6 +57,7 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
         "summary": "A GitHub-first checklist for demo viewing, local real use, and office extension.",
         "paths": paths,
         "recommended_order": [item["id"] for item in paths],
+        "github_download_checklist": _github_download_checklist(root),
         "commands": {
             "public_demo": PUBLIC_DEMO_COMMAND,
             "static_showcase_export": STATIC_EXPORT_COMMAND,
@@ -79,6 +80,94 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
         "doctor_status": doctor.get("status", ""),
         "product_readiness_status": product.get("status", ""),
     }
+
+
+def _github_download_checklist(root: Path) -> dict[str, Any]:
+    expected_public_files = [
+        "README.md",
+        "requirements.txt",
+        "config.example.yaml",
+        "run.py",
+        "scripts/doctor.py",
+        "scripts/verify_first_run_readiness.py",
+        "scripts/verify_release_readiness.py",
+        "scripts/check_no_secrets.py",
+        "docs/MODEL_CONFIGURATION.md",
+        "docs/DEPLOYMENT_MODES.md",
+        "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
+        "docs/PUBLIC_RELEASE_HANDOFF.md",
+    ]
+    file_checks = [
+        {
+            "path": path,
+            "status": "present" if (root / path).exists() else "missing",
+            "why_it_matters": _first_run_file_reason(path),
+        }
+        for path in expected_public_files
+    ]
+    missing_files = [item["path"] for item in file_checks if item["status"] != "present"]
+    return {
+        "status": "ready" if not missing_files else "missing_required_files",
+        "summary": "What a GitHub downloader should see before trying real model calls.",
+        "expected_public_file_count": len(file_checks),
+        "present_public_file_count": len(file_checks) - len(missing_files),
+        "missing_public_files": missing_files,
+        "expected_public_files": file_checks,
+        "private_paths_never_commit": [
+            "config.yaml",
+            ".env",
+            "user_data/",
+            "output/",
+            "runtime_logs/",
+            "logs/",
+            "*.db",
+            "*.sqlite3",
+            "*.docx generated from real runs",
+            "browser profiles, cookies, and third-party login state",
+        ],
+        "first_commands": [
+            {
+                "name": "本地环境体检",
+                "command": LOCAL_DOCTOR_COMMAND,
+                "proves": "依赖、配置、输出目录、办公室状态和真实生产前检查是否能被新人理解。",
+            },
+            {
+                "name": "第一次运行清单",
+                "command": "python scripts/verify_first_run_readiness.py --format markdown",
+                "proves": "公开演示、本地真实使用和开发者扩展三条路径是否分开说明。",
+            },
+            {
+                "name": "公开发布总门禁",
+                "command": "python scripts/verify_release_readiness.py --format markdown",
+                "proves": "无 Key demo、静态展示包、交付物、模型指引、隔离和密钥扫描是否统一通过。",
+            },
+        ],
+        "before_public_sharing": [
+            PUBLIC_DEMO_COMMAND,
+            STATIC_EXPORT_COMMAND,
+            STATIC_SHOWCASE_COMMAND,
+            "python scripts/verify_release_readiness.py --format markdown",
+            "python scripts/check_no_secrets.py",
+        ],
+    }
+
+
+def _first_run_file_reason(path: str) -> str:
+    reasons = {
+        "README.md": "GitHub front door: explains what the product is and which path a visitor should take.",
+        "requirements.txt": "Lets a new user install the Python dependencies deterministically.",
+        "config.example.yaml": "Shows model configuration shape without exposing any real API Key.",
+        "run.py": "Starts the local app for real local use.",
+        "scripts/doctor.py": "Gives a quick local health check before the user blames the product flow.",
+        "scripts/verify_first_run_readiness.py": "Prints the GitHub-first onboarding checklist.",
+        "scripts/verify_release_readiness.py": "Aggregates the public-release gate.",
+        "scripts/check_no_secrets.py": "Prevents API Keys and runtime artifacts from entering the public repo.",
+        "docs/MODEL_CONFIGURATION.md": "Explains which departments need text, image, or vision models.",
+        "docs/DEPLOYMENT_MODES.md": "Separates public demo, local real use, and future SaaS deployment.",
+        "docs/STATIC_SHOWCASE_DEPLOYMENT.md": "Explains how to publish the no-key static showcase.",
+        "docs/PUBLIC_RELEASE_HANDOFF.md": "Explains what evidence must exist before sharing the project publicly.",
+    }
+    return reasons.get(path, "Required first-run file.")
 
 
 def _common_first_run_failures() -> list[dict[str, Any]]:
@@ -330,6 +419,30 @@ def format_markdown(payload: dict[str, Any]) -> str:
     ]
     for index, path_id in enumerate(payload.get("recommended_order", []), start=1):
         lines.append(f"{index}. `{path_id}`")
+    checklist = payload.get("github_download_checklist") or {}
+    lines.extend(
+        [
+            "",
+            "## GitHub Download Checklist",
+            "",
+            f"Status: `{checklist.get('status')}`",
+            f"Expected public files: `{checklist.get('present_public_file_count')}/{checklist.get('expected_public_file_count')}`",
+            "",
+            "### Expected Public Files",
+            "",
+        ]
+    )
+    for item in checklist.get("expected_public_files", []):
+        lines.append(f"- `{item.get('path')}`: {item.get('status')} - {item.get('why_it_matters')}")
+    lines.extend(["", "### Never Commit", ""])
+    for path in checklist.get("private_paths_never_commit", []):
+        lines.append(f"- `{path}`")
+    lines.extend(["", "### First Commands", ""])
+    for item in checklist.get("first_commands", []):
+        lines.append(f"- {item.get('name')}: `{item.get('command')}` - {item.get('proves')}")
+    lines.extend(["", "### Before Public Sharing", ""])
+    for command in checklist.get("before_public_sharing", []):
+        lines.append(f"- `{command}`")
     lines.extend(["", "## Paths", ""])
     for item in payload.get("paths", []):
         lines.extend([

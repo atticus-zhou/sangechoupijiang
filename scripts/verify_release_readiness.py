@@ -239,9 +239,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             stage_b = runtime.get("stage_b_product_loop") or {}
             return f"status={parsed.get('status')}; stage_b={stage_b.get('status')}"
         if check_id == "first_run":
+            checklist = parsed.get("github_download_checklist") or {}
             return (
                 f"mode={parsed.get('mode')}; "
-                f"paths={','.join(parsed.get('recommended_order') or [])}"
+                f"paths={','.join(parsed.get('recommended_order') or [])}; "
+                f"github_download={checklist.get('status')}:"
+                f"{checklist.get('present_public_file_count')}/{checklist.get('expected_public_file_count')}; "
+                f"private_boundaries={len(checklist.get('private_paths_never_commit') or [])}"
             )
         if check_id == "productization_status":
             return (

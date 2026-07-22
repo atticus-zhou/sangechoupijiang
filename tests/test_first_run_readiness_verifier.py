@@ -25,6 +25,35 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertTrue(payload["safe_for_public_repo"])
         self.assertNotIn("sk-", result.stdout.lower())
 
+        checklist = payload["github_download_checklist"]
+        self.assertEqual(checklist["status"], "ready")
+        self.assertEqual(
+            checklist["present_public_file_count"],
+            checklist["expected_public_file_count"],
+        )
+        checklist_text = json.dumps(checklist, ensure_ascii=False)
+        for marker in [
+            "README.md",
+            "requirements.txt",
+            "config.example.yaml",
+            "scripts/doctor.py",
+            "scripts/verify_release_readiness.py",
+            "docs/MODEL_CONFIGURATION.md",
+            "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
+        ]:
+            self.assertIn(marker, checklist_text)
+        for private_marker in [
+            "config.yaml",
+            ".env",
+            "user_data/",
+            "output/",
+            "runtime_logs/",
+            "browser profiles",
+        ]:
+            self.assertIn(private_marker, checklist_text)
+        self.assertIn("python scripts/check_no_secrets.py", checklist_text)
+        self.assertIn("python scripts/verify_release_readiness.py --format markdown", checklist_text)
+
         paths = {item["id"]: item for item in payload["paths"]}
         for path_id in ["public_demo", "local_real_use", "developer_extension"]:
             self.assertIn(path_id, paths)
@@ -120,6 +149,12 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         )
 
         self.assertIn("# First Run Readiness", result.stdout)
+        self.assertIn("GitHub Download Checklist", result.stdout)
+        self.assertIn("Expected public files", result.stdout)
+        self.assertIn("Never Commit", result.stdout)
+        self.assertIn("config.example.yaml", result.stdout)
+        self.assertIn("runtime_logs/", result.stdout)
+        self.assertIn("Before Public Sharing", result.stdout)
         self.assertIn("public_demo", result.stdout)
         self.assertIn("local_real_use", result.stdout)
         self.assertIn("real_production.status=", result.stdout)
