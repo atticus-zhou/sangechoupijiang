@@ -175,6 +175,14 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         )
         self.assertIn("public/three-stooges/", json.dumps(integration["integration_options"], ensure_ascii=False))
         self.assertIn("config.yaml", " ".join(integration["must_not_include"]))
+        ci_proof = integration["portfolio_ci_proof"]
+        self.assertEqual(ci_proof["status"], "repo_static_checks")
+        self.assertEqual(ci_proof["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
+        self.assertIn("npm run check:showcase", ci_proof["commands"])
+        self.assertIn("npm run check:deploy-handoff", ci_proof["commands"])
+        self.assertIn("npm run build", ci_proof["commands"])
+        self.assertEqual(ci_proof["live_authority"], "npm run check:online")
+        self.assertIn("Vercel production route", " ".join(ci_proof["does_not_prove"]))
         extension_story = showcase["portfolio_embed"]["office_extension_story"]
         self.assertEqual(extension_story["starter_checklist_doc"], "docs/NEW_OFFICE_STARTER_CHECKLIST.md")
         self.assertEqual(extension_story["starter_item_count"], 8)
@@ -213,6 +221,14 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(live_verification["ship_command"], "npm run ship:vercel")
         self.assertTrue(live_verification["requires_vercel_authorization"])
         self.assertIn("check:online", live_verification["do_not_claim_live_until"])
+        deploy_ci = deploy_manifest["ci_verification"]
+        self.assertEqual(deploy_ci["status"], "repo_static_checks")
+        self.assertEqual(deploy_ci["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
+        self.assertIn("npm run check:showcase", deploy_ci["commands"])
+        self.assertIn("npm run check:deploy-handoff", deploy_ci["commands"])
+        self.assertIn("npm run build", deploy_ci["commands"])
+        self.assertEqual(deploy_ci["live_authority"], "npm run check:online")
+        self.assertIn("real model calls", " ".join(deploy_ci["does_not_prove"]))
         self.assertEqual(deploy_manifest["sample_download_count"], 6)
         self.assertIn("downloads/", deploy_manifest["required_files"])
         self.assertIn("data/visitor_acceptance_guide.json", deploy_manifest["required_files"])
@@ -226,6 +242,9 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(showcase_live_verification["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(showcase_live_verification["check_command"], "npm run check:online")
         self.assertEqual(showcase_live_verification["live_url"], "https://www.atticus.asia/three-stooges/")
+        showcase_ci = showcase["public_deployment"]["ci_verification"]
+        self.assertEqual(showcase_ci["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
+        self.assertEqual(showcase_ci["live_authority"], "npm run check:online")
         quick_start = showcase["portfolio_embed"]["downstream_quick_start"]
         self.assertEqual([item["step"] for item in quick_start], [1, 2, 3, 4, 5])
         self.assertIn("逐镜头生成视频", json.dumps(quick_start, ensure_ascii=False))

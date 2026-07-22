@@ -127,6 +127,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             if deploy_manifest.get(flag) is not False:
                 errors.append(f"portfolio deploy manifest must keep {flag}=False")
         live_verification = deploy_manifest.get("live_verification") or {}
+        deploy_ci_verification = deploy_manifest.get("ci_verification") or {}
         if live_verification.get("status") != "external_required":
             errors.append("portfolio deploy manifest must mark live verification as external_required")
         if live_verification.get("doctor_command") != "npm run doctor:deploy":
@@ -139,6 +140,18 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("portfolio deploy manifest must state that Vercel authorization is required")
         if "check:online" not in str(live_verification.get("do_not_claim_live_until") or ""):
             errors.append("portfolio deploy manifest must forbid live claims until check:online passes")
+        if deploy_ci_verification.get("status") != "repo_static_checks":
+            errors.append("portfolio deploy manifest must expose repository static CI proof")
+        if deploy_ci_verification.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
+            errors.append("portfolio deploy manifest must point to the personal website showcase workflow")
+        deploy_ci_commands = "\n".join(deploy_ci_verification.get("commands") or [])
+        for marker in ("npm run check:showcase", "npm run check:deploy-handoff", "npm run build"):
+            if marker not in deploy_ci_commands:
+                errors.append(f"portfolio deploy manifest CI proof must include command: {marker}")
+        deploy_ci_boundary = json.dumps(deploy_ci_verification, ensure_ascii=False)
+        for marker in ("Vercel production route", "real model calls", "npm run check:online"):
+            if marker not in deploy_ci_boundary:
+                errors.append(f"portfolio deploy manifest CI proof must preserve boundary marker: {marker}")
         required_deploy_files = {
             "index.html",
             "data.js",
@@ -172,6 +185,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         if (showcase.get("static_export") or {}).get("requires_backend") is not False:
             errors.append("showcase manifest does not declare the backend-free boundary")
         showcase_live_verification = (showcase.get("public_deployment") or {}).get("live_verification") or {}
+        showcase_ci_verification = (showcase.get("public_deployment") or {}).get("ci_verification") or {}
         if showcase_live_verification.get("status") != "external_required":
             errors.append("static showcase must mark live deployment verification as external_required")
         if showcase_live_verification.get("doctor_command") != "npm run doctor:deploy":
@@ -180,6 +194,10 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase must expose the personal website online check command")
         if showcase_live_verification.get("live_url") != "https://www.atticus.asia/three-stooges/":
             errors.append("static showcase must expose the public live URL")
+        if showcase_ci_verification.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
+            errors.append("static showcase must expose the personal website CI workflow path")
+        if showcase_ci_verification.get("live_authority") != "npm run check:online":
+            errors.append("static showcase CI verification must defer live proof to check:online")
         guide_summary = showcase.get("visitor_acceptance_guide") or {}
         if guide_summary.get("uri") != "data/visitor_acceptance_guide.json":
             errors.append("static showcase must link the visitor acceptance guide")
@@ -206,6 +224,11 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("visitor acceptance guide must expose the online check command")
         if "check:online" not in str(visitor_guide.get("live_verification", {}).get("do_not_claim_live_until") or ""):
             errors.append("visitor acceptance guide must forbid live claims until online check passes")
+        visitor_ci_verification = visitor_guide.get("ci_verification") or {}
+        if visitor_ci_verification.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
+            errors.append("visitor acceptance guide must expose the personal website CI workflow path")
+        if visitor_ci_verification.get("live_authority") != "npm run check:online":
+            errors.append("visitor acceptance guide CI verification must defer live proof to check:online")
         guide_text = json.dumps(visitor_guide, ensure_ascii=False)
         for marker in ("API Key", "config.yaml", "Cookie", "user_data/", "output/"):
             if marker not in guide_text:
@@ -493,6 +516,19 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for marker in ("config.yaml", "API Key", "Cookie", "user_data/", "output/"):
             if marker not in forbidden:
                 errors.append(f"static portfolio integration must forbid {marker}")
+        portfolio_ci_proof = portfolio_integration.get("portfolio_ci_proof") or {}
+        if portfolio_ci_proof.get("status") != "repo_static_checks":
+            errors.append("static portfolio integration must expose repository static CI proof")
+        if portfolio_ci_proof.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
+            errors.append("static portfolio CI proof must point to the personal website showcase workflow")
+        portfolio_ci_commands = "\n".join(portfolio_ci_proof.get("commands") or [])
+        for marker in ("npm run check:showcase", "npm run check:deploy-handoff", "npm run build"):
+            if marker not in portfolio_ci_commands:
+                errors.append(f"static portfolio CI proof must include command: {marker}")
+        portfolio_ci_boundary = json.dumps(portfolio_ci_proof, ensure_ascii=False)
+        for marker in ("Vercel production route", "real model calls", "npm run check:online"):
+            if marker not in portfolio_ci_boundary:
+                errors.append(f"static portfolio CI proof must preserve boundary marker: {marker}")
         extension_checklist = office_extension_story.get("starter_checklist") or []
         future_candidates = office_extension_story.get("future_office_candidates") or []
         future_backlog = office_extension_story.get("future_platform_backlog") or []
@@ -690,6 +726,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "portfolio_live_url": deploy_manifest.get("live_url", ""),
             "portfolio_live_verification_status": (deploy_manifest.get("live_verification") or {}).get("status", ""),
             "portfolio_live_check_command": (deploy_manifest.get("live_verification") or {}).get("check_command", ""),
+            "portfolio_ci_status": (deploy_manifest.get("ci_verification") or {}).get("status", ""),
+            "portfolio_ci_workflow": (deploy_manifest.get("ci_verification") or {}).get("workflow_path", ""),
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),

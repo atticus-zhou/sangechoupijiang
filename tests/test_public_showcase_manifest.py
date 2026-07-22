@@ -268,6 +268,15 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(integration_live["check_command"], "npm run check:online")
         self.assertEqual(integration_live["ship_command"], "npm run ship:vercel")
         self.assertIn("check:online", integration_live["do_not_claim_live_until"])
+        ci_proof = integration["portfolio_ci_proof"]
+        self.assertEqual(ci_proof["status"], "repo_static_checks")
+        self.assertEqual(ci_proof["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
+        self.assertIn("npm run check:showcase", ci_proof["commands"])
+        self.assertIn("npm run check:deploy-handoff", ci_proof["commands"])
+        self.assertIn("npm run build", ci_proof["commands"])
+        self.assertEqual(ci_proof["live_authority"], "npm run check:online")
+        self.assertIn("Vercel production route", " ".join(ci_proof["does_not_prove"]))
+        self.assertIn("real model calls", " ".join(ci_proof["does_not_prove"]))
         self.assertEqual(
             {item["id"] for item in integration["integration_options"]},
             {"standalone_static_site", "personal_site_subdirectory"},
@@ -326,6 +335,10 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(deployment_live["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(deployment_live["check_command"], "npm run check:online")
         self.assertEqual(deployment_live["ship_command"], "npm run ship:vercel")
+        deployment_ci = public_deployment["ci_verification"]
+        self.assertEqual(deployment_ci["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
+        self.assertEqual(deployment_ci["live_authority"], "npm run check:online")
+        self.assertIn("npm run build", deployment_ci["commands"])
         self.assertIn("config.yaml", " ".join(public_deployment["forbidden_public_assets"]))
         self.assertIn(
             "python scripts/verify_static_public_showcase.py --format markdown",

@@ -138,6 +138,7 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
     portfolio = static_showcase.get("portfolio_embed") or {}
     deployment = static_showcase.get("public_deployment") or {}
     live_verification = deployment.get("live_verification") or {}
+    ci_verification = deployment.get("ci_verification") or (portfolio.get("portfolio_integration") or {}).get("portfolio_ci_proof") or {}
     release_badge = portfolio.get("release_badge") or {}
     claim = portfolio.get("real_production_claim") or {}
     research_claim = portfolio.get("research_claim_boundary") or {}
@@ -215,6 +216,13 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
             "doctor_command": live_verification.get("doctor_command", "npm run doctor:deploy"),
             "check_command": live_verification.get("check_command", "npm run check:online"),
             "do_not_claim_live_until": "npm run check:online passes",
+        },
+        "ci_verification": {
+            "status": ci_verification.get("status", "repo_static_checks"),
+            "workflow_path": ci_verification.get("workflow_path", ".github/workflows/three-cobblers-showcase.yml"),
+            "commands": ci_verification.get("commands", []),
+            "live_authority": ci_verification.get("live_authority", "npm run check:online"),
+            "do_not_claim_live_until": ci_verification.get("do_not_claim_live_until", "npm run check:online passes"),
         },
         "must_not_include": [
             "API Key",
@@ -385,6 +393,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             encoding="utf-8",
         )
         portfolio_integration = (static_showcase.get("portfolio_embed") or {}).get("portfolio_integration") or {}
+        ci_verification = (static_showcase.get("public_deployment") or {}).get("ci_verification") or portfolio_integration.get("portfolio_ci_proof") or {}
         deploy_manifest = {
             "mode": "public_no_key_portfolio_deploy",
             "recommended_path": "static_export",
@@ -407,6 +416,16 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "requires_vercel_authorization": True,
                 "passes_when": "https://www.atticus.asia/three-stooges/ and sample downloads return HTTP 200 from the personal website repository check.",
                 "do_not_claim_live_until": "npm run check:online passes",
+            },
+            "ci_verification": {
+                "status": ci_verification.get("status", "repo_static_checks"),
+                "repository": ci_verification.get("repository", "https://github.com/atticus-zhou/me"),
+                "workflow_path": ci_verification.get("workflow_path", ".github/workflows/three-cobblers-showcase.yml"),
+                "proves": ci_verification.get("proves", []),
+                "does_not_prove": ci_verification.get("does_not_prove", []),
+                "commands": ci_verification.get("commands", []),
+                "live_authority": ci_verification.get("live_authority", "npm run check:online"),
+                "do_not_claim_live_until": ci_verification.get("do_not_claim_live_until", "npm run check:online passes"),
             },
             "required_files": [
                 "index.html",

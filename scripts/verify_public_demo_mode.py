@@ -84,6 +84,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
     quality_upgrade_path = portfolio_embed.get("quality_upgrade_path") or {}
     portfolio_integration = portfolio_embed.get("portfolio_integration") or {}
+    portfolio_ci_proof = portfolio_integration.get("portfolio_ci_proof") or {}
+    deployment_ci_verification = public_deployment.get("ci_verification") or {}
     office_extension_story = portfolio_embed.get("office_extension_story") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
@@ -206,6 +208,18 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("export_public_showcase.py", "verify_static_public_showcase.py", "verify_release_readiness.py", "check_no_secrets.py"):
         if marker not in commands:
             errors.append(f"portfolio integration must include verifier command: {marker}")
+    if portfolio_ci_proof.get("status") != "repo_static_checks":
+        errors.append("portfolio integration must expose repository static CI proof")
+    if portfolio_ci_proof.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
+        errors.append("portfolio CI proof must point to the personal website showcase workflow")
+    ci_commands = "\n".join(portfolio_ci_proof.get("commands") or [])
+    for marker in ("npm run check:showcase", "npm run check:deploy-handoff", "npm run build"):
+        if marker not in ci_commands:
+            errors.append(f"portfolio CI proof must include command: {marker}")
+    ci_boundary = json.dumps(portfolio_ci_proof, ensure_ascii=False)
+    for marker in ("Vercel production route", "real model calls", "npm run check:online"):
+        if marker not in ci_boundary:
+            errors.append(f"portfolio CI proof must preserve boundary marker: {marker}")
     starter_checklist = office_extension_story.get("starter_checklist") or []
     future_candidates = office_extension_story.get("future_office_candidates") or []
     future_backlog = office_extension_story.get("future_platform_backlog") or []
@@ -263,6 +277,10 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public deployment profile must forbid real model calls")
     if public_deployment.get("allows_workspace_writes") is not False:
         errors.append("public deployment profile must forbid workspace writes")
+    if deployment_ci_verification.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
+        errors.append("public deployment profile must expose the personal website CI workflow path")
+    if deployment_ci_verification.get("live_authority") != "npm run check:online":
+        errors.append("public deployment CI verification must defer live proof to check:online")
     if static_export.get("command") != "python scripts/export_public_showcase.py":
         errors.append("public deployment profile must expose the static export command")
     if static_export.get("entrypoint") != "dist/public-showcase/index.html":
@@ -331,6 +349,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
         "portfolio_integration_option_count": len(integration_options),
         "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
+        "portfolio_ci_status": portfolio_ci_proof.get("status", ""),
+        "portfolio_ci_workflow": portfolio_ci_proof.get("workflow_path", ""),
         "office_extension_checklist_count": len(starter_checklist),
         "office_extension_phase_count": len(starter_phases),
         "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),

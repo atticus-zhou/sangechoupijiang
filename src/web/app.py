@@ -1059,6 +1059,31 @@ def _public_showcase_quality_upgrade_path(claim: dict) -> dict:
     }
 
 
+def _public_showcase_portfolio_ci_proof() -> dict:
+    return {
+        "status": "repo_static_checks",
+        "repository": "https://github.com/atticus-zhou/me",
+        "workflow_path": ".github/workflows/three-cobblers-showcase.yml",
+        "proves": [
+            "personal website repository can install dependencies and build",
+            "public/three-stooges contains the no-key static showcase",
+            "deploy handoff keeps the Vercel live boundary explicit",
+        ],
+        "does_not_prove": [
+            "the Vercel production route is live",
+            "real model calls or API keys work",
+            "comic image quality is production verified",
+        ],
+        "commands": [
+            "npm run check:showcase",
+            "npm run check:deploy-handoff",
+            "npm run build",
+        ],
+        "live_authority": "npm run check:online",
+        "do_not_claim_live_until": "npm run check:online passes",
+    }
+
+
 def _public_showcase_portfolio_integration() -> dict:
     return {
         "title": "个人网站接入方式",
@@ -1081,6 +1106,7 @@ def _public_showcase_portfolio_integration() -> dict:
             "ship_command": "npm run ship:vercel",
             "do_not_claim_live_until": "npm run check:online passes",
         },
+        "portfolio_ci_proof": _public_showcase_portfolio_ci_proof(),
         "integration_options": [
             {
                 "id": "standalone_static_site",
@@ -1976,6 +2002,7 @@ async def get_public_showcase_demo_api():
                 "ship_command": "npm run ship:vercel",
                 "do_not_claim_live_until": "npm run check:online passes",
             },
+            "ci_verification": _public_showcase_portfolio_ci_proof(),
             "forbidden_public_assets": [
                 "config.yaml",
                 ".env",
