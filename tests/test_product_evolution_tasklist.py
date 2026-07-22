@@ -55,6 +55,14 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("first-run、公开演示、AI 漫剧交付物、研究办公室", text)
         self.assertIn("敏感信息扫描", text)
 
+    def test_office_launch_matrix_is_part_of_future_extension_protocol(self):
+        text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("office_launch_matrix", text)
+        self.assertIn("`AI 漫剧制片办公室` 是当前主推办公室", text)
+        self.assertIn("`研究办公室` 可公开展示固定样例", text)
+        self.assertIn("旧 `AI 漫剧办公室` 只保留为兼容入口", text)
+
     def test_download_links_are_marked_done_with_launch_gate_evidence(self):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
 
