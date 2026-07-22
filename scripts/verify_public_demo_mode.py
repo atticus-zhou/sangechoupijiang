@@ -193,6 +193,9 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     starter_checklist = office_extension_story.get("starter_checklist") or []
     future_candidates = office_extension_story.get("future_office_candidates") or []
     future_backlog = office_extension_story.get("future_platform_backlog") or []
+    office_launch_matrix = portfolio_embed.get("office_launch_matrix") or {}
+    launch_matrix_summary = office_launch_matrix.get("summary") or {}
+    launch_matrix_offices = office_launch_matrix.get("offices") or []
     if office_extension_story.get("starter_checklist_doc") != "docs/NEW_OFFICE_STARTER_CHECKLIST.md":
         errors.append("portfolio embed must expose the new office starter checklist document")
     if len(starter_checklist) != 8:
@@ -222,6 +225,17 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for item in future_backlog:
         if not item.get("description") or not item.get("evidence_required"):
             errors.append(f"future platform backlog item is incomplete: {item.get('id')}")
+    if launch_matrix_summary.get("office_count") != 3:
+        errors.append("public showcase should expose all current office launch states")
+    if launch_matrix_summary.get("primary_allowed_count") != 1:
+        errors.append("public showcase should expose exactly one primary office")
+    launch_by_office = {item.get("office_id"): item for item in launch_matrix_offices}
+    if launch_by_office.get("comic_production", {}).get("primary_allowed") is not True:
+        errors.append("public showcase should mark comic_production as the primary office")
+    if launch_by_office.get("comic", {}).get("visitor_label") != "旧版兼容入口":
+        errors.append("public showcase should label legacy comic as a compatibility entry")
+    if "legacy_migration_required" not in (launch_by_office.get("comic", {}).get("blocked_by") or []):
+        errors.append("public showcase should expose the legacy comic migration blocker")
     if len(interview_script) < 4:
         errors.append("portfolio embed must expose a 4-step interview demo script")
     for item in interview_script:
@@ -300,6 +314,10 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
         "office_extension_candidate_count": len(future_candidates),
         "office_extension_backlog_count": len(future_backlog),
+        "office_launch_public_ready_count": launch_matrix_summary.get("public_ready_count", 0),
+        "office_launch_office_count": launch_matrix_summary.get("office_count", 0),
+        "office_launch_primary_allowed_count": launch_matrix_summary.get("primary_allowed_count", 0),
+        "office_launch_legacy_count": launch_matrix_summary.get("legacy_count", 0),
         "public_deployment_mode": public_deployment.get("mode", ""),
         "static_export_command": static_export.get("command", ""),
         "static_export_entrypoint": static_export.get("entrypoint", ""),
@@ -501,6 +519,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
         f"- New office extension: checklist={manifest.get('office_extension_checklist_count')} / phases={manifest.get('office_extension_phase_count')} / doc={manifest.get('office_extension_doc')}",
         f"- Future office candidates: {manifest.get('office_extension_candidate_count')} / backlog={manifest.get('office_extension_backlog_count')}",
+        f"- Office launch matrix: public_ready={manifest.get('office_launch_public_ready_count')}/{manifest.get('office_launch_office_count')} / primary={manifest.get('office_launch_primary_allowed_count')} / legacy={manifest.get('office_launch_legacy_count')}",
         f"- 公开部署模式：{manifest.get('public_deployment_mode')}",
         "",
     ]

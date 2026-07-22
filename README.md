@@ -78,6 +78,14 @@ python scripts/verify_static_public_showcase.py --format markdown --existing-dir
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
 静态展示包会同时带上最快验收路线、六份下载物、七个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据。
 
+静态展示包还会显示办公室公开状态矩阵，避免访客把旧入口和主力入口混在一起：
+
+- `AI 漫剧制片办公室`：当前主推办公室，可以作为对外重点演示和后续真实使用入口。
+- `研究办公室`：可公开展示固定样例，但当前不是主推入口。
+- `AI 漫剧办公室`：旧版兼容入口，只用于迁移或历史兼容，不建议新用户从这里开始。
+
+命令行也会显示同一结论：`python scripts/verify_public_demo_mode.py --format markdown` 和 `python scripts/verify_static_public_showcase.py --format markdown` 都会输出 `Office launch matrix: public_ready=2/3 / primary=1 / legacy=1`。
+
 本地真实使用路径：
 
 ```powershell

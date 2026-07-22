@@ -164,6 +164,15 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean", text)
         self.assertIn("python -m unittest discover -s tests -q", text)
 
+    def test_readme_documents_public_office_launch_matrix(self):
+        text = Path("README.md").read_text(encoding="utf-8")
+
+        self.assertIn("办公室公开状态矩阵", text)
+        self.assertIn("`AI 漫剧制片办公室`：当前主推办公室", text)
+        self.assertIn("`研究办公室`：可公开展示固定样例", text)
+        self.assertIn("`AI 漫剧办公室`：旧版兼容入口", text)
+        self.assertIn("Office launch matrix: public_ready=2/3 / primary=1 / legacy=1", text)
+
     def test_readme_documents_image_evidence_recovery_path(self):
         text = Path("README.md").read_text(encoding="utf-8")
 
