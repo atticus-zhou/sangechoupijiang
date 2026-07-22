@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from src.config_manager import config_manager
-from src.offices import audit_office_launch_gates, get_office, list_office_creation_template, list_office_extension_blueprint, list_office_protocols, list_offices
+from src.offices import audit_office_extension_governance, audit_office_launch_gates, get_office, list_office_creation_template, list_office_extension_blueprint, list_office_protocols, list_offices
 from src.comic_artifacts import build_comic_artifacts
 from src.comic_office.production_handoff import build_production_handoff_artifacts
 from src.comic_office.production_chain import build_production_chain_state, format_production_chain_state
@@ -353,10 +353,13 @@ async def get_offices():
 @app.get("/api/offices/protocols")
 async def get_office_protocols_api():
     """List product contracts every office must expose before it can scale."""
+    governance = audit_office_extension_governance()
     return {
         "protocols": list_office_protocols(),
         "creation_template": list_office_creation_template(),
         "extension_blueprint": list_office_extension_blueprint(),
+        "launch_matrix": governance["launch_matrix"],
+        "launch_matrix_summary": governance["launch_matrix_summary"],
     }
 
 

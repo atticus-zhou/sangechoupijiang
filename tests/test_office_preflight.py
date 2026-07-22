@@ -187,6 +187,13 @@ class OfficePreflightApiTests(unittest.TestCase):
         payload = response.json()
         self.assertIn("creation_template", payload)
         self.assertIn("extension_blueprint", payload)
+        self.assertEqual(payload["launch_matrix_summary"]["office_count"], 3)
+        self.assertEqual(payload["launch_matrix_summary"]["primary_allowed_count"], 1)
+        launch_matrix = {item["office_id"]: item for item in payload["launch_matrix"]}
+        self.assertTrue(launch_matrix["comic_production"]["can_show_publicly"])
+        self.assertTrue(launch_matrix["comic_production"]["primary_allowed"])
+        self.assertFalse(launch_matrix["comic"]["can_show_publicly"])
+        self.assertIn("legacy_migration_required", launch_matrix["comic"]["blocked_by"])
         self.assertIn("required_profile_fields", payload["creation_template"])
         self.assertIn("recovery_actions", payload["creation_template"]["required_profile_fields"])
         self.assertIn("no_key_demo", payload["creation_template"]["required_launch_gates"])
