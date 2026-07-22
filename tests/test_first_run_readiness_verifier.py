@@ -53,6 +53,16 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             self.assertIn(private_marker, checklist_text)
         self.assertIn("python scripts/check_no_secrets.py", checklist_text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", checklist_text)
+        self.assertEqual(checklist["missing_python_packages"], [])
+        for package in [
+            "fastapi",
+            "litellm",
+            "python-docx",
+            "pillow",
+            "requests",
+            "beautifulsoup4",
+        ]:
+            self.assertIn(package, checklist["present_python_packages"])
 
         paths = {item["id"]: item for item in payload["paths"]}
         for path_id in ["public_demo", "local_real_use", "developer_extension"]:

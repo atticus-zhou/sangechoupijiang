@@ -25,6 +25,19 @@ PRODUCT_READINESS_COMMAND = "python scripts/verify_product_readiness.py --format
 OFFICE_ISOLATION_COMMAND = "python scripts/verify_office_isolation.py --format markdown"
 SERVER_COMMAND = "python run.py --port 8080"
 HANDOFF_AUDIT_COMMAND = "python scripts/audit_comic_v2_handoffs.py --format markdown"
+REQUIRED_PYTHON_PACKAGES = [
+    "litellm",
+    "fastapi",
+    "uvicorn",
+    "chromadb",
+    "pyyaml",
+    "python-dotenv",
+    "pydantic",
+    "python-docx",
+    "pillow",
+    "requests",
+    "beautifulsoup4",
+]
 REAL_CLAIM_COMMAND = (
     "python scripts/verify_comic_real_production_claim.py "
     "--manifest output/your_project/xxx_handoff_manifest.json --format markdown"
@@ -106,13 +119,22 @@ def _github_download_checklist(root: Path) -> dict[str, Any]:
         for path in expected_public_files
     ]
     missing_files = [item["path"] for item in file_checks if item["status"] != "present"]
+    dependency_check = _requirements_dependency_check(root)
+    status = "ready"
+    if missing_files:
+        status = "missing_required_files"
+    elif dependency_check["missing_packages"]:
+        status = "missing_required_dependencies"
     return {
-        "status": "ready" if not missing_files else "missing_required_files",
+        "status": status,
         "summary": "What a GitHub downloader should see before trying real model calls.",
         "expected_public_file_count": len(file_checks),
         "present_public_file_count": len(file_checks) - len(missing_files),
         "missing_public_files": missing_files,
         "expected_public_files": file_checks,
+        "required_python_packages": dependency_check["required_packages"],
+        "present_python_packages": dependency_check["present_packages"],
+        "missing_python_packages": dependency_check["missing_packages"],
         "private_paths_never_commit": [
             "config.yaml",
             ".env",
@@ -150,6 +172,33 @@ def _github_download_checklist(root: Path) -> dict[str, Any]:
             "python scripts/check_no_secrets.py",
         ],
     }
+
+
+def _requirements_dependency_check(root: Path) -> dict[str, Any]:
+    requirements = root / "requirements.txt"
+    declared = _declared_requirement_names(requirements.read_text(encoding="utf-8") if requirements.exists() else "")
+    present = [package for package in REQUIRED_PYTHON_PACKAGES if package in declared]
+    missing = [package for package in REQUIRED_PYTHON_PACKAGES if package not in declared]
+    return {
+        "required_packages": REQUIRED_PYTHON_PACKAGES,
+        "present_packages": present,
+        "missing_packages": missing,
+    }
+
+
+def _declared_requirement_names(text: str) -> set[str]:
+    names: set[str] = set()
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        name = line.split(";", 1)[0].strip()
+        for separator in ("==", ">=", "<=", "~=", "!=", ">", "<"):
+            name = name.split(separator, 1)[0].strip()
+        name = name.split("[", 1)[0].strip().lower().replace("_", "-")
+        if name:
+            names.add(name)
+    return names
 
 
 def _first_run_file_reason(path: str) -> str:
