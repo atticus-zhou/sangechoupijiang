@@ -202,6 +202,32 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         catalog_uris = {str(item.get("local_uri") or "") for item in download_catalog}
         if "data/comic_production_claim_report.json" not in catalog_uris:
             errors.append("download_catalog must include the real production claim report")
+        inventory_uri = "downloads/comic-production/handoff-inventory.json"
+        if inventory_uri not in catalog_uris:
+            errors.append("download_catalog must include the comic handoff inventory")
+        inventory_path = temp_dir / inventory_uri
+        inventory_payload: dict[str, Any] = {}
+        inventory_recovery_items: list[dict[str, Any]] = []
+        if not inventory_path.is_file():
+            errors.append("static showcase must export the comic handoff inventory JSON")
+        else:
+            inventory_payload = json.loads(inventory_path.read_text(encoding="utf-8"))
+            if inventory_payload.get("calls_real_models") is not False:
+                errors.append("static comic handoff inventory must not call real models")
+            if inventory_payload.get("requires_api_key") is not False:
+                errors.append("static comic handoff inventory must not require an API Key")
+            if inventory_payload.get("production_verified_count", 0) != 0:
+                errors.append("static comic handoff inventory must not claim real production verification")
+            inventory_recovery_items = [
+                item for item in (inventory_payload.get("items") or [])
+                if (item.get("recommended_recovery") or {}).get("action")
+            ]
+            if inventory_payload.get("demo_only_count", 0) > 0 and not inventory_recovery_items:
+                errors.append("static comic handoff inventory demo-only items must expose recovery actions")
+            for item in inventory_recovery_items:
+                recovery = item.get("recommended_recovery") or {}
+                if not recovery.get("expected_stage") or not recovery.get("preserves") or not recovery.get("clears"):
+                    errors.append(f"static comic handoff recovery item is incomplete: {item.get('title') or item.get('quality_claim')}")
         for item in download_catalog:
             local_uri = str(item.get("local_uri") or "")
             path = temp_dir / local_uri
@@ -565,6 +591,12 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "file_count": len(files),
             "download_count": len(downloads),
             "download_catalog_count": len(download_catalog),
+            "handoff_inventory_recovery_item_count": len(inventory_recovery_items),
+            "handoff_inventory_recovery_actions": sorted({
+                str((item.get("recommended_recovery") or {}).get("action") or "")
+                for item in inventory_recovery_items
+                if (item.get("recommended_recovery") or {}).get("action")
+            }),
             "fast_review_count": len(fast_review_route),
             "fast_review_ready_count": ready_fast_review_items,
             "reading_guide_count": len(reading_guide),
@@ -645,6 +677,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Files: {payload.get('file_count')}",
         f"- Downloadable deliverables: {payload.get('download_count')}",
         f"- Reviewable catalog: {payload.get('download_catalog_count')} files",
+        f"- Handoff recovery inventory: {payload.get('handoff_inventory_recovery_item_count')} items / actions={','.join(payload.get('handoff_inventory_recovery_actions') or []) or 'none'}",
         f"- Fast review route: {payload.get('fast_review_ready_count')}/{payload.get('fast_review_count')}",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- First-run paths: {payload.get('first_run_path_count')}",

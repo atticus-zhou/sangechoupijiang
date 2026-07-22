@@ -42,6 +42,22 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("downloads/research/claim-report.json", {item["local_uri"] for item in catalog})
         self.assertTrue(all(item["title"] and item["sha256"] and item["bytes"] for item in catalog))
         self.assertTrue(all(item["proves"] or item["reader_guidance"] or item["look_for"] for item in catalog))
+        handoff_inventory = json.loads(
+            (self.output_dir / "downloads/comic-production/handoff-inventory.json").read_text(encoding="utf-8")
+        )
+        self.assertFalse(handoff_inventory["requires_api_key"])
+        self.assertFalse(handoff_inventory["calls_real_models"])
+        self.assertEqual(handoff_inventory["production_verified_count"], 0)
+        demo_recoveries = [
+            item["recommended_recovery"]
+            for item in handoff_inventory["items"]
+            if item["quality_claim"] == "demo_structure_verified"
+        ]
+        self.assertTrue(demo_recoveries)
+        self.assertTrue(all(item["action"] == "regenerate_images" for item in demo_recoveries))
+        self.assertTrue(all(item["expected_stage"] == "image_generation" for item in demo_recoveries))
+        self.assertTrue(all("story_contract" in item["preserves"] for item in demo_recoveries))
+        self.assertTrue(all("fixture_images" in item["clears"] for item in demo_recoveries))
         demos = {item["office_id"]: item for item in showcase["featured_demos"]}
         comic_benchmark = demos["comic_production"]["quality_benchmark"]
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
@@ -302,6 +318,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Status: `passed`", completed.stdout)
         self.assertIn("Downloadable deliverables: 6", completed.stdout)
         self.assertIn("Reviewable catalog: 7 files", completed.stdout)
+        self.assertIn("Handoff recovery inventory: 4 items / actions=regenerate_images", completed.stdout)
         self.assertIn("Fast review route: 5/5", completed.stdout)
         self.assertIn("Reading guide: 6/6", completed.stdout)
         self.assertIn("First-run paths: 3", completed.stdout)
