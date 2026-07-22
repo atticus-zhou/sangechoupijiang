@@ -77,7 +77,7 @@ python scripts/verify_portfolio_showcase_sync.py --format markdown
 - `developer_extension`：首次审计不需要 API Key；新增办公室前，先看办公室协议、隔离检查和 `python scripts/verify_office_extension_governance.py --format markdown`，确认不会和现有办公室串线。
 
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
-如果你把静态包复制到个人网站 `public/three-stooges/`，再运行 `python scripts/verify_portfolio_showcase_sync.py --format markdown`。它会逐个比对 `dist/public-showcase` 和个人网站拷贝的文件哈希：通过只能说明个人网站仓库里的静态拷贝和产品本体一致，不能说明线上 Vercel 已经刷新；线上仍必须由个人网站仓库的 `npm run check:online` 证明。
+如果你把静态包复制到个人网站 `public/three-stooges/`，再运行 `python scripts/verify_portfolio_showcase_sync.py --format markdown`。它会逐个比对 `dist/public-showcase` 和个人网站拷贝的文件哈希：通过只能说明个人网站仓库里的静态拷贝和产品本体一致，不能说明线上 Vercel 已经刷新；线上仍必须由个人网站仓库的 `npm run check:online` 证明。其他开发者没有我的个人网站目录时，这条检查会显示 `skipped`；复制到自己的作品集目录后，可以用 `--target-dir` 指向自己的 `public/three-stooges`。
 静态展示包会同时带上最快验收路线、六份下载物、七个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对资产图片规格矩阵 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据。
 
 静态展示包还会显示办公室公开状态矩阵，避免访客把旧入口和主力入口混在一起：

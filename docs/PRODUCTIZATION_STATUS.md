@@ -105,7 +105,7 @@ online check.
 Current deployment boundary:
 
 - `local_static_showcase_ready`: proved by `python scripts/verify_static_public_showcase.py --format markdown`.
-- `portfolio_copy_sync_ready`: proved by `python scripts/verify_portfolio_showcase_sync.py --format markdown`; it compares `dist/public-showcase` against the personal website copy at `public/three-stooges/` by file hash.
+- `portfolio_copy_sync_ready`: proved by `python scripts/verify_portfolio_showcase_sync.py --format markdown`; it compares `dist/public-showcase` against the personal website copy at `public/three-stooges/` by file hash. If the default personal website folder is absent, the check reports `skipped` and asks the operator to rerun with `--target-dir` after copying the static package into a portfolio site.
 - `live_domain_verification_external`: diagnosed by `npm run doctor:deploy` and proved only by the personal website command `npm run check:online`.
 - `external_vercel_redeploy_required`: if `https://www.atticus.asia/three-stooges/` returns 404 or stale content, complete Vercel authorization and run `npm run ship:vercel` from the personal website repository.
 

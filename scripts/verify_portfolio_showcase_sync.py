@@ -57,6 +57,7 @@ def verify_portfolio_showcase_sync(source_dir: Path | str = DEFAULT_SOURCE, targ
     if target_dir is None:
         target = (DEFAULT_PERSONAL_SITE / "public" / "three-stooges").resolve()
         target_source = "default_personal_site"
+        target_required = False
     else:
         target = Path(target_dir)
         if not target.is_absolute():
@@ -64,6 +65,7 @@ def verify_portfolio_showcase_sync(source_dir: Path | str = DEFAULT_SOURCE, targ
         else:
             target = target.resolve()
         target_source = "explicit_target_dir"
+        target_required = True
 
     errors: list[str] = []
     warnings: list[str] = []
@@ -74,8 +76,44 @@ def verify_portfolio_showcase_sync(source_dir: Path | str = DEFAULT_SOURCE, targ
 
     if not source.is_dir():
         errors.append(f"source showcase directory is missing: {source}")
+        return {
+            "status": "failed",
+            "mode": "portfolio_showcase_sync",
+            "source_dir": str(source),
+            "target_dir": str(target),
+            "target_source": target_source,
+            "compared_files": 0,
+            "source_file_count": 0,
+            "target_actual_file_count": 0,
+            "missing_files": missing_files,
+            "mismatched_files": mismatched_files,
+            "extra_files": extra_files,
+            "warnings": warnings,
+            "errors": errors,
+        }
     if not target.is_dir():
-        errors.append(f"target showcase directory is missing: {target}")
+        if target_required:
+            errors.append(f"target showcase directory is missing: {target}")
+        else:
+            warnings.append(
+                "default personal website target is not present; pass --target-dir after copying dist/public-showcase into a portfolio site"
+            )
+            return {
+                "status": "skipped",
+                "mode": "portfolio_showcase_sync",
+                "source_dir": str(source),
+                "target_dir": str(target),
+                "target_source": target_source,
+                "compared_files": 0,
+                "source_file_count": 0,
+                "target_actual_file_count": 0,
+                "missing_files": missing_files,
+                "mismatched_files": mismatched_files,
+                "extra_files": extra_files,
+                "warnings": warnings,
+                "errors": errors,
+                "next_action": "Copy dist/public-showcase into a portfolio directory such as public/three-stooges, then rerun with --target-dir.",
+            }
     if errors:
         return {
             "status": "failed",
@@ -215,6 +253,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
         "Meaning: this check proves the personal website copy has the same static files and hashes as `dist/public-showcase`; it does not prove the live Vercel domain has redeployed.",
     ]
+    if payload.get("next_action"):
+        lines.extend(["", f"Next action: {payload.get('next_action')}"])
     for title, key in (
         ("Missing Files", "missing_files"),
         ("Mismatched Files", "mismatched_files"),
@@ -244,7 +284,7 @@ def main() -> int:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
         print(format_markdown(payload))
-    return 0 if payload["status"] == "passed" else 1
+    return 0 if payload["status"] in {"passed", "skipped"} else 1
 
 
 if __name__ == "__main__":
