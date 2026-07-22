@@ -104,7 +104,11 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("访客打开页面时只读取随包的 data.js", script_text)
         self.assertIn("六份交付物已经随静态站点一起导出", script_text)
         fast_review = showcase["portfolio_embed"]["fast_review_route"]
-        self.assertEqual([item["order"] for item in fast_review], [1, 2, 3, 4])
+        self.assertEqual([item["order"] for item in fast_review], [1, 2, 3, 4, 5])
+        fast_review_text = json.dumps(fast_review, ensure_ascii=False)
+        self.assertIn("asset-matrix-title", fast_review_text)
+        self.assertIn("three_view", fast_review_text)
+        self.assertIn("clean_background_required", fast_review_text)
         self.assertTrue(all(item["viewer_action"] and item["proof"] and item["next_anchor"] for item in fast_review))
         repro = showcase["portfolio_embed"]["reproducibility_checklist"]
         self.assertEqual(len(repro), 5)

@@ -34,6 +34,7 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
 
         self.assertIn("Asset Requirement Matrix In The Static Package", text)
         self.assertIn("asset_requirement_matrix", text)
+        self.assertIn("核对资产图片规格矩阵", text)
         self.assertIn("three_view", text)
         self.assertIn("top_down", text)
         self.assertIn("npm run check:showcase", text)

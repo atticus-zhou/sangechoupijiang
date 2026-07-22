@@ -298,6 +298,14 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static portfolio embed must expose the research evidence capture playbook step count")
         research_claim_upgrade_checklist = research_claim_payload.get("claim_upgrade_checklist") or []
 
+        fast_review_route = portfolio.get("fast_review_route") or []
+        if [item.get("order") for item in fast_review_route] != [1, 2, 3, 4, 5]:
+            errors.append("static showcase fast review route must expose five ordered steps")
+        fast_review_text = json.dumps(fast_review_route, ensure_ascii=False)
+        for marker in ("asset-matrix-title", "three_view", "clean_background_required"):
+            if marker not in fast_review_text:
+                errors.append(f"static showcase fast review route is missing marker: {marker}")
+
         reading_guide = portfolio.get("deliverable_reading_guide") or []
         ready_reading_items = 0
         for item in reading_guide:
@@ -536,7 +544,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase stylesheet must style the first-run paths")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
             errors.append("static showcase stylesheet must style the reviewable download catalog")
-        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):
+        for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "第一次打开，先看这五步", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):
             if marker not in index_text and marker not in (temp_dir / "style.css").read_text(encoding="utf-8"):
                 errors.append(f"static showcase page is missing marker: {marker}")
 

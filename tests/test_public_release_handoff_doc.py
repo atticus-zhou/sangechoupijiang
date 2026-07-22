@@ -27,6 +27,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("Vercel authorization/redeploy", text)
         self.assertIn("Public Asset Requirement Matrix", text)
         self.assertIn("portfolio_embed.asset_requirement_matrix", text)
+        self.assertIn("核对资产图片规格矩阵", text)
         self.assertIn("three_view", text)
         self.assertIn("expression_sheet", text)
         self.assertIn("turnaround", text)

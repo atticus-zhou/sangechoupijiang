@@ -1441,6 +1441,13 @@ def _public_showcase_fast_review_route() -> list[dict]:
         },
         {
             "order": 4,
+            "title": "接着核对资产图片规格矩阵",
+            "viewer_action": "查看人物 three_view / expression_sheet、道具 turnaround、场景 wide / top_down 和 clean_background_required 是否齐全。",
+            "proof": "基础资产图已经按下游视频生产需要声明，不只是 Word 里写了一个故事。",
+            "next_anchor": "#asset-matrix-title",
+        },
+        {
+            "order": 5,
             "title": "最后看声明边界和复现命令",
             "viewer_action": "确认漫画和研究两个办公室哪些能公开证明、哪些还不能宣称，并看 release readiness 命令。",
             "proof": "作品集展示不会夸大成真实 SaaS 或真实模型质量验证。",

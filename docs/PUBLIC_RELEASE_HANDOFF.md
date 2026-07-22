@@ -12,7 +12,7 @@
 - AI 漫剧真实生产声明报告：`data/comic_production_claim_report.json` 会公开 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`，说明当前 demo 为什么不能宣称真实画质、后续要保留什么、重建什么，以及如何用 `regenerate_images` 补齐真实图片和视觉质检证据。
 - 下游生产 quick-start：从确认制片画布、锁定基础资产、逐镜头生成视频、质量复核到归档证据的 5 步接手顺序。
 - 研究办公室固定样例：阶段报告、来源清单、数据表、截图计划、证据缺口说明和补证操作手册。
-- 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、查看声明边界和复现命令。
+- 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵、查看声明边界和复现命令。
 - 第一次运行清单、模型配置说明、办公室协议、办公室上线门禁和隔离验证。
 - GitHub README、部署边界、安全说明和 release readiness 结果。
 
@@ -29,7 +29,7 @@
 ## 面试官或访客建议路径
 
 1. 打开个人网站上的静态展示页，或从本地首页进入公开展示页。
-2. 按页面里的最快验收路线走：先确认无 Key 和声明边界，再下载 Word 制片画布，再核对 handoff manifest，最后查看复现命令。
+2. 按页面里的最快验收路线走：先确认无 Key 和声明边界，再下载 Word 制片画布，再核对 handoff manifest 和资产图片规格矩阵，最后查看复现命令。
 3. 查看 `/api/demo/public-showcase` 对应的产品定位、发布状态铭牌、访客路径、3 分钟演示脚本、推荐 demo 和安全边界。
 4. 先看 AI 漫剧制片办公室固定样例，下载 Word 制片画布和 handoff manifest。
 5. 查看下游生产 quick-start，确认 Word 画布之后如何交给视频工具、人工剪辑或后续平台继续生产。
