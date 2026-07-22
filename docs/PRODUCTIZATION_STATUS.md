@@ -111,4 +111,27 @@ Current deployment boundary:
 Do not describe the personal website route as live until
 `npm run check:online` passes for `https://www.atticus.asia/three-stooges/`.
 
+## Comic Asset Requirement Matrix
+
+The AI comic production office is not considered downstream-ready when it only
+exports a Word canvas. The public demo and local handoff audit must also expose
+`asset_requirement_matrix`, so a reviewer can see which reference images are
+required before a video platform or editing workflow can continue production.
+
+Required asset image coverage:
+
+- character assets: `three_view` and `expression_sheet`
+- prop assets: `turnaround`
+- scene assets: `wide` and `top_down`
+- clean isolation rule: `clean_background_required` for character and prop
+  reference images
+
+The authoritative checks are:
+
+```powershell
+python scripts/verify_comic_v2_downstream_handoff.py --format markdown
+python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_static_public_showcase.py --format markdown
+```
+
 当这些命令没有通过时，不要把当前状态说成产品化完成。
