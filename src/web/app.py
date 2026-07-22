@@ -722,6 +722,7 @@ async def get_research_demo_api():
     competitors = _research_demo_competitors(results)
     chart_suggestions = _research_demo_chart_suggestions(results)
     evidence_handoff = _research_demo_evidence_handoff()
+    evidence_status_summary = _research_demo_evidence_status_summary(sources, data_points)
     return {
         "mode": "no_key_demo",
         "office_id": "research",
@@ -770,6 +771,7 @@ async def get_research_demo_api():
             "public_demo_boundary": "公开演示只展示固定样例和证据缺口，不读取账号、不登录第三方平台、不宣称全自动会员级采集。",
         },
         "evidence_handoff": evidence_handoff,
+        "evidence_status_summary": evidence_status_summary,
         "deliverable_reading_guide": [
             {
                 "order": 1,
@@ -851,6 +853,7 @@ async def get_research_demo_api():
 def _research_claim_report_from_demo(demo: dict) -> dict:
     evidence_boundaries = demo.get("evidence_boundaries") or {}
     evidence_handoff = demo.get("evidence_handoff") or []
+    evidence_status_summary = demo.get("evidence_status_summary") or {}
     return {
         "status": "passed",
         "mode": "research_staged_delivery_claim",
@@ -872,6 +875,7 @@ def _research_claim_report_from_demo(demo: dict) -> dict:
         ],
         "evidence_boundaries": evidence_boundaries,
         "evidence_handoff": evidence_handoff,
+        "evidence_status_summary": evidence_status_summary,
         "claim_upgrade_checklist": [
             {
                 "id": "account_authorized_capture",
@@ -1759,6 +1763,8 @@ def _ensure_research_demo_delivery() -> dict[str, Path]:
     fixture = _load_research_demo_fixture()
     artifacts = build_research_artifacts("demo_research", fixture)
     by_type = {item.get("artifact_type"): item for item in artifacts}
+    sources = _research_demo_sources(fixture.get("results") or [])
+    data_points = _research_demo_data_points(fixture.get("results") or [])
     report = by_type.get("standard_report") or by_type.get("report")
     if not report:
         raise HTTPException(status_code=500, detail="Demo research report was not generated.")
@@ -1768,11 +1774,12 @@ def _ensure_research_demo_delivery() -> dict[str, Path]:
     manifest = {
         "title": (fixture.get("plan") or {}).get("title") or "研究办公室固定样例",
         "mode": "no_key_demo",
-        "sources": _research_demo_sources(fixture.get("results") or []),
-        "data_points": _research_demo_data_points(fixture.get("results") or []),
+        "sources": sources,
+        "data_points": data_points,
         "competitors": _research_demo_competitors(fixture.get("results") or []),
         "chart_suggestions": _research_demo_chart_suggestions(fixture.get("results") or []),
         "evidence_handoff": _research_demo_evidence_handoff(),
+        "evidence_status_summary": _research_demo_evidence_status_summary(sources, data_points),
         "screenshot_plan": (by_type.get("screenshot_plan") or {}).get("content", ""),
         "artifacts": [
             {
@@ -1810,7 +1817,7 @@ def _research_demo_sources(results: list[dict]) -> list[dict]:
     for step in results:
         for source in step.get("sources", []) or []:
             if isinstance(source, dict):
-                sources.append(source)
+                sources.append(_with_research_evidence_status(source, url_key="url"))
     return sources
 
 
@@ -1819,8 +1826,78 @@ def _research_demo_data_points(results: list[dict]) -> list[dict]:
     for step in results:
         for point in step.get("data_points", []) or []:
             if isinstance(point, dict):
-                data_points.append(point)
+                data_points.append(_with_research_evidence_status(point, url_key="source_url"))
     return data_points
+
+
+def _research_evidence_status_for(url: str, note: str = "", confidence: str = "") -> dict:
+    text = f"{url} {note} {confidence}".lower()
+    if url.startswith("local://pending"):
+        return {
+            "evidence_status": "pending_account_or_manual_capture",
+            "can_support_final_claim": False,
+            "requires_human_review": True,
+            "reason": "This evidence is a pending capture target and cannot support a final claim yet.",
+        }
+    if "example.com" in text or "demo" in text or "sample" in text:
+        return {
+            "evidence_status": "placeholder_demo_source",
+            "can_support_final_claim": False,
+            "requires_human_review": True,
+            "reason": "This is a fixed public-demo placeholder, not a real cited source.",
+        }
+    if url.startswith("http://") or url.startswith("https://"):
+        return {
+            "evidence_status": "public_reference_candidate",
+            "can_support_final_claim": True,
+            "requires_human_review": False,
+            "reason": "This public URL can support a claim after normal source review.",
+        }
+    return {
+        "evidence_status": "unclassified_evidence",
+        "can_support_final_claim": False,
+        "requires_human_review": True,
+        "reason": "This evidence needs a URL, screenshot, or source note before it can support a claim.",
+    }
+
+
+def _with_research_evidence_status(item: dict, url_key: str) -> dict:
+    enriched = dict(item)
+    status = _research_evidence_status_for(
+        str(enriched.get(url_key) or ""),
+        str(enriched.get("note") or ""),
+        str(enriched.get("confidence") or ""),
+    )
+    enriched.update(status)
+    return enriched
+
+
+def _research_demo_evidence_status_summary(sources: list[dict], data_points: list[dict]) -> dict:
+    all_items = [*sources, *data_points]
+    counts: dict[str, int] = {}
+    for item in all_items:
+        status = str(item.get("evidence_status") or "unclassified_evidence")
+        counts[status] = counts.get(status, 0) + 1
+    blocking_items = [
+        item
+        for item in all_items
+        if item.get("can_support_final_claim") is not True
+    ]
+    return {
+        "claim_readiness": "staged_only",
+        "can_claim_final_report": False,
+        "can_claim_platform_capture_complete": False,
+        "counts": counts,
+        "blocking_item_count": len(blocking_items),
+        "blocking_item_titles": [
+            str(item.get("title") or item.get("metric") or item.get("url") or item.get("source_url") or "evidence")
+            for item in blocking_items[:8]
+        ],
+        "operator_message": (
+            "This fixed demo intentionally contains placeholder and pending evidence. "
+            "It can show the workflow, but it cannot be used as a verified final research report."
+        ),
+    }
 
 
 def _research_demo_competitors(results: list[dict]) -> list[dict]:

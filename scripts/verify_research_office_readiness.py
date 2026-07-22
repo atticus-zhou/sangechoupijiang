@@ -123,6 +123,7 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     if payload.get("calls_real_models") is not False:
         errors.append("research demo must not call real models")
     evidence_boundaries = payload.get("evidence_boundaries") or {}
+    evidence_status_summary = payload.get("evidence_status_summary") or {}
     covered_in_demo = evidence_boundaries.get("covered_in_demo") or []
     requires_human_or_account = evidence_boundaries.get("requires_human_or_account") or []
     public_demo_boundary = str(evidence_boundaries.get("public_demo_boundary") or "")
@@ -130,6 +131,7 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     evidence_handoff = payload.get("evidence_handoff") or []
     claim_response = client.get("/api/demo/research/claim-report")
     claim_report = claim_response.json() if claim_response.status_code == 200 else {}
+    claim_evidence_status_summary = claim_report.get("evidence_status_summary") or {}
     if len(covered_in_demo) < 4:
         errors.append("research demo must describe which evidence is covered in the fixed sample")
     if len(requires_human_or_account) < 3:
@@ -148,6 +150,17 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     for item in evidence_handoff:
         if not item.get("owner") or not item.get("target_evidence") or not item.get("why_needed") or not item.get("upgrades"):
             errors.append(f"research evidence handoff item is incomplete: {item.get('title') or item.get('id')}")
+    status_counts = evidence_status_summary.get("counts") or {}
+    if evidence_status_summary.get("claim_readiness") != "staged_only":
+        errors.append("research demo evidence status must stay staged_only")
+    if evidence_status_summary.get("can_claim_final_report") is not False:
+        errors.append("research demo must not claim the sample supports a final verified report")
+    if status_counts.get("placeholder_demo_source", 0) < 1:
+        errors.append("research demo must identify placeholder demo sources")
+    if status_counts.get("pending_account_or_manual_capture", 0) < 1:
+        errors.append("research demo must identify pending account/manual evidence")
+    if not evidence_status_summary.get("operator_message"):
+        errors.append("research demo evidence status must include an operator-facing message")
     if claim_response.status_code != 200:
         errors.append(f"research claim report returned {claim_response.status_code}")
     if claim_report.get("claim_level") != "staged_research_demo":
@@ -156,6 +169,8 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         errors.append("research claim report must not claim full automation")
     if claim_report.get("requires_api_key") is not False or claim_report.get("calls_real_models") is not False:
         errors.append("research claim report must remain no-key and offline")
+    if claim_evidence_status_summary.get("claim_readiness") != evidence_status_summary.get("claim_readiness"):
+        errors.append("research claim report must repeat the evidence status summary")
     forbidden_claims = "\n".join(claim_report.get("forbidden_public_claims") or [])
     if "自动登录飞瓜" not in forbidden_claims or "会员级" not in forbidden_claims:
         errors.append("research claim report must forbid full platform automation claims")
@@ -181,6 +196,18 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
             errors.append(f"research demo download failed: {item['uri']}")
         if record["bytes"] <= 20:
             errors.append(f"research demo download too small: {item['uri']}")
+        if item["uri"].endswith("/evidence_manifest.json") and record["status_code"] == 200:
+            manifest = file_response.json()
+            manifest_status = manifest.get("evidence_status_summary") or {}
+            manifest_counts = manifest_status.get("counts") or {}
+            if manifest_status.get("claim_readiness") != "staged_only":
+                errors.append("research evidence manifest must record staged_only claim readiness")
+            if manifest_status.get("can_claim_final_report") is not False:
+                errors.append("research evidence manifest must not claim final-report readiness")
+            if manifest_counts.get("placeholder_demo_source", 0) < 1:
+                errors.append("research evidence manifest must count placeholder demo sources")
+            if manifest_counts.get("pending_account_or_manual_capture", 0) < 1:
+                errors.append("research evidence manifest must count pending capture evidence")
 
     required_downloads = {
         "/api/demo/research/files/report.md",
@@ -221,6 +248,10 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         "claim_level": claim_report.get("claim_level", ""),
         "can_claim_full_automation": bool(claim_report.get("can_claim_full_automation")),
         "claim_upgrade_checklist_count": len(upgrade_checklist),
+        "evidence_claim_readiness": evidence_status_summary.get("claim_readiness", ""),
+        "evidence_can_claim_final_report": evidence_status_summary.get("can_claim_final_report"),
+        "placeholder_demo_source_count": (evidence_status_summary.get("counts") or {}).get("placeholder_demo_source", 0),
+        "pending_evidence_count": (evidence_status_summary.get("counts") or {}).get("pending_account_or_manual_capture", 0),
     }
 
 
@@ -283,8 +314,10 @@ def format_markdown(payload: dict[str, Any]) -> str:
             f"- Requires API key: {demo.get('requires_api_key')}",
             f"- Calls real models: {demo.get('calls_real_models')}",
             f"- Downloads: {demo.get('download_count')}",
-            f"- Evidence boundaries: {demo.get('evidence_boundary_count')}",
-            f"- Human/account boundaries: {demo.get('human_or_account_boundary_count')}",
+        f"- Evidence boundaries: {demo.get('evidence_boundary_count')}",
+        f"- Human/account boundaries: {demo.get('human_or_account_boundary_count')}",
+        f"- Evidence claim readiness: {demo.get('evidence_claim_readiness')} / final_report={demo.get('evidence_can_claim_final_report')}",
+        f"- Evidence status counts: placeholder={demo.get('placeholder_demo_source_count')}, pending={demo.get('pending_evidence_count')}",
         f"- Reading guide: {demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}",
         f"- Evidence handoff: {demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}",
         f"- Claim report: HTTP {demo.get('claim_report_status_code')} / {demo.get('claim_level')} / full_automation={demo.get('can_claim_full_automation')}",
