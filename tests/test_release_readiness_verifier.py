@@ -34,6 +34,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "public_docs_readability",
                 "public_demo",
                 "static_showcase",
+                "portfolio_showcase_sync",
                 "comic_delivery",
                 "comic_downstream_handoff",
                 "comic_production_benchmark",
@@ -66,13 +67,19 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("reading_guide=6/6", static_showcase["summary"])
         self.assertIn("quick_start=5/5", static_showcase["summary"])
         self.assertIn("post_run=3/3", static_showcase["summary"])
-        self.assertIn("visitor_acceptance=5/7", static_showcase["summary"])
+        self.assertIn("visitor_route=7", static_showcase["summary"])
+        self.assertIn("download_acceptance=7", static_showcase["summary"])
         self.assertIn("handoff_recovery=4:regenerate_images", static_showcase["summary"])
         self.assertIn("backend=False", static_showcase["summary"])
         self.assertIn("prompt_quality=ready", static_showcase["summary"])
         self.assertIn("prompt_issues=0", static_showcase["summary"])
         self.assertIn("research_claim=staged_research_demo", static_showcase["summary"])
         self.assertIn("research_full_auto=False", static_showcase["summary"])
+        portfolio_sync = next(item for item in payload["checks"] if item["id"] == "portfolio_showcase_sync")
+        self.assertIn("compared=", portfolio_sync["summary"])
+        self.assertIn("missing=0", portfolio_sync["summary"])
+        self.assertIn("mismatched=0", portfolio_sync["summary"])
+        self.assertIn("live_external=True", portfolio_sync["summary"])
         public_docs = next(item for item in payload["checks"] if item["id"] == "public_docs_readability")
         self.assertIn("docs=", public_docs["summary"])
         self.assertIn("failures=0", public_docs["summary"])
@@ -135,6 +142,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Model configuration guidance", completed.stdout)
         self.assertIn("Public docs readability", completed.stdout)
         self.assertIn("Backend-free static showcase export", completed.stdout)
+        self.assertIn("Portfolio showcase copy sync", completed.stdout)
         self.assertIn("AI comic Word canvas delivery", completed.stdout)
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("AI comic production quality benchmark", completed.stdout)
@@ -148,7 +156,10 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("fast_review=5/5", completed.stdout)
         self.assertIn("quick_start=5/5", completed.stdout)
         self.assertIn("badge=safe_public_demo", completed.stdout)
-        self.assertIn("downloads=6; catalog=7; fast_review=5/5; reading_guide=6/6; quick_start=5/5; post_run=3/3; visitor_acceptance=5/7; handoff_recovery=4:regenerate_images; backend=False", completed.stdout)
+        self.assertIn("downloads=6; catalog=7; fast_review=5/5; reading_guide=6/6; quick_start=5/5; post_run=3/3; visitor_route=7; download_acceptance=7; handoff_recovery=4:regenerate_images; backend=False", completed.stdout)
+        self.assertIn("compared=", completed.stdout)
+        self.assertIn("mismatched=0", completed.stdout)
+        self.assertIn("live_external=True", completed.stdout)
         self.assertIn("prompt_quality=ready", completed.stdout)
         self.assertIn("prompt_issues=0", completed.stdout)
         self.assertIn("research_claim=staged_research_demo", completed.stdout)

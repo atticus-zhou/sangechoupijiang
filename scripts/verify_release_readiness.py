@@ -45,6 +45,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_static_public_showcase.py", "--format", "json"],
     },
     {
+        "id": "portfolio_showcase_sync",
+        "title": "Portfolio showcase copy sync",
+        "command": ["scripts/verify_portfolio_showcase_sync.py", "--format", "json"],
+    },
+    {
         "id": "comic_delivery",
         "title": "AI comic Word canvas delivery",
         "command": ["scripts/verify_comic_v2_delivery.py", "--format", "json"],
@@ -161,6 +166,16 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"prompt_issues={parsed.get('comic_prompt_issue_count')}; "
                 f"research_claim={parsed.get('research_claim_level')}; "
                 f"research_full_auto={parsed.get('research_can_claim_full_automation')}"
+            )
+        if check_id == "portfolio_showcase_sync":
+            return (
+                f"status={parsed.get('status')}; "
+                f"compared={parsed.get('compared_files')}/{parsed.get('source_file_count')}; "
+                f"missing={len(parsed.get('missing_files') or [])}; "
+                f"mismatched={len(parsed.get('mismatched_files') or [])}; "
+                f"extra={len(parsed.get('extra_files') or [])}; "
+                f"target_source={parsed.get('target_source')}; "
+                f"live_external=True"
             )
         if check_id == "comic_delivery":
             return (

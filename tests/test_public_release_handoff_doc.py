@@ -33,6 +33,8 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("turnaround", text)
         self.assertIn("top_down", text)
         self.assertIn("npm run check:showcase", text)
+        self.assertIn("python scripts/verify_portfolio_showcase_sync.py --format markdown", text)
+        self.assertIn("--target-dir", text)
 
     def test_public_release_handoff_doc_lists_required_release_gates(self):
         text = Path("docs/PUBLIC_RELEASE_HANDOFF.md").read_text(encoding="utf-8")
@@ -42,6 +44,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", text)
         self.assertIn("python scripts/export_public_showcase.py", text)
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", text)
+        self.assertIn("python scripts/verify_portfolio_showcase_sync.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_real_production_claim.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", text)
