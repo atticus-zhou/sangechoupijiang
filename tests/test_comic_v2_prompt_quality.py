@@ -92,6 +92,44 @@ class ComicV2PromptQualityTests(unittest.TestCase):
         self.assertIn("usage_contract", messages)
         self.assertIn("reference_policy", messages)
 
+    def test_flags_cross_asset_template_copy_before_handoff_benchmark(self):
+        shared_generator = (
+            "风格身份：style_01。资产ID：{asset_id}。人物三视图，纯白或近白色干净背景。"
+            "青年修士，青灰色长袍，束发，冷静眼神，古风仙侠质感，正面侧面背面同页展示。"
+            "服装材质清晰，脸型发型稳定，只建立角色身份参考。"
+        )
+        result = audit_prompt_package({
+            "prompts": [
+                {
+                    "object_id": "character_01",
+                    "image_kind": "three_view",
+                    "production_role": "clean_character_identity_three_view",
+                    "clean_background_required": True,
+                    "usage_contract": ["基础资产图只建立角色身份参考，不负责讲述剧情。"],
+                    "reference_policy": "人物资产用于后续镜头身份一致性参考。",
+                    "generator_prompt": shared_generator.format(asset_id="character_01"),
+                    "negative_prompt": ["禁止剧情动作", "禁止剧情场景", "禁止文字、标签、编号和水印"],
+                },
+                {
+                    "object_id": "character_02",
+                    "image_kind": "three_view",
+                    "production_role": "clean_character_identity_three_view",
+                    "clean_background_required": True,
+                    "usage_contract": ["基础资产图只建立角色身份参考，不负责讲述剧情。"],
+                    "reference_policy": "人物资产用于后续镜头身份一致性参考。",
+                    "generator_prompt": shared_generator.format(asset_id="character_02"),
+                    "negative_prompt": ["禁止剧情动作", "禁止剧情场景", "禁止文字、标签、编号和水印"],
+                },
+            ],
+            "shots": [],
+        })
+
+        self.assertEqual(result["status"], "needs_review")
+        self.assertEqual(result["clean_asset_prompt_count"], 0)
+        messages = " ".join(item["message"] for item in result["issues"])
+        self.assertIn("疑似复制模板", messages)
+        self.assertIn("重写专属视觉细节", messages)
+
     def test_flags_template_or_unreadable_prompt_language(self):
         result = audit_prompt_package({
             "prompts": [{

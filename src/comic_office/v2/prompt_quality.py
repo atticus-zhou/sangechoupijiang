@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from difflib import SequenceMatcher
 from typing import Any
 
 
@@ -11,28 +13,41 @@ def audit_prompt_package(package: dict[str, Any] | None) -> dict[str, Any]:
     prompts = list(package.get("prompts") or [])
     shots = list(package.get("shots") or [])
     asset_issues = _asset_prompt_issues(prompts)
+    template_issues = _asset_template_copy_issues(prompts)
     shot_issues = _shot_prompt_issues(shots)
-    issue_count = len(asset_issues) + len(shot_issues)
+    issue_count = len(asset_issues) + len(template_issues) + len(shot_issues)
     total = len(prompts) + len(shots)
-    passed = total - issue_count
+    passed = max(0, total - issue_count)
+    prompt_ids_with_issues = _prompt_ids_with_issues(asset_issues + template_issues)
     return {
         "status": "ready" if total and not issue_count else ("waiting" if not total else "needs_review"),
         "summary": _summary(total, passed, issue_count),
         "recovery": _recovery(issue_count),
         "asset_prompt_count": len(prompts),
         "shot_prompt_count": len(shots),
-        "clean_asset_prompt_count": len(prompts) - len(asset_issues),
+        "clean_asset_prompt_count": max(0, len(prompts) - len(prompt_ids_with_issues)),
         "director_prompt_count": len(shots) - len(shot_issues),
         "issue_count": issue_count,
-        "issues": asset_issues + shot_issues,
+        "issues": asset_issues + template_issues + shot_issues,
         "checks": [
             "人物和道具资产保持纯白或近白色干净背景",
             "场景资产保持空场景空间参考",
+            "不同资产的提示词必须有专属内容，不能复制模板只替换名称",
             "镜头视频提示词包含首帧参考、故事目的、动作链、表演意图、摄影和灯光",
             "镜头提示词绑定首帧参考图片和机器可读资产引用链",
             "负面提示词单独成段，并用“禁止”表达",
         ],
     }
+
+
+def _prompt_ids_with_issues(issues: list[dict[str, Any]]) -> set[str]:
+    ids: set[str] = set()
+    for issue in issues:
+        raw = str(issue.get("id") or "")
+        for part in raw.split("~"):
+            ids.add(part.split(":", 1)[0])
+    ids.discard("")
+    return ids
 
 
 def _summary(total: int, passed: int, issue_count: int) -> str:
@@ -145,6 +160,62 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if usage_contract and "空场景" not in contract_text:
                 add("场景资产 usage_contract 必须说明锁定空场景空间参考。")
     return issues
+
+
+def _asset_template_copy_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[tuple[str, str, str, str]] = []
+    for prompt in prompts:
+        object_id = str(prompt.get("object_id") or "")
+        object_name = str(prompt.get("object_name") or prompt.get("name") or "")
+        image_kind = str(prompt.get("image_kind") or "")
+        asset_type = _asset_type(object_id)
+        body = _normalize_prompt(str(prompt.get("generator_prompt") or ""), object_id, object_name)
+        normalized.append((object_id, image_kind, asset_type, body))
+
+    issues: list[dict[str, Any]] = []
+    for index, left in enumerate(normalized):
+        for right in normalized[index + 1:]:
+            left_id, left_kind, left_type, left_body = left
+            right_id, right_kind, right_type, right_body = right
+            if not left_id or not right_id or left_id == right_id:
+                continue
+            if left_type != right_type or left_kind != right_kind:
+                continue
+            if min(len(left_body), len(right_body)) < 60:
+                continue
+            ratio = SequenceMatcher(None, left_body, right_body).ratio()
+            if ratio >= 0.92:
+                issues.append({
+                    "scope": "asset_prompt",
+                    "id": f"{left_id}~{right_id}:{left_kind}",
+                    "message": f"不同资产的 {left_kind or '基础图'} 提示词相似度 {ratio:.2f}，疑似复制模板后只替换名称，请重写专属视觉细节。",
+                })
+    return issues
+
+
+def _asset_type(object_id: str) -> str:
+    if object_id.startswith("character_"):
+        return "character"
+    if object_id.startswith("prop_"):
+        return "prop"
+    if object_id.startswith("scene_"):
+        return "scene"
+    return ""
+
+
+def _normalize_prompt(text: str, object_id: str, object_name: str) -> str:
+    value = str(text or "")
+    for token in (object_id, object_name):
+        if token:
+            value = value.replace(token, "")
+    sentences = re.split(r"[。；\n]+", value)
+    filtered = [
+        sentence
+        for sentence in sentences
+        if sentence.strip()
+        and not any(marker in sentence for marker in ("风格身份", "画面比例", "资产ID", "资产名称"))
+    ]
+    return re.sub(r"[\s，,:：、]+", "", "。".join(filtered))
 
 
 def _shot_prompt_issues(shots: list[dict[str, Any]]) -> list[dict[str, Any]]:
