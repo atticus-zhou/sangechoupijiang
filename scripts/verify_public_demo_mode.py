@@ -363,6 +363,17 @@ def verify_public_demo_mode() -> dict[str, Any]:
         errors.append("comic handoff inventory must not require API key")
     if inventory_payload.get("production_verified_count", 0) != 0:
         errors.append("fixed public inventory must not claim real production quality verification")
+    inventory_items = inventory_payload.get("items") or []
+    inventory_recovery_items = [
+        item for item in inventory_items
+        if (item.get("recommended_recovery") or {}).get("action")
+    ]
+    if inventory_payload.get("demo_only_count", 0) > 0 and not inventory_recovery_items:
+        errors.append("comic handoff inventory demo-only items must expose recovery actions")
+    for item in inventory_recovery_items:
+        recovery = item.get("recommended_recovery") or {}
+        if not recovery.get("expected_stage") or not recovery.get("preserves") or not recovery.get("clears"):
+            errors.append(f"comic handoff recovery item is incomplete: {item.get('title') or item.get('quality_claim')}")
     claim_response = client.get("/api/demo/comic-production/claim-report")
     claim_payload = claim_response.json() if claim_response.status_code == 200 else {}
     if claim_response.status_code != 200:
@@ -490,6 +501,17 @@ def verify_public_demo_mode() -> dict[str, Any]:
             "demo_only_count": inventory_payload.get("demo_only_count", 0),
             "needs_review_count": inventory_payload.get("needs_review_count", 0),
             "safe_public_claim": inventory_payload.get("safe_public_claim", ""),
+            "recovery_item_count": len(inventory_recovery_items),
+            "recovery_actions": sorted({
+                str((item.get("recommended_recovery") or {}).get("action") or "")
+                for item in inventory_recovery_items
+                if (item.get("recommended_recovery") or {}).get("action")
+            }),
+            "recovery_stage_count": len({
+                str((item.get("recommended_recovery") or {}).get("expected_stage") or "")
+                for item in inventory_recovery_items
+                if (item.get("recommended_recovery") or {}).get("expected_stage")
+            }),
         },
         "comic_real_production_claim": {
             "status_code": claim_response.status_code,
@@ -537,6 +559,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 复现与验收清单：{manifest.get('reproducibility_count')} 步，其中 {manifest.get('reproducibility_ready_count')} 步可执行",
         f"- 发布状态铭牌：{manifest.get('release_badge_status')}，信号 {manifest.get('release_badge_signal_count')} 条，真实画质声明 {manifest.get('release_badge_claim_real_quality')}",
         f"- 漫剧交付盘点：{inventory.get('manifest_count')} 份，真实质量通过 {inventory.get('production_verified_count')} 份，结构样例 {inventory.get('demo_only_count')} 份",
+        f"- 漫剧交付恢复动作：{inventory.get('recovery_item_count')} 份可恢复，动作 {', '.join(inventory.get('recovery_actions') or []) or '无'}，阶段 {inventory.get('recovery_stage_count')}",
         f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
