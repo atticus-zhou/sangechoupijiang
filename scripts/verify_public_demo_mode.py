@@ -74,6 +74,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     portfolio_embed = payload.get("portfolio_embed") or {}
     public_deployment = payload.get("public_deployment") or {}
     static_export = public_deployment.get("static_export") or {}
+    fast_review_route = portfolio_embed.get("fast_review_route") or []
     interview_script = portfolio_embed.get("interview_demo_script") or []
     reproducibility = portfolio_embed.get("reproducibility_checklist") or []
     downstream_quick_start = portfolio_embed.get("downstream_quick_start") or []
@@ -103,6 +104,12 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append(f"sample deliverable missing reader guidance: {item.get('title') or item.get('uri')}")
         if len(item.get("acceptance_signals") or []) < 3:
             errors.append(f"sample deliverable missing acceptance signals: {item.get('title') or item.get('uri')}")
+    if [item.get("order") for item in fast_review_route] != [1, 2, 3, 4, 5]:
+        errors.append("portfolio embed must expose a 5-step fast review route")
+    fast_review_text = json.dumps(fast_review_route, ensure_ascii=False)
+    for marker in ("asset-matrix-title", "three_view", "clean_background_required"):
+        if marker not in fast_review_text:
+            errors.append(f"fast review route is missing marker: {marker}")
     reading_guide = portfolio_embed.get("deliverable_reading_guide") or []
     if len(reading_guide) < 4:
         errors.append("portfolio embed must expose a 4-step deliverable reading guide")
@@ -275,6 +282,12 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             1
             for item in portfolio_embed.get("sample_deliverables") or []
             if item.get("reader_guidance") and len(item.get("acceptance_signals") or []) >= 3
+        ),
+        "fast_review_count": len(fast_review_route),
+        "fast_review_ready_count": sum(
+            1
+            for item in fast_review_route
+            if item.get("viewer_action") and item.get("proof") and item.get("next_anchor")
         ),
         "reading_guide_count": len(reading_guide),
         "reading_guide_ready_count": sum(
@@ -517,6 +530,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 可公开作品集展示：{manifest.get('safe_for_public_portfolio')}",
         f"- 作品集样例交付物：{manifest.get('portfolio_deliverable_count')} 个",
         f"- 带阅读说明的样例交付物：{manifest.get('deliverables_with_reader_guidance')} 个",
+        f"- 最快验收路线：{manifest.get('fast_review_count')} 步，其中 {manifest.get('fast_review_ready_count')} 步可复核",
         f"- 交付物阅读顺序：{manifest.get('reading_guide_count')} 步，其中 {manifest.get('reading_guide_ready_count')} 步可复核",
         f"- 下游生产 quick-start：{manifest.get('downstream_quick_start_count')} 步，其中 {manifest.get('downstream_quick_start_ready_count')} 步可执行",
         f"- 面试演示脚本：{manifest.get('interview_script_count')} 步，其中 {manifest.get('interview_script_ready_count')} 步可复用",

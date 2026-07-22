@@ -26,6 +26,11 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertEqual(payload["showcase_manifest"]["mode"], "public_no_key_showcase")
         self.assertGreaterEqual(payload["showcase_manifest"]["audience_path_count"], 3)
         self.assertGreaterEqual(payload["showcase_manifest"]["featured_demo_count"], 2)
+        self.assertEqual(payload["showcase_manifest"]["fast_review_count"], 5)
+        self.assertEqual(
+            payload["showcase_manifest"]["fast_review_count"],
+            payload["showcase_manifest"]["fast_review_ready_count"],
+        )
         self.assertGreaterEqual(payload["showcase_manifest"]["reading_guide_count"], 4)
         self.assertEqual(
             payload["showcase_manifest"]["reading_guide_count"],
@@ -128,6 +133,8 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("研究办公室", result.stdout)
         self.assertIn("下载链接", result.stdout)
         self.assertIn("公开展示清单", result.stdout)
+        self.assertIn("最快验收路线", result.stdout)
+        self.assertIn("5 步，其中 5 步可复核", result.stdout)
         self.assertIn("交付物阅读顺序", result.stdout)
         self.assertIn("面试演示脚本", result.stdout)
         self.assertIn("复现与验收清单", result.stdout)

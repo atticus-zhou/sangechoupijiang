@@ -302,6 +302,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Status: `passed`", completed.stdout)
         self.assertIn("Downloadable deliverables: 6", completed.stdout)
         self.assertIn("Reviewable catalog: 7 files", completed.stdout)
+        self.assertIn("Fast review route: 5/5", completed.stdout)
         self.assertIn("Reading guide: 6/6", completed.stdout)
         self.assertIn("First-run paths: 3", completed.stdout)
         self.assertIn("Downstream quick-start: 5 steps", completed.stdout)

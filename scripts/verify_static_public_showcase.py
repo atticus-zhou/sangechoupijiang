@@ -305,6 +305,11 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for marker in ("asset-matrix-title", "three_view", "clean_background_required"):
             if marker not in fast_review_text:
                 errors.append(f"static showcase fast review route is missing marker: {marker}")
+        ready_fast_review_items = sum(
+            1
+            for item in fast_review_route
+            if item.get("viewer_action") and item.get("proof") and item.get("next_anchor")
+        )
 
         reading_guide = portfolio.get("deliverable_reading_guide") or []
         ready_reading_items = 0
@@ -560,6 +565,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "file_count": len(files),
             "download_count": len(downloads),
             "download_catalog_count": len(download_catalog),
+            "fast_review_count": len(fast_review_route),
+            "fast_review_ready_count": ready_fast_review_items,
             "reading_guide_count": len(reading_guide),
             "reading_guide_ready_count": ready_reading_items,
             "first_run_path_count": len(first_run_paths),
@@ -638,6 +645,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Files: {payload.get('file_count')}",
         f"- Downloadable deliverables: {payload.get('download_count')}",
         f"- Reviewable catalog: {payload.get('download_catalog_count')} files",
+        f"- Fast review route: {payload.get('fast_review_ready_count')}/{payload.get('fast_review_count')}",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- First-run paths: {payload.get('first_run_path_count')}",
         f"- Downstream quick-start: {payload.get('downstream_quick_start_ready_count')} steps",

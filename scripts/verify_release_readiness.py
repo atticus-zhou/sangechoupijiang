@@ -136,6 +136,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             return (
                 f"{len(demos)} demos; "
                 f"showcase={showcase.get('status_code')}; "
+                f"fast_review={showcase.get('fast_review_ready_count')}/{showcase.get('fast_review_count')}; "
                 f"reading_guide={showcase.get('reading_guide_ready_count')}/{showcase.get('reading_guide_count')}; "
                 f"quick_start={showcase.get('downstream_quick_start_ready_count')}/{showcase.get('downstream_quick_start_count')}; "
                 f"interview_script={showcase.get('interview_script_ready_count')}/{showcase.get('interview_script_count')}; "
@@ -148,6 +149,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"files={parsed.get('file_count')}; "
                 f"downloads={parsed.get('download_count')}; "
                 f"catalog={parsed.get('download_catalog_count')}; "
+                f"fast_review={parsed.get('fast_review_ready_count')}/{parsed.get('fast_review_count')}; "
                 f"reading_guide={parsed.get('reading_guide_ready_count')}/{parsed.get('reading_guide_count')}; "
                 f"quick_start={parsed.get('downstream_quick_start_ready_count')}/{parsed.get('downstream_quick_start_count')}; "
                 f"post_run={parsed.get('post_run_validation_ready_count')}/{parsed.get('post_run_validation_count')}; "
