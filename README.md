@@ -11,6 +11,7 @@
 - 办公室隔离：研究办公室、AI 漫剧制片办公室等场景拥有独立的模型配置、工作区、产物和历史记录。
 - 可交付产物：目标不是生成聊天文本，而是生成报告、截图证据、提示词包、制片画布和 Word 文档。
 - 本地优先：配置、历史和生成文件默认留在本机，避免把用户 API Key 或运行产物提交到仓库。
+- 公开发布门禁：GitHub Actions 会运行无 Key release readiness 检查，证明公开展示、样例交付、办公室隔离和敏感信息扫描不依赖作者私有 Key。
 
 ## 现在能做什么
 
@@ -364,6 +365,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 - 样例 Word 制片画布、handoff manifest、研究样例报告和截图目标说明。
 - GitHub README、部署边界、安全说明和 release readiness 结果。
 - `dist/public-showcase` 静态展示包。
+
+GitHub 上的 `Release readiness` workflow 会自动运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`。这条 CI 只证明公开 no-key 路径和仓库安全边界，不证明个人网站线上 Vercel 已经刷新；线上仍看个人网站的 `npm run check:online`。
 
 不要宣称已经完成：
 

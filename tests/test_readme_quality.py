@@ -158,6 +158,9 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("核对资产图片规格矩阵", text)
         self.assertIn("python scripts/check_no_secrets.py", text)
         self.assertIn("不要把自己的 API Key 暴露给访问者", text)
+        self.assertIn("GitHub Actions", text)
+        self.assertIn("Release readiness", text)
+        self.assertIn("不证明个人网站线上 Vercel 已经刷新", text)
 
     def test_readme_documents_development_checklist(self):
         text = Path("README.md").read_text(encoding="utf-8")

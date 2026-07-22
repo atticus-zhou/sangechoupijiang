@@ -23,6 +23,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "python scripts/verify_portfolio_showcase_sync.py --format markdown",
             "python scripts/verify_public_docs_readability.py --format markdown",
             "/api/demo/public-showcase",
+            ".github/workflows/release-readiness.yml",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
         ],
         "files": [
@@ -31,6 +32,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "scripts/verify_portfolio_showcase_sync.py",
             "scripts/verify_public_docs_readability.py",
             "scripts/export_public_showcase.py",
+            ".github/workflows/release-readiness.yml",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
             "src/web/app.py",
         ],
@@ -171,11 +173,13 @@ REQUIREMENTS: list[dict[str, Any]] = [
         "markers": [
             "公开仓库不应包含用户密钥",
             "python scripts/check_no_secrets.py",
+            ".github/workflows/release-readiness.yml",
             ".gitignore",
             "docs/DEPLOYMENT_MODES.md",
         ],
         "files": [
             "scripts/check_no_secrets.py",
+            ".github/workflows/release-readiness.yml",
             ".gitignore",
             "docs/DEPLOYMENT_MODES.md",
         ],
