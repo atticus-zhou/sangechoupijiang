@@ -959,6 +959,7 @@ def audit_office_extension_governance() -> dict:
         for item in office_audits
         if item["office_id"] in PRIMARY_OFFICE_IDS and not item["primary_allowed"]
     ]
+    launch_matrix = _build_office_launch_matrix(office_audits)
     return {
         "status": "passed" if not protocol_errors and not primary_errors else "failed",
         "mode": "offline_office_extension_governance",
@@ -970,10 +971,64 @@ def audit_office_extension_governance() -> dict:
         "extension_blueprint": list_office_extension_blueprint(),
         "primary_standards": PRIMARY_OFFICE_STANDARDS,
         "offices": office_audits,
+        "launch_matrix": launch_matrix,
+        "launch_matrix_summary": _summarize_office_launch_matrix(launch_matrix),
         "errors": {
             "protocol_errors": protocol_errors,
             "primary_errors": primary_errors,
         },
+    }
+
+
+def _build_office_launch_matrix(office_audits: list[dict]) -> list[dict]:
+    matrix = []
+    for item in office_audits:
+        blocked_by = []
+        if item.get("role") == "legacy":
+            blocked_by.append("legacy_migration_required")
+        if item.get("protocol_status") != "passed":
+            blocked_by.append("protocol_needs_upgrade")
+        if item.get("launch_gate_status") != "ready":
+            blocked_by.append("launch_gates_need_work")
+        failed_standards = [
+            standard.get("id")
+            for standard in item.get("primary_standards", [])
+            if standard.get("status") != "passed"
+        ]
+        blocked_by.extend(f"standard:{standard_id}" for standard_id in failed_standards if standard_id)
+        can_show_publicly = item.get("role") != "legacy" and item.get("launch_gate_status") == "ready"
+        can_be_primary = bool(item.get("can_be_primary"))
+        if can_be_primary:
+            recommended_action = "Keep evidence current and run release readiness before public changes."
+        elif item.get("legacy_migration"):
+            target = item["legacy_migration"].get("target_office_id", "target office")
+            recommended_action = f"Route users to {target}; keep this office as a compatibility entry only."
+        else:
+            recommended_action = "Complete missing launch gates, schema gates, recovery actions, and public demo evidence."
+        matrix.append(
+            {
+                "office_id": item.get("office_id", ""),
+                "office_name": item.get("office_name", ""),
+                "role": item.get("role", ""),
+                "protocol_status": item.get("protocol_status", ""),
+                "launch_gate_status": item.get("launch_gate_status", ""),
+                "can_show_publicly": can_show_publicly,
+                "can_be_primary": can_be_primary,
+                "primary_allowed": bool(item.get("primary_allowed")),
+                "blocked_by": blocked_by,
+                "recommended_action": recommended_action,
+            }
+        )
+    return matrix
+
+
+def _summarize_office_launch_matrix(matrix: list[dict]) -> dict:
+    return {
+        "office_count": len(matrix),
+        "public_ready_count": sum(1 for item in matrix if item.get("can_show_publicly")),
+        "primary_allowed_count": sum(1 for item in matrix if item.get("primary_allowed")),
+        "legacy_count": sum(1 for item in matrix if item.get("role") == "legacy"),
+        "blocked_count": sum(1 for item in matrix if item.get("blocked_by")),
     }
 
 

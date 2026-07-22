@@ -253,6 +253,13 @@ class OfficeExtensionGovernanceTests(unittest.TestCase):
         self.assertEqual(by_office["comic"]["legacy_migration"]["target_office_id"], "comic_production")
         self.assertIn("旧 comic", by_office["comic"]["legacy_migration"]["action"])
 
+        matrix = {item["office_id"]: item for item in audit["launch_matrix"]}
+        self.assertEqual(audit["launch_matrix_summary"]["primary_allowed_count"], 1)
+        self.assertTrue(matrix["comic_production"]["can_show_publicly"])
+        self.assertTrue(matrix["comic_production"]["primary_allowed"])
+        self.assertFalse(matrix["comic"]["can_show_publicly"])
+        self.assertIn("legacy_migration_required", matrix["comic"]["blocked_by"])
+
         standards = {
             item["label"]: item["status"]
             for item in by_office["comic_production"]["primary_standards"]

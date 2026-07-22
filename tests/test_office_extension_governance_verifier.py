@@ -42,6 +42,14 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertEqual(audit["future_extension_audit"]["backlog_count"], 2)
         self.assertIn("short_video_ads", audit["future_extension_audit"]["candidate_ids"])
         self.assertIn("future_schema_validators", audit["future_extension_audit"]["backlog_ids"])
+        self.assertEqual(audit["launch_matrix_summary"]["office_count"], 3)
+        self.assertEqual(audit["launch_matrix_summary"]["public_ready_count"], 2)
+        self.assertEqual(audit["launch_matrix_summary"]["primary_allowed_count"], 1)
+        launch_by_office = {item["office_id"]: item for item in audit["launch_matrix"]}
+        self.assertTrue(launch_by_office["comic_production"]["can_show_publicly"])
+        self.assertTrue(launch_by_office["comic_production"]["primary_allowed"])
+        self.assertFalse(launch_by_office["comic"]["can_show_publicly"])
+        self.assertIn("legacy_migration_required", launch_by_office["comic"]["blocked_by"])
         package_files = {
             item["file"] for item in audit["extension_blueprint"]["minimum_implementation_package"]
         }
@@ -85,6 +93,9 @@ class OfficeExtensionGovernanceVerifierTests(unittest.TestCase):
         self.assertIn("New Office Starter Checklist", completed.stdout)
         self.assertIn("Future Office Candidates", completed.stdout)
         self.assertIn("Future Backlog Audit", completed.stdout)
+        self.assertIn("Office Launch Matrix", completed.stdout)
+        self.assertIn("Public ready: `2/3`", completed.stdout)
+        self.assertIn("legacy_migration_required", completed.stdout)
         self.assertIn("short_video_ads", completed.stdout)
         self.assertIn("future_schema_validators", completed.stdout)
         self.assertIn("Starter Checklist Audit", completed.stdout)

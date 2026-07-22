@@ -387,6 +387,33 @@ def format_markdown(audit: dict[str, Any]) -> str:
             f"| {standard.get('label')} | {', '.join(standard.get('required_gates', []))} |"
         )
 
+    summary = audit.get("launch_matrix_summary") or {}
+    lines.extend(
+        [
+            "",
+            "## Office Launch Matrix",
+            "",
+            f"Public ready: `{summary.get('public_ready_count', 0)}/{summary.get('office_count', 0)}`",
+            f"Primary allowed: `{summary.get('primary_allowed_count', 0)}`",
+            f"Legacy offices: `{summary.get('legacy_count', 0)}`",
+            "",
+            "| Office | Role | Public ready | Primary allowed | Blocked by | Next action |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for office in audit.get("launch_matrix", []):
+        blocked = ", ".join(office.get("blocked_by", [])) or "-"
+        lines.append(
+            "| {office_id} | {role} | {public} | {primary} | {blocked} | {action} |".format(
+                office_id=office.get("office_id"),
+                role=office.get("role"),
+                public=str(bool(office.get("can_show_publicly"))).lower(),
+                primary=str(bool(office.get("primary_allowed"))).lower(),
+                blocked=blocked,
+                action=office.get("recommended_action", ""),
+            )
+        )
+
     lines.extend(
         [
             "",
