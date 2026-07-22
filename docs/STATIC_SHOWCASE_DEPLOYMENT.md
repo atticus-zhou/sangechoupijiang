@@ -127,6 +127,26 @@ Current handoff contract:
 
 Do not describe the personal website as live until `npm run check:online` passes against the production domain.
 
+## Visitor Acceptance Guide
+
+The static package must also keep `data/visitor_acceptance_guide.json`.
+This file is the reviewer-facing route for the public demo: it records the
+five-step visitor path, the seven reviewable downloads, the demo-only claim
+boundaries, and the live-site rule that `/three-stooges/` is not public evidence
+until `npm run check:online` passes.
+
+After copying `dist/public-showcase/*` into the personal website repository,
+both local and online checks must include this file:
+
+```powershell
+npm run check:showcase
+npm run check:online
+```
+
+`check:showcase` proves the copied local package contains the visitor acceptance
+guide. `check:online` proves the production Vercel domain is serving the same
+guide instead of an older build.
+
 ## Asset Requirement Matrix In The Static Package
 
 The static package must carry the same `asset_requirement_matrix` that the API
