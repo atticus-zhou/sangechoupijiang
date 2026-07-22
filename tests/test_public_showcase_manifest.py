@@ -124,10 +124,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         required_fields = {item["field"]: item for item in shot_contract["required_fields"]}
         self.assertEqual(
             set(required_fields),
-            {"first_frame_reference_image", "reference_asset_chain", "director_execution"},
+            {"first_frame_reference_image", "reference_asset_chain", "story_purpose", "director_execution"},
         )
         self.assertIn("image_id", required_fields["first_frame_reference_image"]["must_include"])
         self.assertIn("asset_id", required_fields["reference_asset_chain"]["must_include"])
+        self.assertIn("story_purpose", required_fields["story_purpose"]["must_include"])
+        self.assertIn("story_purpose", required_fields["director_execution"]["must_include"])
         self.assertIn("action_chain", required_fields["director_execution"]["must_include"])
         self.assertIn("needs_review", shot_contract["failure_policy"])
         inventory = embed["handoff_inventory"]

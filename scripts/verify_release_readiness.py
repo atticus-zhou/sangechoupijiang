@@ -211,6 +211,7 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"downloads={demo.get('download_count')}; "
                 f"reading_guide={demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}; "
                 f"handoff={demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}; "
+                f"capture={demo.get('capture_playbook_ready_count')}/{demo.get('capture_playbook_step_count')}; "
                 f"claim={demo.get('claim_level')}; "
                 f"full_auto={demo.get('can_claim_full_automation')}; "
                 f"upgrade_checklist={demo.get('claim_upgrade_checklist_count')}"

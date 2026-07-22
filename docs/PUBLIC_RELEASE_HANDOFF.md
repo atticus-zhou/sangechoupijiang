@@ -11,7 +11,7 @@
 - AI 漫剧制片办公室固定样例：故事、资产引用链路、样例 Word 制片画布、handoff manifest、下游交接门禁。
 - AI 漫剧真实生产声明报告：`data/comic_production_claim_report.json` 会公开 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`，说明当前 demo 为什么不能宣称真实画质、后续要保留什么、重建什么，以及如何用 `regenerate_images` 补齐真实图片和视觉质检证据。
 - 下游生产 quick-start：从确认制片画布、锁定基础资产、逐镜头生成视频、质量复核到归档证据的 5 步接手顺序。
-- 研究办公室固定样例：阶段报告、来源清单、数据表、截图计划和证据缺口说明。
+- 研究办公室固定样例：阶段报告、来源清单、数据表、截图计划、证据缺口说明和补证操作手册。
 - 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、查看声明边界和复现命令。
 - 第一次运行清单、模型配置说明、办公室协议、办公室上线门禁和隔离验证。
 - GitHub README、部署边界、安全说明和 release readiness 结果。
@@ -46,7 +46,7 @@
 - 下游生产 quick-start：确认接手顺序不是一句“可交给下游”，而是明确了负责人、输入、动作、产出和验收标准。
 - 研究办公室阶段报告：确认结论、来源、数据表、截图计划和证据缺口分开呈现。
 - 研究办公室证据清单：确认来源、数据、截图计划、缺口、待补证据交接表和人工确认项没有被伪装成已完成采集。
-- 研究办公室阶段性交付声明：确认公开样例只能说明 staged delivery，不能宣称全自动会员级平台采集。
+- 研究办公室阶段性交付声明：确认公开样例只能说明 staged delivery，不能宣称全自动会员级平台采集；同时检查 `evidence_capture_playbook` 是否说明人类登录、截图命名、来源说明、重跑报告和复核命令。
 
 这份检查也会由 `python scripts/verify_first_run_readiness.py --format markdown` 输出，作为第一次从 GitHub 下载项目后的交付物阅读指南。
 
@@ -81,7 +81,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_comic_v2_delivery.py --format markdown` 能证明 AI 漫剧 Word 画布结构、资产 ID、镜头 ID、图片记录和交付审计可用。
 - `python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 能证明人物三视图、表情、道具、场景广角/俯视图、镜头视频包、首帧参考图和失败重试策略可交接。
 - `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 能证明故事、资产、提示词、镜头、视觉质检和谱系已经交叉校验，并明确区分无 Key 结构样例与真实模型质量证据。
-- `python scripts/verify_research_office_readiness.py --format markdown` 能证明研究办公室只公开阶段性样例、证据边界和待补证据交接表，不伪装成全自动平台采集。
+- `python scripts/verify_research_office_readiness.py --format markdown` 能证明研究办公室只公开阶段性样例、证据边界、待补证据交接表和补证操作手册，不伪装成全自动平台采集。
 - `python scripts/verify_release_readiness.py --format markdown` 能串联全部 no-key 发布门禁。
 - `python scripts/check_no_secrets.py` 能证明仓库没有误提交敏感信息或运行产物。
 

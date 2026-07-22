@@ -129,8 +129,11 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     public_demo_boundary = str(evidence_boundaries.get("public_demo_boundary") or "")
     reading_guide = payload.get("deliverable_reading_guide") or []
     evidence_handoff = payload.get("evidence_handoff") or []
+    capture_playbook = payload.get("evidence_capture_playbook") or {}
+    capture_steps = capture_playbook.get("steps") or []
     claim_response = client.get("/api/demo/research/claim-report")
     claim_report = claim_response.json() if claim_response.status_code == 200 else {}
+    claim_capture_playbook = claim_report.get("evidence_capture_playbook") or {}
     claim_evidence_status_summary = claim_report.get("evidence_status_summary") or {}
     if len(covered_in_demo) < 4:
         errors.append("research demo must describe which evidence is covered in the fixed sample")
@@ -150,6 +153,19 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     for item in evidence_handoff:
         if not item.get("owner") or not item.get("target_evidence") or not item.get("why_needed") or not item.get("upgrades"):
             errors.append(f"research evidence handoff item is incomplete: {item.get('title') or item.get('id')}")
+    if capture_playbook.get("status") != "human_account_required":
+        errors.append("research demo must expose a human-account-required evidence capture playbook")
+    if len(capture_steps) < 5:
+        errors.append("research evidence capture playbook must provide at least 5 steps")
+    if "evidence_" not in str(capture_playbook.get("file_naming_rule") or ""):
+        errors.append("research evidence capture playbook must define evidence file naming")
+    if "账号密码" not in "\n".join(capture_playbook.get("must_not_collect") or []):
+        errors.append("research evidence capture playbook must forbid collecting account passwords")
+    for item in capture_steps:
+        if not item.get("owner") or not item.get("action") or not item.get("expected_artifact") or not item.get("acceptance"):
+            errors.append(f"research evidence capture step is incomplete: {item.get('order') or item.get('action')}")
+    if not any("verify_research_office_readiness.py" in str(command) for command in capture_playbook.get("after_capture_commands") or []):
+        errors.append("research evidence capture playbook must include the readiness verifier command")
     status_counts = evidence_status_summary.get("counts") or {}
     if evidence_status_summary.get("claim_readiness") != "staged_only":
         errors.append("research demo evidence status must stay staged_only")
@@ -171,6 +187,8 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         errors.append("research claim report must remain no-key and offline")
     if claim_evidence_status_summary.get("claim_readiness") != evidence_status_summary.get("claim_readiness"):
         errors.append("research claim report must repeat the evidence status summary")
+    if claim_capture_playbook.get("status") != capture_playbook.get("status"):
+        errors.append("research claim report must repeat the evidence capture playbook")
     forbidden_claims = "\n".join(claim_report.get("forbidden_public_claims") or [])
     if "自动登录飞瓜" not in forbidden_claims or "会员级" not in forbidden_claims:
         errors.append("research claim report must forbid full platform automation claims")
@@ -244,6 +262,14 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
             for item in evidence_handoff
             if item.get("owner") and item.get("target_evidence") and item.get("why_needed") and item.get("upgrades")
         ),
+        "capture_playbook_status": capture_playbook.get("status", ""),
+        "capture_playbook_step_count": len(capture_steps),
+        "capture_playbook_ready_count": sum(
+            1
+            for item in capture_steps
+            if item.get("owner") and item.get("action") and item.get("expected_artifact") and item.get("acceptance")
+        ),
+        "capture_playbook_command_count": len(capture_playbook.get("after_capture_commands") or []),
         "claim_report_status_code": claim_response.status_code,
         "claim_level": claim_report.get("claim_level", ""),
         "can_claim_full_automation": bool(claim_report.get("can_claim_full_automation")),
@@ -320,6 +346,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Evidence status counts: placeholder={demo.get('placeholder_demo_source_count')}, pending={demo.get('pending_evidence_count')}",
         f"- Reading guide: {demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}",
         f"- Evidence handoff: {demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}",
+        f"- Evidence capture playbook: {demo.get('capture_playbook_status')} / steps={demo.get('capture_playbook_ready_count')}/{demo.get('capture_playbook_step_count')} / commands={demo.get('capture_playbook_command_count')}",
         f"- Claim report: HTTP {demo.get('claim_report_status_code')} / {demo.get('claim_level')} / full_automation={demo.get('can_claim_full_automation')}",
         f"- Claim upgrade checklist: {demo.get('claim_upgrade_checklist_count')} items",
         f"- Public demo boundary: {demo.get('public_demo_boundary')}",

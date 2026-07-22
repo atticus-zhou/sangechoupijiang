@@ -253,10 +253,12 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         research_claim_uri = str(research_claim_boundary.get("uri") or "")
         research_claim_path = temp_dir / research_claim_uri
         research_claim_payload = {}
+        research_capture_playbook = {}
         if research_claim_uri != "downloads/research/claim-report.json" or not research_claim_path.is_file():
             errors.append("static showcase must expose a local research office claim report")
         else:
             research_claim_payload = json.loads(research_claim_path.read_text(encoding="utf-8"))
+            research_capture_playbook = research_claim_payload.get("evidence_capture_playbook") or {}
             if research_claim_payload.get("claim_level") != "staged_research_demo":
                 errors.append("static research claim report must remain staged_research_demo")
             if research_claim_payload.get("can_claim_full_automation") is not False:
@@ -271,12 +273,23 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append("static research claim report must include a claim upgrade checklist")
             if len(research_claim_payload.get("evidence_handoff") or []) < 3:
                 errors.append("static research claim report must include evidence handoff items")
+            if research_capture_playbook.get("status") != "human_account_required":
+                errors.append("static research claim report must include a human-account evidence capture playbook")
+            if len(research_capture_playbook.get("steps") or []) < 5:
+                errors.append("static research claim report must include at least five capture playbook steps")
+            if "evidence_" not in str(research_capture_playbook.get("file_naming_rule") or ""):
+                errors.append("static research claim report must define evidence file naming")
         if research_claim_boundary.get("claim_level") != "staged_research_demo":
             errors.append("static portfolio embed must expose the research staged claim level")
         if research_claim_boundary.get("can_claim_full_automation") is not False:
             errors.append("static portfolio embed must not claim research full automation")
         if research_claim_boundary.get("requires_api_key") is not False or research_claim_boundary.get("calls_real_models") is not False:
             errors.append("static portfolio embed must keep the research claim no-key and no-model")
+        boundary_playbook = research_claim_boundary.get("evidence_capture_playbook") or {}
+        if boundary_playbook.get("status") != research_capture_playbook.get("status"):
+            errors.append("static portfolio embed must expose the research evidence capture playbook status")
+        if boundary_playbook.get("step_count") != len(research_capture_playbook.get("steps") or []):
+            errors.append("static portfolio embed must expose the research evidence capture playbook step count")
         research_claim_upgrade_checklist = research_claim_payload.get("claim_upgrade_checklist") or []
 
         reading_guide = portfolio.get("deliverable_reading_guide") or []
@@ -530,6 +543,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "research_can_claim_full_automation": research_claim_payload.get("can_claim_full_automation"),
             "research_claim_upgrade_checklist_count": len(research_claim_upgrade_checklist),
             "research_evidence_handoff_count": len(research_claim_payload.get("evidence_handoff") or []),
+            "research_capture_playbook_step_count": len(research_capture_playbook.get("steps") or []),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
             "office_extension_checklist_count": len(extension_checklist),
@@ -586,7 +600,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
         f"- Claim upgrade recovery: action={payload.get('claim_upgrade_recovery_action')} / steps={payload.get('claim_upgrade_recovery_step_count')}",
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
-        f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')}",
+        f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')} / capture_steps={payload.get('research_capture_playbook_step_count')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- New office extension: checklist={payload.get('office_extension_checklist_count')} / phases={payload.get('office_extension_phase_count')} / doc={payload.get('office_extension_doc')}",
         f"- Future office candidates: {payload.get('office_extension_candidate_count')} / backlog={payload.get('office_extension_backlog_count')}",

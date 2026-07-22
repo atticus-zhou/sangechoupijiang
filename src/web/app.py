@@ -722,6 +722,7 @@ async def get_research_demo_api():
     competitors = _research_demo_competitors(results)
     chart_suggestions = _research_demo_chart_suggestions(results)
     evidence_handoff = _research_demo_evidence_handoff()
+    evidence_capture_playbook = _research_demo_evidence_capture_playbook()
     evidence_status_summary = _research_demo_evidence_status_summary(sources, data_points)
     return {
         "mode": "no_key_demo",
@@ -771,6 +772,7 @@ async def get_research_demo_api():
             "public_demo_boundary": "公开演示只展示固定样例和证据缺口，不读取账号、不登录第三方平台、不宣称全自动会员级采集。",
         },
         "evidence_handoff": evidence_handoff,
+        "evidence_capture_playbook": evidence_capture_playbook,
         "evidence_status_summary": evidence_status_summary,
         "deliverable_reading_guide": [
             {
@@ -853,6 +855,7 @@ async def get_research_demo_api():
 def _research_claim_report_from_demo(demo: dict) -> dict:
     evidence_boundaries = demo.get("evidence_boundaries") or {}
     evidence_handoff = demo.get("evidence_handoff") or []
+    evidence_capture_playbook = demo.get("evidence_capture_playbook") or {}
     evidence_status_summary = demo.get("evidence_status_summary") or {}
     return {
         "status": "passed",
@@ -875,6 +878,7 @@ def _research_claim_report_from_demo(demo: dict) -> dict:
         ],
         "evidence_boundaries": evidence_boundaries,
         "evidence_handoff": evidence_handoff,
+        "evidence_capture_playbook": evidence_capture_playbook,
         "evidence_status_summary": evidence_status_summary,
         "claim_upgrade_checklist": [
             {
@@ -1356,6 +1360,63 @@ def _research_demo_evidence_handoff() -> list[dict]:
     ]
 
 
+def _research_demo_evidence_capture_playbook() -> dict:
+    return {
+        "status": "human_account_required",
+        "summary": "公开样例不自动登录第三方平台；真实调研时由人完成登录和截图，研究办公室负责把截图、来源说明和待核验项重新整理进报告。",
+        "file_naming_rule": "evidence_{order:02d}_{platform}_{page_or_metric}.png，例如 evidence_01_feigua_price_band.png。",
+        "must_not_collect": [
+            "账号密码",
+            "Cookie",
+            "后台 token",
+            "个人隐私数据",
+            "不可公开传播的会员原始数据",
+        ],
+        "steps": [
+            {
+                "order": 1,
+                "owner": "人类操作者",
+                "action": "在自己的浏览器里打开飞瓜、抖音或电商后台，并只完成登录动作。",
+                "expected_artifact": "无文件；只确认账号权限是否足够。",
+                "acceptance": "产品不要求你在聊天或配置文件里提供账号密码。",
+            },
+            {
+                "order": 2,
+                "owner": "人类操作者 / 兵部",
+                "action": "按 evidence_handoff 的优先级逐页截图，优先补价格带、竞品排行和评论痛点。",
+                "expected_artifact": "evidence_01_*.png、evidence_02_*.png 等截图文件。",
+                "acceptance": "每张图能看出页面主题、时间范围、平台或榜单类型；敏感账号信息应被遮挡。",
+            },
+            {
+                "order": 3,
+                "owner": "户部 / 刑部",
+                "action": "为每张截图补一句来源说明和对应结论，不确定的数据标记为待核验。",
+                "expected_artifact": "更新后的 evidence_manifest.json 或等价证据清单。",
+                "acceptance": "每条证据都能对应到报告中的数据、竞品、截图计划或风险提示。",
+            },
+            {
+                "order": 4,
+                "owner": "礼部",
+                "action": "补证后重新生成阶段报告，不直接沿用旧报告结论。",
+                "expected_artifact": "更新后的 report.md / Word 报告和变更说明。",
+                "acceptance": "报告明确哪些结论已由截图支持，哪些仍需要继续人工确认。",
+            },
+            {
+                "order": 5,
+                "owner": "刑部",
+                "action": "重新运行研究办公室 readiness 检查，再决定是否可以给老板或访客展示。",
+                "expected_artifact": "python scripts/verify_research_office_readiness.py --format markdown 的通过结果。",
+                "acceptance": "没有把待人工核验截图、权限缺口或固定样例伪装成完整自动化采集。",
+            },
+        ],
+        "after_capture_commands": [
+            "python scripts/verify_research_office_readiness.py --format markdown",
+            "python scripts/verify_public_demo_mode.py --format markdown",
+            "python scripts/verify_release_readiness.py --format markdown",
+        ],
+    }
+
+
 def _public_showcase_reproducibility_checklist() -> list[dict]:
     return [
         {
@@ -1699,6 +1760,12 @@ async def get_public_showcase_demo_api():
                 "forbidden_public_claims": research_claim.get("forbidden_public_claims", [])[:3],
                 "claim_upgrade_checklist": research_claim.get("claim_upgrade_checklist", [])[:3],
                 "evidence_handoff_count": len(research_claim.get("evidence_handoff") or []),
+                "evidence_capture_playbook": {
+                    "status": (research_claim.get("evidence_capture_playbook") or {}).get("status", ""),
+                    "step_count": len((research_claim.get("evidence_capture_playbook") or {}).get("steps") or []),
+                    "file_naming_rule": (research_claim.get("evidence_capture_playbook") or {}).get("file_naming_rule", ""),
+                    "after_capture_commands": (research_claim.get("evidence_capture_playbook") or {}).get("after_capture_commands", [])[:3],
+                },
                 "next_action": research_claim.get("next_action", ""),
             },
             "real_production_claim": {

@@ -93,6 +93,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         research_readiness = next(item for item in payload["checks"] if item["id"] == "research_readiness")
         self.assertIn("reading_guide=2/2", research_readiness["summary"])
         self.assertIn("handoff=3/3", research_readiness["summary"])
+        self.assertIn("capture=5/5", research_readiness["summary"])
         self.assertIn("claim=staged_research_demo", research_readiness["summary"])
         self.assertIn("full_auto=False", research_readiness["summary"])
         self.assertIn("upgrade_checklist=3", research_readiness["summary"])
