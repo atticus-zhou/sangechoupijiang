@@ -103,14 +103,60 @@ async def plan_asset_manifest(
 
 
 def _ensure_revision_request_was_applied(previous: AssetManifest, candidate: AssetManifest, note: str) -> None:
-    normalized = str(note or "")
-    asks_for_prop = any(word in normalized for word in ("缺少道具", "补道具", "补充道具", "增加道具", "新增道具"))
-    if not asks_for_prop:
+    normalized = str(note or "").strip()
+    if not normalized:
         return
-    previous_props = {item.name for item in previous.items if item.asset_type == "prop"}
-    candidate_props = {item.name for item in candidate.items if item.asset_type == "prop"}
-    if len(candidate_props - previous_props) < 1:
-        raise AssetPlanningError("用户退回意见要求补充道具，但新版资产清单没有新增道具；请补充故事中明确出现的道具，或在资产审核问题中解释为什么不能补。")
+
+    previous_by_type = _asset_names_by_type(previous)
+    candidate_by_type = _asset_names_by_type(candidate)
+    _ensure_requested_additions(previous_by_type, candidate_by_type, normalized)
+    _ensure_requested_removals(previous, candidate, normalized)
+
+
+def _asset_names_by_type(manifest: AssetManifest) -> dict[str, set[str]]:
+    return {
+        asset_type: {item.name for item in manifest.items if item.asset_type == asset_type}
+        for asset_type in ("character", "prop", "scene")
+    }
+
+
+def _ensure_requested_additions(
+    previous_by_type: dict[str, set[str]],
+    candidate_by_type: dict[str, set[str]],
+    note: str,
+) -> None:
+    addition_rules = (
+        ("character", ("缺少人物", "缺人物", "补人物", "补充人物", "增加人物", "新增人物", "漏了人物", "缺少角色", "补角色", "补充角色")),
+        ("prop", ("缺少道具", "缺道具", "补道具", "补充道具", "增加道具", "新增道具", "漏了道具", "缺少物件", "补物件")),
+        ("scene", ("缺少场景", "缺场景", "补场景", "补充场景", "增加场景", "新增场景", "漏了场景", "缺少地点", "补地点")),
+    )
+    labels = {"character": "人物", "prop": "道具", "scene": "场景"}
+    for asset_type, keywords in addition_rules:
+        if not any(keyword in note for keyword in keywords):
+            continue
+        added = candidate_by_type[asset_type] - previous_by_type[asset_type]
+        if not added:
+            label = labels[asset_type]
+            raise AssetPlanningError(
+                f"用户退回意见要求补充{label}，但新版资产清单没有新增{label}；"
+                f"请只从确认故事中补充明确出现且有证据的{label}。"
+            )
+
+
+def _ensure_requested_removals(previous: AssetManifest, candidate: AssetManifest, note: str) -> None:
+    if not any(keyword in note for keyword in ("删除", "去掉", "移除", "不是人物", "不是角色", "不是道具", "不是场景", "误判")):
+        return
+    candidate_keys = {(item.asset_type, item.name) for item in candidate.items}
+    type_labels = {"character": "人物", "prop": "道具", "scene": "场景"}
+    for item in previous.items:
+        if item.name not in note:
+            continue
+        if (item.asset_type, item.name) in candidate_keys:
+            label = type_labels.get(item.asset_type, item.asset_type)
+            raise AssetPlanningError(
+                f"用户退回意见要求处理“{item.name}”，但新版资产清单仍保留它作为{label}；"
+                "如果它是误判资产，请从完整清单中删除；如果必须保留，请在名称和证据中明确它为什么属于该类型。"
+            )
 
 async def _review_manifest(bundle: ContractBundle, manifest: AssetManifest, reviewer) -> dict:
     response = await reviewer.chat(
@@ -193,6 +239,17 @@ def _asset_planner_user_prompt(
                 json.dumps(previous_manifest.to_dict(), ensure_ascii=False),
                 "[用户退回意见]",
                 revision_request,
+                "[退回执行规则]",
+                "\n".join(
+                    [
+                        "- 这不是闲聊建议，而是必须落实的修改指令。",
+                        "- 如果用户说缺少人物、道具或场景，新清单必须新增对应类型，且只能新增确认故事中逐字出现并有用途的资产。",
+                        "- 如果用户说某个名称不是人物、不是道具、不是场景、误判、删除、去掉或移除，新清单必须删除这个误判项。",
+                        "- 如果上一版缺少道具，优先从故事里被持有、使用、发现、携带、留下或影响情节的实体物件中补齐。",
+                        "- 禁止为了通过审核凭空创造确认故事中没有出现的人物、地点和物件。",
+                        "- 禁止返回与上一版相同的清单；必须输出修改后的完整新清单，不要只输出新增项。",
+                    ]
+                ),
             ]
         )
     if review_feedback:

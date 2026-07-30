@@ -14,7 +14,11 @@ STORY = (
 
 
 def contract_bundle():
-    return build_contract_bundle(STORY, {
+    return contract_bundle_for(STORY)
+
+
+def contract_bundle_for(story):
+    return build_contract_bundle(story, {
         "title": "借月人",
         "genre": "古风幻想",
         "theme": "记忆与光明的代价",
@@ -158,6 +162,104 @@ class ComicV2AssetPlannerTests(unittest.IsolatedAsyncioTestCase):
                 planner_llm=planner,
                 reviewer_llm=reviewer,
             )
+
+    async def test_revision_request_for_missing_scene_must_add_scene_or_fail(self):
+        from src.comic_office.v2.asset_manifest import build_asset_manifest
+        from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
+
+        current = build_asset_manifest(contract_bundle(), valid_assets()[:2])
+        proposed_without_scene = [
+            valid_assets()[0] | {"allowed_changes": ["表情", "姿势", "受伤妆"]},
+            valid_assets()[1],
+        ]
+        planner = FakeProvider([
+            json.dumps({"assets": proposed_without_scene}, ensure_ascii=False),
+            json.dumps({"assets": proposed_without_scene}, ensure_ascii=False),
+        ])
+        reviewer = FakeProvider([
+            json.dumps({"status": "approved", "issues": []}, ensure_ascii=False),
+            json.dumps({"status": "approved", "issues": []}, ensure_ascii=False),
+        ])
+        config = ModelConfig(provider="openai", model="fake", api_key="test")
+
+        with self.assertRaisesRegex(AssetPlanningError, "场景"):
+            await plan_asset_manifest(
+                contract_bundle(),
+                config,
+                config,
+                revision_request="缺少故事发生的场景，请补充场景",
+                previous_manifest=current,
+                planner_llm=planner,
+                reviewer_llm=reviewer,
+            )
+
+    async def test_revision_request_to_remove_misclassified_asset_must_remove_it(self):
+        from src.comic_office.v2.asset_manifest import build_asset_manifest
+        from src.comic_office.v2.asset_planner import AssetPlanningError, plan_asset_manifest
+
+        bad_character = {
+            "asset_type": "character",
+            "name": "张卡",
+            "evidence_quote": "张卡",
+            "scene_ids": ["scene_01"],
+            "story_purpose": "被误判成角色的物件碎片",
+            "visual_locks": ["薄纸片"],
+            "allowed_changes": ["磨损"],
+        }
+        story_with_bad_name = STORY + "林昭还在桌上看到张卡。"
+        bundle = contract_bundle_for(story_with_bad_name)
+        current = build_asset_manifest(bundle, valid_assets() + [bad_character])
+        still_bad = [
+            valid_assets()[0] | {"allowed_changes": ["表情", "姿势", "受伤妆"]},
+            *valid_assets()[1:],
+            bad_character,
+        ]
+        planner = FakeProvider([
+            json.dumps({"assets": still_bad}, ensure_ascii=False),
+            json.dumps({"assets": still_bad}, ensure_ascii=False),
+        ])
+        reviewer = FakeProvider([
+            json.dumps({"status": "approved", "issues": []}, ensure_ascii=False),
+            json.dumps({"status": "approved", "issues": []}, ensure_ascii=False),
+        ])
+        config = ModelConfig(provider="openai", model="fake", api_key="test")
+
+        with self.assertRaisesRegex(AssetPlanningError, "张卡"):
+            await plan_asset_manifest(
+                bundle,
+                config,
+                config,
+                revision_request="张卡不是人物，请删除这个误判角色",
+                previous_manifest=current,
+                planner_llm=planner,
+                reviewer_llm=reviewer,
+            )
+
+    async def test_revision_prompt_tells_planner_to_apply_human_feedback_as_instruction(self):
+        from src.comic_office.v2.asset_manifest import build_asset_manifest
+        from src.comic_office.v2.asset_planner import plan_asset_manifest
+
+        current = build_asset_manifest(contract_bundle(), [valid_assets()[0], valid_assets()[2]])
+        planner = FakeProvider([
+            json.dumps({"assets": valid_assets()}, ensure_ascii=False),
+        ])
+        reviewer = FakeProvider([json.dumps({"status": "approved", "issues": []}, ensure_ascii=False)])
+        config = ModelConfig(provider="openai", model="fake", api_key="test")
+
+        await plan_asset_manifest(
+            contract_bundle(),
+            config,
+            config,
+            revision_request="缺少裂纹月灯这个道具，请补充道具",
+            previous_manifest=current,
+            planner_llm=planner,
+            reviewer_llm=reviewer,
+        )
+
+        prompt = planner.calls[0][-1].content
+        self.assertIn("退回执行规则", prompt)
+        self.assertIn("必须落实的修改指令", prompt)
+        self.assertIn("禁止返回与上一版相同的清单", prompt)
 
     async def test_revision_replaces_full_manifest_and_rejects_noop(self):
         from src.comic_office.v2.asset_manifest import build_asset_manifest
