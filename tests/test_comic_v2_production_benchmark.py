@@ -191,6 +191,11 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(instructions[0]["action"], "manual_review")
         self.assertTrue(instructions[0]["label"])
         self.assertIn("operator_steps", instructions[0])
+        self.assertEqual(instructions[0]["priority"], "medium")
+        self.assertEqual(instructions[0]["blocked_stage"], "人工复核")
+        self.assertTrue(instructions[0]["blocks_downstream"])
+        self.assertIn("人工判断", instructions[0]["user_message"])
+        self.assertEqual(instructions[0]["next_button_label"], "人工复核")
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_images")
 
     def test_missing_visual_review_creates_rerun_review_instruction(self):
@@ -203,7 +208,13 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         first = audit["image_quality_summary"]["rework_instructions"][0]
         self.assertEqual(first["action"], "rerun_visual_review")
         self.assertEqual(first["label"], "补跑视觉质检")
+        self.assertEqual(first["department"], "刑部")
+        self.assertEqual(first["blocked_stage"], "视觉质检")
+        self.assertEqual(first["next_button_label"], "重跑视觉质检")
         self.assertIn("七维评分", "；".join(first["operator_steps"]))
+        summary = audit["image_quality_summary"]["rework_action_summary"][0]
+        self.assertEqual(summary["action"], "rerun_visual_review")
+        self.assertEqual(summary["count"], 1)
 
     def test_recommended_recovery_includes_operator_playbook(self):
         with tempfile.TemporaryDirectory() as tmp:

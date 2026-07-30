@@ -4468,7 +4468,14 @@ function renderComicV2HistoryTrace(trace) {
                 ${reworkInstructions.length ? `
                     <ul class="v2-prompt-quality-issues">
                         ${reworkInstructions.slice(0, 3).map(item => `
-                            <li>${escapeHtml(item.image_id || item.asset_id || '图片')}：${escapeHtml(item.label || item.action || '复核')} · ${escapeHtml(item.reason || '')}</li>
+                            <li>
+                                ${escapeHtml(item.image_id || item.asset_id || '图片')}：${escapeHtml(item.label || item.action || '复核')}
+                                ${item.department ? ` · ${escapeHtml(item.department)}` : ''}
+                                ${item.blocked_stage ? ` · 卡在${escapeHtml(item.blocked_stage)}` : ''}
+                                ${item.priority ? ` · ${escapeHtml(item.priority)}` : ''}
+                                <br><small>${escapeHtml(item.user_message || item.reason || '')}</small>
+                                ${item.next_button_label ? `<br><small>建议操作：${escapeHtml(item.next_button_label)}</small>` : ''}
+                            </li>
                         `).join('')}
                     </ul>
                 ` : ''}

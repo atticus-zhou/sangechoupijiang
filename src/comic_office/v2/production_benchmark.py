@@ -510,10 +510,12 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
                 "reason": "图片缺少视觉质检记录，不能判断是否可交付。",
                 "failed_dimensions": [],
                 "missing_dimensions": list(REVIEW_DIMENSIONS),
-                "operator_steps": [
-                    "保留当前图片和提示词。",
-                    "调用刑部视觉模型补齐七维评分、证据和修改建议。",
-                ],
+                **_image_rework_playbook(
+                    "rerun_visual_review",
+                    role=role,
+                    failed_dimensions=[],
+                    missing_dimensions=list(REVIEW_DIMENSIONS),
+                ),
             })
             continue
         reviewed += 1
@@ -540,7 +542,13 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
                 "reason": str(review.get("recovery_reason") or ""),
                 "failed_dimensions": list(review.get("failed_dimensions") or []),
                 "missing_dimensions": list(review.get("missing_dimensions") or []),
-                "operator_steps": list(review.get("operator_steps") or []),
+                **_image_rework_playbook(
+                    action or "manual_review",
+                    role=role,
+                    failed_dimensions=list(review.get("failed_dimensions") or []),
+                    missing_dimensions=list(review.get("missing_dimensions") or []),
+                    operator_steps=list(review.get("operator_steps") or []),
+                ),
             })
         if action == "regenerate_images":
             regenerate_images += 1
@@ -568,6 +576,7 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
         "failed_image_ids": failed_image_ids[:20],
         "rework_instructions": rework_instructions[:20],
         "by_production_role": by_role,
+        "rework_action_summary": _rework_action_summary(rework_instructions),
         "summary": (
             f"共 {total} 张图片，{usable} 张可直接交付，{waste_or_rework} 张需要重生、重审或人工复核。"
             if total
@@ -584,6 +593,104 @@ def _review_scores_ready(review: dict[str, Any]) -> bool:
         return all(int(float(scores[dimension])) >= 80 for dimension in REVIEW_DIMENSIONS)
     except (TypeError, ValueError):
         return False
+
+
+def _image_rework_playbook(
+    action: str,
+    *,
+    role: str,
+    failed_dimensions: list[str],
+    missing_dimensions: list[str],
+    operator_steps: list[str] | None = None,
+) -> dict[str, Any]:
+    """Turn technical visual QA failures into a human/operator recovery card."""
+    normalized_action = str(action or "manual_review").strip() or "manual_review"
+    failed = set(failed_dimensions or [])
+    missing = set(missing_dimensions or [])
+    if normalized_action == "rerun_visual_review" or missing:
+        return {
+            "priority": "high",
+            "department": "刑部",
+            "blocked_stage": "视觉质检",
+            "blocks_downstream": True,
+            "user_message": "这张图还没有完整质检，不能判断能不能交给下游。",
+            "next_button_label": "重跑视觉质检",
+            "operator_steps": operator_steps
+            or [
+                "保留当前图片和提示词。",
+                "调用刑部视觉模型补齐七维评分、证据和修改建议。",
+                "质检通过后再进入 Word 画布组装。",
+            ],
+        }
+    if normalized_action == "regenerate_prompts" or failed & {"spatial_structure", "purpose_fit"}:
+        return {
+            "priority": "critical",
+            "department": "工部 / 兵部 / 刑部",
+            "blocked_stage": "提示词规划",
+            "blocks_downstream": True,
+            "user_message": "这张图的问题不是单纯手气差，而是用途、空间或镜头说明没写清，需要先重写提示词。",
+            "next_button_label": "退回重写提示词",
+            "operator_steps": operator_steps
+            or [
+                "保留已确认故事和资产清单。",
+                "退回工部/兵部补清楚用途、空间结构、镜头目的和引用资产。",
+                "用新版提示词重新生成图片，再由刑部复检。",
+            ],
+        }
+    if normalized_action == "regenerate_images":
+        style_or_purity = failed & {"style_consistency", "era_media", "asset_purity"}
+        return {
+            "priority": "critical" if style_or_purity else "high",
+            "department": "工部 / 刑部",
+            "blocked_stage": "图片生成",
+            "blocks_downstream": True,
+            "user_message": (
+                "这张图偏离了画风、时代或白底资产要求，需要按同一提示词重新生图。"
+                if style_or_purity
+                else "这张图没有通过身份或结构质检，需要保留提示词重新生图。"
+            ),
+            "next_button_label": "重新生成这张图",
+            "operator_steps": operator_steps
+            or [
+                "保留当前故事、资产身份证和提示词版本。",
+                f"只重新生成 {role or '当前图片'}，不要覆盖其他已通过图片。",
+                "新图生成后重新执行七维视觉质检。",
+            ],
+        }
+    return {
+        "priority": "medium",
+        "department": "人工复核 / 刑部",
+        "blocked_stage": "人工复核",
+        "blocks_downstream": True,
+        "user_message": "这张图没有明确的自动恢复路径，需要人工判断是重生图片、重跑质检，还是重写提示词。",
+        "next_button_label": "人工复核",
+        "operator_steps": operator_steps
+        or [
+            "打开图片、提示词和质检记录放在一起看。",
+            "判断问题来自图片随机性、提示词不清，还是质检缺失。",
+            "选择对应恢复动作后重新运行质量基准。",
+        ],
+    }
+
+
+def _rework_action_summary(instructions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    summary: dict[str, dict[str, Any]] = {}
+    for item in instructions:
+        action = str(item.get("action") or "manual_review")
+        current = summary.setdefault(action, {
+            "action": action,
+            "count": 0,
+            "department": str(item.get("department") or ""),
+            "next_button_label": str(item.get("next_button_label") or ""),
+            "image_ids": [],
+        })
+        current["count"] += 1
+        if len(current["image_ids"]) < 8:
+            current["image_ids"].append(str(item.get("image_id") or item.get("asset_id") or ""))
+    return sorted(
+        summary.values(),
+        key=lambda item: {"regenerate_prompts": 0, "regenerate_images": 1, "rerun_visual_review": 2}.get(item["action"], 3),
+    )
 
 
 def _duplicate_asset_prompt_pairs(
