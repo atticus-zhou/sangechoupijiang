@@ -126,8 +126,9 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         issue_codes = {item["code"] for item in audit["issues"]}
         self.assertEqual(audit["status"], "needs_review")
         self.assertIn("prompt.cross_asset_uniqueness", issue_codes)
-        self.assertEqual(audit["prompt_quality_summary"]["status"], "ready")
-        self.assertEqual(audit["prompt_quality_summary"]["issue_count"], 0)
+        self.assertEqual(audit["prompt_quality_summary"]["status"], "needs_review")
+        self.assertEqual(audit["prompt_quality_summary"]["issue_count"], 2)
+        self.assertEqual(audit["prompt_quality_summary"]["clean_asset_prompt_count"], 7)
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_prompts")
 
     def test_prompt_package_issues_are_exposed_as_first_class_summary(self):
@@ -142,7 +143,7 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(summary["status"], "needs_review")
         self.assertEqual(summary["issue_count"], 2)
         self.assertEqual(summary["asset_prompt_count"], 7)
-        self.assertEqual(summary["clean_asset_prompt_count"], 5)
+        self.assertEqual(summary["clean_asset_prompt_count"], 6)
         self.assertLessEqual(len(summary["issues"]), 10)
         self.assertIn("prompt.executable_structure", issue_codes)
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_prompts")

@@ -50,7 +50,20 @@ class ComicV2PromptQualityTests(unittest.TestCase):
             "shots": [
                 {
                     "shot_id": "SHOT-01",
-                    "generator_prompt": "首帧参考：character_01、prop_01、scene_01。故事目的：发现真相。动作链：举起月灯。表演意图：克制震惊。摄影：固定特写。灯光：冷月光。严格继承参考资产的脸型、服装、道具形状和场景空间结构。",
+                    "generator_prompt": "\n".join([
+                        "原文依据：林昭举起月灯。",
+                        "镜头形式：固定特写；缓慢推进。",
+                        "首帧参考：character_01、prop_01、scene_01。",
+                        "参考资产：林昭（character_01）；月灯（prop_01）；月塔（scene_01）。",
+                        "故事目的：发现真相。",
+                        "动作链：举起月灯。",
+                        "动作表演：克制震惊。",
+                        "摄影：固定特写，缓慢推进。",
+                        "灯光：冷月光。",
+                        "台词：无台词。",
+                        "声音：灯芯轻响。",
+                        "连续性要求：严格继承参考资产的脸型、服装、道具形状和场景空间结构。",
+                    ]),
                     "first_frame_reference_image": {
                         "image_id": "img_character_01_three_view",
                         "file": "character_01_three_view.png",
@@ -159,7 +172,7 @@ class ComicV2PromptQualityTests(unittest.TestCase):
             "prompts": [],
             "shots": [{
                 "shot_id": "SHOT-01",
-                "generator_prompt": "首帧参考：character_01。故事目的：发现真相。动作链：停步、抬眼。表演意图：克制。摄影：固定特写。灯光：冷月光。严格继承参考资产身份。",
+                "generator_prompt": "原文依据：林昭停步。镜头形式：固定特写。首帧参考：character_01。参考资产：林昭（character_01）。故事目的：发现真相。动作链：停步、抬眼。动作表演：克制。摄影：固定特写。灯光：冷月光。台词：无。声音：环境声。连续性要求：严格继承参考资产身份。",
                 "negative_prompt": ["禁止资产身份漂移", "禁止动作顺序混乱"],
             }],
         })

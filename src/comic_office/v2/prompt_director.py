@@ -194,16 +194,27 @@ def build_shot_card(
     action_chain = _string_tuple(payload["action_chain"], "action_chain")
     story_purpose = str(payload.get("story_purpose") or payload["story_beat"]).strip()
     first_frame = "、".join(reference_assets)
+    reference_summary = _shot_reference_summary(characters, props, scene)
     action_text = "，随后".join(action_chain)
     dialogue = str(payload.get("dialogue") or "无台词，后期以表演和声音完成叙事").strip()
     sound = str(payload.get("sound") or "保留环境声和动作声音").strip()
-    generator_prompt = (
-        f"{_style_clause(visual)}。首帧参考：{first_frame}。"
-        f"故事目的：{story_purpose}。"
-        f"动作链：{action_text}。表演意图：{str(payload['performance_intent']).strip()}。"
-        f"摄影：{str(payload['framing']).strip()}，{str(payload['camera_movement']).strip()}。"
-        f"灯光：{str(payload['lighting']).strip()}。台词：{dialogue}。声音：{sound}。"
-        "严格继承参考资产的脸型、服装、道具形状和场景空间结构。"
+    evidence_quote = str(payload.get("evidence_quote") or payload["story_beat"]).strip()
+    generator_prompt = "\n".join(
+        [
+            f"原文依据：{evidence_quote}",
+            f"镜头形式：{str(payload['framing']).strip()}；{str(payload['camera_movement']).strip()}。",
+            f"{_style_clause(visual)}。",
+            f"首帧参考：{first_frame}。",
+            f"参考资产：{reference_summary}。",
+            f"故事目的：{story_purpose}。",
+            f"动作链：{action_text}。",
+            f"动作表演：{str(payload['performance_intent']).strip()}。",
+            f"摄影：{str(payload['framing']).strip()}，{str(payload['camera_movement']).strip()}。",
+            f"灯光：{str(payload['lighting']).strip()}。",
+            f"台词：{dialogue}",
+            f"声音：{sound}",
+            "连续性要求：严格继承参考资产的脸型、发型、服装、道具形状、材质、场景空间结构和时代风格。",
+        ]
     )
     negative = (
         "禁止资产身份漂移",
@@ -235,7 +246,7 @@ def build_shot_card(
         retry_strategy=retry,
         retry_strategy_label=f"失败重试：{retry}",
         style_id=visual.style_id,
-        evidence_quote=str(payload.get("evidence_quote") or "").strip(),
+        evidence_quote=evidence_quote,
         acceptance_criteria=acceptance_criteria,
         platform_note=platform_note,
     )
@@ -352,6 +363,19 @@ def _asset_reference_policy(asset: AssetPlan) -> str:
     if asset.asset_type == "scene":
         return "场景资产必须优先作为空间结构、动线和机位参考；镜头生成时继承空间关系，不把场景改成白底棚拍。"
     return "资产必须作为后续镜头的一致性参考，不得被下游重新改写。"
+
+
+def _shot_reference_summary(
+    characters: list[AssetPlan] | tuple[AssetPlan, ...],
+    props: list[AssetPlan] | tuple[AssetPlan, ...],
+    scene: AssetPlan,
+) -> str:
+    parts: list[str] = []
+    for asset in [*characters, *props, scene]:
+        locks = "、".join(asset.visual_locks[:3])
+        suffix = f"，锁定：{locks}" if locks else ""
+        parts.append(f"{asset.name}（{asset.asset_id}，{asset.asset_type}{suffix}）")
+    return "；".join(parts)
 
 
 def _infer_production_role(item: dict[str, Any]) -> str:

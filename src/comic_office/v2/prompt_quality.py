@@ -33,7 +33,7 @@ def audit_prompt_package(package: dict[str, Any] | None) -> dict[str, Any]:
             "人物和道具资产保持纯白或近白色干净背景",
             "场景资产保持空场景空间参考",
             "不同资产的提示词必须有专属内容，不能复制模板只替换名称",
-            "镜头视频提示词包含首帧参考、故事目的、动作链、表演意图、摄影和灯光",
+            "镜头视频提示词包含原文依据、镜头形式、参考资产、故事目的、动作链、动作表演、摄影、灯光、台词、声音和连续性要求",
             "镜头提示词绑定首帧参考图片和机器可读资产引用链",
             "负面提示词单独成段，并用“禁止”表达",
         ],
@@ -220,7 +220,7 @@ def _normalize_prompt(text: str, object_id: str, object_name: str) -> str:
 
 def _shot_prompt_issues(shots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
-    required_markers = ("首帧参考", "故事目的", "动作链", "表演意图", "摄影", "灯光")
+    required_markers = ("原文依据", "镜头形式", "首帧参考", "参考资产", "故事目的", "动作链", "动作表演", "摄影", "灯光", "台词", "声音", "连续性要求")
     for shot in shots:
         shot_id = str(shot.get("shot_id") or "shot_prompt")
         generator = str(shot.get("generator_prompt") or "")
@@ -242,8 +242,12 @@ def _shot_prompt_issues(shots: list[dict[str, Any]]) -> list[dict[str, Any]]:
             add("镜头缺少独立负面提示词。")
         if negative_items and not all(item.startswith("禁止") for item in negative_items):
             add("镜头负面提示词每一项都应该用“禁止”开头。")
-        if "严格继承参考资产" not in generator:
+        if "严格继承参考资产" not in generator and "连续性要求" not in generator:
             add("镜头提示词必须明确继承参考资产身份。")
+        for reference in reference_chain:
+            name = str(reference.get("name") or "")
+            if name and name not in generator:
+                add(f"镜头提示词必须在参考资产段写明资产名称：{name}。")
         if not first_frame.get("image_id") or not first_frame.get("file") or not first_frame.get("asset_id"):
             add("镜头提示词必须绑定首帧参考图片的 image_id、file 和 asset_id。")
         if not reference_chain:
