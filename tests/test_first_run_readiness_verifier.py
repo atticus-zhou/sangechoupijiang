@@ -38,6 +38,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "config.example.yaml",
             "scripts/doctor.py",
             "scripts/verify_release_readiness.py",
+            "docs/FIRST_RUN_DECISION_CARD.md",
             "docs/MODEL_CONFIGURATION.md",
             "docs/MODEL_CAPABILITY_MATRIX.json",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
@@ -162,6 +163,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
 
         self.assertIn("# First Run Readiness", result.stdout)
         self.assertIn("GitHub Download Checklist", result.stdout)
+        self.assertIn("docs/FIRST_RUN_DECISION_CARD.md", result.stdout)
         self.assertIn("Expected public files", result.stdout)
         self.assertIn("Never Commit", result.stdout)
         self.assertIn("config.example.yaml", result.stdout)

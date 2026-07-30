@@ -33,6 +33,7 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         self.assertIn("docs/PUBLIC_RELEASE_HANDOFF.md", checked_paths)
         self.assertIn("docs/COMIC_DOWNSTREAM_HANDOFF.md", checked_paths)
         self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", checked_paths)
+        self.assertIn("docs/FIRST_RUN_DECISION_CARD.md", checked_paths)
         static_doc = next(item for item in payload["docs"] if item["path"] == "docs/STATIC_SHOWCASE_DEPLOYMENT.md")
         self.assertFalse(static_doc["missing_markers"])
         for item in payload["docs"]:
@@ -61,6 +62,8 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         self.assertIn("deployment boundary", completed.stdout)
         self.assertIn("comic downstream handoff", completed.stdout)
         self.assertIn("new office starter checklist", completed.stdout)
+        self.assertIn("first-run decision card", completed.stdout)
+        self.assertIn("docs/FIRST_RUN_DECISION_CARD.md", completed.stdout)
         self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", completed.stdout)
         self.assertIn("Docs: `", completed.stdout)
 

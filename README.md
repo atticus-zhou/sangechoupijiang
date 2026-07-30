@@ -44,6 +44,8 @@ V2 的目标交付不是一部成片，而是一份可生产的制片包：人�
 - 开发者：先跑 `python scripts/verify_first_run_readiness.py --format markdown` 和 `python scripts/doctor.py`，再按 README 配置本地环境。需要扩展新办公室时，先看 `/api/offices/protocols`、上线门禁和隔离验证，不要复制一套临时代码。
 - 普通用户：先通过固定样例确认产品能交付什么；真正创作或调研时，再进入本地真实模式，填写自己的 Key 并在本机运行。不要在公开页面、个人网站或 Vercel 展示页上传自己的 API Key、Cookie、登录态、用户数据或运行产物。
 
+如果你是第一次从 GitHub 下载项目，先看 [docs/FIRST_RUN_DECISION_CARD.md](docs/FIRST_RUN_DECISION_CARD.md)。它会用一页把无 Key 展示、本地真实使用和开发者扩展分开，告诉你第一步该点哪里、跑什么命令、哪些文件绝对不能提交。
+
 ## 快速开始
 
 第一次下载后先跑本地自检，它不会调用真实模型，也不会打印 API Key：

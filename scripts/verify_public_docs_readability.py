@@ -17,6 +17,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
         "required_markers": [
             "# 三个臭皮匠",
             "三类读者怎么体验",
+            "docs/FIRST_RUN_DECISION_CARD.md",
             "公开演示和部署边界",
             "真实生产声明",
             "模型台阶可以这样理解",
@@ -29,6 +30,24 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase",
             "data/comic_production_claim_report.json",
             "claim_upgrade_recovery",
+        ],
+    },
+    {
+        "path": "docs/FIRST_RUN_DECISION_CARD.md",
+        "role": "first-run decision card",
+        "required_markers": [
+            "首次运行决策卡",
+            "先选一条路",
+            "面试官或访客",
+            "本地真实用户",
+            "开发者",
+            "python scripts/export_public_showcase.py",
+            "python run.py --port 8080",
+            "工部",
+            "刑部",
+            "office_id",
+            "python scripts/check_no_secrets.py",
+            "不要提交到公开仓库",
         ],
     },
     {
