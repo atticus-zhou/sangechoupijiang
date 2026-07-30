@@ -4,9 +4,14 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import threading
+import time
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from scripts.export_public_showcase import export_public_showcase
+from scripts.verify_public_showcase_live import verify_public_showcase_live
 
 
 class StaticPublicShowcaseTests(unittest.TestCase):
@@ -417,6 +422,29 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Verification source: `existing_dir`", completed.stdout)
         self.assertIn("Future office candidates: 4 / backlog=2", completed.stdout)
         self.assertIn("Requires API Key: False", completed.stdout)
+
+    def test_live_showcase_verifier_checks_deployed_static_url(self):
+        export_public_showcase(self.output_dir)
+        handler = partial(SimpleHTTPRequestHandler, directory=str(self.output_dir))
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            time.sleep(0.2)
+            url = f"http://127.0.0.1:{server.server_port}/"
+            payload = verify_public_showcase_live(url, timeout=15)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["mode"], "public_no_key_live_showcase")
+        self.assertEqual(payload["checked_files"], 7)
+        self.assertEqual(payload["download_count"], 6)
+        self.assertGreaterEqual(payload["visitor_step_count"], 5)
+        self.assertEqual(payload["claim_level"], "demo_structure_only")
+        self.assertEqual(payload["errors"], [])
 
 
 if __name__ == "__main__":

@@ -35,6 +35,14 @@ dist/public-showcase/index.html
 
 注意：不带 `--existing-dir` 时，验证器会临时导出一份新包再检查；带 `--existing-dir dist/public-showcase` 时，它检查的是你即将复制到个人网站或部署到 Vercel 的现有目录。部署前建议两条都跑，前者证明导出链路可复现，后者证明当前目录不是旧包。
 
+部署完成后，用真实线上 URL 做最终检查：
+
+```powershell
+python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/three-stooges/ --format markdown
+```
+
+这条命令不需要 Vercel 登录，也不会读取本地 Key。它只从公开 URL 下载首页、`showcase.json`、`export-manifest.json`、访客验收指南、真实生产声明报告、样例 Word 画布和 handoff manifest。它通过时，才能把这个 URL 当作可发给面试官或访客的线上证据。
+
 静态包包含：
 
 - 一个无需后端即可打开的公开展示页。
@@ -95,6 +103,7 @@ Netlify 的发布目录选择 `dist/public-showcase`。GitHub Pages 需要把该
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
 python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
+python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/three-stooges/ --format markdown
 python scripts/verify_comic_real_production_claim.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
@@ -123,9 +132,10 @@ Current handoff contract:
 - The personal website has its own deployment helpers: `npm run doctor:deploy`, `npm run check:showcase`, `npm run prepare:vercel-prebuilt`, `npm run ship:vercel`, and `npm run check:online`.
 - Run `npm run doctor:deploy` first when you are unsure whether the current blocker is local package readiness, Vercel authorization, prebuilt output, or the live production route.
 - `npm run check:online` is the authority for the live site. If it reports `/three-stooges/` as 404, the static package is prepared but Vercel is still serving an older deployment.
+- The product repository can also verify any deployed static URL with `python scripts/verify_public_showcase_live.py --url <public-url> --format markdown`; this is useful for Vercel, Netlify, GitHub Pages, or an independent static host.
 - When Vercel CLI asks for device authorization, complete `npx vercel login`, then rerun `npm run ship:vercel`.
 
-Do not describe the personal website as live until `npm run check:online` passes against the production domain.
+Do not describe the personal website as live until `npm run check:online` passes against the production domain. If you deploy the static package outside the personal website, do not share that URL until `verify_public_showcase_live.py` passes against the same URL.
 
 ## Visitor Acceptance Guide
 
