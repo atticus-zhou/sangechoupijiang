@@ -9,6 +9,8 @@
 
 结论先说：公开演示不需要 Key；本地真实使用才需要填自己的 Key。先跑最小可用配置，再补完整制片配置。
 
+> 机器可读版本见 [`docs/MODEL_CAPABILITY_MATRIX.json`](MODEL_CAPABILITY_MATRIX.json)。以后新增办公室或调整部门模型要求时，先改这份矩阵，再同步前端提示、`config.example.yaml` 和验证脚本，避免说明、页面和运行门禁互相打架。
+
 ## 三种使用状态
 
 | 状态 | 需要模型吗 | 能做什么 | 适合谁 |

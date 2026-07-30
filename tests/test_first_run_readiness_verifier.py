@@ -39,6 +39,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "scripts/doctor.py",
             "scripts/verify_release_readiness.py",
             "docs/MODEL_CONFIGURATION.md",
+            "docs/MODEL_CAPABILITY_MATRIX.json",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
         ]:
             self.assertIn(marker, checklist_text)

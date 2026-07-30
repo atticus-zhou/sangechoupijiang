@@ -10,6 +10,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GUIDE = REPO_ROOT / "docs" / "MODEL_CONFIGURATION.md"
+MATRIX = REPO_ROOT / "docs" / "MODEL_CAPABILITY_MATRIX.json"
 
 
 CHECKS: list[dict[str, Any]] = [
@@ -23,6 +24,21 @@ CHECKS: list[dict[str, Any]] = [
             "完整制片配置",
             "办公室隔离规则",
             "python scripts/verify_model_configuration_guidance.py --format markdown",
+            "docs/MODEL_CAPABILITY_MATRIX.json",
+        ],
+    },
+    {
+        "id": "capability_matrix_exists",
+        "title": "Machine-readable model capability matrix exists",
+        "file": MATRIX,
+        "markers": [
+            "three_cobblers_model_capability_matrix_v1",
+            "safe_key_rule",
+            "comic_production",
+            "research",
+            "image_generation",
+            "vision_understanding",
+            "browser_or_human_evidence",
         ],
     },
     {
@@ -137,6 +153,78 @@ CHECKS: list[dict[str, Any]] = [
 ]
 
 
+def _matrix_checks() -> list[dict[str, Any]]:
+    file_label = str(MATRIX.relative_to(REPO_ROOT))
+    if not MATRIX.exists():
+        return [
+            {
+                "id": "capability_matrix_semantics",
+                "title": "Capability matrix maps offices, departments, and model kinds",
+                "status": "failed",
+                "file": file_label,
+                "missing_file": file_label,
+                "missing_markers": ["file missing"],
+            }
+        ]
+
+    matrix = json.loads(MATRIX.read_text(encoding="utf-8"))
+    missing: list[str] = []
+    if matrix.get("schema") != "three_cobblers_model_capability_matrix_v1":
+        missing.append("schema")
+    if "API keys" not in matrix.get("safe_key_rule", ""):
+        missing.append("safe_key_rule")
+
+    kinds = set((matrix.get("capability_kinds") or {}).keys())
+    for required in {"text", "image_generation", "vision_understanding", "browser_or_human_evidence"}:
+        if required not in kinds:
+            missing.append(f"capability_kind:{required}")
+
+    offices = matrix.get("offices") or {}
+    comic_departments = {
+        item.get("department_id"): item.get("required_capability")
+        for item in offices.get("comic_production", {}).get("departments", [])
+    }
+    for department_id, capability in {
+        "cabinet": "text",
+        "zhongshu": "text",
+        "menxia": "text",
+        "hubu": "text",
+        "bingbu": "text",
+        "gongbu": "image_generation",
+        "xingbu": "vision_understanding",
+        "libu": "text",
+    }.items():
+        if comic_departments.get(department_id) != capability:
+            missing.append(f"comic_production.{department_id}:{capability}")
+
+    research_departments = {
+        item.get("department_id"): item.get("required_capability")
+        for item in offices.get("research", {}).get("departments", [])
+    }
+    for department_id in ("zhongshu", "menxia", "hubu", "bingbu"):
+        if research_departments.get(department_id) != "text":
+            missing.append(f"research.{department_id}:text")
+    if research_departments.get("gongbu") != "browser_or_human_evidence":
+        missing.append("research.gongbu:browser_or_human_evidence")
+
+    for office_id, office in offices.items():
+        for department in office.get("departments", []):
+            for field in ("department_id", "display_name", "required_capability", "human_test_label", "missing_impact"):
+                if not department.get(field):
+                    missing.append(f"{office_id}.{department.get('department_id', 'unknown')}.{field}")
+
+    return [
+        {
+            "id": "capability_matrix_semantics",
+            "title": "Capability matrix maps offices, departments, and model kinds",
+            "status": "passed" if not missing else "failed",
+            "file": file_label,
+            "missing_file": "",
+            "missing_markers": missing,
+        }
+    ]
+
+
 def verify_model_configuration_guidance() -> dict[str, Any]:
     results: list[dict[str, Any]] = []
     failures: list[str] = []
@@ -162,6 +250,10 @@ def verify_model_configuration_guidance() -> dict[str, Any]:
                 "missing_markers": missing_markers,
             }
         )
+    for item in _matrix_checks():
+        if item["status"] != "passed":
+            failures.append(item["id"])
+        results.append(item)
     return {
         "status": "passed" if not failures else "failed",
         "mode": "model_configuration_guidance",

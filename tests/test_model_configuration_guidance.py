@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import subprocess
 import sys
 import unittest
@@ -52,6 +53,35 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertIn("文本规划交给中书省、兵部等文本部门", text)
         self.assertIn("不需要在工部同一槽位再填一个文本模型", text)
         self.assertIn("不要提交真实 Key", text)
+        self.assertIn("docs/MODEL_CAPABILITY_MATRIX.json", text)
+
+    def test_machine_readable_matrix_matches_department_roles(self):
+        matrix = json.loads(Path("docs/MODEL_CAPABILITY_MATRIX.json").read_text(encoding="utf-8"))
+        self.assertEqual(matrix["schema"], "three_cobblers_model_capability_matrix_v1")
+        self.assertIn("API keys", matrix["safe_key_rule"])
+
+        comic = {
+            item["department_id"]: item["required_capability"]
+            for item in matrix["offices"]["comic_production"]["departments"]
+        }
+        self.assertEqual(comic["cabinet"], "text")
+        self.assertEqual(comic["zhongshu"], "text")
+        self.assertEqual(comic["menxia"], "text")
+        self.assertEqual(comic["hubu"], "text")
+        self.assertEqual(comic["bingbu"], "text")
+        self.assertEqual(comic["gongbu"], "image_generation")
+        self.assertEqual(comic["xingbu"], "vision_understanding")
+        self.assertEqual(comic["libu"], "text")
+
+        research = {
+            item["department_id"]: item["required_capability"]
+            for item in matrix["offices"]["research"]["departments"]
+        }
+        self.assertEqual(research["zhongshu"], "text")
+        self.assertEqual(research["menxia"], "text")
+        self.assertEqual(research["hubu"], "text")
+        self.assertEqual(research["bingbu"], "text")
+        self.assertEqual(research["gongbu"], "browser_or_human_evidence")
 
 
 if __name__ == "__main__":
