@@ -127,6 +127,8 @@ CHECKS: list[dict[str, Any]] = [
         "markers": [
             "MODEL_REQUIREMENTS",
             "MODEL_REQUIREMENT_GROUPS",
+            "loadModelCapabilityContract",
+            "/api/offices/${officeId}/model-capabilities",
             "modelRequirementImpact",
             "测试此部门",
             "测试当前办公室全部部门",
@@ -141,6 +143,8 @@ CHECKS: list[dict[str, Any]] = [
         "title": "Office preflight distinguishes text, image, and vision capabilities",
         "file": REPO_ROOT / "src" / "office_preflight.py",
         "markers": [
+            "summarize_office_capability_contract",
+            "model_capability_contract",
             "文本模型",
             "生图模型",
             "视觉模型",
@@ -148,6 +152,17 @@ CHECKS: list[dict[str, Any]] = [
             "_is_vision_ready",
             "is_image_generation_config",
             "打开模型页面",
+        ],
+    },
+    {
+        "id": "capability_matrix_api",
+        "title": "Backend exposes the no-key capability matrix for UI and future offices",
+        "file": REPO_ROOT / "src" / "web" / "app.py",
+        "markers": [
+            "/api/model-capability-matrix",
+            "/api/offices/{office_id}/model-capabilities",
+            "load_model_capability_matrix",
+            "get_office_capability_contract",
         ],
     },
 ]

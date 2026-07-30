@@ -3625,6 +3625,7 @@ async function loadModels() {
     const officeLabel = document.getElementById('model-office-label');
     if (officeLabel) officeLabel.textContent = `当前：${OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research}`;
     await loadOfficePreflight(MODEL_OFFICE_ID, 'model-preflight-panel');
+    await loadModelCapabilityContract(MODEL_OFFICE_ID);
     renderModelSetupPath();
     renderModelRequirementSummary();
     const data = await API.get('/api/config/models?office_id=' + encodeURIComponent(MODEL_OFFICE_ID));
@@ -3695,6 +3696,15 @@ async function loadModels() {
             </div>
         </div>`;
     }).join('');
+}
+
+async function loadModelCapabilityContract(officeId) {
+    try {
+        window.currentModelCapabilityContract = await API.get(`/api/offices/${officeId}/model-capabilities`);
+    } catch (error) {
+        console.warn('Unable to load model capability contract', error);
+        window.currentModelCapabilityContract = null;
+    }
 }
 
 async function loadOfficePreflight(officeId, targetId = '') {

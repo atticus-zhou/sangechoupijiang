@@ -13,6 +13,7 @@ from pathlib import Path
 
 from src.image_generation import is_image_generation_config
 from src.llm.providers import ModelConfig
+from src.model_capabilities import summarize_office_capability_contract
 
 
 AGENT_LABELS = {
@@ -170,6 +171,7 @@ def _summarize(office_id: str, checks: list[CapabilityCheck]) -> dict:
         "status": status,
         "summary": summary,
         "next_action": next_action,
+        "model_capability_contract": summarize_office_capability_contract(office_id),
         "blocking_reasons": [_blocking_reason(check) for check in blocking],
         "capabilities": [check.to_dict() for check in checks],
     }

@@ -45,6 +45,12 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertEqual(payload["status"], "ready")
         self.assertEqual(payload["next_action"], "可以开始工作。")
         self.assertTrue(all(item["status"] == "ok" for item in payload["capabilities"]))
+        contract = payload["model_capability_contract"]
+        self.assertEqual(contract["source"], "docs/MODEL_CAPABILITY_MATRIX.json")
+        self.assertEqual(contract["office_id"], "comic_production")
+        self.assertEqual(contract["capability_counts"]["image_generation"], 1)
+        self.assertEqual(contract["capability_counts"]["vision_understanding"], 1)
+        self.assertNotIn("text-key", str(contract))
 
     def test_comic_production_preflight_locates_missing_image_and_vision_models(self):
         def fake_get_model_config(agent, office_id=""):
@@ -75,6 +81,28 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertEqual(by_id["visual_review"]["owner_label"], "刑部")
         self.assertEqual(by_id["visual_review"]["model_kind"], "视觉模型")
         self.assertIn("刑部视觉模型", by_id["visual_review"]["next_action"])
+        self.assertEqual(payload["model_capability_contract"]["full_mode"], "production_canvas_with_images_and_visual_review")
+
+    def test_model_capability_matrix_api_is_no_key_and_office_scoped(self):
+        matrix_response = self.client.get("/api/model-capability-matrix")
+        self.assertEqual(matrix_response.status_code, 200)
+        matrix = matrix_response.json()
+        self.assertEqual(matrix["schema"], "three_cobblers_model_capability_matrix_v1")
+        self.assertIn("comic_production", matrix["offices"])
+        self.assertIn("research", matrix["offices"])
+        self.assertNotIn("api_key", str(matrix).lower())
+
+        office_response = self.client.get("/api/offices/comic/model-capabilities")
+        self.assertEqual(office_response.status_code, 200)
+        office = office_response.json()
+        self.assertEqual(office["office_id"], "comic_production")
+        by_department = {
+            item["department_id"]: item["required_capability"]
+            for item in office["departments"]
+        }
+        self.assertEqual(by_department["gongbu"], "image_generation")
+        self.assertEqual(by_department["xingbu"], "vision_understanding")
+        self.assertIn("safe_key_rule", office)
 
     def test_comic_production_preflight_blocks_when_core_text_model_is_missing(self):
         def fake_get_model_config(agent, office_id=""):

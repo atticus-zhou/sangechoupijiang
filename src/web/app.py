@@ -83,6 +83,7 @@ from src.image_generation import (
 from src.model_connectivity import AGENT_IDS, probe_model_connectivity
 from src.office_runtime import build_office_runtime_status
 from src.office_preflight import build_office_preflight
+from src.model_capabilities import get_office_capability_contract, load_model_capability_matrix
 from src.product_readiness import audit_comic_production_readiness, audit_comic_real_production_start_readiness
 from src.system_preflight import build_system_preflight
 from scripts.audit_comic_v2_handoffs import audit_handoff_inventory
@@ -377,6 +378,18 @@ async def get_office_preflight_api(office_id: str):
         config_manager.get_model_config,
         base_dir=APP_BASE_DIR,
     )
+
+
+@app.get("/api/model-capability-matrix")
+async def get_model_capability_matrix_api():
+    """Return the public, no-key model capability matrix."""
+    return load_model_capability_matrix()
+
+
+@app.get("/api/offices/{office_id}/model-capabilities")
+async def get_office_model_capabilities_api(office_id: str):
+    """Return one office's public model capability contract."""
+    return get_office_capability_contract(office_id)
 
 
 @app.get("/api/offices/{office_id}/launch-gates")
