@@ -3600,12 +3600,21 @@ function renderModelRequirementSummary() {
     const target = document.getElementById('model-requirement-summary');
     if (!target) return;
     const groups = MODEL_REQUIREMENT_GROUPS[MODEL_OFFICE_ID] || MODEL_REQUIREMENT_GROUPS.default;
+    const contract = window.currentModelCapabilityContract;
+    const sourceLabel = contract?.source || '本地兜底规则';
+    const minimumReady = contract?.minimum_ready_when || '文本部门通过后，可以先跑最小可用流程。';
+    const fullReady = contract?.full_ready_when || '补齐图片、视觉或证据能力后，可以跑完整流程。';
     target.innerHTML = `
         <div class="model-summary-head">
             <div>
                 <strong>${escapeHtml(OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research)}模型需求</strong>
                 <span>先按下面清单补齐关键部门，再逐个测试。每个办公室的 Key 和模型配置互相隔离。</span>
             </div>
+            <em class="model-contract-source">${escapeHtml(sourceLabel)}</em>
+        </div>
+        <div class="model-contract-modes">
+            <span><b>最小可跑</b>${escapeHtml(minimumReady)}</span>
+            <span><b>完整生产</b>${escapeHtml(fullReady)}</span>
         </div>
         <div class="model-summary-grid">
             ${groups.map(group => `

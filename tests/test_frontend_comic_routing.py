@@ -103,6 +103,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_model_page_renders_current_office_model_requirement_summary(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
         js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
 
         self.assertIn('id="model-requirement-summary"', html)
         self.assertIn("function renderModelRequirementSummary", js)
@@ -116,6 +117,12 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("modelRequirementFromContract", js)
         self.assertIn("capabilityContractDepartment", js)
         self.assertIn("/api/offices/${officeId}/model-capabilities", js)
+        self.assertIn("model-contract-source", js)
+        self.assertIn("model-contract-modes", js)
+        self.assertIn("minimum_ready_when", js)
+        self.assertIn("full_ready_when", js)
+        self.assertIn(".model-contract-source", css)
+        self.assertIn(".model-contract-modes", css)
 
     def test_model_page_renders_new_user_setup_path(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
