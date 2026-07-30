@@ -1787,21 +1787,26 @@ function renderComicV2PromptQualityRecovery(quality) {
 function buildComicV2PendingAction(label, status) {
     const stage = status?.stage || 'running';
     const map = {
-        visual_bible_review: ['中书省 / 门下省', '正在确认视觉母版，完成后进入资产拆解。'],
-        asset_planning: ['中书省 / 门下省', '正在生成资产拆解审核包，完成后需要你确认人物、道具和场景。'],
-        asset_review: ['门下省 / 尚书省', '正在处理资产审核意见，完成后会进入提示词规划。'],
-        prompt_planning: ['工部 / 兵部', '正在生成资产提示词和镜头提示词，完成后进入图片生产。'],
-        image_generation: ['工部 / 刑部', '正在生成基础资产图并做视觉质检，完成后进入交付组装。'],
-        visual_review: ['刑部 / 工部', '正在处理未通过图片或人工放行，完成后进入文档生成。'],
-        document_generation: ['礼部 / 刑部', '正在组装 Word 制片画布并做结构审计。'],
+        visual_bible_review: ['中书省 / 门下省', '正在生成故事合同和视觉母版。', '完成后会停在视觉母版审核，需要你确认画风、时代和禁用元素。'],
+        asset_planning: ['中书省 / 门下省', '正在生成资产拆解审核包。', '完成后会停在资产审核，需要你确认人物、道具和场景是否都来自故事。'],
+        asset_review: ['门下省 / 尚书省', '正在处理资产审核意见。', '完成后会回到新版资产清单，需要你再次核对。'],
+        prompt_planning: ['工部 / 兵部', '正在生成资产提示词和镜头提示词。', '完成后会停在基础图片生产入口，你可以先看提示词质量门禁。'],
+        image_generation: ['工部 / 刑部', '正在生成基础资产图并做视觉质检。', '完成后会显示可用图、失败图和返工建议。'],
+        visual_review: ['刑部 / 工部', '正在处理未通过图片或人工放行。', '完成后会进入 Word 制片画布组装。'],
+        document_generation: ['礼部 / 刑部', '正在组装 Word 制片画布并做结构审计。', '完成后可以下载 Word 画布和引用清单。'],
     };
-    const [department, next] = map[stage] || [status?.current_agent || '尚书省', status?.next_action || '等待当前动作返回结果。'];
+    const [department, next, after_success] = map[stage] || [
+        status?.current_agent || '尚书省',
+        status?.next_action || '等待当前动作返回结果。',
+        '完成后我会刷新阶段看板，告诉你下一步该确认、重试还是下载。',
+    ];
     return {
         label,
         department,
         stage,
         object: status?.current_object || '当前生产对象',
         next_action: next,
+        after_success,
     };
 }
 
@@ -1812,6 +1817,7 @@ function renderComicV2PendingAction() {
             <strong>正在处理：${escapeHtml(currentComicV2PendingAction.label || 'V2 操作')}</strong>
             <span>负责部门：${escapeHtml(currentComicV2PendingAction.department || '尚书省')}；对象：${escapeHtml(currentComicV2PendingAction.object || '当前生产对象')}</span>
             <small>下一步：${escapeHtml(currentComicV2PendingAction.next_action || '等待系统返回结果')}</small>
+            <small>完成后：${escapeHtml(currentComicV2PendingAction.after_success || '刷新阶段看板，显示下一个确认点。')}</small>
         </div>
     `;
 }
@@ -2503,11 +2509,11 @@ async function confirmComicScript() {
     currentComicV2Status = currentComicV2Status || {
         pipeline_version: 2,
         status: 'running',
-        stage: 'asset_planning',
+        stage: 'visual_bible_review',
         current_agent: '中书省 / 门下省',
-        current_object: '确认故事与资产拆解入口',
+        current_object: '确认故事与视觉母版入口',
         blocking_reason: '',
-        next_action: '正在锁定确认故事，随后生成视觉母版和资产拆解入口。',
+        next_action: '正在锁定确认故事，随后生成故事合同和视觉母版。',
         completed: 1,
         total: 7,
     };
@@ -2515,11 +2521,11 @@ async function confirmComicScript() {
         currentComicV2Status = {
             ...currentComicV2Status,
             status: 'running',
-            stage: 'asset_planning',
+            stage: 'visual_bible_review',
             current_agent: '中书省 / 门下省',
-            current_object: '确认故事与资产拆解入口',
+            current_object: '确认故事与视觉母版入口',
             blocking_reason: '',
-            next_action: '正在锁定确认故事，随后生成视觉母版和资产拆解入口。',
+            next_action: '正在锁定确认故事，随后生成故事合同和视觉母版。',
         };
     }
     currentComicV2ActionError = null;
