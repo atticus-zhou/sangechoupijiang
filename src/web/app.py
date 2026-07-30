@@ -6642,12 +6642,19 @@ def _summarize_history_artifact(artifact: dict) -> dict:
     metadata = artifact.get("metadata") or {}
     task_id = artifact.get("task_id", "")
     artifact_id = artifact.get("artifact_id", "")
+    uri = artifact.get("uri", "")
+    archive_download_uri = f"/api/tasks/{task_id}/artifacts/{artifact_id}/download" if task_id and artifact_id else ""
+    file_download_uri = uri if _history_artifact_uri_is_file(uri) else ""
     return {
         "artifact_id": artifact_id,
         "artifact_type": artifact.get("artifact_type", ""),
         "title": artifact.get("title", ""),
-        "uri": artifact.get("uri", ""),
-        "download_uri": f"/api/tasks/{task_id}/artifacts/{artifact_id}/download" if task_id and artifact_id else "",
+        "uri": uri,
+        "download_uri": archive_download_uri,
+        "archive_download_uri": archive_download_uri,
+        "file_download_uri": file_download_uri,
+        "primary_download_uri": file_download_uri or archive_download_uri,
+        "download_kind": "file" if file_download_uri else "archive",
         "created_by": artifact.get("created_by", ""),
         "created_at": artifact.get("created_at", ""),
         "metadata": {
@@ -6657,6 +6664,24 @@ def _summarize_history_artifact(artifact: dict) -> dict:
         },
         "content_preview": content[:500],
     }
+
+
+def _history_artifact_uri_is_file(uri: str) -> bool:
+    if not uri:
+        return False
+    normalized = str(uri).split("?", 1)[0].lower()
+    return normalized.endswith((
+        ".docx",
+        ".json",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".md",
+        ".csv",
+        ".xlsx",
+        ".zip",
+    ))
 
 
 def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> dict:

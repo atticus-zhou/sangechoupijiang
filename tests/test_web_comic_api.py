@@ -1118,6 +1118,20 @@ class WebComicApiTests(unittest.TestCase):
                 "shots": [
                     {
                         "shot_id": "shot_001",
+                        "first_frame_reference_image": {
+                            "asset_id": "char_001",
+                            "image_id": "img_char_001_three_view",
+                            "image_kind": "three_view",
+                            "file": "char_001_three_view.png",
+                        },
+                        "reference_asset_chain": [
+                            {
+                                "asset_id": "char_001",
+                                "asset_type": "character",
+                                "name": "林昭",
+                                "first_frame_file": "char_001_three_view.png",
+                            }
+                        ],
                         "generator_prompt": "首帧参考 char_001_three_view.png，故事目的：主角推门进入月塔；动作链：停步、抬眼、前推；表演意图：警觉；摄影：缓慢前推；灯光：月光侧逆光；严格继承参考资产身份。",
                         "negative_prompt": ["禁止资产身份漂移", "禁止动作顺序混乱", "禁止文字水印"],
                     }
@@ -1195,10 +1209,27 @@ class WebComicApiTests(unittest.TestCase):
             self.assertTrue(row["handoff_manifest_uri"].endswith("/v2_handoff_manifest.json"))
             self.assertEqual(row["handoff_manifest_title"], "V2 Handoff Manifest")
             self.assertEqual(row["comic_v2_trace_uri"], f"/api/tasks/{task_id}/comic-v2-trace.json")
+            word_artifact = next(
+                item for item in row["artifacts"]
+                if item["artifact_type"] == "comic_v2_word_canvas"
+            )
+            self.assertEqual(word_artifact["download_kind"], "file")
+            self.assertTrue(word_artifact["file_download_uri"].endswith("/v2.docx"))
+            self.assertEqual(word_artifact["primary_download_uri"], word_artifact["file_download_uri"])
+            self.assertTrue(word_artifact["archive_download_uri"].endswith(f"/art_{task_id}_v2_word/download"))
+            handoff_artifact = next(
+                item for item in row["artifacts"]
+                if item["artifact_type"] == "comic_v2_handoff_manifest"
+            )
+            self.assertEqual(handoff_artifact["download_kind"], "file")
+            self.assertTrue(handoff_artifact["file_download_uri"].endswith("/v2_handoff_manifest.json"))
             prompt_artifact = next(
                 item for item in row["artifacts"]
                 if item["artifact_type"] == "comic_v2_prompt_package"
             )
+            self.assertEqual(prompt_artifact["download_kind"], "archive")
+            self.assertEqual(prompt_artifact["file_download_uri"], "")
+            self.assertEqual(prompt_artifact["primary_download_uri"], prompt_artifact["download_uri"])
             self.assertEqual(
                 prompt_artifact["download_uri"],
                 f"/api/tasks/{task_id}/artifacts/art_{task_id}_prompt_pkg/download",
@@ -1815,24 +1846,24 @@ class WebComicApiTests(unittest.TestCase):
 
         tampered_session = {
             "creative_brief": {
-                "core_idea": "篡改项目",
+                "core_idea": "客户端伪造项目",
                 "genre": "suspense",
                 "length": "3 episodes",
                 "platform": "Douyin",
                 "visual_style": "wrong style",
-                "story_promise": "篡改承诺",
-                "main_conflict": "主角和对手的篡改冲突",
+                "story_promise": "客户端伪造承诺",
+                "main_conflict": "主角和对手的客户端伪造冲突",
             },
             "script_preview": {
-                "title": "篡改标题",
-                "logline": "篡改剧本",
-                "why_it_happens": "主角被篡改事件卷入",
-                "how_it_happens": "对手推动篡改",
-                "protagonist_arc": "主角最后发现篡改",
-                "episode_outline": [{"episode": 1, "title": "篡改", "cause": "篡改", "action": "篡改", "turn": "篡改", "hook": "最后篡改"}],
-                "key_turns": ["最后篡改"],
+                "title": "客户端伪造标题",
+                "logline": "客户端伪造剧本",
+                "why_it_happens": "主角被客户端伪造事件卷入",
+                "how_it_happens": "对手推动客户端伪造",
+                "protagonist_arc": "主角最后发现客户端伪造",
+                "episode_outline": [{"episode": 1, "title": "客户端伪造", "cause": "客户端伪造", "action": "客户端伪造", "turn": "客户端伪造", "hook": "最后客户端伪造"}],
+                "key_turns": ["最后客户端伪造"],
             },
-            "user_notes": ["主角、对手、最后都被篡改"],
+            "user_notes": ["主角、对手、最后都被客户端伪造"],
             "cabinet_roles": [],
         }
 
@@ -1844,8 +1875,8 @@ class WebComicApiTests(unittest.TestCase):
 
         self.assertEqual(confirmed.status_code, 200)
         confirmed_script = confirmed.json()["confirmed_script"]
-        self.assertNotIn("篡改", confirmed_script["title"])
-        self.assertNotIn("篡改", confirmed_script["logline"])
+        self.assertNotIn("客户端伪造", confirmed_script["title"])
+        self.assertNotIn("客户端伪造", confirmed_script["logline"])
 
     def test_comic_task_replaces_client_confirmed_script_with_server_confirmed_script(self):
         response = self.client.post("/api/comic/cabinet/turn", json={

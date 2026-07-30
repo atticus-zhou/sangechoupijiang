@@ -4312,12 +4312,19 @@ async function viewHistoryDetail(taskId) {
 }
 
 function renderHistoryArtifactArchiveLink(artifact) {
-    if (!artifact || !artifact.download_uri) return '';
+    if (!artifact || (!artifact.primary_download_uri && !artifact.download_uri)) return '';
     const label = artifact.title || artifact.artifact_type || artifact.artifact_id || 'artifact';
+    const fileHref = artifact.file_download_uri || artifact.uri || '';
+    const href = artifact.primary_download_uri || fileHref || artifact.download_uri;
+    const action = artifact.download_kind === 'file' ? '打开文件' : '下载记录';
+    const secondary = artifact.download_kind === 'file' && artifact.archive_download_uri
+        ? `<a class="ghost btn-sm history-archive-secondary" href="${escapeHtml(artifact.archive_download_uri)}" target="_blank">记录</a>`
+        : '';
     return `
-        <a class="ghost btn-sm" href="${escapeHtml(artifact.download_uri)}" target="_blank">
-            下载归档 · ${escapeHtml(label)}
+        <a class="ghost btn-sm" href="${escapeHtml(href)}" target="_blank">
+            ${action} · ${escapeHtml(label)}
         </a>
+        ${secondary}
     `;
 }
 
