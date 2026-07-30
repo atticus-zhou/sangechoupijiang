@@ -1,6 +1,6 @@
 {
   "schema": "three_cobblers_model_capability_matrix_v1",
-  "safe_key_rule": "Public demos never require API keys. Real API keys belong only in local environment variables, local config.yaml, or private deployment secrets; never commit them to GitHub or copy them into public static showcases.",
+  "safe_key_rule": "Public demos never require API keys. Real keys belong only in local environment variables, local config.yaml, or private deployment secrets; never commit them to GitHub or copy them into public static showcases.",
   "capability_kinds": {
     "text": {
       "label": "文本模型",
@@ -46,6 +46,22 @@
           "missing_impact": "无法审查报告是否遗漏证据、数据是否需要标待核验。"
         },
         {
+          "department_id": "shangshu",
+          "display_name": "尚书省",
+          "required_capability": "text",
+          "required_for": ["阶段调度", "任务状态", "下一步判断"],
+          "human_test_label": "测试尚书省流程统筹",
+          "missing_impact": "无法协调资料收集、数据整理、截图取证和报告交付的先后顺序。"
+        },
+        {
+          "department_id": "libu",
+          "display_name": "吏部",
+          "required_capability": "text",
+          "required_for": ["资料归档", "上下文管理", "来源笔记"],
+          "human_test_label": "测试吏部资料归档",
+          "missing_impact": "无法稳定保存调研上下文、来源笔记和历史资料。"
+        },
+        {
           "department_id": "hubu",
           "display_name": "户部",
           "required_capability": "text",
@@ -54,12 +70,28 @@
           "missing_impact": "无法把调研线索整理成可复核的数据表和竞品表。"
         },
         {
+          "department_id": "libu_comm",
+          "display_name": "礼部",
+          "required_capability": "text",
+          "required_for": ["报告交付", "老板简报", "阅读说明"],
+          "human_test_label": "测试礼部交付说明",
+          "missing_impact": "无法把阶段报告、证据缺口和下一步补证动作整理成给人看的交付说明。"
+        },
+        {
           "department_id": "bingbu",
           "display_name": "兵部",
           "required_capability": "text",
           "required_for": ["执行清单", "截图计划", "检索任务"],
           "human_test_label": "测试兵部执行规划",
           "missing_impact": "无法形成平台检索、截图、归档和补证的执行步骤。"
+        },
+        {
+          "department_id": "xingbu",
+          "display_name": "刑部",
+          "required_capability": "vision_understanding",
+          "required_for": ["截图理解", "证据质检", "数据口径复核"],
+          "human_test_label": "测试刑部视觉/证据质检",
+          "missing_impact": "可以整理文本报告，但不能自动理解截图内容或检查截图证据是否匹配结论。"
         },
         {
           "department_id": "gongbu",
@@ -71,21 +103,13 @@
         }
       ],
       "minimum_ready_when": "核心文本部门通过后，可以产出阶段报告、来源清单、数据表和截图计划。",
-      "full_ready_when": "文本部门通过，并且平台账号、截图上传或浏览器自动化证据链可用。"
+      "full_ready_when": "文本部门通过，并且平台账号、截图上传或浏览器自动化证据链可用；如需自动理解截图，刑部视觉理解也应通过。"
     },
     "comic_production": {
       "office_name": "AI漫剧制片办公室",
       "minimum_mode": "story_assets_prompts_only",
       "full_mode": "production_canvas_with_images_and_visual_review",
       "departments": [
-        {
-          "department_id": "cabinet",
-          "display_name": "内阁",
-          "required_capability": "text",
-          "required_for": ["创作对话", "故事确认", "用户意图保护"],
-          "human_test_label": "测试内阁主创对话",
-          "missing_impact": "无法自然追问、完善故事，也无法避免把完整剧本擅自改写。"
-        },
         {
           "department_id": "zhongshu",
           "display_name": "中书省",
@@ -103,12 +127,36 @@
           "missing_impact": "资产拆解容易漏道具、错把词语当人物，或凭空添加故事中不存在的场景。"
         },
         {
+          "department_id": "shangshu",
+          "display_name": "尚书省",
+          "required_capability": "text",
+          "required_for": ["制片调度", "阶段状态", "失败恢复安排"],
+          "human_test_label": "测试尚书省制片调度",
+          "missing_impact": "无法协调故事、资产、提示词、生图、质检和 Word 交付的阶段推进。"
+        },
+        {
+          "department_id": "libu",
+          "display_name": "吏部",
+          "required_capability": "text",
+          "required_for": ["连续性记忆", "版本上下文", "历史追溯"],
+          "human_test_label": "测试吏部连续性管理",
+          "missing_impact": "人物、道具、场景和故事版本容易失去连续性，历史追溯也会变弱。"
+        },
+        {
           "department_id": "hubu",
           "display_name": "户部",
           "required_capability": "text",
           "required_for": ["资产身份证", "引用链路", "资源台账"],
           "human_test_label": "测试户部资产台账",
           "missing_impact": "人物、道具、场景、图片和镜头之间无法稳定追溯。"
+        },
+        {
+          "department_id": "libu_comm",
+          "display_name": "礼部",
+          "required_capability": "text",
+          "required_for": ["Word制片画布", "下游交接说明", "历史交付摘要"],
+          "human_test_label": "测试礼部交付文本",
+          "missing_impact": "无法把生产结果整理成面向人的 Word 画布和交接说明。"
         },
         {
           "department_id": "bingbu",
@@ -119,14 +167,6 @@
           "missing_impact": "无法生成有导演感的镜头提示词和下游视频执行说明。"
         },
         {
-          "department_id": "gongbu",
-          "display_name": "工部",
-          "required_capability": "image_generation",
-          "required_for": ["人物三视图", "人物表情表", "道具转面图", "场景广角图", "场景俯视图"],
-          "human_test_label": "测试工部生图",
-          "missing_impact": "可以先产出故事、资产和提示词，但不能生成基础资产图片。"
-        },
-        {
           "department_id": "xingbu",
           "display_name": "刑部",
           "required_capability": "vision_understanding",
@@ -135,15 +175,15 @@
           "missing_impact": "可以生成图片，但不能自动判断人物一致性、画风漂移和资产是否符合故事。"
         },
         {
-          "department_id": "libu",
-          "display_name": "礼部",
-          "required_capability": "text",
-          "required_for": ["Word制片画布", "下游交接说明", "历史交付摘要"],
-          "human_test_label": "测试礼部交付文本",
-          "missing_impact": "无法把生产结果整理成面向人的 Word 画布和交接说明。"
+          "department_id": "gongbu",
+          "display_name": "工部",
+          "required_capability": "image_generation",
+          "required_for": ["人物三视图", "人物表情表", "道具转面图", "场景广角图", "场景俯视图"],
+          "human_test_label": "测试工部生图",
+          "missing_impact": "可以先产出故事、资产和提示词，但不能生成基础资产图片。"
         }
       ],
-      "minimum_ready_when": "内阁、中书省、门下省、户部、兵部和礼部文本能力通过后，可以完成故事、资产、镜头和提示词包。",
+      "minimum_ready_when": "中书省、门下省、尚书省、吏部、户部、礼部和兵部文本能力通过后，可以完成故事、资产、镜头和提示词包。",
       "full_ready_when": "文本能力通过，工部生图通过，刑部视觉理解通过，并且输出目录可写。"
     }
   }

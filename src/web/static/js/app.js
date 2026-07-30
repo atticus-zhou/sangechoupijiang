@@ -3515,10 +3515,53 @@ const MODEL_REQUIREMENT_GROUPS = {
     ],
 };
 
+function capabilityContractDepartment(agentId) {
+    const contract = window.currentModelCapabilityContract;
+    const departments = contract?.departments || [];
+    return departments.find(item => item.department_id === agentId) || null;
+}
+
+function capabilityKindLabel(kind) {
+    const fromContract = window.currentModelCapabilityContract?.capability_kinds?.[kind]?.label;
+    if (fromContract) return fromContract;
+    return {
+        text: '文本模型',
+        image_generation: '图片生成模型',
+        vision_understanding: '视觉理解模型',
+        browser_or_human_evidence: '浏览器/人工证据能力',
+    }[kind] || '文本模型';
+}
+
+function capabilityKeyHint(kind) {
+    return {
+        text: 'DeepSeek / 千问 / GPT 等文本 API Key',
+        image_generation: '豆包 Seedream / Qwen Image / MiniMax Image 等生图 API Key',
+        vision_understanding: '千问 VL / GPT 多模态 / Gemini 多模态等图片理解 API Key',
+        browser_or_human_evidence: '优先使用登录后的浏览器、人工上传截图或平台导出；不要把普通文本 Key 当作截图能力',
+    }[kind] || '填写对应模型供应商的 API Key';
+}
+
+function modelRequirementFromContract(agentId) {
+    const department = capabilityContractDepartment(agentId);
+    if (!department) return null;
+    const requiredFor = department.required_for || [];
+    const kind = department.required_capability || 'text';
+    return {
+        type: capabilityKindLabel(kind),
+        key: capabilityKeyHint(kind),
+        use: requiredFor.length ? requiredFor.join('、') : '',
+        impact: department.missing_impact || '',
+        test: department.human_test_label || '',
+        source: window.currentModelCapabilityContract?.source || 'docs/MODEL_CAPABILITY_MATRIX.json',
+    };
+}
+
 function modelRequirement(agentId) {
+    const contractRequirement = modelRequirementFromContract(agentId);
     const requirement = {
         ...(MODEL_REQUIREMENTS.default[agentId] || {}),
         ...((MODEL_REQUIREMENTS[MODEL_OFFICE_ID] || {})[agentId] || {}),
+        ...(contractRequirement || {}),
     };
     return {
         ...requirement,

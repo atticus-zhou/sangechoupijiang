@@ -112,6 +112,10 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("关键部门先填", js)
         self.assertIn("生图模型", js)
         self.assertIn("视觉理解", js)
+        self.assertIn("loadModelCapabilityContract", js)
+        self.assertIn("modelRequirementFromContract", js)
+        self.assertIn("capabilityContractDepartment", js)
+        self.assertIn("/api/offices/${officeId}/model-capabilities", js)
 
     def test_model_page_renders_new_user_setup_path(self):
         html = INDEX_HTML.read_text(encoding="utf-8")

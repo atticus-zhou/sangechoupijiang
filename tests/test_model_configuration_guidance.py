@@ -64,14 +64,15 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
             item["department_id"]: item["required_capability"]
             for item in matrix["offices"]["comic_production"]["departments"]
         }
-        self.assertEqual(comic["cabinet"], "text")
         self.assertEqual(comic["zhongshu"], "text")
         self.assertEqual(comic["menxia"], "text")
+        self.assertEqual(comic["shangshu"], "text")
+        self.assertEqual(comic["libu"], "text")
         self.assertEqual(comic["hubu"], "text")
         self.assertEqual(comic["bingbu"], "text")
         self.assertEqual(comic["gongbu"], "image_generation")
         self.assertEqual(comic["xingbu"], "vision_understanding")
-        self.assertEqual(comic["libu"], "text")
+        self.assertEqual(comic["libu_comm"], "text")
 
         research = {
             item["department_id"]: item["required_capability"]
@@ -79,8 +80,11 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         }
         self.assertEqual(research["zhongshu"], "text")
         self.assertEqual(research["menxia"], "text")
+        self.assertEqual(research["shangshu"], "text")
+        self.assertEqual(research["libu"], "text")
         self.assertEqual(research["hubu"], "text")
         self.assertEqual(research["bingbu"], "text")
+        self.assertEqual(research["xingbu"], "vision_understanding")
         self.assertEqual(research["gongbu"], "browser_or_human_evidence")
 
 

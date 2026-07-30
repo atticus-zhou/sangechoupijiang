@@ -128,6 +128,8 @@ CHECKS: list[dict[str, Any]] = [
             "MODEL_REQUIREMENTS",
             "MODEL_REQUIREMENT_GROUPS",
             "loadModelCapabilityContract",
+            "modelRequirementFromContract",
+            "capabilityContractDepartment",
             "/api/offices/${officeId}/model-capabilities",
             "modelRequirementImpact",
             "测试此部门",
@@ -200,14 +202,15 @@ def _matrix_checks() -> list[dict[str, Any]]:
         for item in offices.get("comic_production", {}).get("departments", [])
     }
     for department_id, capability in {
-        "cabinet": "text",
         "zhongshu": "text",
         "menxia": "text",
+        "shangshu": "text",
+        "libu": "text",
         "hubu": "text",
         "bingbu": "text",
         "gongbu": "image_generation",
         "xingbu": "vision_understanding",
-        "libu": "text",
+        "libu_comm": "text",
     }.items():
         if comic_departments.get(department_id) != capability:
             missing.append(f"comic_production.{department_id}:{capability}")
@@ -216,9 +219,11 @@ def _matrix_checks() -> list[dict[str, Any]]:
         item.get("department_id"): item.get("required_capability")
         for item in offices.get("research", {}).get("departments", [])
     }
-    for department_id in ("zhongshu", "menxia", "hubu", "bingbu"):
+    for department_id in ("zhongshu", "menxia", "shangshu", "libu", "hubu", "libu_comm", "bingbu"):
         if research_departments.get(department_id) != "text":
             missing.append(f"research.{department_id}:text")
+    if research_departments.get("xingbu") != "vision_understanding":
+        missing.append("research.xingbu:vision_understanding")
     if research_departments.get("gongbu") != "browser_or_human_evidence":
         missing.append("research.gongbu:browser_or_human_evidence")
 
