@@ -740,6 +740,7 @@ async def get_research_demo_api():
     competitors = _research_demo_competitors(results)
     chart_suggestions = _research_demo_chart_suggestions(results)
     evidence_handoff = _research_demo_evidence_handoff()
+    evidence_gap_cards = _research_demo_evidence_gap_cards(evidence_handoff)
     evidence_capture_playbook = _research_demo_evidence_capture_playbook()
     evidence_status_summary = _research_demo_evidence_status_summary(sources, data_points)
     return {
@@ -790,6 +791,7 @@ async def get_research_demo_api():
             "public_demo_boundary": "公开演示只展示固定样例和证据缺口，不读取账号、不登录第三方平台、不宣称全自动会员级采集。",
         },
         "evidence_handoff": evidence_handoff,
+        "evidence_gap_cards": evidence_gap_cards,
         "evidence_capture_playbook": evidence_capture_playbook,
         "evidence_status_summary": evidence_status_summary,
         "deliverable_reading_guide": [
@@ -873,6 +875,7 @@ async def get_research_demo_api():
 def _research_claim_report_from_demo(demo: dict) -> dict:
     evidence_boundaries = demo.get("evidence_boundaries") or {}
     evidence_handoff = demo.get("evidence_handoff") or []
+    evidence_gap_cards = demo.get("evidence_gap_cards") or []
     evidence_capture_playbook = demo.get("evidence_capture_playbook") or {}
     evidence_status_summary = demo.get("evidence_status_summary") or {}
     return {
@@ -896,6 +899,7 @@ def _research_claim_report_from_demo(demo: dict) -> dict:
         ],
         "evidence_boundaries": evidence_boundaries,
         "evidence_handoff": evidence_handoff,
+        "evidence_gap_cards": evidence_gap_cards,
         "evidence_capture_playbook": evidence_capture_playbook,
         "evidence_status_summary": evidence_status_summary,
         "claim_upgrade_checklist": [
@@ -1582,6 +1586,27 @@ def _research_demo_evidence_handoff() -> list[dict]:
     ]
 
 
+def _research_demo_evidence_gap_cards(evidence_handoff: list[dict]) -> list[dict]:
+    cards: list[dict] = []
+    for index, item in enumerate(evidence_handoff, start=1):
+        target = item.get("target_evidence", "")
+        cards.append({
+            "id": f"research_gap_{index:02d}_{item.get('id', 'evidence')}",
+            "title": item.get("title", f"补齐证据 {index}"),
+            "owner": item.get("owner", "人类操作者 / 研究办公室"),
+            "target_evidence": target,
+            "why_needed": item.get("why_needed", "把待核验结论升级成可引用证据。"),
+            "user_action": "按目标页面完成登录、截图或导出；不在产品里填写平台账号密码。",
+            "file_name": f"evidence_{index:02d}_{item.get('id', 'research_gap')}.png",
+            "acceptance": "截图能看清页面主题、平台、时间范围和关键数字；敏感账号信息已遮挡。",
+            "upgrades": item.get("upgrades", []),
+            "status": item.get("status", "pending_human_account"),
+            "blocks_claim": "未补齐前只能展示阶段样例，不能宣称完成真实平台数据采集或最终报告。",
+            "next_after_capture": "把截图放入证据清单后重新生成 report.md、evidence_manifest.json 和 claim report。",
+        })
+    return cards
+
+
 def _research_demo_evidence_capture_playbook() -> dict:
     return {
         "status": "human_account_required",
@@ -2106,6 +2131,7 @@ def _ensure_research_demo_delivery() -> dict[str, Path]:
     by_type = {item.get("artifact_type"): item for item in artifacts}
     sources = _research_demo_sources(fixture.get("results") or [])
     data_points = _research_demo_data_points(fixture.get("results") or [])
+    evidence_handoff = _research_demo_evidence_handoff()
     report = by_type.get("standard_report") or by_type.get("report")
     if not report:
         raise HTTPException(status_code=500, detail="Demo research report was not generated.")
@@ -2119,9 +2145,11 @@ def _ensure_research_demo_delivery() -> dict[str, Path]:
         "data_points": data_points,
         "competitors": _research_demo_competitors(fixture.get("results") or []),
         "chart_suggestions": _research_demo_chart_suggestions(fixture.get("results") or []),
-        "evidence_handoff": _research_demo_evidence_handoff(),
+        "evidence_handoff": evidence_handoff,
+        "evidence_gap_cards": _research_demo_evidence_gap_cards(evidence_handoff),
         "evidence_status_summary": _research_demo_evidence_status_summary(sources, data_points),
         "screenshot_plan": (by_type.get("screenshot_plan") or {}).get("content", ""),
+        "evidence_gap_cards_markdown": (by_type.get("evidence_gap_cards") or {}).get("content", ""),
         "artifacts": [
             {
                 "artifact_type": item.get("artifact_type"),

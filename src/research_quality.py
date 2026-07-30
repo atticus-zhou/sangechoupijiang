@@ -16,6 +16,7 @@ REQUIRED_ARTIFACTS = {
     "opportunity_map",
     "chart_plan",
     "screenshot_plan",
+    "evidence_gap_cards",
 }
 
 
@@ -75,6 +76,8 @@ def assess_research_package(artifacts: list[dict]) -> dict:
         warnings.append("标准报告缺少来源清单引用。")
     if standard_report_text and "截图清单" not in standard_report_text:
         warnings.append("标准报告缺少截图清单引用。")
+    if standard_report_text and "补证卡" not in standard_report_text:
+        warnings.append("标准报告缺少证据补齐卡引用。")
 
     score = 100
     score -= len(missing) * 12

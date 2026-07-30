@@ -90,6 +90,16 @@ def build_research_artifacts(task_id: str, result: dict) -> list[dict]:
             "created_by": "libu_comm",
         })
 
+    evidence_gap_cards = _make_evidence_gap_cards(results, report)
+    if evidence_gap_cards:
+        artifacts.append({
+            "artifact_type": "evidence_gap_cards",
+            "title": f"{title} - 证据补齐卡",
+            "content": evidence_gap_cards,
+            "metadata": {"source": "evidence_gap_audit"},
+            "created_by": "xingbu",
+        })
+
     data_table = _make_data_table(results, report)
     if data_table:
         artifacts.append({
@@ -282,6 +292,7 @@ def _make_standard_report(title: str, report: str, artifacts: list[dict]) -> str
     pain_points = by_type.get("review_pain_points", "")
     opportunity_map = by_type.get("opportunity_map", "")
     screenshot_plan = by_type.get("screenshot_plan", "")
+    evidence_gap_cards = by_type.get("evidence_gap_cards", "")
 
     industry = _pick_section(report, ("行业", "市场", "规模", "趋势"), fallback_chars=420)
     risk_lines = _collect_lines(report, ("风险", "建议", "结论", "待核验", "权限", "来源"))
@@ -314,6 +325,9 @@ def _make_standard_report(title: str, report: str, artifacts: list[dict]) -> str
         "",
         "截图清单：",
         screenshot_plan or "暂无截图清单，需要补充平台页面、榜单页或商品详情页截图目标。",
+        "",
+        "补证卡：",
+        evidence_gap_cards or "暂无补证卡。请将待核验数据、截图缺口和权限缺口拆成可执行补证任务。",
     ]).strip()
 
 
@@ -452,6 +466,139 @@ def _make_screenshot_plan(results: list[dict]) -> str:
             f"| {_cell(item['title'])} | {_cell(url)} | {_cell(item['reason'])} | evidence_{i:02d}.png |"
         )
     return "\n".join(rows)
+
+
+def _make_evidence_gap_cards(results: list[dict], report: str) -> str:
+    cards = _collect_evidence_gap_cards(results, report)
+    rows = [
+        "| 补证卡 | 负责人 | 需要补什么 | 为什么需要 | 建议文件名 | 验收标准 | 补完升级 |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for card in cards:
+        rows.append(
+            f"| {_cell(card['title'])} | {_cell(card['owner'])} | {_cell(card['target_evidence'])} | "
+            f"{_cell(card['why_needed'])} | {_cell(card['file_name'])} | {_cell(card['acceptance'])} | "
+            f"{_cell(card['upgrades'])} |"
+        )
+    return "\n".join(rows)
+
+
+def _collect_evidence_gap_cards(results: list[dict], report: str) -> list[dict]:
+    cards: list[dict] = []
+
+    pending_sources = _collect_pending_sources(results)
+    for index, item in enumerate(pending_sources[:4], start=1):
+        cards.append({
+            "title": item.get("title") or f"来源页面补证 {index}",
+            "owner": "兵部 / 人类操作者",
+            "target_evidence": item.get("target_evidence") or item.get("url") or "来源页面 URL、页面截图和发布时间。",
+            "why_needed": item.get("why_needed") or item.get("note") or "把报告中的来源线索升级为可追溯证据。",
+            "file_name": f"evidence_{len(cards) + 1:02d}_source_page.png",
+            "acceptance": "截图能看清页面标题、平台、时间范围或发布方；敏感账号信息已遮挡。",
+            "upgrades": "来源清单、标准报告、老板摘要",
+        })
+
+    if _needs_price_or_data_evidence(results, report):
+        cards.append({
+            "title": "补齐价格带和关键数据截图",
+            "owner": "户部 / 人类操作者",
+            "target_evidence": "平台榜单、商品详情页、销量/热度/价格区间截图或导出表。",
+            "why_needed": "把待核验价格、销量、规模或热度判断升级成老板可引用的数据表。",
+            "file_name": f"evidence_{len(cards) + 1:02d}_price_or_metric.png",
+            "acceptance": "每个数字能对应平台、时间范围、商品或榜单口径；无法确认的数字继续标记待核验。",
+            "upgrades": "数据要点表、价格带图表、开品建议",
+        })
+
+    if _needs_competitor_evidence(results):
+        cards.append({
+            "title": "补齐 TOP 竞品矩阵",
+            "owner": "户部 / 兵部",
+            "target_evidence": "TOP 商品、品牌、价格、卖点、销量/热度、评论入口截图或表格。",
+            "why_needed": "避免竞品表停留在占位描述，形成可比较的产品和品牌矩阵。",
+            "file_name": f"evidence_{len(cards) + 1:02d}_competitor_ranking.png",
+            "acceptance": "至少包含产品名称、品牌、价格或热度信号，并能对应一张截图或来源链接。",
+            "upgrades": "竞品分析表、机会地图、风险与建议",
+        })
+
+    if _needs_review_evidence(report):
+        cards.append({
+            "title": "补齐评论痛点原始截图",
+            "owner": "刑部 / 人类操作者",
+            "target_evidence": "商品评论区、达人评论区、测评页或售后反馈截图。",
+            "why_needed": "验证差评痛点是否真实高频，避免凭常识写产品机会。",
+            "file_name": f"evidence_{len(cards) + 1:02d}_review_pain_points.png",
+            "acceptance": "每类痛点至少有一条可读原文、平台位置和采集时间；隐私信息已遮挡。",
+            "upgrades": "评论痛点表、差异化机会、风险提示",
+        })
+
+    if not cards:
+        cards.append({
+            "title": "人工复核关键结论",
+            "owner": "刑部 / 人类操作者",
+            "target_evidence": "复核报告中最关键的 3 条结论对应的来源、截图和数据口径。",
+            "why_needed": "即使样例信息完整，正式交付前仍需要人工确认结论没有过期或误读。",
+            "file_name": "evidence_01_final_review.png",
+            "acceptance": "每条关键结论都有来源、截图或复核备注；不能确认的结论保留待核验标签。",
+            "upgrades": "最终报告、交付声明、复核记录",
+        })
+
+    return cards
+
+
+def _collect_pending_sources(results: list[dict]) -> list[dict]:
+    pending: list[dict] = []
+    seen = set()
+    for step in results:
+        for source in step.get("sources", []) or []:
+            if not isinstance(source, dict):
+                continue
+            key = source.get("url") or source.get("title")
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            pending.append({
+                "title": source.get("title") or "来源页面",
+                "url": source.get("url", ""),
+                "note": source.get("note", ""),
+                "target_evidence": source.get("url") or source.get("title") or "来源页面截图",
+            })
+        for ref in step.get("context_refs", []) or []:
+            key = str(ref)
+            if key and key not in seen:
+                seen.add(key)
+                pending.append({
+                    "title": "来源页面",
+                    "url": key,
+                    "note": "作为关键来源证据",
+                    "target_evidence": key,
+                })
+    return pending
+
+
+def _needs_price_or_data_evidence(results: list[dict], report: str) -> bool:
+    for step in results:
+        for point in step.get("data_points", []) or []:
+            if isinstance(point, dict):
+                text = " ".join(str(point.get(key, "")) for key in ("value", "confidence", "note", "source_url"))
+                if "待" in text or "pending" in text.lower() or not point.get("source_url"):
+                    return True
+    return bool(re.search(r"待核验|价格|销量|销售额|热度|市场规模|增长", report or ""))
+
+
+def _needs_competitor_evidence(results: list[dict]) -> bool:
+    competitors = []
+    for step in results:
+        competitors.extend([item for item in step.get("competitors", []) or [] if isinstance(item, dict)])
+    if not competitors:
+        return True
+    return any(
+        "待" in " ".join(str(item.get(key, "")) for key in ("sales", "price", "brand", "product_name"))
+        for item in competitors
+    )
+
+
+def _needs_review_evidence(report: str) -> bool:
+    return bool(re.search(r"差评|评论|痛点|售后|不满意|风险|投诉", report or ""))
 
 
 def _make_data_table(results: list[dict], report: str = "") -> str:

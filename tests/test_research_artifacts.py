@@ -37,6 +37,7 @@ class ResearchArtifactTests(unittest.TestCase):
         self.assertIn("briefing", artifact_types)
         self.assertIn("chart_plan", artifact_types)
         self.assertIn("screenshot_plan", artifact_types)
+        self.assertIn("evidence_gap_cards", artifact_types)
         self.assertIn("source_list", artifact_types)
         self.assertIn("data_table", artifact_types)
         self.assertIn("competitor_table", artifact_types)
@@ -57,6 +58,7 @@ class ResearchArtifactTests(unittest.TestCase):
         ):
             self.assertIn(heading, standard_report)
         self.assertIn("来源清单", standard_report)
+        self.assertIn("补证卡", standard_report)
 
     def test_source_list_falls_back_when_sources_are_missing(self):
         result = {
@@ -120,6 +122,9 @@ class ResearchArtifactTests(unittest.TestCase):
         self.assertIn("市场规模", by_type["data_table"]["content"])
         self.assertIn("line", by_type["chart_plan"]["content"])
         self.assertIn("evidence_01.png", by_type["screenshot_plan"]["content"])
+        self.assertIn("补证卡", by_type["evidence_gap_cards"]["content"])
+        self.assertIn("负责人", by_type["evidence_gap_cards"]["content"])
+        self.assertIn("evidence_01_source_page.png", by_type["evidence_gap_cards"]["content"])
         self.assertIn("样例竞品", by_type["competitor_table"]["content"])
         self.assertIn("样例竞品", by_type["standard_report"]["content"])
         self.assertIn("https://example.com/report", by_type["standard_report"]["content"])

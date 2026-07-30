@@ -176,6 +176,7 @@
 - `opportunity_map`: 差异化机会表
 - `chart_plan`: 图表建议
 - `screenshot_plan`: 截图取证计划
+- `evidence_gap_cards`: 证据补齐卡，逐条说明缺哪张截图或数据、负责人、建议文件名、验收标准和补完后升级哪条结论
 - `quality_report`: 验收报告
 
 ## Agent 分工

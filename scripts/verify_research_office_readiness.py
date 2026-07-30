@@ -30,6 +30,7 @@ REQUIRED_RESEARCH_ARTIFACTS = {
     "opportunity_map",
     "chart_plan",
     "screenshot_plan",
+    "evidence_gap_cards",
 }
 
 SCHEMA_GATED_ARTIFACTS = {
@@ -74,8 +75,11 @@ def _verify_artifact_package(errors: list[str]) -> dict[str, Any]:
     source_list = by_type.get("source_list", {}).get("content", "")
     data_table = by_type.get("data_table", {}).get("content", "")
     competitor_table = by_type.get("competitor_table", {}).get("content", "")
+    evidence_gap_cards = by_type.get("evidence_gap_cards", {}).get("content", "")
     if "evidence_01.png" not in screenshot_plan:
         errors.append("screenshot plan must provide evidence file naming")
+    if "补证卡" not in evidence_gap_cards or "负责人" not in evidence_gap_cards or "升级" not in evidence_gap_cards:
+        errors.append("evidence gap cards must explain owner, missing evidence, and upgrade path")
     if "http" not in source_list and "local://" not in source_list:
         errors.append("source list must keep URL or pending local evidence references")
     if "|" not in data_table:
@@ -91,6 +95,7 @@ def _verify_artifact_package(errors: list[str]) -> dict[str, Any]:
         "quality": quality,
         "schema_gates": schema_gates,
         "has_screenshot_plan": bool(screenshot_plan),
+        "has_evidence_gap_cards": bool(evidence_gap_cards),
         "has_source_trace": "http" in source_list or "local://" in source_list,
         "has_data_table": "|" in data_table,
         "has_competitor_table": "|" in competitor_table,
@@ -129,6 +134,7 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     public_demo_boundary = str(evidence_boundaries.get("public_demo_boundary") or "")
     reading_guide = payload.get("deliverable_reading_guide") or []
     evidence_handoff = payload.get("evidence_handoff") or []
+    evidence_gap_cards = payload.get("evidence_gap_cards") or []
     capture_playbook = payload.get("evidence_capture_playbook") or {}
     capture_steps = capture_playbook.get("steps") or []
     claim_response = client.get("/api/demo/research/claim-report")
@@ -153,6 +159,13 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     for item in evidence_handoff:
         if not item.get("owner") or not item.get("target_evidence") or not item.get("why_needed") or not item.get("upgrades"):
             errors.append(f"research evidence handoff item is incomplete: {item.get('title') or item.get('id')}")
+    if len(evidence_gap_cards) < 3:
+        errors.append("research demo must expose at least 3 executable evidence gap cards")
+    for item in evidence_gap_cards:
+        if not item.get("owner") or not item.get("target_evidence") or not item.get("user_action") or not item.get("acceptance") or not item.get("upgrades"):
+            errors.append(f"research evidence gap card is incomplete: {item.get('title') or item.get('id')}")
+        if "evidence_" not in str(item.get("file_name") or ""):
+            errors.append(f"research evidence gap card must define evidence file naming: {item.get('title') or item.get('id')}")
     if capture_playbook.get("status") != "human_account_required":
         errors.append("research demo must expose a human-account-required evidence capture playbook")
     if len(capture_steps) < 5:
@@ -226,6 +239,8 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
                 errors.append("research evidence manifest must count placeholder demo sources")
             if manifest_counts.get("pending_account_or_manual_capture", 0) < 1:
                 errors.append("research evidence manifest must count pending capture evidence")
+            if len(manifest.get("evidence_gap_cards") or []) < 3:
+                errors.append("research evidence manifest must include executable evidence gap cards")
 
     required_downloads = {
         "/api/demo/research/files/report.md",
@@ -261,6 +276,17 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
             1
             for item in evidence_handoff
             if item.get("owner") and item.get("target_evidence") and item.get("why_needed") and item.get("upgrades")
+        ),
+        "evidence_gap_card_count": len(evidence_gap_cards),
+        "evidence_gap_card_ready_count": sum(
+            1
+            for item in evidence_gap_cards
+            if item.get("owner")
+            and item.get("target_evidence")
+            and item.get("user_action")
+            and item.get("acceptance")
+            and item.get("upgrades")
+            and "evidence_" in str(item.get("file_name") or "")
         ),
         "capture_playbook_status": capture_playbook.get("status", ""),
         "capture_playbook_step_count": len(capture_steps),
@@ -316,6 +342,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Quality status: {quality.get('status')} ({quality.get('score')})",
         f"- Missing artifacts: {', '.join(package.get('missing_artifacts') or []) or '-'}",
         f"- Screenshot plan: {package.get('has_screenshot_plan')}",
+        f"- Evidence gap cards: {package.get('has_evidence_gap_cards')}",
         f"- Source trace: {package.get('has_source_trace')}",
         f"- Data table: {package.get('has_data_table')}",
         f"- Competitor table: {package.get('has_competitor_table')}",
@@ -346,6 +373,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Evidence status counts: placeholder={demo.get('placeholder_demo_source_count')}, pending={demo.get('pending_evidence_count')}",
         f"- Reading guide: {demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}",
         f"- Evidence handoff: {demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}",
+        f"- Evidence gap cards: {demo.get('evidence_gap_card_ready_count')}/{demo.get('evidence_gap_card_count')}",
         f"- Evidence capture playbook: {demo.get('capture_playbook_status')} / steps={demo.get('capture_playbook_ready_count')}/{demo.get('capture_playbook_step_count')} / commands={demo.get('capture_playbook_command_count')}",
         f"- Claim report: HTTP {demo.get('claim_report_status_code')} / {demo.get('claim_level')} / full_automation={demo.get('can_claim_full_automation')}",
         f"- Claim upgrade checklist: {demo.get('claim_upgrade_checklist_count')} items",

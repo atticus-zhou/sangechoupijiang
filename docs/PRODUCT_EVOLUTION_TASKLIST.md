@@ -93,7 +93,7 @@
 - [x] `/api/offices/protocols` 和 `/api/demo/public-showcase` 已暴露 `office_launch_matrix`，明确 `AI 漫剧制片办公室` 是当前主推办公室，`研究办公室` 可公开展示固定样例，旧 `AI 漫剧办公室` 只保留为兼容入口。
 - [x] 新办公室公开演示必须满足 `required_demo_contract`，不能只提供一个能打开的接口。
 - [x] 新办公室扩展治理已补充离线验收：`python scripts/verify_office_extension_governance.py --format markdown` 会检查所有办公室是否复用 `OfficeProfile` 协议，并确认主力办公室必须满足可展示、可试用、可交付、可追溯四项标准。
-- [x] 研究办公室可靠性已补充离线验收：`python scripts/verify_research_office_readiness.py --format markdown` 会检查阶段报告、来源清单、数据表、竞品表、截图计划、schema gate 和公开演示下载；边界仍是人机协作补证据，不承诺不稳定的一键全自动抓取。
+- [x] 研究办公室可靠性已补充离线验收：`python scripts/verify_research_office_readiness.py --format markdown` 会检查阶段报告、来源清单、数据表、竞品表、截图计划、证据补齐卡、schema gate 和公开演示下载；边界仍是人机协作补证据，不承诺不稳定的一键全自动抓取。
 - [x] 公开交付前总门禁已补充：`python scripts/verify_release_readiness.py --format markdown` 会串联 first-run、公开演示、AI 漫剧交付物、研究办公室、办公室隔离、办公室扩展治理、产品 readiness 和敏感信息扫描；其中办公室隔离会验证模型配置、工作区、历史、产物和输出目录不会串线，公开演示同时覆盖动态无 Key 入口和后端无关的静态展示导出。
 - [x] 产品化目标覆盖表已补充：`python scripts/verify_productization_status.py --format markdown` 会把公开展示、无 Key 样例、本地复现、AI 漫剧交付、研究办公室边界、办公室扩展治理和安全扫描映射到可验证证据。
 - [x] 只有当一个办公室达到“可展示、可试用、可交付、可追溯”四项标准后，才允许标记为主力办公室。
@@ -329,7 +329,7 @@
 - [x] 支持截图清单生成。
 - [x] 支持用户登录第三方平台后辅助截图。
 - [x] 支持截图归档、识别和证据表整理。
-- [x] 公开演示提供待补证据交接表，明确待补页面、责任人、补完后升级哪些结论。
+- [x] 公开演示提供待补证据交接表和可执行补证卡，明确待补页面、责任人、建议文件名、验收标准，以及补完后升级哪些结论。
 - [x] 支持报告模板标准化。
 - [x] 报告输出包含行业概览、竞品表、价格带、用户痛点、机会判断、风险和建议。
 
