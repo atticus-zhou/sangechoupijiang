@@ -131,6 +131,21 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("turnaround", asset_matrix_text)
         self.assertIn("top_down", asset_matrix_text)
         self.assertIn("clean_background_required", asset_matrix_text)
+        asset_spec = embed["asset_image_production_spec"]
+        self.assertEqual(
+            {item["asset_type"] for item in asset_spec["asset_types"]},
+            {"character", "prop", "scene"},
+        )
+        asset_spec_text = json.dumps(asset_spec, ensure_ascii=False)
+        self.assertIn("clean_white_or_near_white_background", asset_spec_text)
+        self.assertIn("spatial_environment_not_white_background", asset_spec_text)
+        self.assertIn("three_view", asset_spec_text)
+        self.assertIn("expression_sheet", asset_spec_text)
+        self.assertIn("turnaround", asset_spec_text)
+        self.assertIn("top_down", asset_spec_text)
+        self.assertIn("不要把人物放进完整剧情场面", asset_spec_text)
+        self.assertIn("不要把场景做成白底静物", asset_spec_text)
+        self.assertIn("verify_comic_v2_downstream_handoff.py", asset_spec_text)
         comic_demo_response = client.get("/api/demo/comic-production")
         self.assertEqual(comic_demo_response.status_code, 200)
         self.assertEqual(

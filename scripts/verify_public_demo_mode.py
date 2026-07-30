@@ -79,6 +79,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     reproducibility = portfolio_embed.get("reproducibility_checklist") or []
     downstream_quick_start = portfolio_embed.get("downstream_quick_start") or []
     asset_requirement_matrix = portfolio_embed.get("asset_requirement_matrix") or {}
+    asset_image_production_spec = portfolio_embed.get("asset_image_production_spec") or {}
     release_badge = portfolio_embed.get("release_badge") or {}
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
@@ -146,6 +147,26 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("three_view", "expression_sheet", "turnaround", "top_down", "clean_background_required"):
         if marker not in asset_matrix_text:
             errors.append(f"portfolio asset requirement matrix is missing marker: {marker}")
+    asset_spec_types = {
+        item.get("asset_type"): item
+        for item in asset_image_production_spec.get("asset_types") or []
+    }
+    if set(asset_spec_types) != {"character", "prop", "scene"}:
+        errors.append("portfolio asset image production spec must cover character, prop, and scene assets")
+    asset_spec_text = json.dumps(asset_image_production_spec, ensure_ascii=False)
+    for marker in (
+        "clean_white_or_near_white_background",
+        "spatial_environment_not_white_background",
+        "three_view",
+        "expression_sheet",
+        "turnaround",
+        "top_down",
+        "不要把人物放进完整剧情场面",
+        "不要把场景做成白底静物",
+        "verify_comic_v2_downstream_handoff.py",
+    ):
+        if marker not in asset_spec_text:
+            errors.append(f"portfolio asset image production spec is missing marker: {marker}")
     if release_badge.get("status") != "safe_public_demo":
         errors.append("portfolio embed must expose a safe_public_demo release badge")
     if release_badge.get("mode") != "demo_only":

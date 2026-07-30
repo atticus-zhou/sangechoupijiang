@@ -387,6 +387,40 @@
     });
   }
 
+  function renderAssetProductionSpec() {
+    const portfolio = showcase.portfolio_embed || {};
+    const spec = portfolio.asset_image_production_spec || {};
+    const target = document.getElementById('asset-production-spec');
+    if (!target || !spec.asset_types) return;
+
+    const intro = element('article', 'card asset-spec-summary');
+    intro.appendChild(element('h3', '', spec.title || 'Asset image production spec'));
+    intro.appendChild(element('p', '', spec.summary || ''));
+    (spec.why_it_matters || []).forEach(function (item) {
+      intro.appendChild(element('small', '', item));
+    });
+    addTextRow(intro, 'Handoff rule', spec.handoff_rule);
+    addTextRow(intro, 'Release gate', spec.release_gate);
+    target.appendChild(intro);
+
+    (spec.asset_types || []).forEach(function (item) {
+      const card = element('article', 'card asset-spec-card');
+      const head = element('div', 'asset-matrix-head');
+      head.appendChild(element('h3', '', item.label || item.asset_type));
+      head.appendChild(element('span', 'status-pill', item.background_policy || 'background_policy'));
+      card.appendChild(head);
+      addTextRow(card, 'Required images', (item.required_images || []).join(' / '));
+      addTextRow(card, 'Should look like', item.should_look_like);
+      const forbidden = element('ul', 'asset-ref-list');
+      (item.must_not_do || []).forEach(function (rule) {
+        forbidden.appendChild(element('li', '', rule));
+      });
+      card.appendChild(forbidden);
+      addTextRow(card, 'Review focus', (item.review_focus || []).join(' / '));
+      target.appendChild(card);
+    });
+  }
+
   function renderAssetRequirementMatrix() {
     const portfolio = showcase.portfolio_embed || {};
     const matrix = portfolio.asset_requirement_matrix || {};
@@ -698,6 +732,7 @@
   renderReadingGuide();
   renderDownloadCatalog();
   renderDownstreamQuickStart();
+  renderAssetProductionSpec();
   renderAssetRequirementMatrix();
   renderShotContract();
   renderInterviewScript();

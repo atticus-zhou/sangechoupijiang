@@ -184,6 +184,29 @@ a {
   gap: 16px;
 }
 
+.asset-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.asset-spec-summary {
+  grid-column: 1 / -1;
+  border-color: rgba(92, 170, 255, 0.3);
+}
+
+.asset-spec-summary small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.asset-spec-card {
+  border-color: rgba(112, 210, 181, 0.22);
+}
+
 .asset-matrix-summary {
   grid-column: 1 / -1;
   border-color: rgba(112, 210, 181, 0.28);
@@ -978,6 +1001,7 @@ noscript {
     .fast-review-list,
     .catalog-grid,
     .extension-check-grid,
+    .asset-spec-grid,
     .asset-matrix-grid,
     .shot-contract-grid,
     .first-run-grid,

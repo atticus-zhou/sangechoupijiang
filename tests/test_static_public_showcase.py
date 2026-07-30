@@ -258,6 +258,17 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("expression_sheet", asset_matrix_text)
         self.assertIn("turnaround", asset_matrix_text)
         self.assertIn("top_down", asset_matrix_text)
+        asset_spec = showcase["portfolio_embed"]["asset_image_production_spec"]
+        self.assertEqual(
+            {item["asset_type"] for item in asset_spec["asset_types"]},
+            {"character", "prop", "scene"},
+        )
+        asset_spec_text = json.dumps(asset_spec, ensure_ascii=False)
+        self.assertIn("clean_white_or_near_white_background", asset_spec_text)
+        self.assertIn("spatial_environment_not_white_background", asset_spec_text)
+        self.assertIn("不要把人物放进完整剧情场面", asset_spec_text)
+        self.assertIn("不要把场景做成白底静物", asset_spec_text)
+        self.assertIn("verify_comic_v2_downstream_handoff.py", asset_spec_text)
         shot_contract = showcase["portfolio_embed"]["shot_contract"]
         self.assertEqual(shot_contract["manifest_uri"], "downloads/comic-production/files/handoff_manifest.json")
         contract_text = json.dumps(shot_contract, ensure_ascii=False)
@@ -296,6 +307,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("research-capture-playbook-card", static_script)
         self.assertIn("renderAssetRequirementMatrix", static_script)
         self.assertIn("asset_requirement_matrix", static_script)
+        self.assertIn("renderAssetProductionSpec", static_script)
+        self.assertIn("asset_image_production_spec", static_script)
+        self.assertIn("asset-spec-grid", index_text)
+        self.assertIn("asset-spec-card", style_text)
         self.assertIn("资产图片规格矩阵", index_text)
         self.assertIn("research-capture-steps", static_script)
         self.assertIn("research-capture-playbook-card", style_text)

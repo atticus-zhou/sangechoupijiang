@@ -1313,6 +1313,61 @@ def _public_showcase_asset_requirement_matrix(manifest_path: Path | None) -> dic
     }
 
 
+def _public_showcase_asset_image_production_spec() -> dict:
+    return {
+        "title": "资产图片生产规范",
+        "summary": "基础资产图先服务一致性，不负责讲完整剧情；人物和道具要像设定参考图一样干净，场景要像导演和视频平台能复用的空间资料。",
+        "why_it_matters": [
+            "人物和道具如果一开始就混入剧情动作、复杂背景或临时光效，后续镜头会更容易跑脸、跑服装、跑材质。",
+            "场景如果只给一张气氛图，下游很难判断入口、动线、机位和角色站位，所以必须补 wide 与 top_down。",
+            "这份规范让工部生成、刑部质检、礼部组装 Word 画布时使用同一套验收语言。",
+        ],
+        "asset_types": [
+            {
+                "asset_type": "character",
+                "label": "人物资产",
+                "required_images": ["three_view", "expression_sheet"],
+                "background_policy": "clean_white_or_near_white_background",
+                "should_look_like": "角色设定图、三视图、表情表；正面/侧面/背面或多个表情中脸型、发型、体型、服装主色和年龄感保持一致。",
+                "must_not_do": [
+                    "不要把人物放进完整剧情场面。",
+                    "不要添加复杂背景、战斗特效、随机文字、随机 logo 或其他角色。",
+                    "不要让每张基础图变成不同画风的单幅插画。",
+                ],
+                "review_focus": ["face_identity", "hair_shape", "costume_palette", "age_feel", "expression_consistency"],
+            },
+            {
+                "asset_type": "prop",
+                "label": "道具资产",
+                "required_images": ["turnaround", "state_sheet"],
+                "background_policy": "clean_white_or_near_white_background",
+                "should_look_like": "道具转面图、材质细节图、状态变化图；轮廓、比例、材质、破损或发光状态可反复引用。",
+                "must_not_do": [
+                    "不要让道具被人物遮挡或拿在复杂动作里。",
+                    "不要使用现代风格材质替代故事时代的材质。",
+                    "不要让道具只作为剧情截图里的小物件出现。",
+                ],
+                "review_focus": ["silhouette", "scale", "material", "era_fit", "state_variation"],
+            },
+            {
+                "asset_type": "scene",
+                "label": "场景资产",
+                "required_images": ["wide", "top_down", "camera_angles"],
+                "background_policy": "spatial_environment_not_white_background",
+                "should_look_like": "空场景广角图、俯视布局图、关键机位图；能看清入口、出口、人物站位、动线、景深和关键陈设。",
+                "must_not_do": [
+                    "不要把场景做成白底静物。",
+                    "不要只给一张氛围海报而没有空间关系。",
+                    "不要加入故事中未出现的现代物件或无依据陈设。",
+                ],
+                "review_focus": ["layout", "entrance_exit", "blocking_paths", "camera_positions", "era_fit"],
+            },
+        ],
+        "handoff_rule": "只有资产图片满足这份规范，镜头提示词才能引用它们；否则应退回工部重做资产图，不能直接进入视频提示词生产。",
+        "release_gate": "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
+    }
+
+
 def _public_showcase_required_image_specs(asset_type: str) -> list[dict]:
     return {
         "character": [
@@ -1926,6 +1981,7 @@ async def get_public_showcase_demo_api():
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
             "asset_requirement_matrix": asset_requirement_matrix,
+            "asset_image_production_spec": _public_showcase_asset_image_production_spec(),
             "shot_contract": _public_showcase_shot_contract(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "first_run_paths": _public_showcase_first_run_paths(),

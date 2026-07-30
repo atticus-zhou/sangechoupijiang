@@ -471,6 +471,27 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for marker in ("three_view", "expression_sheet", "turnaround", "top_down", "clean_background_required"):
             if marker not in asset_matrix_text:
                 errors.append(f"static asset requirement matrix is missing marker: {marker}")
+        asset_image_production_spec = portfolio.get("asset_image_production_spec") or {}
+        asset_spec_types = {
+            item.get("asset_type"): item
+            for item in asset_image_production_spec.get("asset_types") or []
+        }
+        if set(asset_spec_types) != {"character", "prop", "scene"}:
+            errors.append("static asset image production spec must cover character, prop, and scene assets")
+        asset_spec_text = json.dumps(asset_image_production_spec, ensure_ascii=False)
+        for marker in (
+            "clean_white_or_near_white_background",
+            "spatial_environment_not_white_background",
+            "three_view",
+            "expression_sheet",
+            "turnaround",
+            "top_down",
+            "不要把人物放进完整剧情场面",
+            "不要把场景做成白底静物",
+            "verify_comic_v2_downstream_handoff.py",
+        ):
+            if marker not in asset_spec_text:
+                errors.append(f"static asset image production spec is missing marker: {marker}")
         shot_contract = portfolio.get("shot_contract") or {}
         shot_contract_text = json.dumps(shot_contract, ensure_ascii=False)
         for marker in ("first_frame_reference_image", "reference_asset_chain", "director_execution"):
