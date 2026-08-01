@@ -58,6 +58,7 @@
 ```powershell
 python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_public_comic_trace_bundle.py --format markdown
 python scripts/export_public_showcase.py
 python scripts/verify_static_public_showcase.py --format markdown
 python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
@@ -79,6 +80,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_productization_status.py --format markdown` 能把产品化目标映射到证据。
 - `python scripts/verify_first_run_readiness.py --format markdown` 能说明公开演示、本地真实使用和开发者扩展三条路径。
 - `python scripts/verify_public_demo_mode.py --format markdown` 能证明公开展示清单、demo 端点和样例下载可用。
+- `python scripts/verify_public_comic_trace_bundle.py --format markdown` 能证明公开 AI 漫剧追溯包可下载、无 Key、无真实模型调用，并且故事、风格、资产、图片、镜头、质量声明和恢复清单完整。
 - `python scripts/verify_static_public_showcase.py --format markdown` 能证明静态作品集不依赖后端，七份下载物、阅读指南、下游生产 quick-start、真实产品截图和 UTF-8 可读文案都可用。
 - 静态展示包会扫描 `index.html`、`app.js`、`data.js` 和 JSON 下载数据；如果出现乱码、替换字符或可疑编码残留，发布门禁必须失败。
 - `python scripts/verify_portfolio_showcase_sync.py --format markdown` 能证明个人网站本地拷贝和 `dist/public-showcase` 文件哈希一致；如果没有个人网站目录，它会提示复制到作品集目录后用 `--target-dir` 复查。
@@ -136,6 +138,7 @@ Validation authority:
 
 - `python scripts/verify_comic_v2_downstream_handoff.py --format markdown`
 - `python scripts/verify_public_demo_mode.py --format markdown`
+- `python scripts/verify_public_comic_trace_bundle.py --format markdown`
 - `python scripts/verify_static_public_showcase.py --format markdown`
 - `python scripts/verify_portfolio_showcase_sync.py --format markdown`
 - personal website: `npm run check:showcase`

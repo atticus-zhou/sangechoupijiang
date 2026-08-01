@@ -69,6 +69,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "dist/public-showcase",
             "python scripts/verify_first_run_readiness.py --format markdown",
             "python scripts/verify_release_readiness.py --format markdown",
+            "python scripts/verify_public_comic_trace_bundle.py --format markdown",
             "data/comic_production_claim_report.json",
             "claim_upgrade_recovery",
             "regenerate_images",

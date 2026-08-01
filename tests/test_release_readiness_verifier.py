@@ -40,6 +40,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_downstream_handoff",
                 "comic_production_benchmark",
                 "comic_real_production_claim",
+                "public_comic_trace_bundle",
                 "comic_handoff_inventory",
                 "research_readiness",
                 "office_governance",
@@ -104,6 +105,15 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("upgrade_checklist=3", comic_claim["summary"])
         self.assertIn("recovery=regenerate_images", comic_claim["summary"])
         self.assertIn("recovery_steps=3", comic_claim["summary"])
+        public_trace = next(item for item in payload["checks"] if item["id"] == "public_comic_trace_bundle")
+        self.assertIn("assets=3", public_trace["summary"])
+        self.assertIn("images=7", public_trace["summary"])
+        self.assertIn("shots=2", public_trace["summary"])
+        self.assertIn("claim=demo_structure_only", public_trace["summary"])
+        self.assertIn("visual=fixture_only", public_trace["summary"])
+        self.assertIn("real_quality=False", public_trace["summary"])
+        self.assertIn("supports_real_quality=False", public_trace["summary"])
+        self.assertIn("reproducibility=3", public_trace["summary"])
         comic_inventory = next(item for item in payload["checks"] if item["id"] == "comic_handoff_inventory")
         self.assertIn("production_verified=0", comic_inventory["summary"])
         self.assertIn("demo_only=", comic_inventory["summary"])
@@ -160,6 +170,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("AI comic production quality benchmark", completed.stdout)
         self.assertIn("AI comic real production claim boundary", completed.stdout)
+        self.assertIn("Public AI comic trace bundle", completed.stdout)
         self.assertIn("Office schema gate registry", completed.stdout)
         self.assertIn("bindings=11/11", completed.stdout)
         self.assertIn("Office recovery registry", completed.stdout)
@@ -188,6 +199,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("prompt_quality=ready", completed.stdout)
         self.assertIn("prompt_issues=0", completed.stdout)
         self.assertIn("claim_level=demo_structure_only", completed.stdout)
+        self.assertIn("assets=3; images=7; shots=2; claim=demo_structure_only; visual=fixture_only; real_quality=False; supports_real_quality=False", completed.stdout)
         self.assertIn("upgrade_checklist=3", completed.stdout)
         self.assertIn("recovery=regenerate_images", completed.stdout)
         self.assertIn("production_verified=0", completed.stdout)

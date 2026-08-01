@@ -75,6 +75,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_real_production_claim.py", "--format", "json"],
     },
     {
+        "id": "public_comic_trace_bundle",
+        "title": "Public AI comic trace bundle",
+        "command": ["scripts/verify_public_comic_trace_bundle.py", "--format", "json"],
+    },
+    {
         "id": "comic_handoff_inventory",
         "title": "AI comic handoff inventory",
         "command": ["scripts/audit_comic_v2_handoffs.py", "--root", "output/comic_v2_production_benchmark", "--format", "json"],
@@ -240,6 +245,18 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"upgrade_checklist={len(parsed.get('claim_upgrade_checklist') or [])}; "
                 f"recovery={recovery.get('recovery_action')}; "
                 f"recovery_steps={len(recovery.get('steps') or [])}"
+            )
+        if check_id == "public_comic_trace_bundle":
+            return (
+                f"assets={parsed.get('asset_count')}; "
+                f"images={parsed.get('image_count')}; "
+                f"shots={parsed.get('shot_count')}; "
+                f"claim={parsed.get('claim_level')}; "
+                f"visual={parsed.get('visual_evidence_level')}; "
+                f"real_quality={parsed.get('production_quality_verified')}; "
+                f"supports_real_quality={parsed.get('supports_real_quality_claim')}; "
+                f"upgrade_checklist={parsed.get('upgrade_checklist_count')}; "
+                f"reproducibility={parsed.get('reproducibility_command_count')}"
             )
         if check_id == "office_schema_registry":
             return (

@@ -1,0 +1,208 @@
+"""Verify the public no-key comic trace bundle."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from fastapi.testclient import TestClient
+
+from src.web.app import app
+
+
+TRACE_URI = "/api/demo/comic-production/files/trace.json"
+SECRET_PATTERNS = {
+    "openai_style_secret": re.compile(r"sk-[A-Za-z0-9_-]{16,}", re.I),
+    "long_api_key_assignment": re.compile(r"api[_-]?key\s*[:=]\s*['\"]?[A-Za-z0-9_-]{12,}", re.I),
+    "windows_local_path": re.compile(r"[A-Z]:\\\\", re.I),
+    "cookie_header": re.compile(r"\bCookie\s*[:=]", re.I),
+}
+
+
+def _json_text(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def _collect_trace_errors(trace: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    text = _json_text(trace)
+    for label, pattern in SECRET_PATTERNS.items():
+        if pattern.search(text):
+            errors.append(f"trace bundle leaks forbidden marker: {label}")
+
+    if trace.get("mode") != "no_key_demo_comic_v2_trace":
+        errors.append("trace bundle has an unexpected mode")
+    for flag in ("requires_api_key", "calls_real_models", "writes_workspace"):
+        if trace.get(flag) is not False:
+            errors.append(f"trace bundle must keep {flag}=False")
+
+    story = trace.get("story") or {}
+    style = trace.get("style") or {}
+    assets = trace.get("assets") or []
+    images = trace.get("images") or []
+    shots = trace.get("shots") or []
+    if not story.get("story_id") or not story.get("title"):
+        errors.append("trace bundle must expose story_id and title")
+    if not style.get("style_id"):
+        errors.append("trace bundle must expose style_id")
+    if len(assets) < 3:
+        errors.append("trace bundle must include character, prop, and scene assets")
+    if len(images) < 7:
+        errors.append("trace bundle must include the public demo image records")
+    if len(shots) < 2:
+        errors.append("trace bundle must include shot records")
+
+    asset_ids = {str(item.get("asset_id") or "") for item in assets}
+    image_ids = {str(item.get("image_id") or "") for item in images}
+    missing_image_assets = sorted({
+        str(item.get("asset_id") or "")
+        for item in images
+        if item.get("asset_id") and str(item.get("asset_id") or "") not in asset_ids
+    })
+    if missing_image_assets:
+        errors.append(f"image records reference missing assets: {', '.join(missing_image_assets)}")
+    for shot in shots:
+        shot_id = str(shot.get("shot_id") or "")
+        for asset_id in shot.get("reference_asset_ids") or []:
+            if str(asset_id) not in asset_ids:
+                errors.append(f"shot {shot_id} references missing asset: {asset_id}")
+        first_frame = shot.get("first_frame_reference_image") or {}
+        first_frame_id = str(first_frame.get("image_id") or "")
+        if first_frame_id and first_frame_id not in image_ids:
+            errors.append(f"shot {shot_id} references missing first-frame image: {first_frame_id}")
+
+    quality = trace.get("quality_benchmark") or {}
+    if quality.get("status") != "demo_structure_verified":
+        errors.append("trace quality benchmark must remain demo_structure_verified")
+    if quality.get("production_quality_verified") is not False:
+        errors.append("public trace must not claim production-quality visual evidence")
+    if quality.get("visual_evidence_level") != "fixture_only":
+        errors.append("public trace must keep visual_evidence_level=fixture_only")
+
+    image_evidence = trace.get("image_production_evidence") or {}
+    if image_evidence.get("evidence_level") != "fixture_only":
+        errors.append("image production evidence must remain fixture_only for the public demo")
+    if image_evidence.get("supports_real_quality_claim") is not False:
+        errors.append("public fixture images must not support a real quality claim")
+    if image_evidence.get("total_images") != len(images):
+        errors.append("image production evidence total_images must match trace images")
+    if not image_evidence.get("next_action"):
+        errors.append("image production evidence must include a next action")
+
+    if trace.get("claim_level") != "demo_structure_only":
+        errors.append("trace claim_level must remain demo_structure_only")
+    checklist = trace.get("claim_upgrade_checklist") or []
+    if len(checklist) < 3:
+        errors.append("trace bundle must include the claim upgrade checklist")
+    for item in checklist:
+        if not item.get("id") or not item.get("required_evidence") or not item.get("why_it_matters"):
+            errors.append(f"claim upgrade checklist item is incomplete: {item.get('id') or item.get('title')}")
+
+    reproducibility = trace.get("reproducibility") or {}
+    commands = "\n".join(str(item) for item in reproducibility.get("verification_commands") or [])
+    for marker in (
+        "verify_public_demo_mode.py",
+        "verify_comic_v2_downstream_handoff.py",
+        "verify_comic_real_production_claim.py",
+    ):
+        if marker not in commands:
+            errors.append(f"trace reproducibility is missing command: {marker}")
+    if "真实画质" not in str(reproducibility.get("public_claim_boundary") or ""):
+        errors.append("trace reproducibility must state the public real-quality boundary")
+
+    return errors
+
+
+def verify_public_comic_trace_bundle() -> dict[str, Any]:
+    client = TestClient(app)
+    response = client.get(TRACE_URI)
+    trace = response.json() if response.status_code == 200 else {}
+    errors = []
+    if response.status_code != 200:
+        errors.append(f"{TRACE_URI} returned HTTP {response.status_code}")
+    elif not isinstance(trace, dict):
+        errors.append("trace endpoint did not return a JSON object")
+        trace = {}
+    else:
+        errors.extend(_collect_trace_errors(trace))
+
+    image_evidence = trace.get("image_production_evidence") or {}
+    quality = trace.get("quality_benchmark") or {}
+    return {
+        "status": "passed" if not errors else "failed",
+        "mode": "public_comic_trace_bundle",
+        "uri": TRACE_URI,
+        "summary": (
+            "Public comic trace bundle is downloadable, safe, traceable, and honest about fixture-only image evidence."
+            if not errors
+            else "Public comic trace bundle has gaps."
+        ),
+        "requires_api_key": trace.get("requires_api_key") if trace else None,
+        "calls_real_models": trace.get("calls_real_models") if trace else None,
+        "writes_workspace": trace.get("writes_workspace") if trace else None,
+        "story_id": (trace.get("story") or {}).get("story_id", "") if trace else "",
+        "style_id": (trace.get("style") or {}).get("style_id", "") if trace else "",
+        "asset_count": len(trace.get("assets") or []) if trace else 0,
+        "image_count": len(trace.get("images") or []) if trace else 0,
+        "shot_count": len(trace.get("shots") or []) if trace else 0,
+        "claim_level": trace.get("claim_level", "") if trace else "",
+        "quality_status": quality.get("status", ""),
+        "visual_evidence_level": quality.get("visual_evidence_level", ""),
+        "production_quality_verified": quality.get("production_quality_verified"),
+        "image_evidence_level": image_evidence.get("evidence_level", ""),
+        "supports_real_quality_claim": image_evidence.get("supports_real_quality_claim"),
+        "upgrade_checklist_count": len(trace.get("claim_upgrade_checklist") or []) if trace else 0,
+        "reproducibility_command_count": len((trace.get("reproducibility") or {}).get("verification_commands") or []) if trace else 0,
+        "errors": errors,
+    }
+
+
+def format_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        "# Public Comic Trace Bundle",
+        "",
+        f"Status: `{payload.get('status')}`",
+        f"Mode: `{payload.get('mode')}`",
+        f"URI: `{payload.get('uri')}`",
+        f"Summary: {payload.get('summary')}",
+        "",
+        f"- API Key required: {payload.get('requires_api_key')}",
+        f"- Calls real models: {payload.get('calls_real_models')}",
+        f"- Writes workspace: {payload.get('writes_workspace')}",
+        f"- Story/style: {payload.get('story_id')} / {payload.get('style_id')}",
+        f"- Assets/images/shots: {payload.get('asset_count')} / {payload.get('image_count')} / {payload.get('shot_count')}",
+        f"- Claim level: {payload.get('claim_level')}",
+        f"- Quality: {payload.get('quality_status')} / visual={payload.get('visual_evidence_level')} / real={payload.get('production_quality_verified')}",
+        f"- Image evidence: {payload.get('image_evidence_level')} / supports_real_quality={payload.get('supports_real_quality_claim')}",
+        f"- Upgrade checklist: {payload.get('upgrade_checklist_count')} items",
+        f"- Reproducibility commands: {payload.get('reproducibility_command_count')}",
+    ]
+    if payload.get("errors"):
+        lines.extend(["", "## Errors", ""])
+        lines.extend(f"- {item}" for item in payload["errors"])
+    return "\n".join(lines) + "\n"
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--format", choices={"json", "markdown"}, default="markdown")
+    args = parser.parse_args()
+    payload = verify_public_comic_trace_bundle()
+    if args.format == "json":
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        print(format_markdown(payload))
+    if payload["status"] != "passed":
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

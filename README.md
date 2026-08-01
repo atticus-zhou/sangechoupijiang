@@ -71,6 +71,7 @@ python scripts/verify_github_release_evidence.py --format markdown
 
 ```powershell
 python scripts/export_public_showcase.py
+python scripts/verify_public_comic_trace_bundle.py --format markdown
 python scripts/verify_static_public_showcase.py --format markdown
 python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
 python scripts/verify_portfolio_showcase_sync.py --format markdown
@@ -92,6 +93,8 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 
 这条命令会从线上地址读取首页、`showcase.json`、导出清单、访客验收指南、声明报告、样例 Word 和 handoff manifest。它通过时，才能说明这个 URL 本身可打开、可下载，并且仍保持无 Key demo 边界。
 静态展示包会同时带上最快验收路线、七份下载物、八个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对资产图片规格矩阵 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级和恢复建议串成一份可复核链路；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据。
+
+`python scripts/verify_public_comic_trace_bundle.py --format markdown` 会单独检查公开追溯包：确认它不需要 API Key、不调用真实模型、不写工作区，且资产、图片、镜头、质量声明、图片证据等级和升级清单都完整。它已经接入发布总门禁，后续如果 `trace.json` 缺失、泄漏本地路径或把 fixture 图片说成真实画质，`python scripts/verify_release_readiness.py --format markdown` 会失败。
 
 静态展示包还会显示办公室公开状态矩阵，避免访客把旧入口和主力入口混在一起：
 
@@ -411,6 +414,7 @@ Before claiming the showcase is ready for a reviewer, run:
 ```powershell
 python scripts/verify_comic_v2_downstream_handoff.py --format markdown
 python scripts/verify_public_demo_mode.py --format markdown
+python scripts/verify_public_comic_trace_bundle.py --format markdown
 python scripts/verify_static_public_showcase.py --format markdown
 python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/three-stooges/ --format markdown
 python scripts/verify_portfolio_showcase_sync.py --format markdown
