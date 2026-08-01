@@ -465,8 +465,9 @@
   `quality_report` when a report package is not delivery-ready.
 - [x] Workspace artifact details now render schema-gate status in the UI, so
   users can see whether a delivery artifact passed or needs review.
-- [ ] Continue extending concrete schema validators to future office-specific
+- [x] Continue extending concrete schema validators to future office-specific
   outputs.
+  说明：已新增共享 schema gate 注册表和离线验收：`python scripts/verify_office_schema_registry.py --format markdown` 会检查每个 OfficeProfile 声明的 schema gate 是否绑定到真实办公室验证器、owner/stage/artifact_type 是否一致，并已接入 `verify_office_extension_governance.py` 与 `verify_release_readiness.py`。后续新办公室如果只在文档或前端写 schema、但没有具体验证器，会被门禁拦住。
 
 ## Runtime Recovery Progress
 

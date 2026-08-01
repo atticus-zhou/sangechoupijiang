@@ -90,6 +90,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_office_extension_governance.py", "--format", "json"],
     },
     {
+        "id": "office_schema_registry",
+        "title": "Office schema gate registry",
+        "command": ["scripts/verify_office_schema_registry.py", "--format", "json"],
+    },
+    {
         "id": "office_isolation",
         "title": "Office isolation",
         "command": ["scripts/verify_office_isolation.py", "--format", "json"],
@@ -229,6 +234,12 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"recovery={recovery.get('recovery_action')}; "
                 f"recovery_steps={len(recovery.get('steps') or [])}"
             )
+        if check_id == "office_schema_registry":
+            return (
+                f"providers={','.join(parsed.get('provider_offices') or [])}; "
+                f"bindings={parsed.get('passed_binding_count')}/{parsed.get('binding_count')}; "
+                f"errors={parsed.get('error_count')}"
+            )
         if check_id == "comic_handoff_inventory":
             return (
                 f"manifests={parsed.get('manifest_count')}; "
@@ -253,12 +264,14 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
         if check_id == "office_governance":
             demo_contract = parsed.get("required_demo_contract") or []
             starter = parsed.get("starter_checklist_audit") or {}
+            schema_registry = parsed.get("schema_registry_audit") or {}
             return (
                 f"primary={','.join(parsed.get('primary_office_ids') or [])}; "
                 f"offices={len(parsed.get('offices') or [])}; "
                 f"demo_contract={len(demo_contract)}; "
                 f"starter={starter.get('status')}; "
-                f"starter_items={starter.get('count')}"
+                f"starter_items={starter.get('count')}; "
+                f"schema_bindings={schema_registry.get('passed_binding_count')}/{schema_registry.get('binding_count')}"
             )
         if check_id == "office_isolation":
             checks = parsed.get("checks") or []

@@ -8,6 +8,7 @@ from src.offices import (
     list_office_extension_blueprint,
     list_offices,
 )
+from src.office_schema_registry import audit_office_schema_gate_registry
 
 
 class OfficeProfileTests(unittest.TestCase):
@@ -123,6 +124,10 @@ class OfficeProfileTests(unittest.TestCase):
         backlog_ids = {item["id"] for item in blueprint["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
         self.assertTrue(all(item["evidence_required"] for item in blueprint["future_platform_backlog"]))
+
+        schema_registry = audit_office_schema_gate_registry()
+        self.assertEqual(schema_registry["status"], "passed")
+        self.assertEqual(schema_registry["binding_count"], schema_registry["passed_binding_count"])
 
     def test_comic_production_launch_gate_audit_covers_required_gates(self):
         template = list_office_creation_template()

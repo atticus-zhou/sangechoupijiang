@@ -13,6 +13,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.offices import audit_office_extension_governance
+from src.office_schema_registry import audit_office_schema_gate_registry
 
 PROTOCOL_DOC = REPO_ROOT / "docs" / "OFFICE_EXTENSION_PROTOCOL.md"
 STARTER_CHECKLIST_DOC = REPO_ROOT / "docs" / "NEW_OFFICE_STARTER_CHECKLIST.md"
@@ -373,6 +374,27 @@ def format_markdown(audit: dict[str, Any]) -> str:
     if future.get("incomplete_backlog"):
         lines.append("Incomplete backlog: `" + "`, `".join(future.get("incomplete_backlog", [])) + "`")
 
+    schema_registry = audit.get("schema_registry_audit") or {}
+    lines.extend(
+        [
+            "",
+            "## Schema Gate Registry Audit",
+            "",
+            f"Status: `{schema_registry.get('status', 'missing')}`",
+            f"Providers: `{', '.join(schema_registry.get('provider_offices', []))}`",
+            f"Offices with declared gates: `{', '.join(schema_registry.get('offices_with_declared_gates', []))}`",
+            f"Bindings: `{schema_registry.get('passed_binding_count', 0)}/{schema_registry.get('binding_count', 0)}`",
+        ]
+    )
+    if schema_registry.get("missing_provider_offices"):
+        lines.append(
+            "Missing providers: `" + "`, `".join(schema_registry.get("missing_provider_offices", [])) + "`"
+        )
+    if schema_registry.get("missing_schema_ids"):
+        lines.append("Missing schemas: `" + "`, `".join(schema_registry.get("missing_schema_ids", [])) + "`")
+    if schema_registry.get("orphan_schema_ids"):
+        lines.append("Orphan schemas: `" + "`, `".join(schema_registry.get("orphan_schema_ids", [])) + "`")
+
     lines.extend(
         [
             "",
@@ -462,6 +484,15 @@ def main() -> int:
     args = parser.parse_args()
 
     audit = audit_office_extension_governance()
+    schema_registry_audit = audit_office_schema_gate_registry()
+    audit["schema_registry_audit"] = schema_registry_audit
+    if schema_registry_audit.get("status") != "passed":
+        audit["status"] = "failed"
+        audit.setdefault("errors", {})["schema_registry_errors"] = {
+            "missing_provider_offices": schema_registry_audit.get("missing_provider_offices", []),
+            "missing_schema_ids": schema_registry_audit.get("missing_schema_ids", []),
+            "orphan_schema_ids": schema_registry_audit.get("orphan_schema_ids", []),
+        }
     protocol_doc = audit_protocol_doc()
     audit["protocol_doc"] = protocol_doc
     template_skeleton = audit_creation_template_skeleton(audit.get("creation_template") or {})

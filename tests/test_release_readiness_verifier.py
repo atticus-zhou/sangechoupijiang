@@ -43,6 +43,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_handoff_inventory",
                 "research_readiness",
                 "office_governance",
+                "office_schema_registry",
                 "office_isolation",
                 "product_readiness",
                 "secret_scan",
@@ -116,6 +117,11 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("demo_contract=", office_governance["summary"])
         self.assertIn("starter=passed", office_governance["summary"])
         self.assertIn("starter_items=8", office_governance["summary"])
+        self.assertIn("schema_bindings=11/11", office_governance["summary"])
+        office_schema_registry = next(item for item in payload["checks"] if item["id"] == "office_schema_registry")
+        self.assertIn("providers=comic_production,research", office_schema_registry["summary"])
+        self.assertIn("bindings=11/11", office_schema_registry["summary"])
+        self.assertIn("errors=0", office_schema_registry["summary"])
         office_isolation = next(item for item in payload["checks"] if item["id"] == "office_isolation")
         self.assertIn("checks=5", office_isolation["summary"])
         self.assertIn("failures=0", office_isolation["summary"])
@@ -148,6 +154,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("AI comic production quality benchmark", completed.stdout)
         self.assertIn("AI comic real production claim boundary", completed.stdout)
+        self.assertIn("Office schema gate registry", completed.stdout)
+        self.assertIn("bindings=11/11", completed.stdout)
         self.assertIn("AI comic handoff inventory", completed.stdout)
         self.assertIn("Research office staged delivery", completed.stdout)
         self.assertIn("Office isolation", completed.stdout)

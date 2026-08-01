@@ -113,6 +113,17 @@ Current deployment boundary:
 Do not describe the personal website route as live until
 `npm run check:online` passes for `https://www.atticus.asia/three-stooges/`.
 
+## Office Schema Gate Registry Evidence
+
+Future offices must not only declare schema gates in `src/offices.py`; each
+declared gate must bind to a concrete office validator. This is now checked by
+`python scripts/verify_office_schema_registry.py --format markdown`.
+
+The release gate also surfaces the same evidence through the
+`Office Schema Gate Registry Audit` section and the `schema_bindings` summary. This closes the
+`future_schema_validators` platform backlog item for the current registered
+offices while keeping the rule mandatory for every later office.
+
 ## Comic Asset Requirement Matrix
 
 The AI comic production office is not considered downstream-ready when it only
