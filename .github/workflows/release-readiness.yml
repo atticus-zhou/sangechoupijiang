@@ -29,7 +29,16 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       - name: Run no-key release readiness audit
-        run: python scripts/verify_release_readiness.py --format markdown
+        run: |
+          mkdir -p release-readiness-report
+          python scripts/verify_release_readiness.py --format markdown | tee release-readiness-report/release-readiness.md
 
       - name: Run tracked secret scan
-        run: python scripts/check_no_secrets.py
+        run: python scripts/check_no_secrets.py | tee release-readiness-report/secret-scan.txt
+
+      - name: Upload no-key release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: no-key-release-evidence
+          path: release-readiness-report/
+          if-no-files-found: error

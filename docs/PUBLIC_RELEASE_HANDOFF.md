@@ -15,7 +15,7 @@
 - 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵、查看声明边界和复现命令。
 - 第一次运行清单、模型配置说明、办公室协议、办公室上线门禁和隔离验证。
 - GitHub README、部署边界、安全说明和 release readiness 结果。
-- GitHub Actions 的 `Release readiness` workflow；它只运行无 Key 发布门禁和 secret scan，不需要作者 API Key。
+- GitHub Actions 的 `Release readiness` workflow；它只运行无 Key 发布门禁和 secret scan，不需要作者 API Key，并上传 `no-key-release-evidence` artifact 保存审计输出。
 
 这些内容都应该能在不配置真实 API Key 的情况下查看或验证。它们证明的是产品能力样例和工程边界，不等同于把本地真实生产系统开放成 SaaS。
 
@@ -87,7 +87,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_research_office_readiness.py --format markdown` 能证明研究办公室只公开阶段性样例、证据边界、待补证据交接表、证据补齐卡和补证操作手册，不伪装成全自动平台采集。
 - `python scripts/verify_release_readiness.py --format markdown` 能串联全部 no-key 发布门禁。
 - `python scripts/check_no_secrets.py` 能证明仓库没有误提交敏感信息或运行产物。
-- `.github/workflows/release-readiness.yml` 能让 GitHub 自动复跑无 Key 发布门禁和敏感信息扫描，作为公开仓库的外部可见证据。
+- `.github/workflows/release-readiness.yml` 能让 GitHub 自动复跑无 Key 发布门禁和敏感信息扫描，并通过 `no-key-release-evidence` artifact 留下审计输出，作为公开仓库的外部可见证据。
 
 如果其中任一项失败，不要把当前版本描述为公开发布就绪。
 

@@ -1,5 +1,7 @@
 # 三个臭皮匠
 
+[![Release readiness](https://github.com/atticus-zhou/sangechoupijiang/actions/workflows/release-readiness.yml/badge.svg)](https://github.com/atticus-zhou/sangechoupijiang/actions/workflows/release-readiness.yml)
+
 三个臭皮匠是一个本地优先的多 Agent 协作工作台。它把复杂任务拆成不同“办公室”，再由一组分工明确的 Agent 协同完成，让用户拿到可审核、可追溯、可下载的交付物，而不是只拿到一段聊天回复。
 
 > 当前状态：早期产品原型。适合本地体验、作品展示和继续二次开发，还不是可以直接托管给陌生用户使用的 SaaS。
@@ -11,7 +13,7 @@
 - 办公室隔离：研究办公室、AI 漫剧制片办公室等场景拥有独立的模型配置、工作区、产物和历史记录。
 - 可交付产物：目标不是生成聊天文本，而是生成报告、截图证据、提示词包、制片画布和 Word 文档。
 - 本地优先：配置、历史和生成文件默认留在本机，避免把用户 API Key 或运行产物提交到仓库。
-- 公开发布门禁：GitHub Actions 会运行无 Key release readiness 检查，证明公开展示、样例交付、办公室隔离和敏感信息扫描不依赖作者私有 Key。
+- 公开发布门禁：GitHub Actions 会运行无 Key release readiness 检查，证明公开展示、样例交付、办公室隔离和敏感信息扫描不依赖作者私有 Key；workflow 会上传 `no-key-release-evidence` artifact，保存 release readiness 和 secret scan 输出，方便访客复核。
 
 ## 现在能做什么
 

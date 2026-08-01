@@ -11,6 +11,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertNotIn("閿", text)
         self.assertNotIn("娑撳", text)
         self.assertIn("# 三个臭皮匠", text)
+        self.assertIn("actions/workflows/release-readiness.yml/badge.svg", text)
+        self.assertIn("no-key-release-evidence", text)
         self.assertIn("本地优先的多 Agent 协作工作台", text)
         self.assertIn("AI 漫剧制片办公室", text)
         self.assertIn("确认故事后默认进入 V2 制片链", text)
