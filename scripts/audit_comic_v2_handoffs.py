@@ -98,6 +98,7 @@ def _audit_manifest_path(path: Path) -> dict[str, Any] | None:
             recovery = _demo_only_recovery()
         elif claim == "legacy_unverifiable":
             recovery = _legacy_recovery()
+    image_summary = benchmark.get("image_quality_summary") or {}
     return {
         "path": str(path),
         "title": ((payload.get("story") or {}).get("title") or path.stem),
@@ -107,6 +108,13 @@ def _audit_manifest_path(path: Path) -> dict[str, Any] | None:
         "package_quality_score": int(benchmark.get("package_quality_score") or 0),
         "production_quality_verified": bool(benchmark.get("production_quality_verified")),
         "visual_evidence_level": benchmark.get("visual_evidence_level") or "",
+        "image_quality_summary": image_summary,
+        "total_images": int(image_summary.get("total_images") or 0),
+        "usable_images": int(image_summary.get("usable_images") or 0),
+        "waste_or_rework_images": int(image_summary.get("waste_or_rework_images") or 0),
+        "waste_or_rework_rate": float(image_summary.get("waste_or_rework_rate") or 0),
+        "failed_image_ids": list(image_summary.get("failed_image_ids") or []),
+        "rework_action_summary": list(image_summary.get("rework_action_summary") or []),
         "issue_count": int(benchmark.get("issue_count") or 0),
         "blocker_count": int(benchmark.get("blocker_count") or 0),
         "recommended_recovery": recovery,
@@ -233,14 +241,19 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"Public claim: {result.get('safe_public_claim')}",
         f"Next action: {result.get('next_action')}",
         "",
-        "| Claim | Score | Visual evidence | Title | Word | Recovery | Stage | Impact | Manifest |",
-        "| --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
+        "| Claim | Score | Visual evidence | Images | Usable | Rework | Rework rate | Title | Word | Recovery | Stage | Impact | Manifest |",
+        "| --- | ---: | --- | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- |",
     ]
     for item in result.get("manifests", []):
         recovery = item.get("recommended_recovery") or {}
         lines.append(
             f"| {item.get('quality_claim')} | {item.get('package_quality_score')}/100 | "
-            f"{item.get('visual_evidence_level')} | {item.get('title')} | "
+            f"{item.get('visual_evidence_level')} | "
+            f"{item.get('total_images', 0)} | "
+            f"{item.get('usable_images', 0)} | "
+            f"{item.get('waste_or_rework_images', 0)} | "
+            f"{_format_rate(item.get('waste_or_rework_rate', 0))} | "
+            f"{item.get('title')} | "
             f"{'yes' if item.get('word_canvas_exists') else 'missing'} | "
             f"{recovery.get('label') or recovery.get('action') or ''} | "
             f"{recovery.get('expected_stage') or ''} | "
@@ -252,6 +265,17 @@ def format_markdown(result: dict[str, Any]) -> str:
         for item in result["skipped_roots"]:
             lines.append(f"- `{item.get('root')}`: {item.get('reason')}")
     return "\n".join(lines) + "\n"
+
+
+def _format_rate(value: Any) -> str:
+    try:
+        rate = float(value or 0)
+    except (TypeError, ValueError):
+        rate = 0
+    percent = rate * 100
+    if percent.is_integer():
+        return f"{int(percent)}%"
+    return f"{percent:.1f}%"
 
 
 def main() -> int:
