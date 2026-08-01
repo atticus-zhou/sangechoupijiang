@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.check_no_secrets import SECRET_PATTERNS
 from scripts.export_public_showcase import export_public_showcase
+from scripts.verify_public_docs_readability import _find_suspicious_markers
 
 
 REQUIRED_FILES = {
@@ -63,6 +64,36 @@ def _scan_text_files(root: Path) -> list[str]:
             if pattern.search(content):
                 findings.append(path.relative_to(root).as_posix())
                 break
+    return findings
+
+
+def _scan_text_integrity(root: Path) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    text_suffixes = {".html", ".js", ".json", ".md", ".txt"}
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in text_suffixes:
+            continue
+        relative = path.relative_to(root).as_posix()
+        try:
+            content = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            findings.append(
+                {
+                    "file": relative,
+                    "issue": "utf8_decode_error",
+                    "markers": [str(exc)],
+                }
+            )
+            continue
+        markers = _find_suspicious_markers(content)
+        if markers:
+            findings.append(
+                {
+                    "file": relative,
+                    "issue": "suspicious_text_markers",
+                    "markers": markers,
+                }
+            )
     return findings
 
 
@@ -628,6 +659,11 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         if secret_like_files:
             errors.append("static showcase contains secret-like values: " + ", ".join(secret_like_files))
 
+        text_integrity_findings = _scan_text_integrity(temp_dir)
+        if text_integrity_findings:
+            broken_files = ", ".join(sorted(item["file"] for item in text_integrity_findings))
+            errors.append("static showcase contains unreadable or suspicious text markers: " + broken_files)
+
         index_text = (temp_dir / "index.html").read_text(encoding="utf-8")
         app_text = (temp_dir / "app.js").read_text(encoding="utf-8")
         style_text = (temp_dir / "style.css").read_text(encoding="utf-8")
@@ -749,6 +785,15 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "portfolio_live_check_command": (deploy_manifest.get("live_verification") or {}).get("check_command", ""),
             "portfolio_ci_status": (deploy_manifest.get("ci_verification") or {}).get("status", ""),
             "portfolio_ci_workflow": (deploy_manifest.get("ci_verification") or {}).get("workflow_path", ""),
+            "text_integrity_status": "passed" if not text_integrity_findings else "failed",
+            "text_integrity_scanned_files": len(
+                [
+                    path
+                    for path in temp_dir.rglob("*")
+                    if path.is_file() and path.suffix.lower() in {".html", ".js", ".json", ".md", ".txt"}
+                ]
+            ),
+            "text_integrity_findings": text_integrity_findings,
             "requires_backend": bool(manifest.get("requires_backend")),
             "requires_api_key": bool(manifest.get("requires_api_key")),
             "calls_real_models": bool(manifest.get("calls_real_models")),
@@ -797,6 +842,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",
         f"- Portfolio live verification: {payload.get('portfolio_live_verification_status')} / url={payload.get('portfolio_live_url')} / check={payload.get('portfolio_live_check_command')}",
+        f"- Text integrity: {payload.get('text_integrity_status')} / scanned={payload.get('text_integrity_scanned_files')}",
         f"- Requires backend: {payload.get('requires_backend')}",
         f"- Requires API Key: {payload.get('requires_api_key')}",
         f"- Calls real models: {payload.get('calls_real_models')}",

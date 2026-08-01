@@ -31,6 +31,9 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(summary["requires_api_key"])
         self.assertFalse(summary["calls_real_models"])
         self.assertEqual(summary["download_count"], 6)
+        self.assertEqual(summary["text_integrity_status"], "passed")
+        self.assertGreaterEqual(summary["text_integrity_scanned_files"], 10)
+        self.assertEqual(summary["text_integrity_findings"], [])
 
         manifest = json.loads((self.output_dir / "export-manifest.json").read_text(encoding="utf-8"))
         deploy_manifest = json.loads((self.output_dir / "portfolio-deploy-manifest.json").read_text(encoding="utf-8"))

@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from fastapi.testclient import TestClient
 
+from scripts.verify_public_docs_readability import _find_suspicious_markers
 from src.web.app import app
 
 
@@ -247,6 +248,24 @@ def _sha256(path: Path) -> str:
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _text_integrity_findings(root: Path) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    text_suffixes = {".html", ".js", ".json", ".md", ".txt"}
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in text_suffixes:
+            continue
+        relative = path.relative_to(root).as_posix()
+        try:
+            content = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            findings.append({"file": relative, "issue": "utf8_decode_error", "markers": [str(exc)]})
+            continue
+        markers = _find_suspicious_markers(content)
+        if markers:
+            findings.append({"file": relative, "issue": "suspicious_text_markers", "markers": markers})
+    return findings
 
 
 def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str, Any]:
@@ -501,6 +520,13 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             shutil.rmtree(staging)
         raise
 
+    text_files = [
+        path
+        for path in target.rglob("*")
+        if path.is_file() and path.suffix.lower() in {".html", ".js", ".json", ".md", ".txt"}
+    ]
+    text_integrity_findings = _text_integrity_findings(target)
+
     return {
         "status": "passed",
         "mode": "public_no_key_static_export",
@@ -508,6 +534,9 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
         "entrypoint": str(target / "index.html"),
         "download_count": len(download_records),
         "file_count": len(file_records) + 1,
+        "text_integrity_status": "passed" if not text_integrity_findings else "failed",
+        "text_integrity_scanned_files": len(text_files),
+        "text_integrity_findings": text_integrity_findings,
         "requires_backend": False,
         "requires_api_key": False,
         "calls_real_models": False,
