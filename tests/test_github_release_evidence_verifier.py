@@ -48,6 +48,22 @@ HTML_FALLBACK_PAGE = """
 </html>
 """
 
+COMMIT_CHECKS_PAGE = """
+<html>
+  <head><title>Add public showcase text integrity gate · atticus-zhou/sangechoupijiang@4b5eb51 · GitHub</title></head>
+  <body>
+    <a href="/atticus-zhou/sangechoupijiang/actions/runs/30698472636">
+      <span>Release readiness</span>
+      <span>on: push</span>
+    </a>
+    <svg aria-label="This job succeeded"></svg>
+    <a href="/atticus-zhou/sangechoupijiang/actions/runs/30698472636/job/91365228496">
+      <span>No-key public release gate</span>
+    </a>
+  </body>
+</html>
+"""
+
 
 class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
     def test_verifier_passes_when_latest_run_succeeds_and_artifact_exists(self):
@@ -132,6 +148,31 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertIn("actions?query=branch%3Acodex%2Fcomic-quality-overhaul", payload["public_actions_url"])
         self.assertTrue(any("could not be verified without the GitHub API" in item for item in payload["errors"]))
 
+    def test_verifier_uses_commit_checks_page_when_api_is_rate_limited_and_head_sha_is_given(self):
+        def fake_fetch_text(url, timeout):
+            if "/commit/" in url:
+                return COMMIT_CHECKS_PAGE
+            return HTML_FALLBACK_PAGE
+
+        with (
+            patch(
+                "scripts.verify_github_release_evidence._fetch_json",
+                side_effect=RuntimeError("GitHub API returned HTTP 403: rate limit"),
+            ),
+            patch("scripts.verify_github_release_evidence._fetch_text", side_effect=fake_fetch_text),
+        ):
+            payload = verify_github_release_evidence(head_sha="4b5eb5170112ea6dfea66fc3d7f4ed60dc901f1a")
+
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["verification_source"], "github_commit_checks_html_fallback")
+        self.assertEqual(payload["latest_run"]["run_id"], "30698472636")
+        self.assertEqual(payload["latest_run"]["head_sha"], "4b5eb5170112ea6dfea66fc3d7f4ed60dc901f1a")
+        self.assertEqual(payload["latest_run"]["status"], "completed")
+        self.assertEqual(payload["latest_run"]["conclusion"], "success")
+        self.assertIn("/commit/4b5eb5170112ea6dfea66fc3d7f4ed60dc901f1a/checks", payload["public_commit_checks_url"])
+        self.assertEqual(payload["artifact"], {})
+        self.assertTrue(any("could not be verified without the GitHub API" in item for item in payload["errors"]))
+
     def test_verifier_reports_when_api_and_html_fallback_both_fail(self):
         with (
             patch(
@@ -160,6 +201,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
             "workflow_name": "Release readiness",
             "artifact_name": "no-key-release-evidence",
             "public_actions_url": "https://github.com/atticus-zhou/sangechoupijiang/actions?query=branch%3Acodex%2Fcomic-quality-overhaul",
+            "public_commit_checks_url": "https://github.com/atticus-zhou/sangechoupijiang/commit/4b5eb51/checks",
             "latest_run": {"run_number": 22, "status": "in_progress", "conclusion": None},
             "artifact": {},
             "summary": "fallback",
@@ -170,6 +212,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
 
         self.assertIn("Verification source: `github_actions_html_fallback`", markdown)
         self.assertIn("Public Actions URL: https://github.com/atticus-zhou/sangechoupijiang/actions", markdown)
+        self.assertIn("Public Commit Checks URL: https://github.com/atticus-zhou/sangechoupijiang/commit/4b5eb51/checks", markdown)
 
 
 if __name__ == "__main__":

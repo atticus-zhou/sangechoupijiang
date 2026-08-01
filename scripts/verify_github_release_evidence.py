@@ -75,6 +75,10 @@ def _actions_page_url(owner_repo: str, branch: str) -> str:
     return f"https://github.com/{owner_repo}/actions?query=branch%3A{quote(branch, safe='')}"
 
 
+def _commit_checks_url(owner_repo: str, head_sha: str) -> str:
+    return f"https://github.com/{owner_repo}/commit/{quote(head_sha, safe='')}/checks"
+
+
 def _first_match(pattern: str, text: str, default: str = "") -> str:
     match = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
     return html.unescape(match.group(1)).strip() if match else default
@@ -143,6 +147,56 @@ def _parse_public_actions_html(
     return candidates[0]
 
 
+def _parse_public_commit_checks_html(
+    html_text: str,
+    *,
+    owner_repo: str,
+    branch: str,
+    workflow_name: str,
+    head_sha: str,
+) -> dict[str, Any]:
+    decoded = html.unescape(html_text)
+    workflow_match = re.search(
+        rf'href="/{re.escape(owner_repo)}/actions/runs/(\d+)"[^>]*>\s*<span>\s*{re.escape(workflow_name)}\s*</span>',
+        decoded,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not workflow_match:
+        return {}
+
+    run_id = workflow_match.group(1)
+    context_start = max(0, workflow_match.start() - 4500)
+    context_end = min(len(decoded), workflow_match.end() + 6500)
+    context = decoded[context_start:context_end]
+    lower_context = context.lower()
+    job_succeeded = "this job succeeded" in lower_context or "succeeded" in lower_context
+    job_failed = "this job failed" in lower_context or "failed" in lower_context
+    in_progress = any(marker in lower_context for marker in ("in progress", "queued", "requested", "waiting"))
+    title = _first_match(r"<title>\s*([^·<]+)", decoded)
+    if not title:
+        title = _first_match(r"<h1[^>]*>\s*([^<]+)", decoded)
+    job_url = _first_match(
+        rf'href="(/{re.escape(owner_repo)}/actions/runs/{re.escape(run_id)}/job/\d+)"',
+        context,
+    )
+
+    status = "completed" if job_succeeded or job_failed else ("in_progress" if in_progress else "unknown_from_html")
+    conclusion = "success" if job_succeeded else ("failure" if job_failed else None)
+    return {
+        "run_number": None,
+        "run_id": run_id,
+        "display_title": title,
+        "head_sha": head_sha,
+        "status": status,
+        "conclusion": conclusion,
+        "html_url": f"https://github.com/{owner_repo}/actions/runs/{run_id}",
+        "job_url": f"https://github.com{job_url}" if job_url else "",
+        "created_at": "",
+        "updated_at": "",
+        "branch": branch,
+    }
+
+
 def _html_fallback_payload(
     *,
     repo: str,
@@ -151,6 +205,7 @@ def _html_fallback_payload(
     artifact_name: str,
     timeout: float,
     api_error: str,
+    head_sha: str = "",
 ) -> dict[str, Any]:
     owner_repo = repo.strip("/")
     public_url = _actions_page_url(owner_repo, branch)
@@ -175,6 +230,26 @@ def _html_fallback_payload(
         branch=branch,
         workflow_name=workflow_name,
     )
+    verification_source = "github_actions_html_fallback"
+    commit_checks_url = _commit_checks_url(owner_repo, head_sha) if head_sha else ""
+    if head_sha:
+        try:
+            checks_html = _fetch_text(commit_checks_url, timeout=timeout)
+            commit_latest = _parse_public_commit_checks_html(
+                checks_html,
+                owner_repo=owner_repo,
+                branch=branch,
+                workflow_name=workflow_name,
+                head_sha=head_sha,
+            )
+            if commit_latest:
+                latest = commit_latest
+                verification_source = "github_commit_checks_html_fallback"
+            else:
+                errors.append(f"public commit checks page did not expose {workflow_name!r} for {head_sha}")
+        except RuntimeError as exc:
+            errors.append(str(exc))
+
     if not latest:
         errors.append(f"public Actions page did not expose a run for {workflow_name!r} on branch {branch!r}")
     else:
@@ -187,12 +262,13 @@ def _html_fallback_payload(
     return {
         "status": "failed",
         "mode": "github_no_key_release_evidence",
-        "verification_source": "github_actions_html_fallback",
+        "verification_source": verification_source,
         "repo": owner_repo,
         "branch": branch,
         "workflow_name": workflow_name,
         "artifact_name": artifact_name,
         "public_actions_url": public_url,
+        "public_commit_checks_url": commit_checks_url,
         "latest_run": latest,
         "artifact": {},
         "summary": (
@@ -210,6 +286,7 @@ def verify_github_release_evidence(
     workflow_name: str = DEFAULT_WORKFLOW,
     artifact_name: str = DEFAULT_ARTIFACT,
     timeout: float = 20.0,
+    head_sha: str = "",
 ) -> dict[str, Any]:
     errors: list[str] = []
     owner_repo = repo.strip("/")
@@ -230,6 +307,7 @@ def verify_github_release_evidence(
             artifact_name=artifact_name,
             timeout=timeout,
             api_error=str(exc),
+            head_sha=head_sha,
         )
 
     runs = [
@@ -276,6 +354,7 @@ def verify_github_release_evidence(
         "workflow_name": workflow_name,
         "artifact_name": artifact_name,
         "public_actions_url": _actions_page_url(owner_repo, branch),
+        "public_commit_checks_url": _commit_checks_url(owner_repo, head_sha) if head_sha else "",
         "latest_run": {
             "run_number": latest.get("run_number"),
             "display_title": latest.get("display_title", ""),
@@ -311,6 +390,7 @@ def _failed_payload(
     *,
     verification_source: str = "github_api",
     public_actions_url: str = "",
+    public_commit_checks_url: str = "",
 ) -> dict[str, Any]:
     return {
         "status": "failed",
@@ -321,6 +401,7 @@ def _failed_payload(
         "workflow_name": workflow_name,
         "artifact_name": artifact_name,
         "public_actions_url": public_actions_url,
+        "public_commit_checks_url": public_commit_checks_url,
         "latest_run": {},
         "artifact": {},
         "summary": "GitHub release evidence is not ready yet.",
@@ -340,6 +421,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"Repository: `{payload.get('repo')}`",
         f"Branch: `{payload.get('branch')}`",
         f"Public Actions URL: {payload.get('public_actions_url') or '-'}",
+        f"Public Commit Checks URL: {payload.get('public_commit_checks_url') or '-'}",
         f"Summary: {payload.get('summary')}",
         "",
         "## Latest Run",
@@ -372,6 +454,7 @@ def main() -> int:
     parser.add_argument("--branch", default=DEFAULT_BRANCH, help="Branch to inspect.")
     parser.add_argument("--workflow", default=DEFAULT_WORKFLOW, help="Workflow display name.")
     parser.add_argument("--artifact", default=DEFAULT_ARTIFACT, help="Required artifact name.")
+    parser.add_argument("--head-sha", default="", help="Optional commit SHA used for public commit-checks HTML fallback.")
     parser.add_argument("--timeout", type=float, default=20.0)
     parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
     args = parser.parse_args()
@@ -382,6 +465,7 @@ def main() -> int:
         workflow_name=args.workflow,
         artifact_name=args.artifact,
         timeout=args.timeout,
+        head_sha=args.head_sha,
     )
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
