@@ -249,6 +249,89 @@ def _matrix_checks() -> list[dict[str, Any]]:
     ]
 
 
+def _group_departments_by_capability(departments: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for department in departments:
+        kind = str(department.get("required_capability") or "unknown")
+        grouped.setdefault(kind, []).append(
+            {
+                "department_id": department.get("department_id", ""),
+                "display_name": department.get("display_name", ""),
+                "human_test_label": department.get("human_test_label", ""),
+                "missing_impact": department.get("missing_impact", ""),
+                "required_for": list(department.get("required_for") or []),
+            }
+        )
+    return grouped
+
+
+def _office_model_setup_summary(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+    capability_kinds = matrix.get("capability_kinds") or {}
+    for office_id, office in sorted((matrix.get("offices") or {}).items()):
+        departments = list(office.get("departments") or [])
+        grouped = _group_departments_by_capability(departments)
+        capability_counts = {kind: len(items) for kind, items in grouped.items()}
+        summaries.append(
+            {
+                "office_id": office_id,
+                "office_name": office.get("office_name", office_id),
+                "minimum_mode": office.get("minimum_mode", ""),
+                "full_mode": office.get("full_mode", ""),
+                "department_count": len(departments),
+                "capability_counts": capability_counts,
+                "departments_by_capability": grouped,
+                "requires_image_generation": "image_generation" in grouped,
+                "requires_vision_understanding": "vision_understanding" in grouped,
+                "requires_browser_or_human_evidence": "browser_or_human_evidence" in grouped,
+                "minimum_ready_when": office.get("minimum_ready_when", ""),
+                "full_ready_when": office.get("full_ready_when", ""),
+                "capability_labels": {
+                    kind: (capability_kinds.get(kind) or {}).get("label", kind)
+                    for kind in grouped
+                },
+            }
+        )
+    return summaries
+
+
+def _comic_setup_ladder(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    comic = (matrix.get("offices") or {}).get("comic_production") or {}
+    grouped = _group_departments_by_capability(list(comic.get("departments") or []))
+    text_departments = [item["department_id"] for item in grouped.get("text", [])]
+    image_departments = [item["department_id"] for item in grouped.get("image_generation", [])]
+    vision_departments = [item["department_id"] for item in grouped.get("vision_understanding", [])]
+    return [
+        {
+            "level": "no_key_demo",
+            "requires_api_key": False,
+            "required_departments": [],
+            "can_do": "查看公开固定样例、下载示例交付物、理解产品流程边界。",
+            "ready_when": "public demo/static showcase gates pass; no real model calls and no real user keys.",
+        },
+        {
+            "level": "minimum_text",
+            "requires_api_key": True,
+            "required_departments": text_departments,
+            "can_do": comic.get(
+                "minimum_ready_when",
+                "完成故事、资产、镜头和提示词包的文本规划。",
+            ),
+            "missing_impact": "缺少这些文本部门时，用户会在聊故事、拆资产、提示词规划或 Word 文案阶段卡住。",
+        },
+        {
+            "level": "full_comic_production",
+            "requires_api_key": True,
+            "required_departments": image_departments + vision_departments,
+            "can_do": comic.get(
+                "full_ready_when",
+                "生成基础资产图、执行视觉质检，并输出完整 Word 制片画布。",
+            ),
+            "missing_impact": "缺少工部或刑部时，可以保留文本制片包，但不能宣称完成真实图片生产和视觉质检。",
+        },
+    ]
+
+
 def verify_model_configuration_guidance() -> dict[str, Any]:
     results: list[dict[str, Any]] = []
     failures: list[str] = []
@@ -278,6 +361,7 @@ def verify_model_configuration_guidance() -> dict[str, Any]:
         if item["status"] != "passed":
             failures.append(item["id"])
         results.append(item)
+    matrix_payload = json.loads(MATRIX.read_text(encoding="utf-8")) if MATRIX.exists() else {}
     return {
         "status": "passed" if not failures else "failed",
         "mode": "model_configuration_guidance",
@@ -288,6 +372,8 @@ def verify_model_configuration_guidance() -> dict[str, Any]:
         ),
         "checks": results,
         "failures": failures,
+        "office_model_setup_summary": _office_model_setup_summary(matrix_payload),
+        "comic_setup_ladder": _comic_setup_ladder(matrix_payload),
     }
 
 
@@ -314,6 +400,56 @@ def format_markdown(payload: dict[str, Any]) -> str:
             lines.append(
                 f"- {item.get('id')}: missing_file={item.get('missing_file')}; "
                 f"missing_markers={item.get('missing_markers')}"
+            )
+    summaries = payload.get("office_model_setup_summary") or []
+    if summaries:
+        lines.extend(["", "## Office Model Setup Summary", ""])
+        for office in summaries:
+            counts = ", ".join(
+                f"{kind}={count}"
+                for kind, count in sorted((office.get("capability_counts") or {}).items())
+            )
+            lines.extend(
+                [
+                    f"### {office.get('office_name')} (`{office.get('office_id')}`)",
+                    "",
+                    f"- Minimum mode: `{office.get('minimum_mode')}`",
+                    f"- Full mode: `{office.get('full_mode')}`",
+                    f"- Departments: `{office.get('department_count')}`; capabilities: {counts}",
+                    f"- Minimum ready when: {office.get('minimum_ready_when')}",
+                    f"- Full ready when: {office.get('full_ready_when')}",
+                    "",
+                    "| Capability | Departments | Human test | Missing impact |",
+                    "| --- | --- | --- | --- |",
+                ]
+            )
+            for kind, departments in sorted((office.get("departments_by_capability") or {}).items()):
+                labels = office.get("capability_labels") or {}
+                department_names = "、".join(
+                    f"{item.get('display_name')} `{item.get('department_id')}`"
+                    for item in departments
+                )
+                tests = "；".join(item.get("human_test_label", "") for item in departments)
+                impacts = "；".join(item.get("missing_impact", "") for item in departments)
+                lines.append(
+                    f"| {labels.get(kind, kind)} `{kind}` | {department_names} | {tests} | {impacts} |"
+                )
+            lines.append("")
+    ladder = payload.get("comic_setup_ladder") or []
+    if ladder:
+        lines.extend(["## AI Comic Setup Ladder", ""])
+        for item in ladder:
+            departments = ", ".join(item.get("required_departments") or []) or "none"
+            lines.extend(
+                [
+                    f"### `{item.get('level')}`",
+                    "",
+                    f"- Requires API key: `{item.get('requires_api_key')}`",
+                    f"- Required departments: {departments}",
+                    f"- Can do: {item.get('can_do')}",
+                    f"- Missing impact: {item.get('missing_impact', item.get('ready_when', ''))}",
+                    "",
+                ]
             )
     return "\n".join(lines) + "\n"
 

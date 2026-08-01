@@ -36,6 +36,52 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertIn("Model Configuration Guidance Audit", completed.stdout)
         self.assertIn("Model configuration guide exists", completed.stdout)
         self.assertIn("config.example.yaml", completed.stdout)
+        self.assertIn("Office Model Setup Summary", completed.stdout)
+        self.assertIn("AI Comic Setup Ladder", completed.stdout)
+        self.assertIn("minimum_text", completed.stdout)
+        self.assertIn("full_comic_production", completed.stdout)
+        self.assertIn("browser_or_human_evidence", completed.stdout)
+
+    def test_payload_explains_office_model_setup_summary(self):
+        module = self._module()
+        payload = module.verify_model_configuration_guidance()
+
+        summaries = {
+            item["office_id"]: item
+            for item in payload["office_model_setup_summary"]
+        }
+        self.assertIn("comic_production", summaries)
+        self.assertIn("research", summaries)
+
+        comic = summaries["comic_production"]
+        self.assertGreaterEqual(comic["capability_counts"]["text"], 6)
+        self.assertEqual(comic["capability_counts"]["image_generation"], 1)
+        self.assertEqual(comic["capability_counts"]["vision_understanding"], 1)
+        self.assertTrue(comic["requires_image_generation"])
+        self.assertTrue(comic["requires_vision_understanding"])
+
+        research = summaries["research"]
+        self.assertEqual(research["capability_counts"]["browser_or_human_evidence"], 1)
+        self.assertEqual(research["capability_counts"]["vision_understanding"], 1)
+        self.assertTrue(research["requires_browser_or_human_evidence"])
+
+    def test_comic_setup_ladder_distinguishes_minimum_and_full_production(self):
+        module = self._module()
+        payload = module.verify_model_configuration_guidance()
+
+        ladder = {item["level"]: item for item in payload["comic_setup_ladder"]}
+        self.assertEqual(
+            list(ladder),
+            ["no_key_demo", "minimum_text", "full_comic_production"],
+        )
+        self.assertFalse(ladder["no_key_demo"]["requires_api_key"])
+        self.assertTrue(ladder["minimum_text"]["requires_api_key"])
+        self.assertIn("zhongshu", ladder["minimum_text"]["required_departments"])
+        self.assertIn("bingbu", ladder["minimum_text"]["required_departments"])
+        self.assertNotIn("gongbu", ladder["minimum_text"]["required_departments"])
+        self.assertNotIn("xingbu", ladder["minimum_text"]["required_departments"])
+        self.assertIn("gongbu", ladder["full_comic_production"]["required_departments"])
+        self.assertIn("xingbu", ladder["full_comic_production"]["required_departments"])
 
     def test_guide_distinguishes_minimum_and_full_comic_setup(self):
         text = Path("docs/MODEL_CONFIGURATION.md").read_text(encoding="utf-8")

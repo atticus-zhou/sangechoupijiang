@@ -344,7 +344,12 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"readme_linked={parsed.get('readme_links_status')}"
             )
         if check_id == "model_guidance":
-            return f"checks={len(parsed.get('checks') or [])}; mode={parsed.get('mode')}"
+            return (
+                f"checks={len(parsed.get('checks') or [])}; "
+                f"offices={len(parsed.get('office_model_setup_summary') or [])}; "
+                f"comic_ladder={len(parsed.get('comic_setup_ladder') or [])}; "
+                f"mode={parsed.get('mode')}"
+            )
         if check_id == "public_docs_readability":
             return (
                 f"docs={parsed.get('passed_count')}/{parsed.get('doc_count')}; "
