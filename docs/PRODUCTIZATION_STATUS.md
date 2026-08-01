@@ -124,6 +124,18 @@ The release gate also surfaces the same evidence through the
 `future_schema_validators` platform backlog item for the current registered
 offices while keeping the rule mandatory for every later office.
 
+## Office Recovery Registry Evidence
+
+Future offices must not only list `recovery_actions`; each action must explain
+what a retry preserves, what it clears, and which scoped API action performs the
+retry. This is now checked by
+`python scripts/verify_office_recovery_registry.py --format markdown`.
+
+The release gate surfaces the same evidence through the
+`Office Recovery Registry Audit` section and the `recovery_bindings` summary.
+This closes the `future_recovery_events` platform backlog item for the current
+registered offices while keeping the rule mandatory for later offices.
+
 ## Comic Asset Requirement Matrix
 
 The AI comic production office is not considered downstream-ready when it only

@@ -8,6 +8,7 @@ use it to explain what is happening without mutating the workflow.
 from __future__ import annotations
 
 from src.offices import get_office
+from src.office_recovery_registry import enriched_recovery_actions
 
 
 TERMINAL_STATUSES = {"completed", "failed", "interrupted", "cancelled"}
@@ -38,7 +39,7 @@ def build_office_runtime_status(config_manager, workspace_id: str) -> dict:
         "artifact_progress": _artifact_progress(office.artifact_types, artifacts),
         "downloadable_artifacts": _downloadable_artifacts(artifacts),
         "human_checkpoints": office.human_checkpoints,
-        "recovery_actions": office.recovery_actions,
+        "recovery_actions": enriched_recovery_actions(office.id),
         "stage_lanes": _stage_lanes(office),
         "next_action": _next_action(active_task, office, artifacts),
     }
@@ -160,7 +161,7 @@ def _stage_lanes(office) -> list[dict]:
                 "required": bool(checkpoint.get("required")),
             }
         )
-    for action in office.recovery_actions:
+    for action in enriched_recovery_actions(office.id):
         lanes.append(
             {
                 "id": action.get("stage", ""),

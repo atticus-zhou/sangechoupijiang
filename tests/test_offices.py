@@ -9,6 +9,7 @@ from src.offices import (
     list_offices,
 )
 from src.office_schema_registry import audit_office_schema_gate_registry
+from src.office_recovery_registry import audit_office_recovery_registry
 
 
 class OfficeProfileTests(unittest.TestCase):
@@ -128,6 +129,9 @@ class OfficeProfileTests(unittest.TestCase):
         schema_registry = audit_office_schema_gate_registry()
         self.assertEqual(schema_registry["status"], "passed")
         self.assertEqual(schema_registry["binding_count"], schema_registry["passed_binding_count"])
+        recovery_registry = audit_office_recovery_registry()
+        self.assertEqual(recovery_registry["status"], "passed")
+        self.assertEqual(recovery_registry["binding_count"], recovery_registry["passed_binding_count"])
 
     def test_comic_production_launch_gate_audit_covers_required_gates(self):
         template = list_office_creation_template()

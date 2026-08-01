@@ -95,6 +95,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_office_schema_registry.py", "--format", "json"],
     },
     {
+        "id": "office_recovery_registry",
+        "title": "Office recovery registry",
+        "command": ["scripts/verify_office_recovery_registry.py", "--format", "json"],
+    },
+    {
         "id": "office_isolation",
         "title": "Office isolation",
         "command": ["scripts/verify_office_isolation.py", "--format", "json"],
@@ -240,6 +245,12 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"bindings={parsed.get('passed_binding_count')}/{parsed.get('binding_count')}; "
                 f"errors={parsed.get('error_count')}"
             )
+        if check_id == "office_recovery_registry":
+            return (
+                f"offices={','.join(parsed.get('offices_with_actions') or [])}; "
+                f"bindings={parsed.get('passed_binding_count')}/{parsed.get('binding_count')}; "
+                f"errors={parsed.get('error_count')}"
+            )
         if check_id == "comic_handoff_inventory":
             return (
                 f"manifests={parsed.get('manifest_count')}; "
@@ -265,13 +276,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             demo_contract = parsed.get("required_demo_contract") or []
             starter = parsed.get("starter_checklist_audit") or {}
             schema_registry = parsed.get("schema_registry_audit") or {}
+            recovery_registry = parsed.get("recovery_registry_audit") or {}
             return (
                 f"primary={','.join(parsed.get('primary_office_ids') or [])}; "
                 f"offices={len(parsed.get('offices') or [])}; "
                 f"demo_contract={len(demo_contract)}; "
                 f"starter={starter.get('status')}; "
                 f"starter_items={starter.get('count')}; "
-                f"schema_bindings={schema_registry.get('passed_binding_count')}/{schema_registry.get('binding_count')}"
+                f"schema_bindings={schema_registry.get('passed_binding_count')}/{schema_registry.get('binding_count')}; "
+                f"recovery_bindings={recovery_registry.get('passed_binding_count')}/{recovery_registry.get('binding_count')}"
             )
         if check_id == "office_isolation":
             checks = parsed.get("checks") or []
