@@ -30,6 +30,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_model_configuration_guidance.py", "--format", "json"],
     },
     {
+        "id": "development_checklist",
+        "title": "Developer post-change checklist",
+        "command": ["scripts/verify_development_checklist.py", "--format", "json", "--skip-release"],
+    },
+    {
         "id": "public_docs_readability",
         "title": "Public docs readability",
         "command": ["scripts/verify_public_docs_readability.py", "--format", "json"],
@@ -348,6 +353,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"checks={len(parsed.get('checks') or [])}; "
                 f"offices={len(parsed.get('office_model_setup_summary') or [])}; "
                 f"comic_ladder={len(parsed.get('comic_setup_ladder') or [])}; "
+                f"mode={parsed.get('mode')}"
+            )
+        if check_id == "development_checklist":
+            return (
+                f"checks={len(parsed.get('checks') or [])}; "
+                f"changed_files={parsed.get('changed_files')}; "
+                f"skip_release={parsed.get('skip_release')}; "
                 f"mode={parsed.get('mode')}"
             )
         if check_id == "public_docs_readability":

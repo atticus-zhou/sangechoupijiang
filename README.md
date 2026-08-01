@@ -306,6 +306,12 @@ python -m unittest discover -s tests -q
 python scripts/verify_development_checklist.py --format markdown
 ```
 
+总发布门禁也会自动运行轻量版开发检查：
+
+```powershell
+python scripts/verify_development_checklist.py --format json --skip-release
+```
+
 公开交接或大范围重构前，再跑更严格版本：
 
 ```powershell

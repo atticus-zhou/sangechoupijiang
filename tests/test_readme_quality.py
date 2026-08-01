@@ -169,6 +169,7 @@ class ReadmeQualityTests(unittest.TestCase):
         text = Path("README.md").read_text(encoding="utf-8")
 
         self.assertIn("python scripts/verify_development_checklist.py --format markdown", text)
+        self.assertIn("python scripts/verify_development_checklist.py --format json --skip-release", text)
         self.assertIn("python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean", text)
         self.assertIn("python -m unittest discover -s tests -q", text)
 

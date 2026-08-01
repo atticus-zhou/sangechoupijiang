@@ -31,6 +31,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "first_run",
                 "productization_status",
                 "model_guidance",
+                "development_checklist",
                 "public_docs_readability",
                 "public_demo",
                 "static_showcase_export",
@@ -63,6 +64,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         model_guidance = next(item for item in payload["checks"] if item["id"] == "model_guidance")
         self.assertIn("offices=2", model_guidance["summary"])
         self.assertIn("comic_ladder=3", model_guidance["summary"])
+        development_checklist = next(item for item in payload["checks"] if item["id"] == "development_checklist")
+        self.assertIn("checks=6", development_checklist["summary"])
+        self.assertIn("skip_release=True", development_checklist["summary"])
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("fast_review=5/5", public_demo["summary"])
         self.assertIn("reading_guide=", public_demo["summary"])
@@ -177,6 +181,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Productization objective coverage", completed.stdout)
         self.assertIn("Model configuration guidance", completed.stdout)
         self.assertIn("offices=2; comic_ladder=3", completed.stdout)
+        self.assertIn("Developer post-change checklist", completed.stdout)
+        self.assertIn("skip_release=True", completed.stdout)
         self.assertIn("Public docs readability", completed.stdout)
         self.assertIn("Backend-free static showcase export", completed.stdout)
         self.assertIn("Portfolio showcase copy sync", completed.stdout)
