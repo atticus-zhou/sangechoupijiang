@@ -185,6 +185,17 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("public showcase must not claim real comic production verification from demo inventory")
     if not handoff_inventory.get("safe_public_claim"):
         errors.append("portfolio embed handoff inventory must include a safe public claim")
+    if handoff_inventory.get("demo_only_count", 0) > 0:
+        if handoff_inventory.get("image_quality_item_count", 0) <= 0:
+            errors.append("portfolio embed handoff inventory must summarize image quality items")
+        if handoff_inventory.get("total_images", 0) <= 0:
+            errors.append("portfolio embed handoff inventory must summarize total images")
+        if "usable_images" not in handoff_inventory:
+            errors.append("portfolio embed handoff inventory must summarize usable images")
+        if "waste_or_rework_images" not in handoff_inventory:
+            errors.append("portfolio embed handoff inventory must summarize waste/rework images")
+        if "waste_or_rework_rate" not in handoff_inventory:
+            errors.append("portfolio embed handoff inventory must summarize waste/rework rate")
     if real_production_claim.get("uri") != "/api/demo/comic-production/claim-report":
         errors.append("portfolio embed must expose the comic real production claim report endpoint")
     if real_production_claim.get("claim_level") != "demo_structure_only":
@@ -362,6 +373,11 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "handoff_inventory_uri": handoff_inventory.get("uri", ""),
         "handoff_inventory_manifest_count": handoff_inventory.get("manifest_count", 0),
         "handoff_inventory_production_verified_count": handoff_inventory.get("production_verified_count", 0),
+        "handoff_inventory_image_quality_item_count": handoff_inventory.get("image_quality_item_count", 0),
+        "handoff_inventory_total_images": handoff_inventory.get("total_images", 0),
+        "handoff_inventory_usable_images": handoff_inventory.get("usable_images", 0),
+        "handoff_inventory_waste_or_rework_images": handoff_inventory.get("waste_or_rework_images", 0),
+        "handoff_inventory_waste_or_rework_rate": handoff_inventory.get("waste_or_rework_rate", 0),
         "handoff_inventory_safe_public_claim": handoff_inventory.get("safe_public_claim", ""),
         "real_production_claim_uri": real_production_claim.get("uri", ""),
         "real_production_claim_level": real_production_claim.get("claim_level", ""),
@@ -409,8 +425,34 @@ def verify_public_demo_mode() -> dict[str, Any]:
         item for item in inventory_items
         if (item.get("recommended_recovery") or {}).get("action")
     ]
+    inventory_image_items = [
+        item for item in inventory_items
+        if isinstance(item.get("image_quality_summary"), dict)
+    ]
+    inventory_total_images = sum(int((item.get("image_quality_summary") or {}).get("total_images") or 0) for item in inventory_image_items)
+    inventory_usable_images = sum(int((item.get("image_quality_summary") or {}).get("usable_images") or 0) for item in inventory_image_items)
+    inventory_waste_images = sum(int((item.get("image_quality_summary") or {}).get("waste_or_rework_images") or 0) for item in inventory_image_items)
+    inventory_waste_rate = (
+        inventory_waste_images / inventory_total_images
+        if inventory_total_images
+        else 0
+    )
     if inventory_payload.get("demo_only_count", 0) > 0 and not inventory_recovery_items:
         errors.append("comic handoff inventory demo-only items must expose recovery actions")
+    if inventory_payload.get("demo_only_count", 0) > 0 and not inventory_image_items:
+        errors.append("comic handoff inventory demo-only items must expose image quality summaries")
+    for item in inventory_items:
+        image_summary = item.get("image_quality_summary") or {}
+        if not image_summary:
+            errors.append(f"comic handoff inventory item missing image quality summary: {item.get('title') or item.get('quality_claim')}")
+            continue
+        for field in ("total_images", "usable_images", "waste_or_rework_images", "waste_or_rework_rate"):
+            if field not in image_summary:
+                errors.append(f"comic handoff inventory item image summary missing {field}: {item.get('title') or item.get('quality_claim')}")
+        if "failed_image_ids" not in image_summary or not isinstance(image_summary.get("failed_image_ids"), list):
+            errors.append(f"comic handoff inventory item image summary missing failed_image_ids: {item.get('title') or item.get('quality_claim')}")
+        if "rework_action_summary" not in image_summary or not isinstance(image_summary.get("rework_action_summary"), list):
+            errors.append(f"comic handoff inventory item image summary missing rework_action_summary: {item.get('title') or item.get('quality_claim')}")
     for item in inventory_recovery_items:
         recovery = item.get("recommended_recovery") or {}
         if not recovery.get("expected_stage") or not recovery.get("preserves") or not recovery.get("clears"):
@@ -553,6 +595,11 @@ def verify_public_demo_mode() -> dict[str, Any]:
                 for item in inventory_recovery_items
                 if (item.get("recommended_recovery") or {}).get("expected_stage")
             }),
+            "image_quality_item_count": len(inventory_image_items),
+            "total_images": inventory_total_images,
+            "usable_images": inventory_usable_images,
+            "waste_or_rework_images": inventory_waste_images,
+            "waste_or_rework_rate": inventory_waste_rate,
         },
         "comic_real_production_claim": {
             "status_code": claim_response.status_code,

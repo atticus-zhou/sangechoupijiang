@@ -84,10 +84,34 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertTrue(all(item["expected_stage"] == "image_generation" for item in demo_recoveries))
         self.assertTrue(all("story_contract" in item["preserves"] for item in demo_recoveries))
         self.assertTrue(all("fixture_images" in item["clears"] for item in demo_recoveries))
+        image_totals = {
+            "total": sum(item["total_images"] for item in handoff_inventory["items"]),
+            "usable": sum(item["usable_images"] for item in handoff_inventory["items"]),
+            "rework": sum(item["waste_or_rework_images"] for item in handoff_inventory["items"]),
+        }
+        self.assertEqual(image_totals["total"], 28)
+        self.assertEqual(image_totals["usable"], 21)
+        self.assertEqual(image_totals["rework"], 7)
+        demo_items = [
+            item
+            for item in handoff_inventory["items"]
+            if item["quality_claim"] == "demo_structure_verified"
+        ]
+        self.assertTrue(demo_items)
+        self.assertTrue(any(item["usable_images"] == 7 for item in demo_items))
+        self.assertTrue(any(item["waste_or_rework_images"] == 7 for item in demo_items))
+        self.assertTrue(all("image_quality_summary" in item for item in demo_items))
+        self.assertTrue(all(isinstance(item["failed_image_ids"], list) for item in demo_items))
+        self.assertTrue(all(isinstance(item["rework_action_summary"], list) for item in demo_items))
         demos = {item["office_id"]: item for item in showcase["featured_demos"]}
         comic_benchmark = demos["comic_production"]["quality_benchmark"]
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
         self.assertFalse(comic_benchmark["production_quality_verified"])
+        image_quality = comic_benchmark["image_quality_summary"]
+        self.assertEqual(image_quality["total_images"], 7)
+        self.assertEqual(image_quality["usable_images"], 0)
+        self.assertEqual(image_quality["waste_or_rework_images"], 7)
+        self.assertEqual(image_quality["waste_or_rework_rate"], 1)
         prompt_quality = comic_benchmark["prompt_quality_summary"]
         self.assertEqual(prompt_quality["status"], "ready")
         self.assertEqual(prompt_quality["clean_asset_prompt_count"], 7)

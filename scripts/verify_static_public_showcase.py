@@ -315,6 +315,16 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 recovery = item.get("recommended_recovery") or {}
                 if not recovery.get("expected_stage") or not recovery.get("preserves") or not recovery.get("clears"):
                     errors.append(f"static comic handoff recovery item is incomplete: {item.get('title') or item.get('quality_claim')}")
+                image_summary = item.get("image_quality_summary") or {}
+                if not image_summary:
+                    errors.append(f"static comic handoff inventory must expose image quality summary: {item.get('title') or item.get('quality_claim')}")
+                for marker in ("total_images", "usable_images", "waste_or_rework_images", "waste_or_rework_rate"):
+                    if marker not in image_summary or marker not in item:
+                        errors.append(f"static comic handoff inventory image quality is missing {marker}: {item.get('title') or item.get('quality_claim')}")
+                if not isinstance(item.get("failed_image_ids"), list):
+                    errors.append(f"static comic handoff inventory failed_image_ids must be a list: {item.get('title') or item.get('quality_claim')}")
+                if not isinstance(item.get("rework_action_summary"), list):
+                    errors.append(f"static comic handoff inventory rework_action_summary must be a list: {item.get('title') or item.get('quality_claim')}")
         for item in download_catalog:
             local_uri = str(item.get("local_uri") or "")
             path = temp_dir / local_uri

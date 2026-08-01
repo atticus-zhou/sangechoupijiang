@@ -66,6 +66,11 @@ class PublicDemoVerifierTests(unittest.TestCase):
             "/api/demo/comic-production/handoff-inventory",
         )
         self.assertEqual(payload["showcase_manifest"]["handoff_inventory_production_verified_count"], 0)
+        self.assertEqual(payload["showcase_manifest"]["handoff_inventory_image_quality_item_count"], 4)
+        self.assertEqual(payload["showcase_manifest"]["handoff_inventory_total_images"], 28)
+        self.assertEqual(payload["showcase_manifest"]["handoff_inventory_usable_images"], 21)
+        self.assertEqual(payload["showcase_manifest"]["handoff_inventory_waste_or_rework_images"], 7)
+        self.assertEqual(payload["showcase_manifest"]["handoff_inventory_waste_or_rework_rate"], 0.25)
         self.assertIn("真实模型质量", payload["showcase_manifest"]["handoff_inventory_safe_public_claim"])
         self.assertEqual(
             payload["showcase_manifest"]["real_production_claim_uri"],
@@ -84,6 +89,11 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["recovery_item_count"], 1)
         self.assertIn("regenerate_images", payload["comic_handoff_inventory"]["recovery_actions"])
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["recovery_stage_count"], 1)
+        self.assertGreaterEqual(payload["comic_handoff_inventory"]["image_quality_item_count"], 1)
+        self.assertEqual(payload["comic_handoff_inventory"]["total_images"], 28)
+        self.assertGreaterEqual(payload["comic_handoff_inventory"]["usable_images"], 7)
+        self.assertEqual(payload["comic_handoff_inventory"]["waste_or_rework_images"], 7)
+        self.assertEqual(payload["comic_handoff_inventory"]["waste_or_rework_rate"], 0.25)
         self.assertEqual(payload["comic_real_production_claim"]["status_code"], 200)
         self.assertEqual(payload["comic_real_production_claim"]["claim_level"], "demo_structure_only")
         self.assertFalse(payload["comic_real_production_claim"]["can_claim_real_quality"])

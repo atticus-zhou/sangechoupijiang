@@ -111,6 +111,30 @@
           '真实通过 ' + text(inventory.production_verified_count || 0) + ' 份'
         ));
       }
+      if (demo.office_id === 'comic_production') {
+        const inventoryImageSummary = {
+          total_images: inventory.total_images,
+          usable_images: inventory.usable_images,
+          waste_or_rework_rate: inventory.waste_or_rework_rate,
+        };
+        const imageSummary = Number(inventoryImageSummary.total_images || 0) > 0
+          ? inventoryImageSummary
+          : (benchmark.image_quality_summary || {});
+        if (imageSummary.total_images !== undefined) {
+          meta.appendChild(element(
+            'span',
+            'status-pill',
+            '图片 ' + text(imageSummary.usable_images || 0) + '/'
+              + text(imageSummary.total_images || 0) + ' 可用'
+          ));
+          meta.appendChild(element(
+            'span',
+            'status-pill',
+            '返工率 '
+              + text(Math.round(Number(imageSummary.waste_or_rework_rate || 0) * 100)) + '%'
+          ));
+        }
+      }
       card.appendChild(meta);
 
       const proof = element('ul', 'proof-list');

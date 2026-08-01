@@ -602,6 +602,13 @@ async def get_comic_production_handoff_inventory_demo_api():
             "asset_count": item.get("asset_count", 0),
             "image_count": item.get("image_count", 0),
             "shot_count": item.get("shot_count", 0),
+            "image_quality_summary": item.get("image_quality_summary", {}),
+            "total_images": item.get("total_images", 0),
+            "usable_images": item.get("usable_images", 0),
+            "waste_or_rework_images": item.get("waste_or_rework_images", 0),
+            "waste_or_rework_rate": item.get("waste_or_rework_rate", 0),
+            "failed_image_ids": item.get("failed_image_ids", []),
+            "rework_action_summary": item.get("rework_action_summary", []),
             "recommended_recovery": item.get("recommended_recovery", {}),
             "next_action": item.get("next_action", ""),
         })
@@ -2061,6 +2068,22 @@ async def get_public_showcase_demo_api():
     ]
     sample_deliverables = _public_showcase_sample_deliverables(featured_demos)
     sample_deliverables.append(_public_showcase_claim_report_deliverable(comic_claim))
+    inventory_image_items = [
+        item for item in (comic_inventory.get("items") or [])
+        if isinstance(item.get("image_quality_summary"), dict)
+    ]
+    inventory_total_images = sum(
+        int((item.get("image_quality_summary") or {}).get("total_images") or 0)
+        for item in inventory_image_items
+    )
+    inventory_usable_images = sum(
+        int((item.get("image_quality_summary") or {}).get("usable_images") or 0)
+        for item in inventory_image_items
+    )
+    inventory_waste_images = sum(
+        int((item.get("image_quality_summary") or {}).get("waste_or_rework_images") or 0)
+        for item in inventory_image_items
+    )
     return {
         "mode": "public_no_key_showcase",
         "product_name": "三个臭皮匠",
@@ -2168,6 +2191,15 @@ async def get_public_showcase_demo_api():
                 "demo_only_count": comic_inventory.get("demo_only_count", 0),
                 "needs_review_count": comic_inventory.get("needs_review_count", 0),
                 "legacy_unverifiable_count": comic_inventory.get("legacy_unverifiable_count", 0),
+                "image_quality_item_count": len(inventory_image_items),
+                "total_images": inventory_total_images,
+                "usable_images": inventory_usable_images,
+                "waste_or_rework_images": inventory_waste_images,
+                "waste_or_rework_rate": (
+                    inventory_waste_images / inventory_total_images
+                    if inventory_total_images
+                    else 0
+                ),
                 "safe_public_claim": comic_inventory.get("safe_public_claim", ""),
                 "next_action": comic_inventory.get("next_action", ""),
             },
@@ -4158,6 +4190,9 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
     prompt_quality = benchmark.get("prompt_quality_summary")
     if not isinstance(prompt_quality, dict):
         prompt_quality = (audit_handoff_manifest(payload).get("prompt_quality_summary") or {})
+    image_quality = benchmark.get("image_quality_summary")
+    if not isinstance(image_quality, dict):
+        image_quality = {}
     dimensions = []
     for item in benchmark.get("dimensions") or []:
         if not isinstance(item, dict):
@@ -4201,6 +4236,19 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
             "issue_count": int(prompt_quality.get("issue_count") or 0),
             "summary": str(prompt_quality.get("summary") or ""),
             "checks": [str(item) for item in (prompt_quality.get("checks") or []) if str(item).strip()],
+        },
+        "image_quality_summary": {
+            "total_images": int(image_quality.get("total_images") or 0),
+            "usable_images": int(image_quality.get("usable_images") or 0),
+            "waste_or_rework_images": int(image_quality.get("waste_or_rework_images") or 0),
+            "waste_or_rework_rate": float(image_quality.get("waste_or_rework_rate") or 0),
+            "failed_image_ids": [str(item) for item in (image_quality.get("failed_image_ids") or []) if str(item).strip()],
+            "rework_action_summary": [
+                str(item) for item in (image_quality.get("rework_action_summary") or []) if str(item).strip()
+            ],
+            "rework_instructions": [
+                item for item in (image_quality.get("rework_instructions") or []) if isinstance(item, dict)
+            ],
         },
         "limitations": [str(item) for item in (benchmark.get("limitations") or []) if str(item).strip()],
         "recommended_recovery": recovery,
