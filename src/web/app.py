@@ -4216,6 +4216,18 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
         "clears": [str(item) for item in (raw_recovery.get("clears") or []) if str(item).strip()],
         "operator_steps": [str(item) for item in (raw_recovery.get("operator_steps") or []) if str(item).strip()],
     } if isinstance(raw_recovery, dict) and raw_recovery else {}
+    rework_action_summary = []
+    for item in image_quality.get("rework_action_summary") or []:
+        if isinstance(item, dict):
+            rework_action_summary.append({
+                "action": str(item.get("action") or ""),
+                "count": int(item.get("count") or 0),
+                "department": str(item.get("department") or ""),
+                "next_button_label": str(item.get("next_button_label") or ""),
+                "image_ids": [str(image_id) for image_id in (item.get("image_ids") or []) if str(image_id).strip()],
+            })
+        elif str(item).strip():
+            rework_action_summary.append({"label": str(item)})
     return {
         "benchmark_version": int(benchmark.get("benchmark_version") or 0),
         "status": str(benchmark.get("status") or ""),
@@ -4243,9 +4255,7 @@ def _comic_v2_handoff_quality_benchmark(path: Path | None) -> dict:
             "waste_or_rework_images": int(image_quality.get("waste_or_rework_images") or 0),
             "waste_or_rework_rate": float(image_quality.get("waste_or_rework_rate") or 0),
             "failed_image_ids": [str(item) for item in (image_quality.get("failed_image_ids") or []) if str(item).strip()],
-            "rework_action_summary": [
-                str(item) for item in (image_quality.get("rework_action_summary") or []) if str(item).strip()
-            ],
+            "rework_action_summary": rework_action_summary,
             "rework_instructions": [
                 item for item in (image_quality.get("rework_instructions") or []) if isinstance(item, dict)
             ],

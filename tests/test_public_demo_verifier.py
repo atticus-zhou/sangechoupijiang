@@ -110,6 +110,12 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertFalse(comic_benchmark["production_quality_verified"])
         self.assertEqual(comic_benchmark["prompt_quality_summary"]["status"], "ready")
         self.assertEqual(comic_benchmark["prompt_quality_summary"]["issue_count"], 0)
+        image_quality = comic_benchmark["image_quality_summary"]
+        self.assertEqual(image_quality["waste_or_rework_images"], 7)
+        self.assertTrue(image_quality["rework_action_summary"])
+        self.assertIsInstance(image_quality["rework_action_summary"][0], dict)
+        self.assertEqual(image_quality["rework_action_summary"][0]["action"], "manual_review")
+        self.assertNotIn("{'action'", json.dumps(image_quality["rework_action_summary"], ensure_ascii=False))
         self.assertEqual(
             payload["demos"]["comic_production"]["honest_quality_gate"]["status"],
             "passed",
