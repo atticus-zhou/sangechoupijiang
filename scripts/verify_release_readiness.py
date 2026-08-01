@@ -35,6 +35,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_development_checklist.py", "--format", "json", "--skip-release"],
     },
     {
+        "id": "github_release_contract",
+        "title": "GitHub release evidence contract",
+        "command": ["scripts/verify_github_release_evidence.py", "--format", "json", "--contract-only"],
+    },
+    {
         "id": "public_docs_readability",
         "title": "Public docs readability",
         "command": ["scripts/verify_public_docs_readability.py", "--format", "json"],
@@ -360,6 +365,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"checks={len(parsed.get('checks') or [])}; "
                 f"changed_files={parsed.get('changed_files')}; "
                 f"skip_release={parsed.get('skip_release')}; "
+                f"mode={parsed.get('mode')}"
+            )
+        if check_id == "github_release_contract":
+            return (
+                f"checks={len(parsed.get('checks') or [])}; "
+                f"artifact={parsed.get('artifact_name')}; "
+                f"failures={len(parsed.get('failures') or [])}; "
                 f"mode={parsed.get('mode')}"
             )
         if check_id == "public_docs_readability":

@@ -12,6 +12,7 @@ import html
 import json
 import re
 import sys
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -22,6 +23,10 @@ DEFAULT_REPO = "atticus-zhou/sangechoupijiang"
 DEFAULT_BRANCH = "codex/comic-quality-overhaul"
 DEFAULT_WORKFLOW = "Release readiness"
 DEFAULT_ARTIFACT = "no-key-release-evidence"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "release-readiness.yml"
+README_FILE = REPO_ROOT / "README.md"
+PUBLIC_HANDOFF_FILE = REPO_ROOT / "docs" / "PUBLIC_RELEASE_HANDOFF.md"
 
 
 def _fetch_json(url: str, *, timeout: float) -> dict[str, Any]:
@@ -381,6 +386,97 @@ def verify_github_release_evidence(
     }
 
 
+def verify_github_release_contract() -> dict[str, Any]:
+    """Verify the local no-key GitHub evidence contract without network access."""
+    checks: list[dict[str, Any]] = []
+    checks.extend(
+        [
+            _contract_check(
+                "workflow_uploads_evidence",
+                WORKFLOW_FILE,
+                [
+                    "name: Release readiness",
+                    "branches:",
+                    "main",
+                    "\"codex/**\"",
+                    "permissions:",
+                    "contents: read",
+                    "python scripts/verify_release_readiness.py --format markdown",
+                    "python scripts/check_no_secrets.py",
+                    "actions/upload-artifact@v4",
+                    f"name: {DEFAULT_ARTIFACT}",
+                    "if-no-files-found: error",
+                ],
+            ),
+            _contract_check(
+                "readme_explains_github_evidence_boundary",
+                README_FILE,
+                [
+                    "GitHub Actions",
+                    "Release readiness",
+                    "python scripts/verify_github_release_evidence.py --format markdown",
+                    DEFAULT_ARTIFACT,
+                    "github_actions_html_fallback",
+                    "github_commit_checks_html_fallback",
+                    "不证明个人网站线上 Vercel 已经刷新",
+                    "npm run check:online",
+                ],
+            ),
+            _contract_check(
+                "handoff_explains_github_evidence_boundary",
+                PUBLIC_HANDOFF_FILE,
+                [
+                    "GitHub Actions",
+                    "Release readiness",
+                    "python scripts/verify_github_release_evidence.py --format markdown",
+                    DEFAULT_ARTIFACT,
+                    "GitHub 公共 API",
+                    "github_actions_html_fallback",
+                    "github_commit_checks_html_fallback",
+                    "npm run check:online",
+                ],
+            ),
+        ]
+    )
+    failures = [item["id"] for item in checks if item["status"] != "passed"]
+    return {
+        "status": "passed" if not failures else "failed",
+        "mode": "github_no_key_release_contract",
+        "repo": DEFAULT_REPO,
+        "branch": DEFAULT_BRANCH,
+        "workflow_name": DEFAULT_WORKFLOW,
+        "artifact_name": DEFAULT_ARTIFACT,
+        "checks": checks,
+        "failures": failures,
+        "summary": (
+            "Local GitHub release evidence contract is documented and wired to CI."
+            if not failures
+            else f"{len(failures)} local GitHub release evidence contract checks failed."
+        ),
+    }
+
+
+def _contract_check(check_id: str, path: Path, markers: list[str]) -> dict[str, Any]:
+    relative = path.relative_to(REPO_ROOT).as_posix()
+    if not path.exists():
+        return {
+            "id": check_id,
+            "status": "failed",
+            "file": relative,
+            "missing_file": relative,
+            "missing_markers": markers,
+        }
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    missing = [marker for marker in markers if marker not in text]
+    return {
+        "id": check_id,
+        "status": "passed" if not missing else "failed",
+        "file": relative,
+        "missing_file": "",
+        "missing_markers": missing,
+    }
+
+
 def _failed_payload(
     repo: str,
     branch: str,
@@ -410,6 +506,8 @@ def _failed_payload(
 
 
 def format_markdown(payload: dict[str, Any]) -> str:
+    if payload.get("mode") == "github_no_key_release_contract":
+        return _format_contract_markdown(payload)
     run = payload.get("latest_run") or {}
     artifact = payload.get("artifact") or {}
     lines = [
@@ -446,6 +544,35 @@ def format_markdown(payload: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _format_contract_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        "# GitHub Release Evidence Contract",
+        "",
+        f"Status: `{payload.get('status')}`",
+        f"Mode: `{payload.get('mode')}`",
+        f"Repository: `{payload.get('repo')}`",
+        f"Branch: `{payload.get('branch')}`",
+        f"Workflow: `{payload.get('workflow_name')}`",
+        f"Artifact: `{payload.get('artifact_name')}`",
+        f"Summary: {payload.get('summary')}",
+        "",
+        "| Check | Status | Evidence |",
+        "| --- | --- | --- |",
+    ]
+    for item in payload.get("checks", []):
+        lines.append(f"| {item.get('id')} | {item.get('status')} | `{item.get('file')}` |")
+    if payload.get("failures"):
+        lines.extend(["", "## Failures", ""])
+        for item in payload.get("checks", []):
+            if item.get("status") == "passed":
+                continue
+            lines.append(
+                f"- {item.get('id')}: missing_file={item.get('missing_file')}; "
+                f"missing_markers={item.get('missing_markers')}"
+            )
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -456,17 +583,21 @@ def main() -> int:
     parser.add_argument("--artifact", default=DEFAULT_ARTIFACT, help="Required artifact name.")
     parser.add_argument("--head-sha", default="", help="Optional commit SHA used for public commit-checks HTML fallback.")
     parser.add_argument("--timeout", type=float, default=20.0)
+    parser.add_argument("--contract-only", action="store_true", help="Verify local workflow/docs contract without network access.")
     parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
     args = parser.parse_args()
 
-    payload = verify_github_release_evidence(
-        repo=args.repo,
-        branch=args.branch,
-        workflow_name=args.workflow,
-        artifact_name=args.artifact,
-        timeout=args.timeout,
-        head_sha=args.head_sha,
-    )
+    if args.contract_only:
+        payload = verify_github_release_contract()
+    else:
+        payload = verify_github_release_evidence(
+            repo=args.repo,
+            branch=args.branch,
+            workflow_name=args.workflow,
+            artifact_name=args.artifact,
+            timeout=args.timeout,
+            head_sha=args.head_sha,
+        )
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:

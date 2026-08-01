@@ -4,7 +4,11 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from scripts.verify_github_release_evidence import format_markdown, verify_github_release_evidence
+from scripts.verify_github_release_evidence import (
+    format_markdown,
+    verify_github_release_contract,
+    verify_github_release_evidence,
+)
 
 
 SUCCESS_RUN = {
@@ -213,6 +217,41 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertIn("Verification source: `github_actions_html_fallback`", markdown)
         self.assertIn("Public Actions URL: https://github.com/atticus-zhou/sangechoupijiang/actions", markdown)
         self.assertIn("Public Commit Checks URL: https://github.com/atticus-zhou/sangechoupijiang/commit/4b5eb51/checks", markdown)
+
+    def test_contract_only_verifies_local_workflow_and_docs(self):
+        payload = verify_github_release_contract()
+
+        self.assertEqual(payload["status"], "passed", payload.get("failures"))
+        self.assertEqual(payload["mode"], "github_no_key_release_contract")
+        self.assertEqual(payload["artifact_name"], "no-key-release-evidence")
+        self.assertEqual(
+            {item["id"] for item in payload["checks"]},
+            {
+                "workflow_uploads_evidence",
+                "readme_explains_github_evidence_boundary",
+                "handoff_explains_github_evidence_boundary",
+            },
+        )
+
+    def test_contract_only_cli_is_network_free_and_machine_readable(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "scripts/verify_github_release_evidence.py",
+                "--contract-only",
+                "--format",
+                "json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["mode"], "github_no_key_release_contract")
+        self.assertEqual(len(payload["checks"]), 3)
 
 
 if __name__ == "__main__":

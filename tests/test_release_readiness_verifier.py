@@ -32,6 +32,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "productization_status",
                 "model_guidance",
                 "development_checklist",
+                "github_release_contract",
                 "public_docs_readability",
                 "public_demo",
                 "static_showcase_export",
@@ -67,6 +68,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         development_checklist = next(item for item in payload["checks"] if item["id"] == "development_checklist")
         self.assertIn("checks=6", development_checklist["summary"])
         self.assertIn("skip_release=True", development_checklist["summary"])
+        github_contract = next(item for item in payload["checks"] if item["id"] == "github_release_contract")
+        self.assertIn("artifact=no-key-release-evidence", github_contract["summary"])
+        self.assertIn("failures=0", github_contract["summary"])
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("fast_review=5/5", public_demo["summary"])
         self.assertIn("reading_guide=", public_demo["summary"])
@@ -183,6 +187,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("offices=2; comic_ladder=3", completed.stdout)
         self.assertIn("Developer post-change checklist", completed.stdout)
         self.assertIn("skip_release=True", completed.stdout)
+        self.assertIn("GitHub release evidence contract", completed.stdout)
+        self.assertIn("artifact=no-key-release-evidence", completed.stdout)
         self.assertIn("Public docs readability", completed.stdout)
         self.assertIn("Backend-free static showcase export", completed.stdout)
         self.assertIn("Portfolio showcase copy sync", completed.stdout)
