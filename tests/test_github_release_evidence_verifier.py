@@ -4,7 +4,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from scripts.verify_github_release_evidence import verify_github_release_evidence
+from scripts.verify_github_release_evidence import format_markdown, verify_github_release_evidence
 
 
 SUCCESS_RUN = {
@@ -35,6 +35,18 @@ SUCCESS_ARTIFACTS = {
         }
     ]
 }
+
+HTML_FALLBACK_PAGE = """
+<html>
+  <body>
+    <a href="/atticus-zhou/sangechoupijiang/actions/runs/22"
+       aria-label="in_progress: Run 22 of Release readiness. Add office recovery registry">
+      <span class="css-truncate-target">Add office recovery registry</span>
+    </a>
+    <span>6b1ca2a</span>
+  </body>
+</html>
+"""
 
 
 class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
@@ -100,6 +112,64 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         payload = json.loads(completed.stdout)
         self.assertEqual(payload["status"], "failed")
         self.assertIn("owner/name", payload["errors"][0])
+
+    def test_verifier_uses_public_actions_page_when_api_is_rate_limited(self):
+        with (
+            patch(
+                "scripts.verify_github_release_evidence._fetch_json",
+                side_effect=RuntimeError("GitHub API returned HTTP 403: rate limit"),
+            ),
+            patch("scripts.verify_github_release_evidence._fetch_text", return_value=HTML_FALLBACK_PAGE),
+        ):
+            payload = verify_github_release_evidence()
+
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["verification_source"], "github_actions_html_fallback")
+        self.assertEqual(payload["latest_run"]["run_number"], 22)
+        self.assertEqual(payload["latest_run"]["run_id"], "22")
+        self.assertIn("Add office recovery registry", payload["latest_run"]["display_title"])
+        self.assertEqual(payload["latest_run"]["status"], "in_progress")
+        self.assertIn("actions?query=branch%3Acodex%2Fcomic-quality-overhaul", payload["public_actions_url"])
+        self.assertTrue(any("could not be verified without the GitHub API" in item for item in payload["errors"]))
+
+    def test_verifier_reports_when_api_and_html_fallback_both_fail(self):
+        with (
+            patch(
+                "scripts.verify_github_release_evidence._fetch_json",
+                side_effect=RuntimeError("GitHub API returned HTTP 403: rate limit"),
+            ),
+            patch(
+                "scripts.verify_github_release_evidence._fetch_text",
+                side_effect=RuntimeError("GitHub Actions page request failed: blocked"),
+            ),
+        ):
+            payload = verify_github_release_evidence()
+
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["verification_source"], "github_api_unavailable")
+        self.assertTrue(any("GitHub API returned HTTP 403" in item for item in payload["errors"]))
+        self.assertTrue(any("Actions page request failed" in item for item in payload["errors"]))
+
+    def test_markdown_mentions_verification_source_and_public_actions_url(self):
+        payload = {
+            "status": "failed",
+            "mode": "github_no_key_release_evidence",
+            "verification_source": "github_actions_html_fallback",
+            "repo": "atticus-zhou/sangechoupijiang",
+            "branch": "codex/comic-quality-overhaul",
+            "workflow_name": "Release readiness",
+            "artifact_name": "no-key-release-evidence",
+            "public_actions_url": "https://github.com/atticus-zhou/sangechoupijiang/actions?query=branch%3Acodex%2Fcomic-quality-overhaul",
+            "latest_run": {"run_number": 22, "status": "in_progress", "conclusion": None},
+            "artifact": {},
+            "summary": "fallback",
+            "errors": [],
+        }
+
+        markdown = format_markdown(payload)
+
+        self.assertIn("Verification source: `github_actions_html_fallback`", markdown)
+        self.assertIn("Public Actions URL: https://github.com/atticus-zhou/sangechoupijiang/actions", markdown)
 
 
 if __name__ == "__main__":

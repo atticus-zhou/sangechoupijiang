@@ -87,7 +87,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 能证明故事、资产、提示词、镜头、视觉质检和谱系已经交叉校验，并明确区分无 Key 结构样例与真实模型质量证据。
 - `python scripts/verify_research_office_readiness.py --format markdown` 能证明研究办公室只公开阶段性样例、证据边界、待补证据交接表、证据补齐卡和补证操作手册，不伪装成全自动平台采集。
 - `python scripts/verify_release_readiness.py --format markdown` 能串联全部 no-key 发布门禁。
-- `python scripts/verify_github_release_evidence.py --format markdown` 能通过 GitHub 公共 API 复核最新 `Release readiness` workflow 是否成功，以及 `no-key-release-evidence` artifact 是否存在。
+- `python scripts/verify_github_release_evidence.py --format markdown` 能通过 GitHub 公共 API 复核最新 `Release readiness` workflow 是否成功，以及 `no-key-release-evidence` artifact 是否存在；如果公共 API 被限流，脚本会退回读取公开 Actions 页面并标注 `github_actions_html_fallback`，但不会把未通过 API 复核的 artifact 当作已验证证据。
 - `python scripts/check_no_secrets.py` 能证明仓库没有误提交敏感信息或运行产物。
 - `.github/workflows/release-readiness.yml` 能让 GitHub 自动复跑无 Key 发布门禁和敏感信息扫描，并通过 `no-key-release-evidence` artifact 留下审计输出，作为公开仓库的外部可见证据。
 

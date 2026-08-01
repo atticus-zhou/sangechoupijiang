@@ -8,7 +8,9 @@ workspace data.
 from __future__ import annotations
 
 import argparse
+import html
 import json
+import re
 import sys
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -46,6 +48,161 @@ def _fetch_json(url: str, *, timeout: float) -> dict[str, Any]:
         raise RuntimeError(f"GitHub API request timed out: {exc}") from exc
 
 
+def _fetch_text(url: str, *, timeout: float) -> str:
+    request = Request(
+        url,
+        headers={
+            "Accept": "text/html",
+            "User-Agent": "three-cobblers-github-release-evidence/1.0",
+        },
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.read().decode("utf-8", errors="replace")
+    except HTTPError as exc:
+        try:
+            detail = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            detail = str(exc)
+        raise RuntimeError(f"GitHub Actions page returned HTTP {exc.code}: {detail}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"GitHub Actions page request failed: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise RuntimeError(f"GitHub Actions page request timed out: {exc}") from exc
+
+
+def _actions_page_url(owner_repo: str, branch: str) -> str:
+    return f"https://github.com/{owner_repo}/actions?query=branch%3A{quote(branch, safe='')}"
+
+
+def _first_match(pattern: str, text: str, default: str = "") -> str:
+    match = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+    return html.unescape(match.group(1)).strip() if match else default
+
+
+def _parse_public_actions_html(
+    html_text: str,
+    *,
+    owner_repo: str,
+    branch: str,
+    workflow_name: str,
+) -> dict[str, Any]:
+    decoded = html.unescape(html_text)
+    run_pattern = re.compile(
+        rf'href="/{re.escape(owner_repo)}/actions/runs/(\d+)"',
+        flags=re.IGNORECASE,
+    )
+    candidates: list[dict[str, Any]] = []
+    for match in run_pattern.finditer(decoded):
+        start = max(0, match.start() - 2500)
+        end = min(len(decoded), match.end() + 2500)
+        context = decoded[start:end]
+        if workflow_name not in context:
+            continue
+
+        lower_context = context.lower()
+        status = ""
+        conclusion = None
+        if any(marker in lower_context for marker in ("in_progress", "in progress", "queued", "requested")):
+            status = "in_progress"
+        elif any(marker in lower_context for marker in ("completed", "success", "failure", "cancelled")):
+            status = "completed"
+
+        if "success" in lower_context:
+            conclusion = "success"
+        elif "failure" in lower_context:
+            conclusion = "failure"
+        elif "cancelled" in lower_context or "canceled" in lower_context:
+            conclusion = "cancelled"
+
+        run_number = _first_match(r"Run\s+(\d+)\s+of\s+", context)
+        title = _first_match(r'aria-label="[^"]*?Release readiness\.?\s*([^"]*?)"', context)
+        if not title:
+            title = _first_match(r'title="([^"]+)"', context)
+        if not title:
+            title = _first_match(r'<span[^>]*class="[^"]*css-truncate-target[^"]*"[^>]*>\s*([^<]+)', context)
+
+        sha = _first_match(r"\b([0-9a-f]{7,40})\b", context)
+        candidates.append(
+            {
+                "run_number": int(run_number) if str(run_number).isdigit() else None,
+                "run_id": match.group(1),
+                "display_title": title,
+                "head_sha": sha,
+                "status": status or "unknown_from_html",
+                "conclusion": conclusion,
+                "html_url": f"https://github.com/{owner_repo}/actions/runs/{match.group(1)}",
+                "created_at": "",
+                "updated_at": "",
+                "branch": branch,
+            }
+        )
+
+    if not candidates:
+        return {}
+    return candidates[0]
+
+
+def _html_fallback_payload(
+    *,
+    repo: str,
+    branch: str,
+    workflow_name: str,
+    artifact_name: str,
+    timeout: float,
+    api_error: str,
+) -> dict[str, Any]:
+    owner_repo = repo.strip("/")
+    public_url = _actions_page_url(owner_repo, branch)
+    errors = [api_error, "GitHub API unavailable; used the public Actions page as a read-only fallback."]
+    try:
+        html_text = _fetch_text(public_url, timeout=timeout)
+    except RuntimeError as exc:
+        errors.append(str(exc))
+        return _failed_payload(
+            repo,
+            branch,
+            workflow_name,
+            artifact_name,
+            errors,
+            verification_source="github_api_unavailable",
+            public_actions_url=public_url,
+        )
+
+    latest = _parse_public_actions_html(
+        html_text,
+        owner_repo=owner_repo,
+        branch=branch,
+        workflow_name=workflow_name,
+    )
+    if not latest:
+        errors.append(f"public Actions page did not expose a run for {workflow_name!r} on branch {branch!r}")
+    else:
+        if latest.get("status") != "completed":
+            errors.append(f"latest workflow run appears {latest.get('status')}, not completed")
+        if latest.get("conclusion") not in (None, "success"):
+            errors.append(f"latest workflow conclusion appears {latest.get('conclusion')}, not success")
+
+    errors.append(f"required artifact {artifact_name!r} could not be verified without the GitHub API")
+    return {
+        "status": "failed",
+        "mode": "github_no_key_release_evidence",
+        "verification_source": "github_actions_html_fallback",
+        "repo": owner_repo,
+        "branch": branch,
+        "workflow_name": workflow_name,
+        "artifact_name": artifact_name,
+        "public_actions_url": public_url,
+        "latest_run": latest,
+        "artifact": {},
+        "summary": (
+            "GitHub API was unavailable. The public Actions page was checked, "
+            "but the release evidence artifact still needs API verification."
+        ),
+        "errors": errors,
+    }
+
+
 def verify_github_release_evidence(
     *,
     repo: str = DEFAULT_REPO,
@@ -66,7 +223,14 @@ def verify_github_release_evidence(
     try:
         runs_payload = _fetch_json(runs_url, timeout=timeout)
     except RuntimeError as exc:
-        return _failed_payload(repo, branch, workflow_name, artifact_name, [str(exc)])
+        return _html_fallback_payload(
+            repo=repo,
+            branch=branch,
+            workflow_name=workflow_name,
+            artifact_name=artifact_name,
+            timeout=timeout,
+            api_error=str(exc),
+        )
 
     runs = [
         run for run in (runs_payload.get("workflow_runs") or [])
@@ -106,10 +270,12 @@ def verify_github_release_evidence(
     return {
         "status": "passed" if not errors else "failed",
         "mode": "github_no_key_release_evidence",
+        "verification_source": "github_api",
         "repo": owner_repo,
         "branch": branch,
         "workflow_name": workflow_name,
         "artifact_name": artifact_name,
+        "public_actions_url": _actions_page_url(owner_repo, branch),
         "latest_run": {
             "run_number": latest.get("run_number"),
             "display_title": latest.get("display_title", ""),
@@ -142,14 +308,19 @@ def _failed_payload(
     workflow_name: str,
     artifact_name: str,
     errors: list[str],
+    *,
+    verification_source: str = "github_api",
+    public_actions_url: str = "",
 ) -> dict[str, Any]:
     return {
         "status": "failed",
         "mode": "github_no_key_release_evidence",
+        "verification_source": verification_source,
         "repo": repo,
         "branch": branch,
         "workflow_name": workflow_name,
         "artifact_name": artifact_name,
+        "public_actions_url": public_actions_url,
         "latest_run": {},
         "artifact": {},
         "summary": "GitHub release evidence is not ready yet.",
@@ -165,8 +336,10 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
         f"Status: `{payload.get('status')}`",
         f"Mode: `{payload.get('mode')}`",
+        f"Verification source: `{payload.get('verification_source') or '-'}`",
         f"Repository: `{payload.get('repo')}`",
         f"Branch: `{payload.get('branch')}`",
+        f"Public Actions URL: {payload.get('public_actions_url') or '-'}",
         f"Summary: {payload.get('summary')}",
         "",
         "## Latest Run",

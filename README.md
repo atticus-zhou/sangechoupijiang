@@ -378,7 +378,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 - GitHub README、部署边界、安全说明和 release readiness 结果。
 - `dist/public-showcase` 静态展示包。
 
-GitHub 上的 `Release readiness` workflow 会自动运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`，并上传 `no-key-release-evidence` artifact。你可以用 `python scripts/verify_github_release_evidence.py --format markdown` 通过 GitHub 公共 API 检查最新 workflow 是否成功、artifact 是否存在。这条 CI 只证明公开 no-key 路径和仓库安全边界，不证明个人网站线上 Vercel 已经刷新；线上仍看个人网站的 `npm run check:online`。
+GitHub 上的 `Release readiness` workflow 会自动运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`，并上传 `no-key-release-evidence` artifact。你可以用 `python scripts/verify_github_release_evidence.py --format markdown` 通过 GitHub 公共 API 检查最新 workflow 是否成功、artifact 是否存在；如果公共 API 被限流，脚本会退回读取公开 Actions 页面并明确标注 `github_actions_html_fallback`，但 artifact 仍会保持未验证状态，不会假装发布证据已经通过。这条 CI 只证明公开 no-key 路径和仓库安全边界，不证明个人网站线上 Vercel 已经刷新；线上仍看个人网站的 `npm run check:online`。
 
 不要宣称已经完成：
 
