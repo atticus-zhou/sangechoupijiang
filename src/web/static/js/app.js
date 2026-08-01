@@ -4710,6 +4710,7 @@ function renderPublicShowcase(showcase) {
     const handoffInventory = portfolio.handoff_inventory || {};
     const realProductionClaim = portfolio.real_production_claim || {};
     const qualityUpgradePath = portfolio.quality_upgrade_path || {};
+    const realQualityPromotionGate = realProductionClaim.real_quality_promotion_gate || {};
     const claimUpgradeChecklist = Array.isArray(realProductionClaim.claim_upgrade_checklist) ? realProductionClaim.claim_upgrade_checklist : [];
     const claimUpgradeRecovery = realProductionClaim.claim_upgrade_recovery || {};
     const releaseBadge = portfolio.release_badge || {};
@@ -4786,6 +4787,23 @@ function renderPublicShowcase(showcase) {
                                     <b>${escapeHtml(item.title || item.id || '')}</b>
                                     <p>\u9700\u8981\uff1a${escapeHtml((item.required_evidence || []).join('\u3001'))}</p>
                                     <small>${escapeHtml(item.why_it_matters || '')}</small>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${realQualityPromotionGate.status ? `
+                    <div class="public-claim-upgrade public-claim-promotion-gate">
+                        <strong>\u771f\u5b9e\u8d28\u91cf promotion gate</strong>
+                        <p>\u72b6\u6001\uff1a${escapeHtml(realQualityPromotionGate.status || '')} \u00b7 ready=${realQualityPromotionGate.ready ? 'true' : 'false'} \u00b7 blockers=${escapeHtml(String(realQualityPromotionGate.blocking_count ?? 0))}</p>
+                        <small>${escapeHtml(realQualityPromotionGate.next_action || '')}</small>
+                        <div>
+                            ${(realQualityPromotionGate.checks || []).map(item => `
+                                <article>
+                                    <span>${item.passed ? '\u901a\u8fc7' : '\u7f3a\u8bc1\u636e'}</span>
+                                    <b>${escapeHtml(item.label || item.id || '')}</b>
+                                    <p>${escapeHtml(item.evidence || '')}</p>
+                                    ${item.passed ? '' : `<small>${escapeHtml(item.if_missing || '')}</small>`}
                                 </article>
                             `).join('')}
                         </div>

@@ -627,6 +627,7 @@ async def get_comic_production_claim_report_demo_api():
 def _public_claim_report(report: dict) -> dict:
     evidence = report.get("evidence") or {}
     recovery = report.get("claim_upgrade_recovery") or {}
+    promotion_gate = report.get("real_quality_promotion_gate") or {}
     return {
         "mode": "no_key_demo_claim_report",
         "office_id": "comic_production",
@@ -642,6 +643,24 @@ def _public_claim_report(report: dict) -> dict:
         "downstream_status": report.get("downstream_status", ""),
         "allowed_public_claims": list(report.get("allowed_public_claims") or []),
         "forbidden_public_claims": list(report.get("forbidden_public_claims") or []),
+        "real_quality_promotion_gate": {
+            "ready": bool(promotion_gate.get("ready")),
+            "status": promotion_gate.get("status", ""),
+            "required_for_claim_level": promotion_gate.get("required_for_claim_level", ""),
+            "missing_check_ids": list(promotion_gate.get("missing_check_ids") or []),
+            "blocking_count": int(promotion_gate.get("blocking_count") or 0),
+            "next_action": promotion_gate.get("next_action", ""),
+            "checks": [
+                {
+                    "id": item.get("id", ""),
+                    "label": item.get("label", ""),
+                    "passed": bool(item.get("passed")),
+                    "evidence": item.get("evidence", ""),
+                    "if_missing": item.get("if_missing", ""),
+                }
+                for item in (promotion_gate.get("checks") or [])
+            ],
+        },
         "claim_upgrade_checklist": [
             {
                 "id": item.get("id", ""),
@@ -2070,6 +2089,7 @@ async def get_public_showcase_demo_api():
                 "forbidden_public_claims": comic_claim.get("forbidden_public_claims", [])[:3],
                 "claim_upgrade_checklist": comic_claim.get("claim_upgrade_checklist", [])[:3],
                 "claim_upgrade_recovery": comic_claim.get("claim_upgrade_recovery", {}),
+                "real_quality_promotion_gate": comic_claim.get("real_quality_promotion_gate", {}),
                 "next_action": comic_claim.get("next_action", ""),
                 "evidence": comic_claim.get("evidence", {}),
             },

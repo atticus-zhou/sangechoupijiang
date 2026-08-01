@@ -56,6 +56,12 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertEqual(checklist["run_real_models"]["status"], "missing")
         self.assertEqual(checklist["visual_review"]["status"], "missing")
         self.assertEqual(checklist["stored_benchmark"]["status"], "structure_only")
+        gate = report["real_quality_promotion_gate"]
+        self.assertFalse(gate["ready"])
+        self.assertEqual(gate["status"], "evidence_missing")
+        self.assertIn("visual_evidence_model_reviewed", gate["missing_check_ids"])
+        self.assertIn("production_quality_verified", gate["missing_check_ids"])
+        self.assertGreaterEqual(gate["blocking_count"], 2)
         self.assertIn("真实模型", checklist["run_real_models"]["why_it_matters"])
 
     def test_real_verified_manifest_allows_real_quality_claim(self):
@@ -74,6 +80,12 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertFalse(recovery["required"])
         self.assertIn("visual_review", recovery["preserves"])
         self.assertEqual(recovery["rebuilds"], [])
+        gate = report["real_quality_promotion_gate"]
+        self.assertTrue(gate["ready"])
+        self.assertEqual(gate["status"], "ready_to_claim_real_quality")
+        self.assertFalse(gate["missing_check_ids"])
+        self.assertEqual(gate["blocking_count"], 0)
+        self.assertTrue(all(item["passed"] for item in gate["checks"]))
 
     def test_cli_markdown_is_operator_readable(self):
         completed = subprocess.run(
@@ -95,6 +107,8 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertIn("Forbidden Public Claims", completed.stdout)
         self.assertIn("Claim Upgrade Checklist", completed.stdout)
         self.assertIn("Claim Upgrade Recovery", completed.stdout)
+        self.assertIn("Real Quality Promotion Gate", completed.stdout)
+        self.assertIn("Status: `evidence_missing`", completed.stdout)
         self.assertIn("Recovery action: `regenerate_images`", completed.stdout)
         self.assertIn("/api/workspaces/{workspace_id}/comic/v2/quality/recover", completed.stdout)
         self.assertIn("Preserves", completed.stdout)

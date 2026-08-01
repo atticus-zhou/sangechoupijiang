@@ -14,6 +14,77 @@ def claim_level_from_benchmark(benchmark: dict[str, Any]) -> str:
     return "needs_review"
 
 
+def real_quality_promotion_gate(benchmark: dict[str, Any]) -> dict[str, Any]:
+    """Return the evidence gate required before a handoff can claim real model quality."""
+    image_summary = benchmark.get("image_quality_summary") or {}
+    prompt_summary = benchmark.get("prompt_quality_summary") or {}
+    checks = [
+        {
+            "id": "package_quality_ready",
+            "label": "制片包结构质量通过",
+            "passed": bool(benchmark.get("package_quality_ready")),
+            "evidence": "package_quality_ready=true",
+            "if_missing": "先修复故事、资产、提示词、镜头或交付结构中的 blocker。",
+        },
+        {
+            "id": "stored_benchmark_matches",
+            "label": "manifest 内置质量基准与当前审计一致",
+            "passed": bool(benchmark.get("stored_benchmark_matches")),
+            "evidence": "stored_benchmark_matches=true",
+            "if_missing": "重新写入 handoff manifest 中的 quality_benchmark，再生成声明报告。",
+        },
+        {
+            "id": "visual_evidence_model_reviewed",
+            "label": "图片来自真实模型并通过视觉质检",
+            "passed": benchmark.get("visual_evidence_level") == "model_reviewed",
+            "evidence": "visual_evidence_level=model_reviewed",
+            "if_missing": "使用真实生图模型补跑图片，并由视觉理解模型完成质检。",
+        },
+        {
+            "id": "no_image_rework_left",
+            "label": "图片没有遗留废片或返工项",
+            "passed": int(image_summary.get("waste_or_rework_images") or 0) == 0,
+            "evidence": "image_quality_summary.waste_or_rework_images=0",
+            "if_missing": "按 image_quality_summary.rework_instructions 逐张重跑或补审。",
+        },
+        {
+            "id": "prompt_package_ready",
+            "label": "资产和镜头提示词已通过导演式提示词门槛",
+            "passed": prompt_summary.get("status") == "ready" and int(prompt_summary.get("issue_count") or 0) == 0,
+            "evidence": "prompt_quality_summary.status=ready 且 issue_count=0",
+            "if_missing": "退回提示词规划，修复模板化、缺少镜头信息或负面提示词不规范的问题。",
+        },
+        {
+            "id": "no_blockers",
+            "label": "质量基准没有阻塞项",
+            "passed": int(benchmark.get("blocker_count") or 0) == 0,
+            "evidence": "blocker_count=0",
+            "if_missing": "先处理质量基准中标记为 blocker 的责任部门问题。",
+        },
+        {
+            "id": "production_quality_verified",
+            "label": "最终真实质量布尔证据为真",
+            "passed": bool(benchmark.get("production_quality_verified")),
+            "evidence": "production_quality_verified=true",
+            "if_missing": "补齐上面的真实图片、视觉质检和质量基准证据后重新审计。",
+        },
+    ]
+    missing = [item for item in checks if not item["passed"]]
+    return {
+        "ready": not missing,
+        "status": "ready_to_claim_real_quality" if not missing else "evidence_missing",
+        "required_for_claim_level": "real_quality_verified",
+        "checks": checks,
+        "missing_check_ids": [item["id"] for item in missing],
+        "blocking_count": len(missing),
+        "next_action": (
+            "可以公开声明真实模型质量已验证，但仍需保留 Word、manifest、图片记录、质检结果和声明报告。"
+            if not missing
+            else missing[0]["if_missing"]
+        ),
+    }
+
+
 def claim_upgrade_checklist(claim_level: str, benchmark: dict[str, Any]) -> list[dict[str, Any]]:
     """Describe evidence needed before a stronger public quality claim is allowed."""
     visual_level = str(benchmark.get("visual_evidence_level") or "unknown")

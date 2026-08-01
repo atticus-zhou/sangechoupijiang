@@ -19,7 +19,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.verify_comic_v2_production_benchmark import verify_production_benchmark
-from src.comic_office.v2.claim_report import claim_upgrade_checklist, claim_upgrade_recovery
+from src.comic_office.v2.claim_report import (
+    claim_upgrade_checklist,
+    claim_upgrade_recovery,
+    real_quality_promotion_gate,
+)
 
 
 def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
@@ -78,6 +82,7 @@ def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
 
     upgrade_checklist = claim_upgrade_checklist(claim_level, benchmark)
     upgrade_recovery = claim_upgrade_recovery(claim_level, benchmark)
+    promotion_gate = real_quality_promotion_gate(benchmark)
     return {
         "status": "passed",
         "mode": "comic_real_production_claim",
@@ -90,6 +95,7 @@ def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
         "downstream_status": downstream_status,
         "allowed_public_claims": allowed_claims,
         "forbidden_public_claims": forbidden_claims,
+        "real_quality_promotion_gate": promotion_gate,
         "claim_upgrade_checklist": upgrade_checklist,
         "claim_upgrade_recovery": upgrade_recovery,
         "next_action": next_action,
@@ -132,6 +138,25 @@ def format_markdown(report: dict[str, Any]) -> str:
     lines.extend(f"- {item}" for item in report.get("allowed_public_claims", []))
     lines.extend(["", "## Forbidden Public Claims", ""])
     lines.extend(f"- {item}" for item in report.get("forbidden_public_claims", []))
+    promotion_gate = report.get("real_quality_promotion_gate") or {}
+    lines.extend(
+        [
+            "",
+            "## Real Quality Promotion Gate",
+            "",
+            f"- Ready: `{promotion_gate.get('ready')}`",
+            f"- Status: `{promotion_gate.get('status')}`",
+            f"- Blocking checks: `{promotion_gate.get('blocking_count')}`",
+            f"- Next action: {promotion_gate.get('next_action')}",
+            "",
+            "| Check | Passed | Evidence | If Missing |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for item in promotion_gate.get("checks") or []:
+        lines.append(
+            f"| {item.get('label')} | `{item.get('passed')}` | {item.get('evidence')} | {item.get('if_missing')} |"
+        )
     lines.extend(["", "## Claim Upgrade Checklist", ""])
     for item in report.get("claim_upgrade_checklist", []):
         evidence = ", ".join(item.get("required_evidence") or [])

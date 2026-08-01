@@ -364,6 +364,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 
 不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
 
+声明报告里的 `real_quality_promotion_gate` 是最终升级门。它会逐项检查制片包结构、manifest 内置质量基准、真实模型图片、视觉质检、图片返工数、导演式提示词、blocker 和 `production_quality_verified`。只要有一项缺失，就只能显示 `evidence_missing`，不能把这次交付说成真实生产质量。
+
 历史页的追溯接口 `/api/tasks/{task_id}/comic-v2-trace.json` 会返回 `image_production_evidence` 和 `image_quality_summary`。当它显示 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown` 时，说明当前制片包只能证明结构或部分流程，不能证明真实画质。`image_quality_summary` 会列出 total/usable/waste-or-rework、返工率、失败图片 ID 和 `rework_instructions`；返工指令会说明某张图应该补跑视觉质检、保留提示词重新生图，还是退回提示词重写。此时可以对 `/api/workspaces/{workspace_id}/comic/v2/quality/recover` 提交 `{"action":"regenerate_images"}`：系统会保留已确认故事、资产拆解、提示词包和旧交付记录，把项目退回图片生成/质检阶段，用真实模型重新补齐图片证据。
 
 ## 当前边界

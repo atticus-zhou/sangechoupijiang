@@ -178,6 +178,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(claim["can_publicly_show"])
         self.assertFalse(claim["can_claim_real_quality"])
         self.assertEqual(claim["downstream_status"], "structure_demo_only")
+        gate = claim["real_quality_promotion_gate"]
+        self.assertFalse(gate["ready"])
+        self.assertEqual(gate["status"], "evidence_missing")
+        self.assertIn("visual_evidence_model_reviewed", gate["missing_check_ids"])
+        self.assertIn("production_quality_verified", gate["missing_check_ids"])
+        self.assertGreaterEqual(len(gate["checks"]), 6)
         self.assertGreaterEqual(len(claim["claim_upgrade_checklist"]), 3)
         self.assertTrue(any(item["id"] == "run_real_models" for item in claim["claim_upgrade_checklist"]))
         self.assertTrue(all(item["required_evidence"] for item in claim["claim_upgrade_checklist"]))

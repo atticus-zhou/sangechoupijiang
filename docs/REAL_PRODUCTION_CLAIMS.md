@@ -22,6 +22,10 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 报告还会输出 `claim_upgrade_checklist`。它不是宣传文案，而是补证据清单：固定样例会列出还缺真实模型图片、视觉质检和重新写入质量基准；真实质量已验证的 manifest 会提示保留证据包，并在故事、资产、模型或提示词有重大改动后重新验证。
 
+## Real Quality Promotion Gate
+
+`real_quality_promotion_gate` is the final machine-readable gate before any public `real_quality_verified` claim. It must show `ready=true` only when `package_quality_ready=true`, `stored_benchmark_matches=true`, `visual_evidence_level=model_reviewed`, `image_quality_summary.waste_or_rework_images=0`, `prompt_quality_summary.status=ready`, `blocker_count=0`, and `production_quality_verified=true`. If any check is missing, the gate must stay `evidence_missing` and expose the missing check IDs plus the next action.
+
 ## 图片证据恢复路径
 
 `claim_upgrade_recovery` 是公开 claim report 里的恢复路线字段。它会用 `preserves` 说明故事、资产拆解、提示词包和旧交付记录等哪些内容应该保留，用 `rebuilds` 说明图片生产证据、视觉质检、Word 画布、handoff manifest 和 claim report 等哪些内容必须重建，并用 `steps` 把 `regenerate_images` 这类动作拆成可执行、可验收的步骤。公开页面可以展示这份恢复路线，但不能把它说成真实质量已经完成。

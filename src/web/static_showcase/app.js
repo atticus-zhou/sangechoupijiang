@@ -131,6 +131,7 @@
   function renderClaimBoundary() {
     const portfolio = showcase.portfolio_embed || {};
     const claim = portfolio.real_production_claim || {};
+    const promotionGate = claim.real_quality_promotion_gate || {};
     const researchClaim = portfolio.research_claim_boundary || {};
     const qualityUpgradePath = portfolio.quality_upgrade_path || {};
     const grid = document.getElementById('claim-grid');
@@ -227,6 +228,24 @@
         upgradeCard.appendChild(block);
       });
       grid.appendChild(upgradeCard);
+    }
+
+    if (promotionGate.status || Array.isArray(promotionGate.checks)) {
+      const gateCard = element('article', 'card claim-card claim-upgrade-card public-claim-promotion-gate');
+      gateCard.appendChild(element('h3', '', '\u771f\u5b9e\u751f\u4ea7\u8d28\u91cf\u95e8\u7981'));
+      addTextRow(gateCard, '\u72b6\u6001', promotionGate.status || '\u5f85\u8865\u9f50');
+      addTextRow(gateCard, '\u53ef\u5347\u7ea7', promotionGate.ready ? '\u662f' : '\u5426');
+      addTextRow(gateCard, '\u963b\u585e\u9879', promotionGate.blocking_count || 0);
+      if (promotionGate.next_action) {
+        gateCard.appendChild(element('p', '', text(promotionGate.next_action)));
+      }
+      const checks = element('ul', 'proof-list');
+      (promotionGate.checks || []).forEach(function (item) {
+        const statusText = item.passed ? '\u5df2\u901a\u8fc7' : '\u5f85\u8865\u9f50';
+        checks.appendChild(element('li', '', statusText + '\uff1a' + text(item.label || item.id || 'check')));
+      });
+      if (checks.children.length) gateCard.appendChild(checks);
+      grid.appendChild(gateCard);
     }
 
     renderClaimUpgradeRecovery(grid, claim.claim_upgrade_recovery || {});
