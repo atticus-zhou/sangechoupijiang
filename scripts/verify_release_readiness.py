@@ -328,9 +328,11 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
             return f"status={parsed.get('status')}; stage_b={stage_b.get('status')}"
         if check_id == "first_run":
             checklist = parsed.get("github_download_checklist") or {}
+            deployment_modes = parsed.get("deployment_mode_matrix") or []
             return (
                 f"mode={parsed.get('mode')}; "
                 f"paths={','.join(parsed.get('recommended_order') or [])}; "
+                f"deployment_modes={len(deployment_modes)}; "
                 f"github_download={checklist.get('status')}:"
                 f"{checklist.get('present_public_file_count')}/{checklist.get('expected_public_file_count')}; "
                 f"private_boundaries={len(checklist.get('private_paths_never_commit') or [])}"

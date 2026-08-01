@@ -67,6 +67,22 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         ]:
             self.assertIn(package, checklist["present_python_packages"])
 
+        deployment_modes = {item["id"]: item for item in payload["deployment_mode_matrix"]}
+        self.assertEqual(set(deployment_modes), {"public_demo", "local_real_use", "future_saas"})
+        self.assertEqual(deployment_modes["public_demo"]["status"], "ready")
+        self.assertFalse(deployment_modes["public_demo"]["requires_api_key"])
+        self.assertFalse(deployment_modes["public_demo"]["allows_real_model_calls"])
+        self.assertFalse(deployment_modes["public_demo"]["allows_workspace_writes"])
+        self.assertIn("/api/demo", " ".join(deployment_modes["public_demo"]["allowed"]))
+        self.assertIn("config.yaml", " ".join(deployment_modes["public_demo"]["forbidden"]))
+        self.assertTrue(deployment_modes["local_real_use"]["requires_api_key"])
+        self.assertTrue(deployment_modes["local_real_use"]["allows_real_model_calls"])
+        self.assertTrue(deployment_modes["local_real_use"]["allows_workspace_writes"])
+        self.assertIn("output", " ".join(deployment_modes["local_real_use"]["forbidden"]))
+        self.assertEqual(deployment_modes["future_saas"]["status"], "not_current_product")
+        self.assertEqual(deployment_modes["future_saas"]["allows_real_model_calls"], "not_implemented")
+        self.assertIn("前端 JavaScript", " ".join(deployment_modes["future_saas"]["forbidden"]))
+
         paths = {item["id"]: item for item in payload["paths"]}
         for path_id in ["public_demo", "local_real_use", "developer_extension"]:
             self.assertIn(path_id, paths)
@@ -169,6 +185,12 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("config.example.yaml", result.stdout)
         self.assertIn("runtime_logs/", result.stdout)
         self.assertIn("Before Public Sharing", result.stdout)
+        self.assertIn("Deployment Mode Matrix", result.stdout)
+        self.assertIn("public_demo - 公开无 Key 演示", result.stdout)
+        self.assertIn("local_real_use - 本地真实使用", result.stdout)
+        self.assertIn("future_saas - 未来 SaaS 模式", result.stdout)
+        self.assertIn("Allows real model calls: `False`", result.stdout)
+        self.assertIn("not_current_product", result.stdout)
         self.assertIn("public_demo", result.stdout)
         self.assertIn("local_real_use", result.stdout)
         self.assertIn("real_production.status=", result.stdout)

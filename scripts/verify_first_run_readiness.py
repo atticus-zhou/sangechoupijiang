@@ -72,6 +72,7 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
         "paths": paths,
         "recommended_order": [item["id"] for item in paths],
         "github_download_checklist": _github_download_checklist(root),
+        "deployment_mode_matrix": _deployment_mode_matrix(),
         "commands": {
             "public_demo": PUBLIC_DEMO_COMMAND,
             "static_showcase_export": STATIC_EXPORT_COMMAND,
@@ -175,6 +176,69 @@ def _github_download_checklist(root: Path) -> dict[str, Any]:
             "python scripts/check_no_secrets.py",
         ],
     }
+
+
+def _deployment_mode_matrix() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "public_demo",
+            "title": "公开无 Key 演示",
+            "status": "ready",
+            "who_can_use": "面试官、作品集访客、第一次看项目的人。",
+            "allowed": [
+                "查看固定样例",
+                "下载样例 Word、handoff manifest、trace 和研究报告",
+                "访问 /api/demo 或静态 dist/public-showcase",
+            ],
+            "forbidden": [
+                "调用真实模型",
+                "写入用户工作区",
+                "读取 config.yaml、.env、Cookie、浏览器登录态或本地输出目录",
+            ],
+            "requires_api_key": False,
+            "allows_real_model_calls": False,
+            "allows_workspace_writes": False,
+            "verification": STATIC_SHOWCASE_COMMAND,
+        },
+        {
+            "id": "local_real_use",
+            "title": "本地真实使用",
+            "status": "ready_when_user_configures_models",
+            "who_can_use": "项目使用者本人，使用自己的本地 Key 和本地文件。",
+            "allowed": [
+                "在本机填写模型 Key",
+                "运行真实办公室任务",
+                "生成本地 Word、图片、历史记录和追溯文件",
+            ],
+            "forbidden": [
+                "提交 config.yaml、.env、user_data、output、runtime_logs 或真实生成文件",
+                "把作者 Key 提供给外部访问者",
+                "把未验证真实质量的产物说成 production_quality_verified",
+            ],
+            "requires_api_key": True,
+            "allows_real_model_calls": True,
+            "allows_workspace_writes": True,
+            "verification": LOCAL_DOCTOR_COMMAND,
+        },
+        {
+            "id": "future_saas",
+            "title": "未来 SaaS 模式",
+            "status": "not_current_product",
+            "who_can_use": "未来的陌生在线用户；当前仓库还没有提供这类能力。",
+            "allowed": [
+                "未来可设计账号、租户隔离、配额、计费、队列和服务端 Key 托管",
+            ],
+            "forbidden": [
+                "把当前本地版直接部署成多人在线真实生产系统",
+                "把 API Key 放进前端 JavaScript、HTML、静态 JSON 或公开环境变量",
+                "绕过权限、成本、队列和文件授权设计直接开放真实接口",
+            ],
+            "requires_api_key": "future_server_or_user_key_policy_required",
+            "allows_real_model_calls": "not_implemented",
+            "allows_workspace_writes": "not_implemented",
+            "verification": "docs/DEPLOYMENT_MODES.md",
+        },
+    ]
 
 
 def _requirements_dependency_check(root: Path) -> dict[str, Any]:
@@ -497,6 +561,24 @@ def format_markdown(payload: dict[str, Any]) -> str:
     lines.extend(["", "### Before Public Sharing", ""])
     for command in checklist.get("before_public_sharing", []):
         lines.append(f"- `{command}`")
+    lines.extend(["", "## Deployment Mode Matrix", ""])
+    for mode in payload.get("deployment_mode_matrix", []):
+        lines.extend([
+            f"### {mode.get('id')} - {mode.get('title')}",
+            "",
+            f"- Status: `{mode.get('status')}`",
+            f"- Requires API Key: `{mode.get('requires_api_key')}`",
+            f"- Allows real model calls: `{mode.get('allows_real_model_calls')}`",
+            f"- Allows workspace writes: `{mode.get('allows_workspace_writes')}`",
+            f"- Verification: `{mode.get('verification')}`",
+            f"- Who can use: {mode.get('who_can_use')}",
+            "- Allowed:",
+        ])
+        for allowed in mode.get("allowed", []):
+            lines.append(f"  - {allowed}")
+        lines.append("- Forbidden:")
+        for forbidden in mode.get("forbidden", []):
+            lines.append(f"  - {forbidden}")
     lines.extend(["", "## Paths", ""])
     for item in payload.get("paths", []):
         lines.extend([
