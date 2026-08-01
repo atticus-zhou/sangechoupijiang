@@ -136,11 +136,13 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     evidence_handoff = payload.get("evidence_handoff") or []
     evidence_gap_cards = payload.get("evidence_gap_cards") or []
     capture_playbook = payload.get("evidence_capture_playbook") or {}
+    research_evidence_requirements = payload.get("research_evidence_requirements") or {}
     capture_steps = capture_playbook.get("steps") or []
     claim_response = client.get("/api/demo/research/claim-report")
     claim_report = claim_response.json() if claim_response.status_code == 200 else {}
     claim_capture_playbook = claim_report.get("evidence_capture_playbook") or {}
     claim_evidence_status_summary = claim_report.get("evidence_status_summary") or {}
+    claim_research_evidence_requirements = claim_report.get("research_evidence_requirements") or {}
     if len(covered_in_demo) < 4:
         errors.append("research demo must describe which evidence is covered in the fixed sample")
     if len(requires_human_or_account) < 3:
@@ -190,6 +192,17 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         errors.append("research demo must identify pending account/manual evidence")
     if not evidence_status_summary.get("operator_message"):
         errors.append("research demo evidence status must include an operator-facing message")
+    if research_evidence_requirements.get("status") != "staged_only":
+        errors.append("research demo must expose research_evidence_requirements.status=staged_only")
+    if research_evidence_requirements.get("ready_for_final_research_claim") is not False:
+        errors.append("research demo must not claim final research evidence readiness")
+    if research_evidence_requirements.get("can_claim_full_automation") is not False:
+        errors.append("research demo evidence requirements must forbid full automation claims")
+    for marker in ("pending_evidence_disclosed", "placeholder_sources_disclosed", "final_report_not_claimed"):
+        if marker not in (research_evidence_requirements.get("blocking_check_ids") or []):
+            errors.append(f"research evidence requirements missing blocking check id: {marker}")
+    if len(research_evidence_requirements.get("checks") or []) < 6:
+        errors.append("research evidence requirements must include detailed checks")
     if claim_response.status_code != 200:
         errors.append(f"research claim report returned {claim_response.status_code}")
     if claim_report.get("claim_level") != "staged_research_demo":
@@ -202,6 +215,8 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         errors.append("research claim report must repeat the evidence status summary")
     if claim_capture_playbook.get("status") != capture_playbook.get("status"):
         errors.append("research claim report must repeat the evidence capture playbook")
+    if claim_research_evidence_requirements.get("status") != research_evidence_requirements.get("status"):
+        errors.append("research claim report must repeat research evidence requirements")
     forbidden_claims = "\n".join(claim_report.get("forbidden_public_claims") or [])
     if "自动登录飞瓜" not in forbidden_claims or "会员级" not in forbidden_claims:
         errors.append("research claim report must forbid full platform automation claims")
@@ -302,6 +317,9 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         "claim_upgrade_checklist_count": len(upgrade_checklist),
         "evidence_claim_readiness": evidence_status_summary.get("claim_readiness", ""),
         "evidence_can_claim_final_report": evidence_status_summary.get("can_claim_final_report"),
+        "research_evidence_requirements_status": research_evidence_requirements.get("status", ""),
+        "research_ready_for_final_claim": research_evidence_requirements.get("ready_for_final_research_claim"),
+        "research_evidence_blocking_checks": list(research_evidence_requirements.get("blocking_check_ids") or []),
         "placeholder_demo_source_count": (evidence_status_summary.get("counts") or {}).get("placeholder_demo_source", 0),
         "pending_evidence_count": (evidence_status_summary.get("counts") or {}).get("pending_account_or_manual_capture", 0),
     }
@@ -370,6 +388,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Evidence boundaries: {demo.get('evidence_boundary_count')}",
         f"- Human/account boundaries: {demo.get('human_or_account_boundary_count')}",
         f"- Evidence claim readiness: {demo.get('evidence_claim_readiness')} / final_report={demo.get('evidence_can_claim_final_report')}",
+        f"- Research evidence requirements: {demo.get('research_evidence_requirements_status')} / final_ready={demo.get('research_ready_for_final_claim')} / blocking={', '.join(demo.get('research_evidence_blocking_checks') or [])}",
         f"- Evidence status counts: placeholder={demo.get('placeholder_demo_source_count')}, pending={demo.get('pending_evidence_count')}",
         f"- Reading guide: {demo.get('reading_guide_ready_count')}/{demo.get('reading_guide_count')}",
         f"- Evidence handoff: {demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}",

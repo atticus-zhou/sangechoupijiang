@@ -908,6 +908,12 @@ async def get_research_demo_api():
     evidence_gap_cards = _research_demo_evidence_gap_cards(evidence_handoff)
     evidence_capture_playbook = _research_demo_evidence_capture_playbook()
     evidence_status_summary = _research_demo_evidence_status_summary(sources, data_points)
+    research_evidence_requirements = _research_demo_evidence_requirements(
+        evidence_handoff,
+        evidence_gap_cards,
+        evidence_capture_playbook,
+        evidence_status_summary,
+    )
     return {
         "mode": "no_key_demo",
         "office_id": "research",
@@ -959,6 +965,7 @@ async def get_research_demo_api():
         "evidence_gap_cards": evidence_gap_cards,
         "evidence_capture_playbook": evidence_capture_playbook,
         "evidence_status_summary": evidence_status_summary,
+        "research_evidence_requirements": research_evidence_requirements,
         "deliverable_reading_guide": [
             {
                 "order": 1,
@@ -1043,6 +1050,12 @@ def _research_claim_report_from_demo(demo: dict) -> dict:
     evidence_gap_cards = demo.get("evidence_gap_cards") or []
     evidence_capture_playbook = demo.get("evidence_capture_playbook") or {}
     evidence_status_summary = demo.get("evidence_status_summary") or {}
+    research_evidence_requirements = demo.get("research_evidence_requirements") or _research_demo_evidence_requirements(
+        evidence_handoff,
+        evidence_gap_cards,
+        evidence_capture_playbook,
+        evidence_status_summary,
+    )
     return {
         "status": "passed",
         "mode": "research_staged_delivery_claim",
@@ -1067,6 +1080,7 @@ def _research_claim_report_from_demo(demo: dict) -> dict:
         "evidence_gap_cards": evidence_gap_cards,
         "evidence_capture_playbook": evidence_capture_playbook,
         "evidence_status_summary": evidence_status_summary,
+        "research_evidence_requirements": research_evidence_requirements,
         "claim_upgrade_checklist": [
             {
                 "id": "account_authorized_capture",
@@ -1840,6 +1854,113 @@ def _research_demo_evidence_capture_playbook() -> dict:
     }
 
 
+def _research_demo_evidence_requirements(
+    evidence_handoff: list[dict],
+    evidence_gap_cards: list[dict],
+    evidence_capture_playbook: dict,
+    evidence_status_summary: dict,
+) -> dict:
+    """Summarize what evidence is still required before final research claims."""
+    status_counts = evidence_status_summary.get("counts") or {}
+    pending_count = int(status_counts.get("pending_account_or_manual_capture") or 0)
+    placeholder_count = int(status_counts.get("placeholder_demo_source") or 0)
+    handoff_ready = [
+        item for item in evidence_handoff
+        if item.get("owner") and item.get("target_evidence") and item.get("why_needed") and item.get("upgrades")
+    ]
+    gap_cards_ready = [
+        item for item in evidence_gap_cards
+        if item.get("user_action") and item.get("acceptance") and "evidence_" in str(item.get("file_name") or "")
+    ]
+    capture_steps = evidence_capture_playbook.get("steps") or []
+    capture_steps_ready = [
+        item for item in capture_steps
+        if item.get("owner") and item.get("action") and item.get("expected_artifact") and item.get("acceptance")
+    ]
+    after_capture_commands = evidence_capture_playbook.get("after_capture_commands") or []
+    checks = [
+        {
+            "id": "handoff_targets_present",
+            "label": "待补证据交接目标完整",
+            "passed": len(handoff_ready) >= 3,
+            "evidence": f"handoff_targets={len(handoff_ready)}/{len(evidence_handoff)}",
+            "if_missing": "补齐平台价格带、竞品排行和评论痛点等待补证据目标。",
+        },
+        {
+            "id": "gap_cards_actionable",
+            "label": "证据补齐卡可执行",
+            "passed": len(gap_cards_ready) >= len(evidence_handoff) and len(gap_cards_ready) >= 3,
+            "evidence": f"gap_cards_ready={len(gap_cards_ready)}/{len(evidence_gap_cards)}",
+            "if_missing": "每张补证卡必须有用户动作、验收标准和 evidence_ 文件命名。",
+        },
+        {
+            "id": "human_capture_playbook_ready",
+            "label": "人工登录和截图流程明确",
+            "passed": evidence_capture_playbook.get("status") == "human_account_required" and len(capture_steps_ready) >= 5,
+            "evidence": f"status={evidence_capture_playbook.get('status', '')}; steps={len(capture_steps_ready)}/{len(capture_steps)}",
+            "if_missing": "补齐人类登录、截图、来源说明、报告刷新和复核命令步骤。",
+        },
+        {
+            "id": "after_capture_verifiers_present",
+            "label": "补证后复核命令完整",
+            "passed": any("verify_research_office_readiness.py" in str(command) for command in after_capture_commands)
+            and any("verify_release_readiness.py" in str(command) for command in after_capture_commands),
+            "evidence": f"commands={len(after_capture_commands)}",
+            "if_missing": "补上 research readiness 和 release readiness 复核命令。",
+        },
+        {
+            "id": "pending_evidence_disclosed",
+            "label": "待人工或账号权限证据已披露",
+            "passed": pending_count >= 1,
+            "evidence": f"pending_account_or_manual_capture={pending_count}",
+            "if_missing": "公开样例必须标明哪些证据仍需真实账号或人工截图。",
+        },
+        {
+            "id": "placeholder_sources_disclosed",
+            "label": "固定样例占位来源已披露",
+            "passed": placeholder_count >= 1,
+            "evidence": f"placeholder_demo_source={placeholder_count}",
+            "if_missing": "公开样例必须标明哪些来源只是固定样例或占位。",
+        },
+        {
+            "id": "final_report_not_claimed",
+            "label": "没有宣称最终可验证报告",
+            "passed": evidence_status_summary.get("can_claim_final_report") is False
+            and evidence_status_summary.get("claim_readiness") == "staged_only",
+            "evidence": (
+                f"claim_readiness={evidence_status_summary.get('claim_readiness', '')}; "
+                f"can_claim_final_report={evidence_status_summary.get('can_claim_final_report')}"
+            ),
+            "if_missing": "在截图和来源未补齐前，研究办公室只能声明 staged delivery。",
+        },
+    ]
+    missing = [item for item in checks if not item["passed"]]
+    blocking_ids = [
+        "pending_evidence_disclosed",
+        "placeholder_sources_disclosed",
+        "final_report_not_claimed",
+    ]
+    return {
+        "status": "staged_only" if not missing else "evidence_contract_incomplete",
+        "ready_for_final_research_claim": False,
+        "can_claim_full_automation": False,
+        "claim_readiness": evidence_status_summary.get("claim_readiness", "staged_only"),
+        "pending_account_or_manual_capture": pending_count,
+        "placeholder_demo_source": placeholder_count,
+        "handoff_target_count": len(evidence_handoff),
+        "gap_card_count": len(evidence_gap_cards),
+        "capture_playbook_step_count": len(capture_steps),
+        "checks": checks,
+        "missing_check_ids": [item["id"] for item in missing],
+        "blocking_check_ids": blocking_ids,
+        "next_action": (
+            "使用真实账号补齐截图、来源说明和人工复核记录，然后重新生成 report、evidence manifest 和 claim report。"
+            if not missing
+            else missing[0]["if_missing"]
+        ),
+    }
+
+
 def _public_showcase_reproducibility_checklist() -> list[dict]:
     return [
         {
@@ -2271,6 +2392,7 @@ async def get_public_showcase_demo_api():
                     "file_naming_rule": (research_claim.get("evidence_capture_playbook") or {}).get("file_naming_rule", ""),
                     "after_capture_commands": (research_claim.get("evidence_capture_playbook") or {}).get("after_capture_commands", [])[:3],
                 },
+                "research_evidence_requirements": research_claim.get("research_evidence_requirements", {}),
                 "next_action": research_claim.get("next_action", ""),
             },
             "real_production_claim": {

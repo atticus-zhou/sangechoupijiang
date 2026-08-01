@@ -208,6 +208,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(research_claim["claim_level"], "staged_research_demo")
         self.assertFalse(research_claim["can_claim_full_automation"])
         self.assertIn("自动登录飞瓜", "\n".join(research_claim["forbidden_public_claims"]))
+        research_requirements = research_claim["research_evidence_requirements"]
+        self.assertEqual(research_requirements["status"], "staged_only")
+        self.assertFalse(research_requirements["ready_for_final_research_claim"])
+        self.assertIn("pending_evidence_disclosed", research_requirements["blocking_check_ids"])
+        self.assertIn("placeholder_sources_disclosed", research_requirements["blocking_check_ids"])
+        self.assertIn("final_report_not_claimed", research_requirements["blocking_check_ids"])
         upgrade_path = embed["quality_upgrade_path"]
         self.assertEqual(upgrade_path["current_public_level"], "demo_structure_only")
         self.assertEqual(upgrade_path["current_image_evidence"], "fixture_only")

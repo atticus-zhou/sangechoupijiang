@@ -170,6 +170,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(research_claim["calls_real_models"])
         self.assertGreaterEqual(research_claim["evidence_handoff_count"], 3)
         self.assertGreaterEqual(len(research_claim["evidence_handoff"]), 3)
+        research_requirements = research_claim["research_evidence_requirements"]
+        self.assertEqual(research_requirements["status"], "staged_only")
+        self.assertFalse(research_requirements["ready_for_final_research_claim"])
+        self.assertIn("pending_evidence_disclosed", research_requirements["blocking_check_ids"])
+        self.assertIn("placeholder_sources_disclosed", research_requirements["blocking_check_ids"])
+        self.assertIn("final_report_not_claimed", research_requirements["blocking_check_ids"])
         first_handoff = research_claim["evidence_handoff"][0]
         self.assertTrue(first_handoff["target_evidence"])
         self.assertTrue(first_handoff["why_needed"])
@@ -185,6 +191,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertGreaterEqual(len(research_claim_payload["claim_upgrade_checklist"]), 3)
         self.assertGreaterEqual(len(research_claim_payload["evidence_handoff"]), 3)
         self.assertGreaterEqual(len(research_claim_payload["evidence_capture_playbook"]["steps"]), 5)
+        self.assertEqual(research_claim_payload["research_evidence_requirements"]["status"], "staged_only")
         self.assertNotIn("E:\\", json.dumps(research_claim_payload, ensure_ascii=False))
         upgrade_path = showcase["portfolio_embed"]["quality_upgrade_path"]
         self.assertEqual(upgrade_path["current_public_level"], "demo_structure_only")

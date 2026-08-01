@@ -425,6 +425,14 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append("static research claim report must include a claim upgrade checklist")
             if len(research_claim_payload.get("evidence_handoff") or []) < 3:
                 errors.append("static research claim report must include evidence handoff items")
+            research_requirements = research_claim_payload.get("research_evidence_requirements") or {}
+            if research_requirements.get("status") != "staged_only":
+                errors.append("static research claim report must expose research_evidence_requirements.status=staged_only")
+            if research_requirements.get("ready_for_final_research_claim") is not False:
+                errors.append("static research claim report must not claim final research readiness")
+            for marker in ("pending_evidence_disclosed", "placeholder_sources_disclosed", "final_report_not_claimed"):
+                if marker not in (research_requirements.get("blocking_check_ids") or []):
+                    errors.append(f"static research evidence requirements missing blocking check id: {marker}")
             if research_capture_playbook.get("status") != "human_account_required":
                 errors.append("static research claim report must include a human-account evidence capture playbook")
             if len(research_capture_playbook.get("steps") or []) < 5:
@@ -438,10 +446,13 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         if research_claim_boundary.get("requires_api_key") is not False or research_claim_boundary.get("calls_real_models") is not False:
             errors.append("static portfolio embed must keep the research claim no-key and no-model")
         boundary_playbook = research_claim_boundary.get("evidence_capture_playbook") or {}
+        boundary_requirements = research_claim_boundary.get("research_evidence_requirements") or {}
         if boundary_playbook.get("status") != research_capture_playbook.get("status"):
             errors.append("static portfolio embed must expose the research evidence capture playbook status")
         if boundary_playbook.get("step_count") != len(research_capture_playbook.get("steps") or []):
             errors.append("static portfolio embed must expose the research evidence capture playbook step count")
+        if boundary_requirements.get("status") != "staged_only":
+            errors.append("static portfolio research claim boundary must expose staged_only evidence requirements")
         research_claim_upgrade_checklist = research_claim_payload.get("claim_upgrade_checklist") or []
 
         fast_review_route = portfolio.get("fast_review_route") or []
