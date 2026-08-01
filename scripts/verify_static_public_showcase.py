@@ -325,6 +325,19 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                     errors.append(f"static comic handoff inventory failed_image_ids must be a list: {item.get('title') or item.get('quality_claim')}")
                 if not isinstance(item.get("rework_action_summary"), list):
                     errors.append(f"static comic handoff inventory rework_action_summary must be a list: {item.get('title') or item.get('quality_claim')}")
+                if int(item.get("waste_or_rework_images") or 0) > 0:
+                    rework_instructions = image_summary.get("rework_instructions") or []
+                    if not rework_instructions:
+                        errors.append(f"static comic handoff inventory must explain every rework image: {item.get('title') or item.get('quality_claim')}")
+                    for instruction in rework_instructions:
+                        if not str(instruction.get("reason") or "").strip():
+                            errors.append(f"static comic rework instruction is missing a user-readable reason: {instruction.get('image_id') or instruction.get('asset_id')}")
+                        if not str(instruction.get("user_message") or "").strip():
+                            errors.append(f"static comic rework instruction is missing user_message: {instruction.get('image_id') or instruction.get('asset_id')}")
+                        if not str(instruction.get("next_button_label") or "").strip():
+                            errors.append(f"static comic rework instruction is missing next_button_label: {instruction.get('image_id') or instruction.get('asset_id')}")
+                        if not any(str(step).strip() for step in (instruction.get("operator_steps") or [])):
+                            errors.append(f"static comic rework instruction is missing operator_steps: {instruction.get('image_id') or instruction.get('asset_id')}")
         for item in download_catalog:
             local_uri = str(item.get("local_uri") or "")
             path = temp_dir / local_uri

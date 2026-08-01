@@ -103,6 +103,16 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertTrue(all("image_quality_summary" in item for item in demo_items))
         self.assertTrue(all(isinstance(item["failed_image_ids"], list) for item in demo_items))
         self.assertTrue(all(isinstance(item["rework_action_summary"], list) for item in demo_items))
+        rework_cards = [
+            instruction
+            for item in demo_items
+            for instruction in item["image_quality_summary"].get("rework_instructions", [])
+        ]
+        self.assertGreaterEqual(len(rework_cards), 7)
+        self.assertTrue(all(card["reason"].strip() for card in rework_cards))
+        self.assertTrue(all(card["user_message"].strip() for card in rework_cards))
+        self.assertTrue(all(card["next_button_label"].strip() for card in rework_cards))
+        self.assertTrue(all(card["operator_steps"] for card in rework_cards))
         demos = {item["office_id"]: item for item in showcase["featured_demos"]}
         comic_benchmark = demos["comic_production"]["quality_benchmark"]
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
