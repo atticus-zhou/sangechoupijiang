@@ -24,6 +24,7 @@ REQUIRED_STATIC_FILES = (
     "data/comic_production_claim_report.json",
     "downloads/comic-production/files/word_canvas.docx",
     "downloads/comic-production/files/handoff_manifest.json",
+    "downloads/comic-production/files/trace.json",
 )
 
 

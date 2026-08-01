@@ -13,7 +13,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("claim_upgrade_recovery", text)
         self.assertIn("regenerate_images", text)
         self.assertIn("AI 漫剧 Word 制片画布", text)
-        self.assertIn("六份下载物", text)
+        self.assertIn("七份下载物", text)
         self.assertIn("最快验收路线", text)
         self.assertIn("核对 handoff manifest", text)
         self.assertIn("研究办公室阶段性交付声明", text)

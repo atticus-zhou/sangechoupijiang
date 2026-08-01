@@ -2,7 +2,7 @@
 
 这条路径用于把“三个臭皮匠”放进个人网站、作品集或面试展示页。它输出的是一个自包含的静态站点，不需要 Python 后端，不读取 `config.yaml`，不调用真实模型，也不会消耗作者 API Key。
 
-它不是在线 SaaS。访客可以看固定样例、理解两个办公室的工作链、按最快验收路线检查五个关键证据、下载六份样例交付物，并查看 AI 漫剧下游生产 quick-start，但不能提交真实创作任务。
+它不是在线 SaaS。访客可以看固定样例、理解两个办公室的工作链、按最快验收路线检查五个关键证据、下载七份样例下载物，并查看 AI 漫剧下游生产 quick-start，但不能提交真实创作任务。
 
 ## 一键生成
 
@@ -47,13 +47,14 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 
 - 一个无需后端即可打开的公开展示页。
 - 首次打开时的最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵、查看声明边界和复现命令。
+- A five-step visitor path for quickly checking the public page, Word canvas, handoff manifest, asset matrix, claim boundary, and reproducibility commands.
 - 三条首次使用路径：
   - `public_demo`：不需要 API Key，只看固定样例、下载物、阅读指南和公开安全边界，适合面试官或作品集访客。
   - `local_real_use`：使用者在本机填写自己的 API Key，测试各办公室部门模型后，再运行真实调研或 AI 漫剧制片。
   - `developer_extension`：开发者先跑办公室协议、隔离和扩展治理检查，再新增办公室，避免模型配置、工作区、历史和产物串线。
 - AI 漫剧制片办公室与研究办公室的固定样例说明。
 - 样例 Word 制片画布、handoff manifest、阶段调研报告、证据清单和研究补证操作手册。
-- 六份下载物和七个可复核文件目录，包含研究办公室阶段性交付声明、`evidence_capture_playbook` 和 AI 漫剧真实生产声明报告。
+- 七份下载物和八个可复核文件目录，包含 AI 漫剧追溯记录、研究办公室阶段性交付声明、`evidence_capture_playbook` 和 AI 漫剧真实生产声明报告。
 - AI 漫剧真实生产声明报告里的 `claim_upgrade_recovery` 卡片，明确公开样例只证明结构；如果要升级为真实质量证据，需要本地配置模型、重新生成图片、执行视觉质检，并重新写入质量基准。
 - AI 漫剧下游生产 quick-start，说明 Word 画布之后如何确认资产、逐镜头生成、复核和归档。
 - 实际产品界面截图、交付物阅读顺序和 3 分钟面试演示脚本。
@@ -141,7 +142,7 @@ Do not describe the personal website as live until `npm run check:online` passes
 
 The static package must also keep `data/visitor_acceptance_guide.json`.
 This file is the reviewer-facing route for the public demo: it records the
-seven-step visitor route, the seven reviewable downloads, the demo-only claim
+seven-step visitor route, the eight reviewable downloads, the demo-only claim
 boundaries, and the live-site rule that `/three-stooges/` is not public evidence
 until `npm run check:online` passes.
 

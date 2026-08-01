@@ -98,14 +98,15 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(len(research_claim_deliverables), 1)
         self.assertEqual(research_claim_deliverables[0]["uri"], "/api/demo/research/claim-report")
         self.assertIn("全自动会员级采集", " ".join(research_claim_deliverables[0]["acceptance_signals"]))
-        self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 6)
-        self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4, 5, 6])
+        self.assertGreaterEqual(len(embed["deliverable_reading_guide"]), 7)
+        self.assertEqual([item["order"] for item in embed["deliverable_reading_guide"]], [1, 2, 3, 4, 5, 6, 7])
         for item in embed["deliverable_reading_guide"]:
             self.assertTrue(item["uri"].startswith("/api/demo/"))
             self.assertTrue(item["look_for"])
             self.assertTrue(item["proves"])
         self.assertTrue(any("Word 制片画布" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("handoff manifest" in item["title"] for item in embed["deliverable_reading_guide"]))
+        self.assertTrue(any("追溯记录" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("交付盘点" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("证据清单" in item["title"] for item in embed["deliverable_reading_guide"]))
         self.assertTrue(any("声明边界" in item["title"] for item in embed["deliverable_reading_guide"]))
@@ -192,6 +193,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("visual_review", claim["claim_upgrade_recovery"]["rebuilds"])
         self.assertIn("不能宣称真实模型画质已验证", "\n".join(claim["forbidden_public_claims"]))
         self.assertEqual(claim["evidence"]["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
+        self.assertEqual(claim["evidence"]["trace_uri"], "/api/demo/comic-production/files/trace.json")
         self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
         research_claim_response = client.get("/api/demo/research/claim-report")
         self.assertEqual(research_claim_response.status_code, 200)
@@ -255,9 +257,9 @@ class PublicShowcaseManifestTests(unittest.TestCase):
 
         reproducibility = embed["reproducibility_checklist"]
         self.assertEqual([item["order"] for item in reproducibility], [1, 2, 3, 4, 5])
-        self.assertIn("6 个下载物", reproducibility[2]["expected"])
-        self.assertIn("7 个可复核文件", reproducibility[2]["expected"])
-        self.assertIn("6/6 阅读指南", reproducibility[2]["expected"])
+        self.assertIn("7 个下载物", reproducibility[2]["expected"])
+        self.assertIn("8 个可复核文件", reproducibility[2]["expected"])
+        self.assertIn("7/7 阅读指南", reproducibility[2]["expected"])
         for item in reproducibility:
             self.assertTrue(item["command"])
             self.assertTrue(item["expected"])

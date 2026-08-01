@@ -486,6 +486,7 @@ async def get_comic_production_demo_api():
         "proof_points": [
             "不需要 API Key 就能安全展示完整流程。",
             "Word 制片画布和引用清单可以直接下载。",
+            "追溯记录 JSON 可以独立下载，方便外部访客复核故事、资产、图片、镜头和质量声明边界。",
             "资产、镜头、提示词和交付物之间保留引用链路。",
             "下游视频平台接手前所需的人物三视图、场景空间图、镜头视频包和失败重试策略都有独立验证命令覆盖。",
             "质量基准明确区分 demo_structure_verified 和 production_quality_verified，不把占位图冒充真实画质。",
@@ -513,7 +514,7 @@ async def get_comic_production_demo_api():
                 "id": "downloadable_delivery",
                 "title": "可下载交付物",
                 "status": "passed",
-                "evidence": "提供 Word 制片画布和资产/镜头引用清单下载。",
+                "evidence": "提供 Word 制片画布、资产/镜头引用清单和追溯记录 JSON 下载。",
             },
             {
                 "id": "reference_chain",
@@ -566,6 +567,12 @@ async def get_comic_production_demo_api():
                 "title": "资产与镜头引用清单",
                 "status": "downloadable",
                 "uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            },
+            {
+                "type": "trace_bundle",
+                "title": "样例生产追溯记录",
+                "status": "downloadable",
+                "uri": "/api/demo/comic-production/files/trace.json",
             },
             {
                 "type": "downstream_handoff_gate",
@@ -694,11 +701,95 @@ def _public_claim_report(report: dict) -> dict:
         "evidence": {
             "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
             "word_canvas_uri": "/api/demo/comic-production/files/word_canvas.docx",
+            "trace_uri": "/api/demo/comic-production/files/trace.json",
             "package_quality_score": evidence.get("package_quality_score"),
             "visual_evidence_level": evidence.get("visual_evidence_level", ""),
             "stored_benchmark_matches": bool(evidence.get("stored_benchmark_matches")),
             "production_quality_verified": bool(evidence.get("production_quality_verified")),
         },
+    }
+
+
+def _public_comic_trace_from_handoff(manifest_path: Path, word_canvas_path: Path | None = None) -> dict:
+    """Build a public-safe trace bundle for the deterministic no-key comic demo."""
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    quality_benchmark = payload.get("quality_benchmark") or audit_handoff_manifest(payload)
+    claim_level = claim_level_from_benchmark(quality_benchmark)
+    prompt_payload = payload.get("prompt_package") or {}
+    prompt_quality = audit_prompt_package(prompt_payload) if prompt_payload else {}
+    image_assets = [
+        _public_comic_trace_image_asset(image)
+        for image in (payload.get("images") or [])
+    ]
+    return {
+        "mode": "no_key_demo_comic_v2_trace",
+        "office_id": "comic_production",
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "writes_workspace": False,
+        "source": "public_demo_handoff_manifest",
+        "story": payload.get("story") or {},
+        "style": payload.get("style") or {},
+        "manifest": payload.get("manifest") or {},
+        "word_canvas": {
+            **(payload.get("word_canvas") or {}),
+            "uri": "/api/demo/comic-production/files/word_canvas.docx",
+            "exists_in_demo": bool(word_canvas_path and word_canvas_path.exists()),
+        },
+        "handoff_manifest": {
+            "uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            "schema": payload.get("schema", ""),
+            "schema_version": payload.get("schema_version", 0),
+        },
+        "assets": payload.get("assets") or [],
+        "images": image_assets,
+        "shots": payload.get("shots") or [],
+        "production_lineage": payload.get("production_lineage") or [],
+        "downstream_quick_start": payload.get("downstream_quick_start") or [],
+        "quality_benchmark": quality_benchmark,
+        "claim_level": claim_level,
+        "claim_upgrade_checklist": claim_upgrade_checklist(claim_level, quality_benchmark),
+        "prompt_quality": prompt_quality,
+        "prompt_quality_status": prompt_quality.get("status", ""),
+        "image_production_evidence": _comic_v2_image_production_evidence(image_assets, quality_benchmark),
+        "delivery_audit": payload.get("audit") or {},
+        "reproducibility": {
+            "demo_endpoint": "/api/demo/comic-production",
+            "download_uri": "/api/demo/comic-production/files/trace.json",
+            "verification_commands": [
+                "python scripts/verify_public_demo_mode.py --format markdown",
+                "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
+                "python scripts/verify_comic_real_production_claim.py --format markdown",
+            ],
+            "public_claim_boundary": "固定样例只证明结构、引用链路和交付格式；真实画质必须由使用者本地模型重新生成并通过质检后再声明。",
+        },
+    }
+
+
+def _public_comic_trace_image_asset(image: dict) -> dict:
+    review = image.get("review") or {}
+    return {
+        "image_id": image.get("image_id", ""),
+        "asset_id": image.get("asset_id", ""),
+        "image_kind": image.get("image_kind", ""),
+        "file": image.get("file", ""),
+        "status": image.get("status", ""),
+        "provider": image.get("provider", ""),
+        "model": image.get("model", ""),
+        "prompt_hash": image.get("prompt_hash", ""),
+        "prompt_purpose": image.get("prompt_purpose", ""),
+        "production_role": image.get("production_role", ""),
+        "clean_background_required": bool(image.get("clean_background_required", False)),
+        "usage_contract": list(image.get("usage_contract") or []),
+        "reference_policy": image.get("reference_policy", ""),
+        "is_identity_baseline": bool(image.get("is_identity_baseline")),
+        "reference_image_ids": list(image.get("reference_image_ids") or []),
+        "review_status": review.get("status", ""),
+        "review_handoff_ready": bool(review.get("handoff_ready", False)),
+        "review_recovery_action": review.get("recovery_action", ""),
+        "review_recovery_focus": review.get("recovery_focus", ""),
+        "review_recovery_reason": review.get("recovery_reason", ""),
+        "review_operator_steps": list(review.get("operator_steps") or []),
     }
 
 
@@ -722,9 +813,19 @@ def _ensure_comic_production_demo_delivery() -> dict[str, Path]:
         delivery = build_delivery_from_v2(bundle, manifest, prompt_package, image_result, delivery_dir)
         if delivery.handoff_manifest_path is None:
             raise HTTPException(status_code=500, detail="Demo handoff manifest was not generated.")
+        trace_path = delivery_dir / "trace.json"
+        trace_path.write_text(
+            json.dumps(
+                _public_comic_trace_from_handoff(delivery.handoff_manifest_path, delivery.path),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         return {
             "word_canvas": delivery.path,
             "handoff_manifest": delivery.handoff_manifest_path,
+            "trace": trace_path,
         }
 
 @app.get("/api/demo/comic-production/files/{filename}")
@@ -735,6 +836,7 @@ async def get_comic_production_demo_file_api(filename: str):
     allowed = {
         "word_canvas.docx": delivery["word_canvas"],
         "handoff_manifest.json": delivery["handoff_manifest"],
+        "trace.json": delivery["trace"],
     }
     file_path = allowed.get(safe_name)
     if not file_path or not file_path.exists():
@@ -996,6 +1098,10 @@ def _public_showcase_deliverable_guidance(item_type: str) -> tuple[str, list[str
             "用于开发者或下游工具复核每个资产、镜头、图片和 Word 文件来自哪一版生产链路，并查看质量基准与恢复动作。",
             ["保留故事版本和视觉母版版本", "列出资产、镜头和图片记录", "区分结构演示与真实质量验证", "支持失败后追溯和重试"],
         ),
+        "trace_bundle": (
+            "用于独立复核样例从故事到交付的完整链路，重点看每个资产、图片和镜头是否能追到同一份故事、视觉母版和质量声明。",
+            ["包含故事/风格/资产/图片/镜头链路", "列出图片证据等级和重跑建议", "不用打开本地历史页也能审查样例"],
+        ),
         "report_markdown": (
             "打开后重点看调研结论、数据点、竞品表和截图计划是否分开呈现，而不是混成一段泛泛文字。",
             ["报告可读", "来源和数据有对应关系", "证据缺口被明确标注"],
@@ -1212,27 +1318,34 @@ def _public_showcase_deliverable_reading_guide() -> list[dict]:
         },
         {
             "order": 3,
+            "title": "再看 AI 漫剧追溯记录 JSON",
+            "uri": "/api/demo/comic-production/files/trace.json",
+            "look_for": "story、style、asset_id、image_id、shot_id、image_production_evidence、claim_upgrade_checklist 和 reproducibility 是否完整。",
+            "proves": "外部访客不需要访问本地历史页，也能审查这份样例从故事到资产、图片、镜头、Word 画布和质量声明的完整链路。",
+        },
+        {
+            "order": 4,
             "title": "再看 AI 漫剧交付盘点",
             "uri": "/api/demo/comic-production/handoff-inventory",
             "look_for": "production_verified_count、demo_only_count、needs_review_count 和 safe_public_claim 是否说明真实质量证据边界。",
             "proves": "公开展示不会把本地样例或历史产物误标成真实模型质量通过；多份制片包可以被统一盘点和分类。",
         },
         {
-            "order": 4,
+            "order": 5,
             "title": "再看研究办公室阶段报告",
             "uri": "/api/demo/research/files/report.md",
             "look_for": "报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现。",
             "proves": "研究办公室展示的是 staged delivery，不把未确认信息包装成完整自动化采集结果。",
         },
         {
-            "order": 5,
+            "order": 6,
             "title": "最后看研究办公室证据清单",
             "uri": "/api/demo/research/files/evidence_manifest.json",
             "look_for": "来源、数据、截图计划、缺口和人工确认项是否可追踪。",
             "proves": "公开演示保留证据边界，方便访客判断哪些已确认、哪些需要真实账号或人工补证。",
         },
         {
-            "order": 6,
+            "order": 7,
             "title": "最后确认研究办公室声明边界",
             "uri": "/api/demo/research/claim-report",
             "look_for": "claim_level、forbidden_public_claims、evidence_boundaries 和 claim_upgrade_checklist 是否明确说明不能宣称全自动平台采集。",
@@ -1703,7 +1816,7 @@ def _public_showcase_reproducibility_checklist() -> list[dict]:
             "order": 3,
             "title": "导出可托管静态展示包",
             "command": "python scripts/export_public_showcase.py && python scripts/verify_static_public_showcase.py --format markdown",
-            "expected": "看到 dist/public-showcase/index.html、6 个下载物、7 个可复核文件、6/6 阅读指南，并且 requires_backend=False。",
+            "expected": "看到 dist/public-showcase/index.html、7 个下载物、8 个可复核文件、7/7 阅读指南，并且 requires_backend=False。",
             "if_fails": "不要部署到 Vercel；先修复静态下载路径、data.js、截图资产或 claim report。",
         },
         {

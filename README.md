@@ -91,7 +91,7 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 ```
 
 这条命令会从线上地址读取首页、`showcase.json`、导出清单、访客验收指南、声明报告、样例 Word 和 handoff manifest。它通过时，才能说明这个 URL 本身可打开、可下载，并且仍保持无 Key demo 边界。
-静态展示包会同时带上最快验收路线、六份下载物、七个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对资产图片规格矩阵 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据。
+静态展示包会同时带上最快验收路线、七份下载物、八个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对资产图片规格矩阵 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级和恢复建议串成一份可复核链路；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据。
 
 静态展示包还会显示办公室公开状态矩阵，避免访客把旧入口和主力入口混在一起：
 
@@ -155,7 +155,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 
 | 阶段 | 需要什么 | 通过后能做什么 |
 | --- | --- | --- |
-| 公开无 Key 演示 | 不需要模型 | 查看固定样例、下载六份交付物、阅读 quick-start 和安全边界 |
+| 公开无 Key 演示 | 不需要模型 | 查看固定样例、下载七份交付物、阅读 quick-start 和安全边界 |
 | 最小可跑配置 | 文本部门通过测试 | 聊故事、锁定剧本方向、拆资产、生成镜头和提示词草案 |
 | 完整制片配置 | 工部生图模型 + 刑部视觉理解模型通过测试 | 生成基础资产图、执行视觉质检、输出完整 Word 制片画布和 handoff manifest |
 
@@ -373,7 +373,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 可以公开展示：
 
 - 办公室大厅和产品定位。
-- 公开静态页的最快验收路线、六份下载物和七个可复核文件。
+- 公开静态页的最快验收路线、七份下载物和八个可复核文件。
 - AI 漫剧制片办公室固定样例流程。
 - 研究办公室固定样例流程。
 - 样例 Word 制片画布、handoff manifest、研究样例报告和截图目标说明。
