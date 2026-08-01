@@ -86,6 +86,16 @@ def _collect_trace_errors(trace: dict[str, Any]) -> list[str]:
         errors.append("public trace must not claim production-quality visual evidence")
     if quality.get("visual_evidence_level") != "fixture_only":
         errors.append("public trace must keep visual_evidence_level=fixture_only")
+    real_model_evidence = quality.get("real_model_evidence_requirements") or {}
+    if real_model_evidence.get("status") != "evidence_missing":
+        errors.append("public trace must expose real_model_evidence_requirements.status=evidence_missing")
+    if real_model_evidence.get("ready_for_real_quality_claim") is not False:
+        errors.append("public trace must expose ready_for_real_quality_claim=false")
+    for marker in ("non_fixture_images", "provider_model_bound", "seven_dimension_scores"):
+        if marker not in (real_model_evidence.get("missing_check_ids") or []):
+            errors.append(f"public trace real model evidence is missing check id: {marker}")
+    if len(real_model_evidence.get("checks") or []) < 6:
+        errors.append("public trace real model evidence must include detailed checks")
 
     image_evidence = trace.get("image_production_evidence") or {}
     if image_evidence.get("evidence_level") != "fixture_only":
@@ -136,6 +146,7 @@ def verify_public_comic_trace_bundle() -> dict[str, Any]:
 
     image_evidence = trace.get("image_production_evidence") or {}
     quality = trace.get("quality_benchmark") or {}
+    real_model_evidence = quality.get("real_model_evidence_requirements") or {}
     return {
         "status": "passed" if not errors else "failed",
         "mode": "public_comic_trace_bundle",
@@ -159,6 +170,9 @@ def verify_public_comic_trace_bundle() -> dict[str, Any]:
         "production_quality_verified": quality.get("production_quality_verified"),
         "image_evidence_level": image_evidence.get("evidence_level", ""),
         "supports_real_quality_claim": image_evidence.get("supports_real_quality_claim"),
+        "real_model_evidence_status": real_model_evidence.get("status", ""),
+        "real_model_evidence_ready": real_model_evidence.get("ready_for_real_quality_claim"),
+        "real_model_evidence_missing_checks": list(real_model_evidence.get("missing_check_ids") or []),
         "upgrade_checklist_count": len(trace.get("claim_upgrade_checklist") or []) if trace else 0,
         "reproducibility_command_count": len((trace.get("reproducibility") or {}).get("verification_commands") or []) if trace else 0,
         "errors": errors,
@@ -182,6 +196,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Claim level: {payload.get('claim_level')}",
         f"- Quality: {payload.get('quality_status')} / visual={payload.get('visual_evidence_level')} / real={payload.get('production_quality_verified')}",
         f"- Image evidence: {payload.get('image_evidence_level')} / supports_real_quality={payload.get('supports_real_quality_claim')}",
+        f"- Real model evidence: {payload.get('real_model_evidence_status')} / ready={payload.get('real_model_evidence_ready')}",
+        f"- Missing real model checks: {', '.join(payload.get('real_model_evidence_missing_checks') or [])}",
         f"- Upgrade checklist: {payload.get('upgrade_checklist_count')} items",
         f"- Reproducibility commands: {payload.get('reproducibility_command_count')}",
     ]

@@ -185,6 +185,13 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("visual_evidence_model_reviewed", gate["missing_check_ids"])
         self.assertIn("production_quality_verified", gate["missing_check_ids"])
         self.assertGreaterEqual(len(gate["checks"]), 6)
+        real_model_evidence = claim["real_model_evidence_requirements"]
+        self.assertEqual(real_model_evidence["status"], "evidence_missing")
+        self.assertFalse(real_model_evidence["ready_for_real_quality_claim"])
+        self.assertIn("non_fixture_images", real_model_evidence["missing_check_ids"])
+        self.assertIn("provider_model_bound", real_model_evidence["missing_check_ids"])
+        self.assertIn("seven_dimension_scores", real_model_evidence["missing_check_ids"])
+        self.assertGreaterEqual(len(real_model_evidence["checks"]), 6)
         self.assertGreaterEqual(len(claim["claim_upgrade_checklist"]), 3)
         self.assertTrue(any(item["id"] == "run_real_models" for item in claim["claim_upgrade_checklist"]))
         self.assertTrue(all(item["required_evidence"] for item in claim["claim_upgrade_checklist"]))

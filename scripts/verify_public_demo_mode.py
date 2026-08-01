@@ -469,6 +469,16 @@ def verify_public_demo_mode() -> dict[str, Any]:
         errors.append("fixed public claim report must remain demo_structure_only")
     if claim_payload.get("can_claim_real_quality") is not False:
         errors.append("fixed public claim report must not claim real production quality")
+    real_model_evidence = claim_payload.get("real_model_evidence_requirements") or {}
+    if real_model_evidence.get("status") != "evidence_missing":
+        errors.append("fixed comic claim report must expose real_model_evidence_requirements.status=evidence_missing")
+    if real_model_evidence.get("ready_for_real_quality_claim") is not False:
+        errors.append("fixed comic claim report must expose ready_for_real_quality_claim=false")
+    for marker in ("non_fixture_images", "provider_model_bound", "seven_dimension_scores"):
+        if marker not in (real_model_evidence.get("missing_check_ids") or []):
+            errors.append(f"fixed comic claim report real evidence is missing check id: {marker}")
+    if len(real_model_evidence.get("checks") or []) < 6:
+        errors.append("fixed comic claim report must include detailed real model evidence checks")
     claim_upgrade_checklist = claim_payload.get("claim_upgrade_checklist") or []
     if len(claim_upgrade_checklist) < 3:
         errors.append("fixed comic claim report must include a claim upgrade checklist")

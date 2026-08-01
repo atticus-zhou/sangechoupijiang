@@ -642,6 +642,7 @@ def _public_claim_report(report: dict) -> dict:
     evidence = report.get("evidence") or {}
     recovery = report.get("claim_upgrade_recovery") or {}
     promotion_gate = report.get("real_quality_promotion_gate") or {}
+    real_model_evidence = report.get("real_model_evidence_requirements") or {}
     return {
         "mode": "no_key_demo_claim_report",
         "office_id": "comic_production",
@@ -675,6 +676,7 @@ def _public_claim_report(report: dict) -> dict:
                 for item in (promotion_gate.get("checks") or [])
             ],
         },
+        "real_model_evidence_requirements": _public_real_model_evidence_requirements(real_model_evidence),
         "claim_upgrade_checklist": [
             {
                 "id": item.get("id", ""),
@@ -714,6 +716,41 @@ def _public_claim_report(report: dict) -> dict:
             "stored_benchmark_matches": bool(evidence.get("stored_benchmark_matches")),
             "production_quality_verified": bool(evidence.get("production_quality_verified")),
         },
+    }
+
+
+def _public_real_model_evidence_requirements(real_model_evidence: dict) -> dict:
+    """Return the public-safe proof contract for upgrading fixture demos to real model evidence."""
+    if not real_model_evidence:
+        return {
+            "status": "missing",
+            "ready_for_real_quality_claim": False,
+            "missing_check_ids": ["real_model_evidence_requirements"],
+            "checks": [],
+            "next_action": "补齐真实模型图片来源、视觉质检和七维评分证据。",
+        }
+    return {
+        "status": real_model_evidence.get("status", ""),
+        "visual_evidence_level": real_model_evidence.get("visual_evidence_level", ""),
+        "ready_for_real_quality_claim": bool(real_model_evidence.get("ready_for_real_quality_claim")),
+        "total_images": int(real_model_evidence.get("total_images") or 0),
+        "non_fixture_images": int(real_model_evidence.get("non_fixture_images") or 0),
+        "provider_model_images": int(real_model_evidence.get("provider_model_images") or 0),
+        "review_records": int(real_model_evidence.get("review_records") or 0),
+        "handoff_ready_reviews": int(real_model_evidence.get("handoff_ready_reviews") or 0),
+        "seven_dimension_scored_reviews": int(real_model_evidence.get("seven_dimension_scored_reviews") or 0),
+        "missing_check_ids": list(real_model_evidence.get("missing_check_ids") or []),
+        "next_action": real_model_evidence.get("next_action", ""),
+        "checks": [
+            {
+                "id": item.get("id", ""),
+                "label": item.get("label", ""),
+                "passed": bool(item.get("passed")),
+                "evidence": item.get("evidence", ""),
+                "if_missing": item.get("if_missing", ""),
+            }
+            for item in (real_model_evidence.get("checks") or [])
+        ],
     }
 
 
@@ -2248,6 +2285,7 @@ async def get_public_showcase_demo_api():
                 "claim_upgrade_checklist": comic_claim.get("claim_upgrade_checklist", [])[:3],
                 "claim_upgrade_recovery": comic_claim.get("claim_upgrade_recovery", {}),
                 "real_quality_promotion_gate": comic_claim.get("real_quality_promotion_gate", {}),
+                "real_model_evidence_requirements": comic_claim.get("real_model_evidence_requirements", {}),
                 "next_action": comic_claim.get("next_action", ""),
                 "evidence": comic_claim.get("evidence", {}),
             },

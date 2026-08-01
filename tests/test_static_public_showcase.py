@@ -89,8 +89,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             "usable": sum(item["usable_images"] for item in handoff_inventory["items"]),
             "rework": sum(item["waste_or_rework_images"] for item in handoff_inventory["items"]),
         }
-        self.assertEqual(image_totals["total"], 28)
-        self.assertEqual(image_totals["usable"], 21)
+        self.assertEqual(image_totals["total"], len(handoff_inventory["items"]) * 7)
+        self.assertEqual(image_totals["usable"], image_totals["total"] - 7)
         self.assertEqual(image_totals["rework"], 7)
         demo_items = [
             item
@@ -148,6 +148,13 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("visual_evidence_model_reviewed", gate["missing_check_ids"])
         self.assertIn("production_quality_verified", gate["missing_check_ids"])
         self.assertGreaterEqual(len(gate["checks"]), 6)
+        real_model_evidence = claim_payload["real_model_evidence_requirements"]
+        self.assertEqual(real_model_evidence["status"], "evidence_missing")
+        self.assertFalse(real_model_evidence["ready_for_real_quality_claim"])
+        self.assertIn("non_fixture_images", real_model_evidence["missing_check_ids"])
+        self.assertIn("provider_model_bound", real_model_evidence["missing_check_ids"])
+        self.assertIn("seven_dimension_scores", real_model_evidence["missing_check_ids"])
+        self.assertGreaterEqual(len(real_model_evidence["checks"]), 6)
         self.assertGreaterEqual(len(claim_payload["claim_upgrade_checklist"]), 3)
         self.assertTrue(all(item["required_evidence"] for item in claim_payload["claim_upgrade_checklist"]))
         self.assertEqual(claim_payload["claim_upgrade_recovery"]["recovery_action"], "regenerate_images")
@@ -435,7 +442,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Downloadable deliverables: 7", completed.stdout)
         self.assertIn("Reviewable catalog: 8 files", completed.stdout)
         self.assertIn("Visitor acceptance guide: 7 steps / downloads=8 / live=external_required", completed.stdout)
-        self.assertIn("Handoff recovery inventory: 4 items / actions=regenerate_images", completed.stdout)
+        self.assertIn("Handoff recovery inventory: 6 items / actions=regenerate_images", completed.stdout)
         self.assertIn("Fast review route: 5/5", completed.stdout)
         self.assertIn("Reading guide: 7/7", completed.stdout)
         self.assertIn("First-run paths: 3", completed.stdout)
@@ -445,7 +452,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Real output validation: 3/3 steps", completed.stdout)
         self.assertIn("Release badge: safe_public_demo", completed.stdout)
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
-        self.assertIn("Claim upgrade checklist: 3 items", completed.stdout)
+        self.assertIn("Claim upgrade checklist: 4 items", completed.stdout)
         self.assertIn("Claim upgrade recovery: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Research claim report: downloads/research/claim-report.json / ready=True / level=staged_research_demo / full_automation=False", completed.stdout)

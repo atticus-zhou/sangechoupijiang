@@ -35,6 +35,11 @@ class PublicComicTraceBundleVerifierTests(unittest.TestCase):
         self.assertFalse(payload["production_quality_verified"])
         self.assertEqual(payload["image_evidence_level"], "fixture_only")
         self.assertFalse(payload["supports_real_quality_claim"])
+        self.assertEqual(payload["real_model_evidence_status"], "evidence_missing")
+        self.assertFalse(payload["real_model_evidence_ready"])
+        self.assertIn("non_fixture_images", payload["real_model_evidence_missing_checks"])
+        self.assertIn("provider_model_bound", payload["real_model_evidence_missing_checks"])
+        self.assertIn("seven_dimension_scores", payload["real_model_evidence_missing_checks"])
         self.assertGreaterEqual(payload["upgrade_checklist_count"], 3)
         self.assertGreaterEqual(payload["reproducibility_command_count"], 3)
         self.assertEqual(payload["errors"], [])
@@ -59,6 +64,8 @@ class PublicComicTraceBundleVerifierTests(unittest.TestCase):
         self.assertIn("Assets/images/shots: 3 / 7 / 2", completed.stdout)
         self.assertIn("Claim level: demo_structure_only", completed.stdout)
         self.assertIn("Image evidence: fixture_only / supports_real_quality=False", completed.stdout)
+        self.assertIn("Real model evidence: evidence_missing / ready=False", completed.stdout)
+        self.assertIn("non_fixture_images", completed.stdout)
 
 
 if __name__ == "__main__":

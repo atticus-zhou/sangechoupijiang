@@ -379,6 +379,16 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append("static claim report must not require an API Key")
             if "E:\\" in json.dumps(claim_payload, ensure_ascii=False):
                 errors.append("static claim report leaks a local Windows path")
+            real_model_evidence = claim_payload.get("real_model_evidence_requirements") or {}
+            if real_model_evidence.get("status") != "evidence_missing":
+                errors.append("static claim report must expose real_model_evidence_requirements.status=evidence_missing")
+            if real_model_evidence.get("ready_for_real_quality_claim") is not False:
+                errors.append("static claim report must expose ready_for_real_quality_claim=false")
+            for marker in ("non_fixture_images", "provider_model_bound", "seven_dimension_scores"):
+                if marker not in (real_model_evidence.get("missing_check_ids") or []):
+                    errors.append(f"static claim report real evidence is missing check id: {marker}")
+            if len(real_model_evidence.get("checks") or []) < 6:
+                errors.append("static claim report must include detailed real model evidence checks")
             claim_upgrade_checklist = claim_payload.get("claim_upgrade_checklist") or []
             if len(claim_upgrade_checklist) < 3:
                 errors.append("static claim report must include a claim upgrade checklist")
