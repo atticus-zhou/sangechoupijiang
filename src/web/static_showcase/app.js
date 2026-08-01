@@ -142,6 +142,9 @@
         proof.appendChild(element('li', '', item));
       });
       card.appendChild(proof);
+      if (demo.office_id === 'comic_production') {
+        renderImageReworkSummary(card, benchmark.image_quality_summary || {});
+      }
 
       const downloads = element('div', 'download-row');
       (demo.downloads || []).forEach(function (item) {
@@ -150,6 +153,36 @@
       card.appendChild(downloads);
       grid.appendChild(card);
     });
+  }
+
+  function renderImageReworkSummary(card, imageQuality) {
+    if (!card || !imageQuality || !Array.isArray(imageQuality.rework_action_summary)) return;
+    const actions = imageQuality.rework_action_summary.filter(function (item) {
+      return item && typeof item === 'object' && (item.action || item.label);
+    });
+    if (!actions.length) return;
+    const panel = element('div', 'image-rework-summary');
+    panel.appendChild(element('strong', '', '\u56fe\u7247\u8fd4\u5de5\u52a8\u4f5c'));
+    actions.slice(0, 3).forEach(function (item) {
+      const row = element('div', 'image-rework-row');
+      row.appendChild(element(
+        'span',
+        'status-pill bounded',
+        text(item.next_button_label || item.action || item.label)
+      ));
+      row.appendChild(element(
+        'small',
+        '',
+        text(item.department || '\u5f85\u5206\u914d') + ' · '
+          + text(item.count || 0) + ' \u5f20'
+      ));
+      const ids = Array.isArray(item.image_ids) ? item.image_ids.slice(0, 3) : [];
+      if (ids.length) {
+        row.appendChild(element('code', 'hash-code', ids.map(text).join(', ')));
+      }
+      panel.appendChild(row);
+    });
+    card.appendChild(panel);
   }
 
   function renderClaimBoundary() {

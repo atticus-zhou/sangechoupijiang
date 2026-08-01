@@ -159,6 +159,33 @@ a {
   color: #f3d38a;
 }
 
+.image-rework-summary {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 14px;
+  padding: 12px;
+  border: 1px solid rgba(239, 184, 78, 0.24);
+  border-radius: 12px;
+  background: rgba(239, 184, 78, 0.06);
+}
+
+.image-rework-summary strong {
+  font-size: 14px;
+}
+
+.image-rework-row {
+  display: grid;
+  gap: 7px;
+}
+
+.image-rework-row small {
+  color: var(--muted);
+}
+
+.image-rework-row code {
+  overflow-wrap: anywhere;
+}
+
 .quality-upgrade-path-card {
   grid-column: 1 / -1;
 }
