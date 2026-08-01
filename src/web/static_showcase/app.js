@@ -243,6 +243,30 @@
       }
       grid.appendChild(researchCard);
 
+      const handoffItems = Array.isArray(researchClaim.evidence_handoff)
+        ? researchClaim.evidence_handoff
+        : [];
+      if (handoffItems.length) {
+        const handoffCard = element('article', 'card claim-card research-evidence-handoff-card');
+        handoffCard.appendChild(element('h3', '', '\u5f85\u8865\u8bc1\u636e\u4ea4\u63a5\u8868'));
+        handoffItems.slice(0, 3).forEach(function (item) {
+          const block = element('div', 'research-evidence-handoff-item');
+          block.appendChild(element('strong', '', text(item.title || item.id || '\u8865\u8bc1\u9879')));
+          block.appendChild(element('small', '', text(item.owner || '\u4eba\u673a\u534f\u4f5c') + ' · ' + text(item.status || '\u5f85\u8865\u9f50')));
+          if (item.target_evidence) {
+            block.appendChild(element('p', '', text(item.target_evidence)));
+          }
+          if (item.why_needed) {
+            block.appendChild(element('small', '', '\u4e3a\u4ec0\u4e48\u8981\u8865\uff1a' + text(item.why_needed)));
+          }
+          if (Array.isArray(item.upgrades) && item.upgrades.length) {
+            block.appendChild(element('code', 'hash-code', '\u8865\u5b8c\u5f71\u54cd\uff1a' + item.upgrades.map(text).join(' / ')));
+          }
+          handoffCard.appendChild(block);
+        });
+        grid.appendChild(handoffCard);
+      }
+
       const playbook = researchClaim.evidence_capture_playbook || {};
       if (playbook.status) {
         const playbookCard = element('article', 'card claim-card research-capture-playbook-card');

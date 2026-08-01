@@ -2215,6 +2215,19 @@ async def get_public_showcase_demo_api():
                 "forbidden_public_claims": research_claim.get("forbidden_public_claims", [])[:3],
                 "claim_upgrade_checklist": research_claim.get("claim_upgrade_checklist", [])[:3],
                 "evidence_handoff_count": len(research_claim.get("evidence_handoff") or []),
+                "evidence_handoff": [
+                    {
+                        "id": str(item.get("id") or ""),
+                        "title": str(item.get("title") or ""),
+                        "owner": str(item.get("owner") or ""),
+                        "target_evidence": str(item.get("target_evidence") or ""),
+                        "why_needed": str(item.get("why_needed") or ""),
+                        "status": str(item.get("status") or ""),
+                        "upgrades": [str(value) for value in (item.get("upgrades") or []) if str(value).strip()],
+                    }
+                    for item in (research_claim.get("evidence_handoff") or [])[:3]
+                    if isinstance(item, dict)
+                ],
                 "evidence_capture_playbook": {
                     "status": (research_claim.get("evidence_capture_playbook") or {}).get("status", ""),
                     "step_count": len((research_claim.get("evidence_capture_playbook") or {}).get("steps") or []),

@@ -607,6 +607,35 @@ h3 {
   background: linear-gradient(180deg, rgba(112, 210, 181, 0.08), rgba(19, 25, 34, 0.84));
 }
 
+.research-evidence-handoff-card {
+  border-color: rgba(239, 184, 78, 0.26);
+  background: linear-gradient(180deg, rgba(239, 184, 78, 0.07), rgba(19, 25, 34, 0.84));
+}
+
+.research-evidence-handoff-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.research-evidence-handoff-item:first-of-type {
+  border-top: 0;
+}
+
+.research-evidence-handoff-item strong {
+  color: var(--text);
+}
+
+.research-evidence-handoff-item small,
+.research-evidence-handoff-item p {
+  color: var(--muted);
+}
+
+.research-evidence-handoff-item code {
+  overflow-wrap: anywhere;
+}
+
 .mini-label {
   margin: 12px 0 0;
   color: var(--muted);
