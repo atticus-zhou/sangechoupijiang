@@ -45,6 +45,7 @@ def verify_production_benchmark(
             "production_quality_verified",
             "visual_evidence_level",
             "image_quality_summary",
+            "real_model_evidence_requirements",
             "issue_count",
             "blocker_count",
             "recommended_recovery",
@@ -113,6 +114,31 @@ def format_markdown(result: dict[str, Any]) -> str:
                 )
                 for step in item.get("operator_steps") or []:
                     lines.append(f"  - {step}")
+    real_model_evidence = result.get("real_model_evidence_requirements") or {}
+    if real_model_evidence:
+        lines.extend([
+            "",
+            "## Real Model Evidence Requirements",
+            "",
+            f"- Status: `{real_model_evidence.get('status')}`",
+            f"- Ready for real quality claim: `{real_model_evidence.get('ready_for_real_quality_claim')}`",
+            f"- Visual evidence level: `{real_model_evidence.get('visual_evidence_level')}`",
+            f"- Total images: `{real_model_evidence.get('total_images', 0)}`",
+            f"- Non-fixture images: `{real_model_evidence.get('non_fixture_images', 0)}`",
+            f"- Provider/model bound images: `{real_model_evidence.get('provider_model_images', 0)}`",
+            f"- Review records: `{real_model_evidence.get('review_records', 0)}`",
+            f"- Handoff-ready reviews: `{real_model_evidence.get('handoff_ready_reviews', 0)}`",
+            f"- Seven-dimension scored reviews: `{real_model_evidence.get('seven_dimension_scored_reviews', 0)}`",
+            f"- Missing checks: `{', '.join(real_model_evidence.get('missing_check_ids') or []) or 'none'}`",
+            f"- Next action: {real_model_evidence.get('next_action')}",
+            "",
+            "| Check | Passed | Evidence | If Missing |",
+            "| --- | --- | --- | --- |",
+        ])
+        for item in real_model_evidence.get("checks") or []:
+            lines.append(
+                f"| {item.get('id')} | `{item.get('passed')}` | {item.get('evidence')} | {item.get('if_missing')} |"
+            )
     prompt_summary = result.get("prompt_quality_summary") or {}
     if prompt_summary:
         lines.extend([

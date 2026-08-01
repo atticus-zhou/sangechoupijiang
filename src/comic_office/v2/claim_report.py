@@ -18,6 +18,7 @@ def real_quality_promotion_gate(benchmark: dict[str, Any]) -> dict[str, Any]:
     """Return the evidence gate required before a handoff can claim real model quality."""
     image_summary = benchmark.get("image_quality_summary") or {}
     prompt_summary = benchmark.get("prompt_quality_summary") or {}
+    real_model_evidence = benchmark.get("real_model_evidence_requirements") or {}
     checks = [
         {
             "id": "package_quality_ready",
@@ -39,6 +40,16 @@ def real_quality_promotion_gate(benchmark: dict[str, Any]) -> dict[str, Any]:
             "passed": benchmark.get("visual_evidence_level") == "model_reviewed",
             "evidence": "visual_evidence_level=model_reviewed",
             "if_missing": "使用真实生图模型补跑图片，并由视觉理解模型完成质检。",
+        },
+        {
+            "id": "real_model_evidence_requirements",
+            "label": "Real model image evidence fields are complete",
+            "passed": real_model_evidence.get("ready_for_real_quality_claim") is True,
+            "evidence": "real_model_evidence_requirements.ready_for_real_quality_claim=true",
+            "if_missing": str(
+                real_model_evidence.get("next_action")
+                or "Fill provider/model, non-fixture image records, visual reviews, seven-dimension scores, and rework status."
+            ),
         },
         {
             "id": "no_image_rework_left",
@@ -88,6 +99,7 @@ def real_quality_promotion_gate(benchmark: dict[str, Any]) -> dict[str, Any]:
 def claim_upgrade_checklist(claim_level: str, benchmark: dict[str, Any]) -> list[dict[str, Any]]:
     """Describe evidence needed before a stronger public quality claim is allowed."""
     visual_level = str(benchmark.get("visual_evidence_level") or "unknown")
+    real_model_evidence = benchmark.get("real_model_evidence_requirements") or {}
     stored_matches = bool(benchmark.get("stored_benchmark_matches"))
     production_verified = bool(benchmark.get("production_quality_verified"))
     package_ready = bool(benchmark.get("package_quality_ready"))
@@ -174,6 +186,25 @@ def claim_upgrade_checklist(claim_level: str, benchmark: dict[str, Any]) -> list
                 "why_it_matters": (
                     "\u516c\u5f00\u58f0\u660e\u5fc5\u987b\u6765\u81ea\u5f53\u524d manifest \u7684\u673a\u5668\u53ef\u590d\u6838\u57fa\u51c6\uff0c"
                     "\u800c\u4e0d\u662f\u4eba\u5de5\u53e3\u5934\u5224\u65ad\u3002"
+                ),
+            },
+            {
+                "id": "real_model_evidence_contract",
+                "title": "\u8865\u9f50\u771f\u5b9e\u6a21\u578b\u8bc1\u636e\u5b57\u6bb5",
+                "status": "complete" if real_model_evidence.get("ready_for_real_quality_claim") else "missing",
+                "required_evidence": [
+                    "non_fixture_images",
+                    "provider_model_bound",
+                    "visual_review_records",
+                    "handoff_ready_reviews",
+                    "seven_dimension_scores",
+                    "no_rework_left",
+                ],
+                "why_it_matters": (
+                    "\u771f\u5b9e\u8d28\u91cf\u58f0\u660e\u4e0d\u80fd\u53ea\u770b\u56fe\u7247\u662f\u5426\u5b58\u5728\uff0c"
+                    "\u8fd8\u5fc5\u987b\u77e5\u9053\u6bcf\u5f20\u56fe\u6765\u81ea\u54ea\u4e2a\u6a21\u578b\u3001"
+                    "\u662f\u5426\u975e fixture\u3001\u662f\u5426\u901a\u8fc7\u89c6\u89c9\u8d28\u68c0\u3001"
+                    "\u662f\u5426\u6709\u4e03\u7ef4\u8bc4\u5206\uff0c\u4ee5\u53ca\u662f\u5426\u4ecd\u6709\u8fd4\u5de5\u9879\u3002"
                 ),
             },
         ]

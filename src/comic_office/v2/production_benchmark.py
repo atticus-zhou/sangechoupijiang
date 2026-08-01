@@ -47,6 +47,11 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
     lineage = list(manifest.get("production_lineage") or [])
     visual_evidence = _visual_evidence_level(images)
     image_quality_summary = _image_quality_summary(images)
+    real_model_evidence_requirements = _real_model_evidence_requirements(
+        images,
+        visual_evidence,
+        image_quality_summary,
+    )
     prompt_quality_summary = _prompt_quality_summary(images, shots)
 
     dimensions = [
@@ -105,6 +110,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         "production_quality_verified": production_quality_verified,
         "visual_evidence_level": visual_evidence,
         "image_quality_summary": image_quality_summary,
+        "real_model_evidence_requirements": real_model_evidence_requirements,
         "prompt_quality_summary": prompt_quality_summary,
         "summary": _summary(claim, score),
         "dimensions": dimensions,
@@ -589,6 +595,106 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
             f"共 {total} 张图片，{usable} 张可直接交付，{waste_or_rework} 张需要重生、重审或人工复核。"
             if total
             else "尚未生成可统计的图片资产。"
+        ),
+    }
+
+
+def _real_model_evidence_requirements(
+    images: list[dict[str, Any]],
+    visual_evidence: str,
+    image_quality_summary: dict[str, Any],
+) -> dict[str, Any]:
+    """Explain exactly what evidence is still needed before real quality claims."""
+    total = len(images)
+    non_fixture_images = [
+        item for item in images
+        if str(item.get("provider") or "").strip().lower() not in {"", "fixture"}
+    ]
+    provider_model_images = [
+        item for item in non_fixture_images
+        if str(item.get("provider") or "").strip() and str(item.get("model") or "").strip()
+    ]
+    review_records = [
+        item for item in images
+        if isinstance(item.get("review"), dict) and bool(item.get("review"))
+    ]
+    handoff_ready_reviews = [
+        item for item in review_records
+        if bool((item.get("review") or {}).get("handoff_ready"))
+        and str((item.get("review") or {}).get("status") or "").strip().lower() == "pass"
+    ]
+    scored_reviews = [
+        item for item in review_records
+        if _review_scores_ready(item.get("review") or {})
+    ]
+    checks = [
+        {
+            "id": "images_exist",
+            "label": "图片记录存在",
+            "passed": total > 0,
+            "evidence": f"images={total}",
+            "if_missing": "先完成工部图片生成并写入 handoff manifest.images。",
+        },
+        {
+            "id": "non_fixture_images",
+            "label": "图片不是 fixture 或占位样例",
+            "passed": total > 0 and len(non_fixture_images) == total,
+            "evidence": f"non_fixture_images={len(non_fixture_images)}/{total}",
+            "if_missing": "使用真实生图模型重新生成所有基础资产图，并把 fixture 标记清除为真实生产记录。",
+        },
+        {
+            "id": "provider_model_bound",
+            "label": "每张真实图片绑定 provider 和 model",
+            "passed": total > 0 and len(provider_model_images) == total,
+            "evidence": f"provider_model_images={len(provider_model_images)}/{total}",
+            "if_missing": "图片记录必须写入 provider、model、image_id 和生成来源，方便后续复核与返工。",
+        },
+        {
+            "id": "visual_review_records",
+            "label": "每张图片都有视觉质检记录",
+            "passed": total > 0 and len(review_records) == total,
+            "evidence": f"review_records={len(review_records)}/{total}",
+            "if_missing": "由刑部视觉理解模型补跑每张图片的质检记录。",
+        },
+        {
+            "id": "handoff_ready_reviews",
+            "label": "每张图片质检通过且可交接",
+            "passed": total > 0 and len(handoff_ready_reviews) == total,
+            "evidence": f"handoff_ready_reviews={len(handoff_ready_reviews)}/{total}",
+            "if_missing": "未通过或未标记 handoff_ready 的图片不能进入最终 Word 画布和下游交接。",
+        },
+        {
+            "id": "seven_dimension_scores",
+            "label": "真实视觉质检包含七维评分",
+            "passed": total > 0 and len(scored_reviews) == total,
+            "evidence": f"seven_dimension_scores={len(scored_reviews)}/{total}",
+            "if_missing": "补齐身份、画风、时代、空间、纯净度、结构和用途七个维度的评分。",
+        },
+        {
+            "id": "no_rework_left",
+            "label": "没有遗留废片或返工项",
+            "passed": int(image_quality_summary.get("waste_or_rework_images") or 0) == 0,
+            "evidence": f"waste_or_rework_images={image_quality_summary.get('waste_or_rework_images', 0)}",
+            "if_missing": "按 image_quality_summary.rework_instructions 逐张重生、重审或重写提示词。",
+        },
+    ]
+    missing = [item for item in checks if not item["passed"]]
+    return {
+        "status": "ready" if not missing and visual_evidence == "model_reviewed" else "evidence_missing",
+        "visual_evidence_level": visual_evidence,
+        "ready_for_real_quality_claim": not missing and visual_evidence == "model_reviewed",
+        "total_images": total,
+        "non_fixture_images": len(non_fixture_images),
+        "provider_model_images": len(provider_model_images),
+        "review_records": len(review_records),
+        "handoff_ready_reviews": len(handoff_ready_reviews),
+        "seven_dimension_scored_reviews": len(scored_reviews),
+        "checks": checks,
+        "missing_check_ids": [item["id"] for item in missing],
+        "next_action": (
+            "真实图片证据已满足公开质量声明前置要求。"
+            if not missing and visual_evidence == "model_reviewed"
+            else missing[0]["if_missing"] if missing else "重新审计 visual_evidence_level，确认是否为 model_reviewed。"
         ),
     }
 

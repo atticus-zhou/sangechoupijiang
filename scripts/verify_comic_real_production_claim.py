@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.verify_comic_v2_production_benchmark import verify_production_benchmark
+from scripts.verify_comic_v2_production_benchmark import DEFAULT_OUTPUT, verify_production_benchmark
 from src.comic_office.v2.claim_report import (
     claim_upgrade_checklist,
     claim_upgrade_recovery,
@@ -26,8 +26,8 @@ from src.comic_office.v2.claim_report import (
 )
 
 
-def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
-    benchmark = verify_production_benchmark(manifest_path=manifest_path)
+def build_claim_report(manifest_path: Path | None = None, output_dir: Path = DEFAULT_OUTPUT) -> dict[str, Any]:
+    benchmark = verify_production_benchmark(manifest_path=manifest_path, output_dir=output_dir)
     claim = str(benchmark.get("quality_claim") or "")
     production_verified = bool(benchmark.get("production_quality_verified"))
     package_ready = bool(benchmark.get("package_quality_ready"))
@@ -96,6 +96,7 @@ def build_claim_report(manifest_path: Path | None = None) -> dict[str, Any]:
         "allowed_public_claims": allowed_claims,
         "forbidden_public_claims": forbidden_claims,
         "real_quality_promotion_gate": promotion_gate,
+        "real_model_evidence_requirements": benchmark.get("real_model_evidence_requirements") or {},
         "claim_upgrade_checklist": upgrade_checklist,
         "claim_upgrade_recovery": upgrade_recovery,
         "next_action": next_action,
@@ -157,6 +158,27 @@ def format_markdown(report: dict[str, Any]) -> str:
         lines.append(
             f"| {item.get('label')} | `{item.get('passed')}` | {item.get('evidence')} | {item.get('if_missing')} |"
         )
+    real_model_evidence = report.get("real_model_evidence_requirements") or {}
+    if real_model_evidence:
+        lines.extend(
+            [
+                "",
+                "## Real Model Evidence Requirements",
+                "",
+                f"- Status: `{real_model_evidence.get('status')}`",
+                f"- Ready for real quality claim: `{real_model_evidence.get('ready_for_real_quality_claim')}`",
+                f"- Visual evidence level: `{real_model_evidence.get('visual_evidence_level')}`",
+                f"- Missing checks: `{', '.join(real_model_evidence.get('missing_check_ids') or []) or 'none'}`",
+                f"- Next action: {real_model_evidence.get('next_action')}",
+                "",
+                "| Check | Passed | Evidence | If Missing |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for item in real_model_evidence.get("checks") or []:
+            lines.append(
+                f"| {item.get('id')} | `{item.get('passed')}` | {item.get('evidence')} | {item.get('if_missing')} |"
+            )
     lines.extend(["", "## Claim Upgrade Checklist", ""])
     for item in report.get("claim_upgrade_checklist", []):
         evidence = ", ".join(item.get("required_evidence") or [])
@@ -205,10 +227,11 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Build an honest claim report for an AI comic handoff.")
     parser.add_argument("--manifest", type=Path, help="Existing handoff manifest to audit.")
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--format", choices=["json", "markdown", "text"], default="markdown")
     args = parser.parse_args()
 
-    report = build_claim_report(args.manifest)
+    report = build_claim_report(args.manifest, output_dir=args.output_dir)
     if args.format == "json":
         print(json.dumps(report, ensure_ascii=False, indent=2))
     elif args.format == "markdown":

@@ -56,10 +56,17 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertEqual(checklist["run_real_models"]["status"], "missing")
         self.assertEqual(checklist["visual_review"]["status"], "missing")
         self.assertEqual(checklist["stored_benchmark"]["status"], "structure_only")
+        self.assertEqual(checklist["real_model_evidence_contract"]["status"], "missing")
+        evidence = report["real_model_evidence_requirements"]
+        self.assertEqual(evidence["status"], "evidence_missing")
+        self.assertFalse(evidence["ready_for_real_quality_claim"])
+        self.assertIn("non_fixture_images", evidence["missing_check_ids"])
+        self.assertIn("provider_model_bound", evidence["missing_check_ids"])
         gate = report["real_quality_promotion_gate"]
         self.assertFalse(gate["ready"])
         self.assertEqual(gate["status"], "evidence_missing")
         self.assertIn("visual_evidence_model_reviewed", gate["missing_check_ids"])
+        self.assertIn("real_model_evidence_requirements", gate["missing_check_ids"])
         self.assertIn("production_quality_verified", gate["missing_check_ids"])
         self.assertGreaterEqual(gate["blocking_count"], 2)
         self.assertIn("真实模型", checklist["run_real_models"]["why_it_matters"])
@@ -73,6 +80,10 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertTrue(report["can_claim_real_quality"])
         self.assertEqual(report["downstream_status"], "ready_for_downstream")
         self.assertEqual(report["evidence"]["visual_evidence_level"], "model_reviewed")
+        evidence = report["real_model_evidence_requirements"]
+        self.assertEqual(evidence["status"], "ready")
+        self.assertTrue(evidence["ready_for_real_quality_claim"])
+        self.assertFalse(evidence["missing_check_ids"])
         checklist = {item["id"]: item for item in report["claim_upgrade_checklist"]}
         self.assertEqual(checklist["keep_evidence_bundle"]["status"], "complete")
         self.assertEqual(checklist["repeat_after_major_edit"]["status"], "required_when_changed")
@@ -108,6 +119,8 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertIn("Claim Upgrade Checklist", completed.stdout)
         self.assertIn("Claim Upgrade Recovery", completed.stdout)
         self.assertIn("Real Quality Promotion Gate", completed.stdout)
+        self.assertIn("Real Model Evidence Requirements", completed.stdout)
+        self.assertIn("non_fixture_images", completed.stdout)
         self.assertIn("Status: `evidence_missing`", completed.stdout)
         self.assertIn("Recovery action: `regenerate_images`", completed.stdout)
         self.assertIn("/api/workspaces/{workspace_id}/comic/v2/quality/recover", completed.stdout)
