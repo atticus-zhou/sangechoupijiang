@@ -496,7 +496,12 @@
 - [x] History records expose downloadable archived artifact content and comic V2
   trace JSON, so prompt packages and lineage evidence can be reproduced from
   the history page instead of only from the live workspace.
+- [x] Comic V2 history and public trace records must expose
+  `image_quality_summary`, including total images, usable images,
+  waste/rework count, rework rate, failed image IDs, and user-facing
+  `rework_instructions` before a handoff can be promoted from a structure demo
+  toward real production-quality evidence.
 - [x] Office protocols now declare reusable recovery actions, so future offices
   can expose retry buttons without hard-coding stage maps in task storage.
 - [x] Extend explicit recovery events to future offices as they are added.
-  说明：已新增共享 recovery registry 和离线验收：`python scripts/verify_office_recovery_registry.py --format markdown` 会检查每个办公室恢复动作是否有可执行 API、workspace/task 作用域、`preserves`、`clears` 且二者不重叠；运行状态接口也会返回补齐后的恢复契约。该检查已接入 `verify_office_extension_governance.py` 与 `verify_release_readiness.py`，后续新办公室如果只写“可恢复”但没有说明保留/重建边界，会被门禁拦住。`python scripts/verify_future_office_backlog.py --format markdown` 会把短视频投放、电商选品、故事 IP 和技术项目办公室继续标记为 blocked_until_evidence，直到它们补齐办公室专属 schema、恢复事件、样例交付、声明边界和发布门禁。
+  说明：已新增共享 recovery registry 和离线验收：`python scripts/verify_office_recovery_registry.py --format markdown` 会检查每个办公室恢复动作是否有可执行 API、workspace/task 作用域、`preserves`、`clears` 且二者不重叠；运行状态接口也会返回补齐后的恢复契约。该检查已接入 `verify_office_extension_governance.py` 与 `verify_release_readiness.py`，后续新办公室如果只写“可恢复”但没有说明保留/重建边界，会被门禁拦住。`python scripts/verify_future_office_backlog.py --format markdown` 会把短视频投放、电商选品、故事 IP 和技术项目办公室继续标记为 blocked_until_evidence，直到它们补齐办公室专属 schema、恢复事件、样例交付、声明边界和发布门禁。新办公室从 backlog 迁入正式矩阵前，必须先补齐 `future_schema_validators` 所代表的办公室专属 schema 校验器，并把对应恢复事件纳入 `future_recovery_events`，不能只做 UI 入口或静态文案。

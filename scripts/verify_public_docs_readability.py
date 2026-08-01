@@ -90,6 +90,24 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
         ],
     },
     {
+        "path": "docs/PRODUCT_EVOLUTION_TASKLIST.md",
+        "role": "mission-critical evolution tasklist",
+        "required_markers": [
+            "\u4e09\u4e2a\u81ed\u76ae\u5320\u4ea7\u54c1\u8fdb\u5316\u4efb\u52a1\u6e05\u5355",
+            "\u7b2c\u4e00\u4f18\u5148\u7ea7\u7ea6\u675f",
+            "\u957f\u671f\u76ee\u6807",
+            "\u9636\u6bb5 A\uff1a\u53ef\u4fe1\u5c55\u793a",
+            "\u9636\u6bb5 B\uff1a\u5355\u529e\u516c\u5ba4\u4ea7\u54c1\u7ea7",
+            "\u9636\u6bb5 C\uff1a\u5e73\u53f0\u534f\u8bae\u5316",
+            "\u9636\u6bb5 D\uff1a\u771f\u5b9e\u4f7f\u7528\u95ed\u73af",
+            "\u9636\u6bb5 E\uff1a\u591a\u529e\u516c\u5ba4\u6269\u5c55",
+            "python scripts/verify_development_checklist.py --format markdown",
+            "python scripts/verify_release_readiness.py --format markdown",
+            "image_quality_summary",
+            "future_schema_validators",
+        ],
+    },
+    {
         "path": "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
         "role": "static showcase deploy guide",
         "required_markers": [
