@@ -190,6 +190,8 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(instructions), 7)
         self.assertEqual(instructions[0]["action"], "manual_review")
         self.assertTrue(instructions[0]["label"])
+        self.assertTrue(all(item["reason"].strip() for item in instructions))
+        self.assertIn("\u4e03\u7ef4\u8bc4\u5206", instructions[0]["reason"])
         self.assertIn("operator_steps", instructions[0])
         self.assertEqual(instructions[0]["priority"], "medium")
         self.assertEqual(instructions[0]["blocked_stage"], "人工复核")

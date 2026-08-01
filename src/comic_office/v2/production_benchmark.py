@@ -532,6 +532,8 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
             failed_image_ids.append(image_id)
         action = str(review.get("recovery_action") or "").strip()
         if image_id in failed_image_ids:
+            failed_dimensions = list(review.get("failed_dimensions") or [])
+            missing_dimensions = list(review.get("missing_dimensions") or [])
             rework_instructions.append({
                 "image_id": image_id,
                 "asset_id": str(image.get("asset_id") or ""),
@@ -539,14 +541,20 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
                 "production_role": role,
                 "action": action or "manual_review",
                 "label": str(review.get("rework_label") or review.get("recovery_reason") or "人工复核"),
-                "reason": str(review.get("recovery_reason") or ""),
-                "failed_dimensions": list(review.get("failed_dimensions") or []),
-                "missing_dimensions": list(review.get("missing_dimensions") or []),
+                "reason": _image_rework_reason(
+                    action or "manual_review",
+                    role=role,
+                    review=review,
+                    failed_dimensions=failed_dimensions,
+                    missing_dimensions=missing_dimensions,
+                ),
+                "failed_dimensions": failed_dimensions,
+                "missing_dimensions": missing_dimensions,
                 **_image_rework_playbook(
                     action or "manual_review",
                     role=role,
-                    failed_dimensions=list(review.get("failed_dimensions") or []),
-                    missing_dimensions=list(review.get("missing_dimensions") or []),
+                    failed_dimensions=failed_dimensions,
+                    missing_dimensions=missing_dimensions,
                     operator_steps=list(review.get("operator_steps") or []),
                 ),
             })
@@ -671,6 +679,32 @@ def _image_rework_playbook(
             "选择对应恢复动作后重新运行质量基准。",
         ],
     }
+
+
+def _image_rework_reason(
+    action: str,
+    *,
+    role: str,
+    review: dict[str, Any],
+    failed_dimensions: list[str],
+    missing_dimensions: list[str],
+) -> str:
+    """Return a user-readable reason for every image rework card."""
+    explicit = str(review.get("recovery_reason") or "").strip()
+    if explicit:
+        return explicit
+    if missing_dimensions:
+        return "\u89c6\u89c9\u8d28\u68c0\u7f3a\u5c11\u5fc5\u8981\u7ef4\u5ea6\uff0c\u9700\u8981\u8865\u5b8c\u540e\u624d\u80fd\u5224\u65ad\u662f\u5426\u53ef\u4ee5\u4ea4\u7ed9\u4e0b\u6e38\u3002"
+    if failed_dimensions:
+        dimensions = "\u3001".join(str(item) for item in failed_dimensions[:4])
+        current_role = role or "\u5f53\u524d\u56fe\u7247"
+        return f"{current_role} \u5728 {dimensions} \u7b49\u7ef4\u5ea6\u672a\u901a\u8fc7\uff0c\u9700\u8981\u8fd4\u5de5\u540e\u624d\u80fd\u8fdb\u5165 Word \u753b\u5e03\u3002"
+    scores = review.get("scores")
+    if isinstance(scores, dict) and not set(scores).issuperset(REVIEW_DIMENSIONS):
+        return "\u89c6\u89c9\u6a21\u578b\u8fd4\u56de\u4e86\u8d28\u68c0\u7ed3\u679c\uff0c\u4f46\u7f3a\u5c11\u4e03\u7ef4\u8bc4\u5206\uff0c\u65e0\u6cd5\u652f\u6491\u771f\u5b9e\u751f\u4ea7\u8d28\u91cf\u58f0\u660e\u3002"
+    if str(review.get("status") or "").strip().lower() in {"pass", "passed"} and not bool(review.get("handoff_ready")):
+        return "\u8fd9\u5f20\u56fe\u5355\u9879\u8d28\u68c0\u7ed3\u679c\u4f3c\u4e4e\u53ef\u7528\uff0c\u4f46\u5211\u90e8\u672a\u660e\u786e\u653e\u884c\u4ea4\u4ed8\uff0c\u9700\u8981\u4eba\u5de5\u590d\u6838\u3002"
+    return "\u8fd9\u5f20\u56fe\u6ca1\u6709\u8db3\u591f\u7684\u8d28\u68c0\u539f\u56e0\u6216\u6062\u590d\u65b9\u5411\uff0c\u9700\u8981\u4eba\u5de5\u5224\u65ad\u662f\u91cd\u751f\u56fe\u7247\u3001\u91cd\u8dd1\u8d28\u68c0\uff0c\u8fd8\u662f\u91cd\u5199\u63d0\u793a\u8bcd\u3002"
 
 
 def _rework_action_summary(instructions: list[dict[str, Any]]) -> list[dict[str, Any]]:
