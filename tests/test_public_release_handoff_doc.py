@@ -53,9 +53,11 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", text)
         self.assertIn("python scripts/verify_research_office_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_github_release_evidence.py --format markdown", text)
         self.assertIn("python scripts/check_no_secrets.py", text)
         self.assertIn(".github/workflows/release-readiness.yml", text)
         self.assertIn("no-key-release-evidence", text)
+        self.assertIn("GitHub 公共 API", text)
         self.assertIn("npm run prepare:vercel-prebuilt", text)
 
     def test_readme_links_public_release_handoff_doc(self):

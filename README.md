@@ -62,6 +62,7 @@ python scripts/doctor.py
 python scripts/verify_productization_status.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_first_run_readiness.py --format markdown
+python scripts/verify_github_release_evidence.py --format markdown
 ```
 
 这些命令会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力。
@@ -377,7 +378,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 - GitHub README、部署边界、安全说明和 release readiness 结果。
 - `dist/public-showcase` 静态展示包。
 
-GitHub 上的 `Release readiness` workflow 会自动运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`。这条 CI 只证明公开 no-key 路径和仓库安全边界，不证明个人网站线上 Vercel 已经刷新；线上仍看个人网站的 `npm run check:online`。
+GitHub 上的 `Release readiness` workflow 会自动运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`，并上传 `no-key-release-evidence` artifact。你可以用 `python scripts/verify_github_release_evidence.py --format markdown` 通过 GitHub 公共 API 检查最新 workflow 是否成功、artifact 是否存在。这条 CI 只证明公开 no-key 路径和仓库安全边界，不证明个人网站线上 Vercel 已经刷新；线上仍看个人网站的 `npm run check:online`。
 
 不要宣称已经完成：
 
