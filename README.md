@@ -245,6 +245,8 @@ office_models:
 
 这些候选办公室不能先做 UI 再补底层。进入公开展示前，必须先补 `future_schema_validators` 和 `future_recovery_events` 两类平台证据：每个办公室自己的 schema 校验器、运行状态、任务时间线、历史追溯、恢复接口，以及说明哪些产物会保留、哪些产物会清理的测试。
 
+`python scripts/verify_future_office_backlog.py --format markdown` 会把候选办公室逐个列成阻塞清单，确认它们仍然不能被当作 public ready 或 primary office；只有补齐办公室专属 schema、恢复事件、样例交付、声明边界和发布门禁后，才允许从 backlog 迁入正式办公室矩阵。
+
 查看单个办公室的上线门禁：
 
 ```text

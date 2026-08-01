@@ -499,4 +499,4 @@
 - [x] Office protocols now declare reusable recovery actions, so future offices
   can expose retry buttons without hard-coding stage maps in task storage.
 - [x] Extend explicit recovery events to future offices as they are added.
-  说明：已新增共享 recovery registry 和离线验收：`python scripts/verify_office_recovery_registry.py --format markdown` 会检查每个办公室恢复动作是否有可执行 API、workspace/task 作用域、`preserves`、`clears` 且二者不重叠；运行状态接口也会返回补齐后的恢复契约。该检查已接入 `verify_office_extension_governance.py` 与 `verify_release_readiness.py`，后续新办公室如果只写“可恢复”但没有说明保留/重建边界，会被门禁拦住。
+  说明：已新增共享 recovery registry 和离线验收：`python scripts/verify_office_recovery_registry.py --format markdown` 会检查每个办公室恢复动作是否有可执行 API、workspace/task 作用域、`preserves`、`clears` 且二者不重叠；运行状态接口也会返回补齐后的恢复契约。该检查已接入 `verify_office_extension_governance.py` 与 `verify_release_readiness.py`，后续新办公室如果只写“可恢复”但没有说明保留/重建边界，会被门禁拦住。`python scripts/verify_future_office_backlog.py --format markdown` 会把短视频投放、电商选品、故事 IP 和技术项目办公室继续标记为 blocked_until_evidence，直到它们补齐办公室专属 schema、恢复事件、样例交付、声明边界和发布门禁。

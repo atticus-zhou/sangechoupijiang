@@ -28,6 +28,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "python scripts/verify_development_checklist.py --format markdown",
             "python scripts/verify_public_docs_readability.py --format markdown",
             "python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase",
+            "python scripts/verify_future_office_backlog.py --format markdown",
             "data/comic_production_claim_report.json",
             "claim_upgrade_recovery",
         ],

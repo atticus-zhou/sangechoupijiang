@@ -95,6 +95,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_office_extension_governance.py", "--format", "json"],
     },
     {
+        "id": "future_office_backlog",
+        "title": "Future office backlog boundary",
+        "command": ["scripts/verify_future_office_backlog.py", "--format", "json"],
+    },
+    {
         "id": "office_schema_registry",
         "title": "Office schema gate registry",
         "command": ["scripts/verify_office_schema_registry.py", "--format", "json"],
@@ -304,6 +309,13 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"starter_items={starter.get('count')}; "
                 f"schema_bindings={schema_registry.get('passed_binding_count')}/{schema_registry.get('binding_count')}; "
                 f"recovery_bindings={recovery_registry.get('passed_binding_count')}/{recovery_registry.get('binding_count')}"
+            )
+        if check_id == "future_office_backlog":
+            return (
+                f"candidates={parsed.get('blocked_candidate_count')}/{parsed.get('candidate_count')}; "
+                f"backlog={parsed.get('backlog_count')}; "
+                f"ids={','.join(parsed.get('candidate_ids') or [])}; "
+                f"platform={','.join(parsed.get('backlog_ids') or [])}"
             )
         if check_id == "office_isolation":
             checks = parsed.get("checks") or []

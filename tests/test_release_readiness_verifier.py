@@ -44,6 +44,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_handoff_inventory",
                 "research_readiness",
                 "office_governance",
+                "future_office_backlog",
                 "office_schema_registry",
                 "office_recovery_registry",
                 "office_isolation",
@@ -130,6 +131,13 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("starter_items=8", office_governance["summary"])
         self.assertIn("schema_bindings=11/11", office_governance["summary"])
         self.assertIn("recovery_bindings=12/12", office_governance["summary"])
+        future_backlog = next(item for item in payload["checks"] if item["id"] == "future_office_backlog")
+        self.assertIn("candidates=4/4", future_backlog["summary"])
+        self.assertIn("backlog=2", future_backlog["summary"])
+        self.assertIn("short_video_ads", future_backlog["summary"])
+        self.assertIn("technical_project", future_backlog["summary"])
+        self.assertIn("future_schema_validators", future_backlog["summary"])
+        self.assertIn("future_recovery_events", future_backlog["summary"])
         office_schema_registry = next(item for item in payload["checks"] if item["id"] == "office_schema_registry")
         self.assertIn("providers=comic_production,research", office_schema_registry["summary"])
         self.assertIn("bindings=11/11", office_schema_registry["summary"])
@@ -175,6 +183,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("bindings=11/11", completed.stdout)
         self.assertIn("Office recovery registry", completed.stdout)
         self.assertIn("bindings=12/12", completed.stdout)
+        self.assertIn("Future office backlog boundary", completed.stdout)
         self.assertIn("AI comic handoff inventory", completed.stdout)
         self.assertIn("Research office staged delivery", completed.stdout)
         self.assertIn("Office isolation", completed.stdout)
@@ -210,6 +219,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("demo_contract=8", completed.stdout)
         self.assertIn("starter=passed", completed.stdout)
         self.assertIn("starter_items=8", completed.stdout)
+        self.assertIn("candidates=4/4; backlog=2", completed.stdout)
         self.assertIn("checks=5; failures=0", completed.stdout)
 
 
