@@ -63,6 +63,7 @@ RESEARCH_OFFICE = OfficeProfile(
         "chart_plan",
         "source_list",
         "screenshot_plan",
+        "evidence_gap_cards",
         "quality_report",
     ],
     model_requirements=[
@@ -764,6 +765,7 @@ LAUNCH_GATE_EVIDENCE_LINKS = {
         "sample_delivery": [
             {"label": "阶段调研报告", "uri": "/api/demo/research/files/report.md"},
             {"label": "证据清单", "uri": "/api/demo/research/files/evidence_manifest.json"},
+            {"label": "阶段性交付声明", "uri": "/api/demo/research/claim-report"},
         ],
         "no_key_demo": [
             {"label": "研究办公室无 Key 演示", "uri": "/api/demo/research"},
@@ -800,6 +802,7 @@ LAUNCH_GATE_EVIDENCE_LINKS.update(
             "sample_delivery": [
                 {"label": "阶段调研报告", "uri": "/api/demo/research/files/report.md"},
                 {"label": "证据清单", "uri": "/api/demo/research/files/evidence_manifest.json"},
+                {"label": "阶段性交付声明", "uri": "/api/demo/research/claim-report"},
             ],
             "no_key_demo": [
                 {"label": "研究办公室无 Key 演示", "uri": "/api/demo/research"},

@@ -18,6 +18,7 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertIn("zhongshu", office.agent_duties)
         self.assertIn("report", office.artifact_types)
         self.assertIn("source_list", office.artifact_types)
+        self.assertIn("evidence_gap_cards", office.artifact_types)
         schema_ids = {item["schema_id"] for item in office.schema_gates}
         self.assertIn("research_standard_report", schema_ids)
         self.assertIn("research_source_list", schema_ids)
@@ -161,12 +162,14 @@ class OfficeProfileTests(unittest.TestCase):
             {
                 "/api/demo/research/files/report.md",
                 "/api/demo/research/files/evidence_manifest.json",
+                "/api/demo/research/claim-report",
             },
         )
         self.assertIn("Word 制片画布", comic_links)
         self.assertIn("引用清单", comic_links)
         self.assertIn("阶段调研报告", research_links)
         self.assertIn("证据清单", research_links)
+        self.assertIn("阶段性交付声明", research_links)
         return
 
         self.assertEqual(comic_links["Word 制片画布"], "/api/demo/comic-production/files/word_canvas.docx")
