@@ -1,5 +1,48 @@
 # 产品化状态审计
 
+这份文档回答一个很具体的问题：当前“三个臭皮匠”距离可公开展示、可复现、可扩展的产品化阶段，到底哪些已经有证据，哪些还只是后续路线。
+
+它不是宣传稿。任何对外说法都必须能落到一个可运行命令、一个公开接口、一个样例交付物或一份安全边界文档上。
+
+## 当前结论
+
+- **公开展示**：本地静态展示包和无 Key demo 已经具备基础条件，但线上个人网站是否刷新必须由个人网站仓库的 `npm run check:online` 证明。
+- **AI 漫剧制片办公室**：已经具备故事、资产、提示词、图片记录、Word 画布和 handoff manifest 的结构化交付链路；真实画质声明必须通过真实模型证据和视觉质检。
+- **研究办公室**：可以公开展示 staged demo、证据缺口和补证流程；不能宣称已经完成第三方平台会员级全自动采集。
+- **模型配置**：每个办公室和部门需要的模型能力必须写清楚，文本、图片生成、视觉理解和人工/浏览器证据能力不能混填。
+- **办公室扩展**：新增办公室必须先补 office_id、schema gate、recovery actions、无 Key demo、样例交付、安全边界和发布门禁。
+- **安全边界**：公开仓库不能包含真实 API Key、Cookie、用户数据库、运行日志或本地输出产物。
+
+## 一键总门禁
+
+```powershell
+python scripts/verify_productization_status.py --format markdown
+python scripts/verify_public_docs_readability.py --format markdown
+python scripts/verify_model_configuration_guidance.py --format markdown
+python scripts/verify_release_readiness.py --format markdown
+python scripts/check_no_secrets.py
+```
+
+当这些命令没有通过时，不要把当前状态说成产品化完成。
+
+## 线上展示边界
+
+产品仓库只能证明 `dist/public-showcase` 是可导出的静态展示包，也能证明它和个人网站仓库中的 `public/three-stooges/` 拷贝是否一致。它不能证明 Vercel 线上页面已经更新。
+
+线上证明只认：
+
+```powershell
+npm run check:online
+```
+
+如果 `https://www.atticus.asia/three-stooges/` 仍然 404 或显示旧内容，需要在个人网站仓库完成 Vercel 授权并重新部署。
+
+---
+
+以下保留的是历史状态表和旧门禁标记，后续会继续分批清理为正常中文文档。
+
+# 产品化状态审计
+
 这份文档用来回答一个问题：当前“三个臭皮匠”距离可公开展示、可复现、可扩展的产品化阶段，到底哪些已经有证据，哪些仍然只是后续路线。
 
 它不是路线图，也不是宣传稿。它是给开发者、面试官和未来维护者看的状态表：每一条产品承诺都必须能落到一个可运行命令、一个公开接口、一个样例交付物或一份安全边界文档上。
