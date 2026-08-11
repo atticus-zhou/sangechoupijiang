@@ -485,7 +485,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Visitor acceptance guide: 7 steps / downloads=8 / live=external_required", completed.stdout)
         self.assertIn("Handoff recovery inventory: 6 items / actions=regenerate_images", completed.stdout)
         self.assertIn("Fast review route: 5/5", completed.stdout)
-        self.assertIn("Reading guide: 7/7", completed.stdout)
+        self.assertIn("Reading guide: 8/8", completed.stdout)
         self.assertIn("First-run paths: 3", completed.stdout)
         self.assertIn("Downstream quick-start: 5 steps", completed.stdout)
         self.assertIn("Shot contract: 4 fields", completed.stdout)
