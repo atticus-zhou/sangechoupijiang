@@ -86,6 +86,7 @@ class ComicV2PromptQualityTests(unittest.TestCase):
         self.assertEqual(result["director_prompt_count"], 1)
         self.assertEqual(result["issue_count"], 0)
         self.assertFalse(result["recovery"]["recoverable"])
+        self.assertIn("视觉母版", " ".join(result["checks"]))
 
     def test_flags_asset_prompt_without_usage_contract(self):
         result = audit_prompt_package({

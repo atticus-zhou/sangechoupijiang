@@ -57,7 +57,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
     dimensions = [
         _story_grounding(story, assets, shots),
         _asset_identity(style, assets, images),
-        _prompt_specificity(assets, images, shots),
+        _prompt_specificity(style, assets, images, shots),
         _director_execution(style, story, assets, images, shots),
         _visual_evidence(style, images, lineage, visual_evidence),
     ]
@@ -229,6 +229,7 @@ def _asset_identity(
 
 
 def _prompt_specificity(
+    style: dict[str, Any],
     assets: list[dict[str, Any]],
     images: list[dict[str, Any]],
     shots: list[dict[str, Any]],
@@ -294,8 +295,28 @@ def _prompt_specificity(
             "不同资产的提示词高度雷同，疑似复制模板后只替换名称。",
             ", ".join(duplicate_pairs[:4]) if duplicate_pairs else "no near-duplicates",
         ),
+        _collection_check(
+            "prompt.visual_bible_transfer",
+            images,
+            lambda item: _prompt_inherits_visual_bible(str(item.get("generator_prompt") or ""), style),
+            "每条基础图提示词都继承了视觉母版的媒介、时代、光线和调色方向。",
+            "存在基础图提示词没有继承视觉母版，容易把古风、时代、光线或色彩生成跑偏。",
+        ),
     ]
     return _dimension("prompt_specificity", "提示词专属性", checks)
+
+
+def _prompt_inherits_visual_bible(generator_prompt: str, style: dict[str, Any]) -> bool:
+    body = str(generator_prompt or "")
+    required = [
+        str(style.get("medium") or "").strip(),
+        str(style.get("era") or "").strip(),
+        str(style.get("lighting") or "").strip(),
+    ]
+    if any(token and token not in body for token in required):
+        return False
+    palette = [str(item).strip() for item in (style.get("palette") or []) if str(item).strip()]
+    return not palette or any(token in body for token in palette)
 
 
 def _prompt_quality_summary(images: list[dict[str, Any]], shots: list[dict[str, Any]]) -> dict[str, Any]:

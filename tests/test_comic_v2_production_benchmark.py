@@ -153,6 +153,20 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertIn("prompt.executable_structure", issue_codes)
         self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_prompts")
 
+    def test_asset_prompts_must_inherit_visual_bible_style_terms(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = fixture_manifest(Path(tmp))
+        lighting = manifest["style"]["lighting"]
+        self.assertIn(lighting, manifest["images"][0]["generator_prompt"])
+        manifest["images"][0]["generator_prompt"] = manifest["images"][0]["generator_prompt"].replace(lighting, "")
+
+        audit = audit_handoff_manifest(manifest)
+
+        issue_codes = {item["code"] for item in audit["issues"]}
+        self.assertEqual(audit["status"], "needs_review")
+        self.assertIn("prompt.visual_bible_transfer", issue_codes)
+        self.assertEqual(audit["recommended_recovery"]["action"], "regenerate_prompts")
+
     def test_shot_prompt_requires_first_frame_and_reference_chain(self):
         with tempfile.TemporaryDirectory() as tmp:
             manifest = fixture_manifest(Path(tmp))
