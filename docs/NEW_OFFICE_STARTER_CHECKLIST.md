@@ -64,3 +64,22 @@ An office can be visible in the public product story only when it has:
 
 If an item is missing, keep the office as an internal draft and show a clear
 "not ready" reason instead of presenting it as production-ready.
+
+## Go/No-Go Review
+
+Before implementation begins, treat the answer as **No-Go** when any of these
+proof points are missing:
+
+| Gate | No-Go condition | Required proof |
+| --- | --- | --- |
+| Office isolation | The office reuses another office's `office_id`, model config, workspace, history, artifacts, or recovery actions. | `python scripts/verify_office_isolation.py --format markdown` and tests proving shared display department names do not share API keys or runtime state. |
+| Public no-key demo | A visitor needs an API key, private data, runtime output, or a live model call to understand the office. | Filled public demo contract, downloadable sample deliverables, and `python scripts/verify_public_demo_mode.py --format markdown`. |
+| Schema and recovery | A long-running stage can fail without a structured gate, a human-readable reason, or a retry path that says what is preserved and cleared. | Office-specific `schema_gates`, `recovery_actions`, and `python scripts/verify_office_extension_governance.py --format markdown`. |
+| Sample delivery and history | The final result cannot be downloaded or traced back to stage records. | Downloadable sample URIs, history trace evidence, and `python scripts/verify_release_readiness.py --format markdown`. |
+| Security and claim boundary | The public repo or public page contains secrets, cookies, runtime artifacts, or claims stronger than the evidence. | Public claim report plus `python scripts/check_no_secrets.py`. |
+
+This review is also exported by:
+
+```powershell
+python scripts/export_office_creation_template.py --format markdown
+```

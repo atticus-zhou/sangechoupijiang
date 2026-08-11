@@ -27,12 +27,42 @@ class OfficeCreationTemplateExportTests(unittest.TestCase):
         self.assertIn("future_office_candidates", payload["blueprint"])
         self.assertTrue(payload["quick_start"])
 
+    def test_go_no_go_review_blocks_unsafe_future_offices(self):
+        payload = export_office_creation_template()
+
+        review = payload["template"]["go_no_go_review"]
+        review_ids = {item["id"] for item in review}
+
+        self.assertIn("office_id_isolation", review_ids)
+        self.assertIn("no_key_public_demo", review_ids)
+        self.assertIn("schema_gate_and_recovery", review_ids)
+        self.assertIn("sample_deliverable_and_history", review_ids)
+        self.assertIn("security_and_claim_boundary", review_ids)
+        self.assertTrue(all(item["decision"] == "no_go_if_missing" for item in review))
+        for item in review:
+            joined = " ".join(item["required_evidence"])
+            self.assertTrue(item["question"])
+            self.assertTrue(item["why_it_matters"])
+            self.assertTrue(joined)
+        all_evidence = " ".join(
+            evidence
+            for item in review
+            for evidence in item["required_evidence"]
+        )
+        self.assertIn("verify_office_isolation.py", all_evidence)
+        self.assertIn("verify_public_demo_mode.py", all_evidence)
+        self.assertIn("verify_office_extension_governance.py", all_evidence)
+        self.assertIn("verify_release_readiness.py", all_evidence)
+        self.assertIn("check_no_secrets.py", all_evidence)
+
     def test_markdown_is_human_readable(self):
         markdown = render_markdown(export_office_creation_template())
 
         self.assertIn("# 新办公室启动包", markdown)
         self.assertIn("OfficeProfile 必填字段", markdown)
         self.assertIn("上线门禁", markdown)
+        self.assertIn("上线前 Go/No-Go", markdown)
+        self.assertIn("schema_gate_and_recovery", markdown)
         self.assertIn("后续候选办公室", markdown)
         self.assertIn("verify_release_readiness.py", markdown)
 

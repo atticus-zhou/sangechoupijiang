@@ -364,6 +364,61 @@ def list_office_creation_template() -> dict:
             "readme_documentation",
             "secret_scan",
         ],
+        "go_no_go_review": [
+            {
+                "id": "office_id_isolation",
+                "decision": "no_go_if_missing",
+                "question": "这个办公室是否拥有独立 office_id、模型配置、工作区、历史、产物和恢复动作？",
+                "required_evidence": [
+                    "tests prove shared display department names do not share model config",
+                    "python scripts/verify_office_isolation.py --format markdown",
+                ],
+                "why_it_matters": "避免一个办公室改 API Key 或历史记录时影响另一个办公室。",
+            },
+            {
+                "id": "no_key_public_demo",
+                "decision": "no_go_if_missing",
+                "question": "陌生访客是否可以在没有 API Key 的情况下看懂 demo、下载样例并理解边界？",
+                "required_evidence": [
+                    "public_demo_contract_skeleton is filled",
+                    "downloadable sample deliverables exist",
+                    "python scripts/verify_public_demo_mode.py --format markdown",
+                ],
+                "why_it_matters": "公开展示必须能证明产品形态，但不能消耗或暴露用户密钥。",
+            },
+            {
+                "id": "schema_gate_and_recovery",
+                "decision": "no_go_if_missing",
+                "question": "长流程阶段是否有结构化验收、失败原因、人类退回和可恢复路径？",
+                "required_evidence": [
+                    "schema_gates bind to office-specific artifacts",
+                    "recovery_actions define preserves and clears",
+                    "python scripts/verify_office_extension_governance.py --format markdown",
+                ],
+                "why_it_matters": "多 agent 不能只生成一坨文本，必须知道卡在哪、保留什么、重做什么。",
+            },
+            {
+                "id": "sample_deliverable_and_history",
+                "decision": "no_go_if_missing",
+                "question": "最终交付物是否可下载、可阅读、可追溯到阶段记录？",
+                "required_evidence": [
+                    "downloadable deliverable URIs are reachable",
+                    "history trace records final package and recovery status",
+                    "python scripts/verify_release_readiness.py --format markdown",
+                ],
+                "why_it_matters": "用户和面试官需要看到真实产物，而不是只看到页面状态。",
+            },
+            {
+                "id": "security_and_claim_boundary",
+                "decision": "no_go_if_missing",
+                "question": "公开仓库和公开页面是否没有密钥、Cookie、运行产物和夸大声明？",
+                "required_evidence": [
+                    "public_claim_report separates allowed and forbidden claims",
+                    "python scripts/check_no_secrets.py",
+                ],
+                "why_it_matters": "上线展示不能把 demo 说成真实生产能力，也不能泄露敏感信息。",
+            },
+        ],
         "required_demo_contract": [
             "viewer_path",
             "proof_points",

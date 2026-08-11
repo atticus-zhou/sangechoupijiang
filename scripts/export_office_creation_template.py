@@ -77,6 +77,20 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         *[f"- `{gate}`" for gate in template.get("required_launch_gates") or []],
         "",
+        "## 上线前 Go/No-Go",
+        "",
+        "| Gate | Decision | Question | Evidence |",
+        "| --- | --- | --- | --- |",
+        *[
+            "| `{id}` | `{decision}` | {question} | {evidence} |".format(
+                id=item.get("id", ""),
+                decision=item.get("decision", ""),
+                question=item.get("question", ""),
+                evidence="; ".join(item.get("required_evidence") or []),
+            )
+            for item in template.get("go_no_go_review") or []
+        ],
+        "",
         "## 最小实现包",
         "",
         "| File | Proves |",
