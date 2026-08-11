@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 
 from scripts.verify_public_docs_readability import _find_suspicious_markers
 
@@ -41,6 +42,12 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
             self.assertFalse(item["read_error"])
             self.assertFalse(item["suspicious_markers"])
             self.assertFalse(item["missing_markers"])
+
+    def test_public_status_doc_is_not_left_in_legacy_cleanup_state(self):
+        text = Path("docs/PRODUCTIZATION_STATUS.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("历史状态表和旧门禁标记", text)
+        self.assertEqual(text.count("## 一键总门禁"), 1)
 
     def test_markdown_is_operator_readable(self):
         completed = subprocess.run(

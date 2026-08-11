@@ -68,6 +68,14 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertIn("https://www.atticus.asia/three-stooges/", website_boundary["markers"])
         self.assertIn("docs/PUBLIC_RELEASE_HANDOFF.md", website_boundary["files"])
 
+    def test_status_doc_no_longer_contains_legacy_duplicate_intro(self):
+        text = Path("docs/PRODUCTIZATION_STATUS.md").read_text(encoding="utf-8")
+
+        self.assertEqual(text.count("# 产品化状态审计"), 1)
+        self.assertEqual(text.count("## 一键总门禁"), 1)
+        self.assertNotIn("以下保留的是历史状态表和旧门禁标记", text)
+        self.assertNotIn("docs/REAL_PRODUCTION_CLAIMS.md\n```", text)
+
     def test_markdown_output_is_readable(self):
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--format", "markdown"],
