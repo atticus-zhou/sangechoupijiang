@@ -307,6 +307,7 @@ def _write_handoff_manifest(
             shots,
             audit,
         ),
+        "asset_usage_map": _asset_usage_map(assets, images, shots),
         "assets": assets,
         "images": images,
         "shots": shots,
@@ -316,6 +317,100 @@ def _write_handoff_manifest(
     path = word_path.with_name(f"{word_path.stem}_handoff_manifest.json")
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
+
+
+def _asset_usage_map(
+    assets: list[dict],
+    images: list[dict],
+    shots: list[dict],
+) -> list[dict[str, object]]:
+    """Expose how each approved asset should be reused by downstream operators."""
+    images_by_id = {
+        image.get("image_id"): image
+        for image in images
+        if image.get("image_id")
+    }
+    shots_by_asset: dict[str, list[dict[str, object]]] = {}
+    for shot in shots:
+        first_frame = shot.get("first_frame_reference_image") or {}
+        for ref in shot.get("reference_asset_chain") or []:
+            asset_id = str(ref.get("asset_id") or "")
+            if not asset_id:
+                continue
+            shots_by_asset.setdefault(asset_id, []).append({
+                "shot_id": shot.get("shot_id") or "",
+                "story_purpose": shot.get("story_purpose") or "",
+                "story_beat": shot.get("story_beat") or "",
+                "first_frame_image_id": ref.get("first_frame_image_id") or "",
+                "first_frame_file": ref.get("first_frame_file") or "",
+                "is_primary_first_frame": ref.get("first_frame_image_id") == first_frame.get("image_id"),
+            })
+
+    rows: list[dict[str, object]] = []
+    for asset in assets:
+        asset_type = str(asset.get("asset_type") or "")
+        image_roles = []
+        for image_kind, image_id in sorted((asset.get("image_ids_by_kind") or {}).items()):
+            image = images_by_id.get(image_id, {})
+            image_roles.append({
+                "image_kind": image_kind,
+                "image_id": image_id,
+                "file": image.get("file") or "",
+                "production_role": image.get("production_role") or "",
+                "use_for": _image_kind_use_for(asset_type, image_kind),
+                "clean_background_required": bool(image.get("clean_background_required")),
+                "reference_policy": image.get("reference_policy") or "",
+            })
+        referenced_shots = shots_by_asset.get(str(asset.get("asset_id") or ""), [])
+        rows.append({
+            "asset_id": asset.get("asset_id") or "",
+            "asset_type": asset_type,
+            "type_label": asset.get("type_label") or "",
+            "name": asset.get("name") or "",
+            "story_purpose": asset.get("story_purpose") or "",
+            "identity_baseline_image_id": asset.get("identity_baseline_image_id") or "",
+            "identity_baseline_image_kind": asset.get("identity_baseline_image_kind") or "",
+            "image_roles": image_roles,
+            "referenced_by_shots": referenced_shots,
+            "downstream_instruction": _asset_downstream_instruction(asset_type, image_roles, referenced_shots),
+            "handoff_ready": bool(
+                asset.get("identity_baseline_image_id")
+                and image_roles
+                and referenced_shots
+            ),
+        })
+    return rows
+
+
+def _image_kind_use_for(asset_type: str, image_kind: str) -> str:
+    labels = {
+        ("character", "three_view"): "锁定人物脸型、发型、体型、服装主色和年龄感；后续镜头优先用作身份基准图。",
+        ("character", "expression_sheet"): "锁定可复用表情，不改变人物身份设计。",
+        ("prop", "turnaround"): "锁定道具轮廓、材质、比例和主要装饰细节。",
+        ("prop", "state_sheet"): "锁定道具在故事中允许出现的状态变化。",
+        ("scene", "wide"): "锁定场景整体气氛、入口、出口、纵深和关键陈设。",
+        ("scene", "top_down"): "锁定空间俯视布局、人物走位和机位关系。",
+        ("scene", "camera_angles"): "锁定后续镜头可复用的机位方向和构图边界。",
+    }
+    return labels.get((asset_type, image_kind), "作为该资产的可复用参考图。")
+
+
+def _asset_downstream_instruction(
+    asset_type: str,
+    image_roles: list[dict[str, object]],
+    referenced_shots: list[dict[str, object]],
+) -> str:
+    if asset_type == "character":
+        return "先绑定三视图锁脸和服装，再按镜头卡继承表情、姿势和动作；不要让基础资产图承担剧情表演。"
+    if asset_type == "prop":
+        return "先绑定转面图锁轮廓和材质，再在镜头中只改变角度、持握方式或状态；不要临时改成现代物件。"
+    if asset_type == "scene":
+        return "先看广角图和俯视图确认空间，再按镜头卡选择机位；场景图服务调度，不按白底静物处理。"
+    if referenced_shots:
+        return "按引用镜头逐一复用该资产，保持身份和风格一致。"
+    if image_roles:
+        return "先作为基础参考资产留档，后续镜头引用时再绑定。"
+    return "缺少可复用图片或镜头引用，交付前需要补齐。"
 
 
 def _downstream_quick_start(

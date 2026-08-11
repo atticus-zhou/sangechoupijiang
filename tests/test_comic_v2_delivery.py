@@ -300,6 +300,20 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("绑定首帧参考图片", handoff["shots"][0]["execution_steps"][0])
             self.assertIn("粘贴视频提示词", handoff["shots"][0]["execution_steps"][1])
             self.assertIn("按验收标准检查", handoff["shots"][0]["execution_steps"][2])
+            usage_map = handoff["asset_usage_map"]
+            self.assertEqual(len(usage_map), len(handoff["assets"]))
+            first_usage = usage_map[0]
+            self.assertEqual(first_usage["asset_id"], manifest.items[0].asset_id)
+            self.assertEqual(first_usage["name"], manifest.items[0].name)
+            self.assertTrue(first_usage["handoff_ready"])
+            self.assertEqual(first_usage["identity_baseline_image_id"], result.records[0].image_id)
+            self.assertTrue(first_usage["image_roles"])
+            self.assertEqual(first_usage["image_roles"][0]["image_kind"], "expression_sheet")
+            self.assertIn("锁定可复用表情", first_usage["image_roles"][0]["use_for"])
+            self.assertIn("reference_policy", first_usage["image_roles"][0])
+            self.assertEqual(first_usage["referenced_by_shots"][0]["shot_id"], package.shots[0].shot_id)
+            self.assertIn("让林昭第一次主动进入真相空间", first_usage["referenced_by_shots"][0]["story_purpose"])
+            self.assertIn("三视图", first_usage["downstream_instruction"])
             lineage = handoff["production_lineage"]
             self.assertEqual(
                 [stage["stage"] for stage in lineage],

@@ -47,6 +47,10 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(result["asset_image_requirement_ready"], 3)
         self.assertEqual(result["asset_image_requirement_total"], 3)
         self.assertEqual(result["asset_image_requirement_missing"], 0)
+        self.assertTrue(result["asset_usage_map_ready"])
+        self.assertEqual(result["asset_usage_map_items"], 3)
+        self.assertEqual(result["asset_usage_map_referenced_assets"], 3)
+        self.assertEqual(result["asset_usage_map_image_roles"], 7)
         matrix = result["asset_image_requirement_matrix"]
         character = next(item for item in matrix if item["asset_type"] == "character")
         prop = next(item for item in matrix if item["asset_type"] == "prop")
@@ -91,6 +95,9 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(payload["image_usage_contracts"], payload["image_count"])
         self.assertEqual(payload["asset_image_requirement_ready"], payload["asset_image_requirement_total"])
         self.assertEqual(payload["asset_image_requirement_missing"], 0)
+        self.assertTrue(payload["asset_usage_map_ready"])
+        self.assertEqual(payload["asset_usage_map_items"], payload["asset_count"])
+        self.assertEqual(payload["asset_usage_map_image_roles"], payload["image_count"])
         self.assertTrue(payload["asset_image_requirement_matrix"])
         self.assertEqual(payload["errors"], [])
 
@@ -130,6 +137,7 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertIn("Complete reference-chain shots: 2/2", completed.stdout)
         self.assertIn("Asset Image Requirement Matrix", completed.stdout)
         self.assertIn("Ready assets: 3/3", completed.stdout)
+        self.assertIn("Asset usage map: 3/3 assets, 7 image roles", completed.stdout)
         self.assertIn("林昭", completed.stdout)
         self.assertIn("three_view, expression_sheet", completed.stdout)
         self.assertIn("wide, top_down", completed.stdout)

@@ -230,6 +230,23 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not shot_production_package_ready:
         raise AssertionError("handoff manifest shot records are missing production-ready shot packages")
+    asset_usage_map = handoff_manifest.get("asset_usage_map") or []
+    asset_usage_ready = (
+        isinstance(asset_usage_map, list)
+        and len(asset_usage_map) == len(handoff_manifest.get("assets") or [])
+        and all(
+            item.get("asset_id")
+            and item.get("name")
+            and item.get("identity_baseline_image_id")
+            and item.get("image_roles")
+            and item.get("referenced_by_shots")
+            and item.get("downstream_instruction")
+            and item.get("handoff_ready") is True
+            for item in asset_usage_map
+        )
+    )
+    if not asset_usage_ready:
+        raise AssertionError("handoff manifest is missing asset usage map")
     lineage = handoff_manifest.get("production_lineage") or []
     lineage_handoff_ready = (
         isinstance(lineage, list)
@@ -304,6 +321,8 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
         "handoff_manifest_shot_execution_notes": shot_execution_notes_ready,
         "handoff_manifest_shot_production_package": shot_production_package_ready,
+        "handoff_manifest_asset_usage_map": asset_usage_ready,
+        "handoff_manifest_asset_usage_map_items": len(asset_usage_map),
         "handoff_manifest_production_lineage": lineage_ready,
         "handoff_manifest_lineage_handoff_fields": lineage_handoff_ready,
         "handoff_manifest_downstream_quick_start": quick_start_ready,
@@ -391,6 +410,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         ("handoff_manifest_shot_reference_images", "Shot reference images"),
         ("handoff_manifest_shot_execution_notes", "Shot execution notes"),
         ("handoff_manifest_shot_production_package", "Shot production package"),
+        ("handoff_manifest_asset_usage_map", "Asset usage map"),
         ("handoff_manifest_production_lineage", "Production lineage"),
         ("handoff_manifest_lineage_handoff_fields", "Lineage handoff fields"),
         ("handoff_manifest_downstream_quick_start", "Downstream quick-start playbook"),

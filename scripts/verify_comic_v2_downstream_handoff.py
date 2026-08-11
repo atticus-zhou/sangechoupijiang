@@ -110,6 +110,7 @@ def verify_downstream_handoff(
     shot_references = _shot_reference_counts(shots, asset_ids, image_ids)
     asset_requirement_matrix = _asset_image_requirement_matrix(assets, images)
     asset_requirement_summary = _asset_image_requirement_summary(asset_requirement_matrix)
+    asset_usage = _asset_usage_summary(manifest.get("asset_usage_map") or [], asset_ids, image_ids, shots)
     prompt_quality_failures = [
         f"{item.get('id', '<unknown>')}: {item.get('message', '')}"
         for item in prompt_quality.get("issues", [])
@@ -117,6 +118,7 @@ def verify_downstream_handoff(
 
     errors.extend(asset_failures)
     errors.extend(shot_failures)
+    errors.extend(asset_usage["failures"])
     errors.extend(lineage_failures)
     errors.extend(quick_start_failures)
     errors.extend(prompt_quality_failures)
@@ -155,6 +157,10 @@ def verify_downstream_handoff(
         "asset_image_requirement_ready": asset_requirement_summary["ready"],
         "asset_image_requirement_total": asset_requirement_summary["total"],
         "asset_image_requirement_missing": asset_requirement_summary["missing"],
+        "asset_usage_map_ready": asset_usage["ready"],
+        "asset_usage_map_items": asset_usage["items"],
+        "asset_usage_map_referenced_assets": asset_usage["referenced_assets"],
+        "asset_usage_map_image_roles": asset_usage["image_roles"],
         "lineage_stage_count": len(manifest.get("production_lineage") or []),
         "quick_start_step_count": len(manifest.get("downstream_quick_start") or []),
         "errors": errors,
@@ -163,6 +169,55 @@ def verify_downstream_handoff(
     if not result["downstream_handoff_ready"]:
         result["status"] = "failed"
     return result
+
+
+def _asset_usage_summary(
+    usage_map: list[dict[str, Any]],
+    asset_ids: set[str],
+    image_ids: set[str],
+    shots: list[dict[str, Any]],
+) -> dict[str, Any]:
+    failures: list[str] = []
+    shot_ids = {shot.get("shot_id") for shot in shots if shot.get("shot_id")}
+    usage_asset_ids = {item.get("asset_id") for item in usage_map if item.get("asset_id")}
+    if usage_asset_ids != asset_ids:
+        failures.append("asset_usage_map must contain exactly every approved asset")
+    referenced_assets = 0
+    image_roles = 0
+    for item in usage_map:
+        asset_id = item.get("asset_id") or "<missing_asset_id>"
+        roles = item.get("image_roles") or []
+        refs = item.get("referenced_by_shots") or []
+        image_roles += len(roles)
+        if refs:
+            referenced_assets += 1
+        if not item.get("identity_baseline_image_id") or item.get("identity_baseline_image_id") not in image_ids:
+            failures.append(f"{asset_id}: asset_usage_map missing approved identity baseline")
+        if not roles:
+            failures.append(f"{asset_id}: asset_usage_map missing image roles")
+        if not refs:
+            failures.append(f"{asset_id}: asset_usage_map missing shot references")
+        if not item.get("downstream_instruction"):
+            failures.append(f"{asset_id}: asset_usage_map missing downstream instruction")
+        if item.get("handoff_ready") is not True:
+            failures.append(f"{asset_id}: asset_usage_map is not handoff ready")
+        for role in roles:
+            if role.get("image_id") not in image_ids:
+                failures.append(f"{asset_id}: asset_usage_map role references unknown image")
+            if not role.get("use_for") or not role.get("file"):
+                failures.append(f"{asset_id}: asset_usage_map role missing use_for or file")
+        for ref in refs:
+            if ref.get("shot_id") not in shot_ids:
+                failures.append(f"{asset_id}: asset_usage_map references unknown shot")
+            if ref.get("first_frame_image_id") and ref.get("first_frame_image_id") not in image_ids:
+                failures.append(f"{asset_id}: asset_usage_map shot reference uses unknown image")
+    return {
+        "ready": not failures,
+        "items": len(usage_map),
+        "referenced_assets": referenced_assets,
+        "image_roles": image_roles,
+        "failures": failures,
+    }
 
 
 def _require_fields(errors: list[str], label: str, payload: dict[str, Any], fields: list[str]) -> None:
@@ -580,6 +635,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- First-frame bound shots: {result.get('first_frame_bound_shots')}/{result.get('shot_count')}",
         f"- Complete reference-chain shots: {result.get('complete_reference_chain_shots')}/{result.get('shot_count')}",
         f"- Machine-readable reference asset links: {result.get('reference_asset_links')}",
+        f"- Asset usage map: {result.get('asset_usage_map_referenced_assets')}/{result.get('asset_count')} assets, {result.get('asset_usage_map_image_roles')} image roles",
         "",
         "## Asset Image Requirement Matrix",
         "",

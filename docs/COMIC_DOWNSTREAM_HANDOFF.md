@@ -14,6 +14,7 @@
 - 镜头视频包：每个镜头必须有原文依据、叙事目的、参考资产、首帧参考图片、视频提示词、负面提示词、执行步骤、验收标准和失败重试策略。
 - 机器可读导演执行合同：handoff manifest v3 的每个镜头都必须保留叙事目的、参考资产、首帧图片 ID、动作顺序、动作表演、景别、运镜、灯光、台词、声音和风格版本，不能只留一整段提示词。
 - 下游 quick-start：handoff manifest 必须提供 `downstream_quick_start`，按确认制片画布、锁定基础资产、逐镜头生成视频、执行质量复核、归档交付证据五步说明接手顺序。
+- 资产使用地图：`asset_usage_map` 必须按每个人物、道具、场景说明它有哪些图片角色、身份基准图、被哪些镜头引用，以及下游应该如何复用。这样下游工具不需要从一堆图片里猜“哪张是基础资产、哪张能当首帧、这个道具出现在哪个镜头”。
 - 制片包质量基准：交叉检查故事证据、资产身份证、提示词专属性、导演执行合同、视觉质检和生产谱系，防止“字段齐全但内容仍是模板”的假完成。
 - 图片质量摘要：`image_quality_summary` 必须能说明总图片数、可用图片数、废片/返工图片数、返工率、失败图片 ID 和 `rework_instructions`，让下游知道哪些图能用、哪些图必须先修。每条 `rework_instructions` 都必须像一张单图返工卡：包含责任部门、阻塞阶段、优先级、给用户看的原因、建议按钮文案和操作步骤，不能只留下内部 action。
 - 下游接手决策卡：`downstream_handoff_decision` 必须同时出现在公开 claim report、公开 `trace.json` 和历史追溯接口里，直接告诉操作者状态是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`，`handoff_allowed` 是否为 true，还缺哪些证据，以及下一步应该补跑图片、补跑视觉质检、重组 Word，还是可以交给下游。
@@ -112,3 +113,14 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 这些信息缺一不可。`video_prompt_block` 负责给生图/图生视频平台复制执行，`story_purpose` 负责说明镜头在故事里的存在理由，`first_frame_reference_image` 和 `reference_asset_chain` 负责让系统验证它有没有真正继承已批准资产，`director_execution` 负责让二次工具、历史追溯和失败恢复知道应该从哪一步重试。
 
 因此，下游交付审计会把“叙事目的”“首帧参考图”和“机器可读资产引用链”当成硬门禁：如果某个镜头没有 `story_purpose`、`first_frame_reference_image.image_id`、`first_frame_reference_image.file`、`first_frame_reference_image.asset_id`，或没有完整的 `reference_asset_chain`，这个制片包只能停在 `needs_review`，不能交给 Libtv、小云雀或其他视频平台当作最终生产素材。
+
+## 资产使用地图
+
+`asset_usage_map` 是给下游操作者和二次工具看的索引表。每个资产必须有：
+
+- `image_roles`：说明每张图的图种、文件、用途、生成角色和引用策略。
+- `identity_baseline_image_id`：说明默认身份基准图是哪一张。
+- `referenced_by_shots`：说明这个资产被哪些镜头使用，以及是否作为首帧主参考。
+- `downstream_instruction`：给下游操作者一句明确的复用规则。
+
+缺少这张资产使用地图时，即使图片和镜头都存在，也只能说明“文件生成了”，不能说明“下游知道该怎么用”。
