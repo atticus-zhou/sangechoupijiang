@@ -69,6 +69,12 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertIn("real_model_evidence_requirements", gate["missing_check_ids"])
         self.assertIn("production_quality_verified", gate["missing_check_ids"])
         self.assertGreaterEqual(gate["blocking_count"], 2)
+        decision = report["downstream_handoff_decision"]
+        self.assertEqual(decision["status"], "structure_demo_only")
+        self.assertFalse(decision["handoff_allowed"])
+        self.assertIn("不能交给下游", decision["decision"])
+        self.assertIn("真实模型生成的非 fixture 图片", decision["missing_before_handoff"])
+        self.assertIn("regenerate_images", "\n".join(decision["required_actions"]))
         self.assertIn("真实模型", checklist["run_real_models"]["why_it_matters"])
 
     def test_real_verified_manifest_allows_real_quality_claim(self):
@@ -97,6 +103,11 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertFalse(gate["missing_check_ids"])
         self.assertEqual(gate["blocking_count"], 0)
         self.assertTrue(all(item["passed"] for item in gate["checks"]))
+        decision = report["downstream_handoff_decision"]
+        self.assertEqual(decision["status"], "ready_for_downstream")
+        self.assertTrue(decision["handoff_allowed"])
+        self.assertEqual(decision["missing_before_handoff"], [])
+        self.assertIn("handoff manifest", decision["operator_next_step"])
 
     def test_cli_markdown_is_operator_readable(self):
         completed = subprocess.run(
@@ -120,6 +131,9 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertIn("Claim Upgrade Recovery", completed.stdout)
         self.assertIn("Real Quality Promotion Gate", completed.stdout)
         self.assertIn("Real Model Evidence Requirements", completed.stdout)
+        self.assertIn("Downstream Handoff Decision", completed.stdout)
+        self.assertIn("Handoff allowed: `False`", completed.stdout)
+        self.assertIn("只能公开演示结构", completed.stdout)
         self.assertIn("non_fixture_images", completed.stdout)
         self.assertIn("Status: `evidence_missing`", completed.stdout)
         self.assertIn("Recovery action: `regenerate_images`", completed.stdout)

@@ -725,6 +725,26 @@ h3 {
   margin-top: 16px;
 }
 
+.downstream-handoff-card {
+  grid-column: 1 / -1;
+  border-color: rgba(132, 204, 22, 0.28);
+  background: linear-gradient(180deg, rgba(22, 37, 29, 0.9), rgba(16, 23, 34, 0.96));
+}
+
+.downstream-handoff-card .text-row {
+  background: rgba(7, 18, 12, 0.38);
+}
+
+.downstream-handoff-card .claim-recovery-next {
+  border-color: rgba(132, 204, 22, 0.28);
+  background: rgba(132, 204, 22, 0.08);
+}
+
+.downstream-missing-list,
+.downstream-action-steps {
+  margin-top: 14px;
+}
+
 .claim-upgrade-item {
   display: grid;
   gap: 6px;

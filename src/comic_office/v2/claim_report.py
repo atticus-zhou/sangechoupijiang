@@ -256,6 +256,93 @@ def claim_upgrade_checklist(claim_level: str, benchmark: dict[str, Any]) -> list
     ]
 
 
+def downstream_handoff_decision_card(claim_level: str, benchmark: dict[str, Any]) -> dict[str, Any]:
+    """Return a human-readable decision card for downstream production handoff."""
+    image_summary = benchmark.get("image_quality_summary") or {}
+    real_model_evidence = benchmark.get("real_model_evidence_requirements") or {}
+    recommended_recovery = benchmark.get("recommended_recovery") or {}
+    package_ready = bool(benchmark.get("package_quality_ready"))
+    production_verified = bool(benchmark.get("production_quality_verified"))
+    visual_level = str(benchmark.get("visual_evidence_level") or "unknown")
+    prompt_status = str((benchmark.get("prompt_quality_summary") or {}).get("status") or "unknown")
+    score = benchmark.get("package_quality_score")
+
+    base_evidence = [
+        f"package_quality_ready={str(package_ready).lower()}",
+        f"production_quality_verified={str(production_verified).lower()}",
+        f"visual_evidence_level={visual_level}",
+        f"prompt_quality_status={prompt_status}",
+        f"waste_or_rework_images={int(image_summary.get('waste_or_rework_images') or 0)}",
+    ]
+
+    if claim_level == "real_quality_verified":
+        return {
+            "status": "ready_for_downstream",
+            "decision": "可以交给下游视频或剪辑流程继续生产。",
+            "human_message": "这份包已经具备真实模型图片、视觉质检、Word 画布和 handoff manifest，可以作为当前版本的生产输入。",
+            "handoff_allowed": True,
+            "operator_next_step": "把 Word 画布、handoff manifest、图片目录和 claim report 一起交给下游，后续如改故事或资产必须重新跑质量基准。",
+            "missing_before_handoff": [],
+            "required_actions": [
+                "归档当前证据包",
+                "下游按 handoff manifest 的 asset_id、image_id 和 shot_id 逐项引用",
+                "任何故事、资产或图片变更后重新生成 claim report",
+            ],
+            "evidence": base_evidence,
+        }
+
+    if claim_level == "demo_structure_only":
+        return {
+            "status": "structure_demo_only",
+            "decision": "只能公开演示结构，不能交给下游当真实生产素材。",
+            "human_message": "这份包证明流程、引用链和交付格式可复现，但图片仍是无 Key 样例或证据不足，不能证明真实画风和人物一致性。",
+            "handoff_allowed": False,
+            "operator_next_step": "保留故事、资产和提示词包；用真实生图模型重新生成图片；用视觉理解模型质检；再重建 Word、manifest 和 claim report。",
+            "missing_before_handoff": [
+                "真实模型生成的非 fixture 图片",
+                "每张图的 provider/model/image_id 记录",
+                "视觉质检通过记录",
+                "七维视觉评分",
+                "production_quality_verified=true",
+            ],
+            "required_actions": [
+                "模型页完成文本、生图、视觉理解模型预检",
+                "执行 regenerate_images 恢复动作",
+                "确认 real_model_evidence_requirements.ready_for_real_quality_claim=true",
+                "重新运行 verify_comic_real_production_claim.py 指向真实 manifest",
+            ],
+            "evidence": base_evidence + [
+                f"real_model_evidence_ready={str(real_model_evidence.get('ready_for_real_quality_claim') is True).lower()}",
+            ],
+        }
+
+    return {
+        "status": "blocked",
+        "decision": "不能公开交付，也不能交给下游继续生产。",
+        "human_message": "当前制片包仍有质量阻塞项，需要先退回责任部门修复，再重新审计。",
+        "handoff_allowed": False,
+        "operator_next_step": str(
+            recommended_recovery.get("description")
+            or benchmark.get("next_action")
+            or "按质量基准中的 blocker 和 recommended_recovery 修复。"
+        ),
+        "missing_before_handoff": [
+            str(item.get("code") or item.get("message") or "")
+            for item in (benchmark.get("issues") or [])
+            if item.get("severity") == "blocker"
+        ],
+        "required_actions": [
+            "退回质量基准标记的责任部门",
+            "保留旧 Word 和旧 manifest 作为历史",
+            "修复后重新生成质量基准和 claim report",
+        ],
+        "evidence": base_evidence + [
+            f"package_quality_score={score}",
+            f"blocker_count={int(benchmark.get('blocker_count') or 0)}",
+        ],
+    }
+
+
 def claim_upgrade_recovery(claim_level: str, benchmark: dict[str, Any]) -> dict[str, Any]:
     """Return an operator playbook for moving a demo claim toward real quality evidence."""
     visual_level = str(benchmark.get("visual_evidence_level") or "unknown")

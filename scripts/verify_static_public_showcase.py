@@ -402,6 +402,17 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append("static claim report must mark recovery as required")
             if len(claim_upgrade_recovery.get("steps") or []) < 3:
                 errors.append("static claim report must include recovery steps")
+            handoff_decision = claim_payload.get("downstream_handoff_decision") or {}
+            if handoff_decision.get("status") != "structure_demo_only":
+                errors.append("static claim report must expose downstream_handoff_decision.status=structure_demo_only")
+            if handoff_decision.get("handoff_allowed") is not False:
+                errors.append("static claim report must not allow downstream handoff for fixture demos")
+            if "不能交给下游" not in str(handoff_decision.get("decision") or ""):
+                errors.append("static claim report must explain why downstream handoff is not allowed")
+            if "真实模型生成的非 fixture 图片" not in (handoff_decision.get("missing_before_handoff") or []):
+                errors.append("static claim report must list missing non-fixture model images before handoff")
+            if "regenerate_images" not in "\n".join(str(item) for item in (handoff_decision.get("required_actions") or [])):
+                errors.append("static claim report handoff decision must point to regenerate_images")
         research_claim_uri = str(research_claim_boundary.get("uri") or "")
         research_claim_path = temp_dir / research_claim_uri
         research_claim_payload = {}
@@ -715,6 +726,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the claim upgrade checklist")
         if "claim.claim_upgrade_recovery" not in app_text or "claim-recovery-card" not in app_text:
             errors.append("static showcase page must render the claim recovery playbook")
+        if "claim.downstream_handoff_decision" not in app_text or "downstream-handoff-card" not in app_text:
+            errors.append("static showcase page must render the downstream handoff decision card")
         if "portfolio.research_claim_boundary" not in app_text or "research-claim-card" not in app_text:
             errors.append("static showcase page must render the research claim boundary")
         if "research-capture-playbook-card" not in app_text or "research-capture-steps" not in app_text:
@@ -735,6 +748,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render future office candidates and platform backlog")
         if "claim-upgrade-item" not in style_text:
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
+        if "downstream-handoff-card" not in style_text or "downstream-action-steps" not in style_text:
+            errors.append("static showcase stylesheet must style the downstream handoff decision")
         if "research-capture-playbook-card" not in style_text or "research-capture-steps" not in style_text:
             errors.append("static showcase stylesheet must style the research evidence capture playbook")
         if "extension-check-grid" not in style_text or "extension-panel" not in style_text:

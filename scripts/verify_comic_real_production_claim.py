@@ -22,6 +22,7 @@ from scripts.verify_comic_v2_production_benchmark import DEFAULT_OUTPUT, verify_
 from src.comic_office.v2.claim_report import (
     claim_upgrade_checklist,
     claim_upgrade_recovery,
+    downstream_handoff_decision_card,
     real_quality_promotion_gate,
 )
 
@@ -83,6 +84,7 @@ def build_claim_report(manifest_path: Path | None = None, output_dir: Path = DEF
     upgrade_checklist = claim_upgrade_checklist(claim_level, benchmark)
     upgrade_recovery = claim_upgrade_recovery(claim_level, benchmark)
     promotion_gate = real_quality_promotion_gate(benchmark)
+    handoff_decision = downstream_handoff_decision_card(claim_level, benchmark)
     return {
         "status": "passed",
         "mode": "comic_real_production_claim",
@@ -96,6 +98,7 @@ def build_claim_report(manifest_path: Path | None = None, output_dir: Path = DEF
         "allowed_public_claims": allowed_claims,
         "forbidden_public_claims": forbidden_claims,
         "real_quality_promotion_gate": promotion_gate,
+        "downstream_handoff_decision": handoff_decision,
         "real_model_evidence_requirements": benchmark.get("real_model_evidence_requirements") or {},
         "claim_upgrade_checklist": upgrade_checklist,
         "claim_upgrade_recovery": upgrade_recovery,
@@ -179,6 +182,30 @@ def format_markdown(report: dict[str, Any]) -> str:
             lines.append(
                 f"| {item.get('id')} | `{item.get('passed')}` | {item.get('evidence')} | {item.get('if_missing')} |"
             )
+    decision = report.get("downstream_handoff_decision") or {}
+    lines.extend(
+        [
+            "",
+            "## Downstream Handoff Decision",
+            "",
+            f"- Status: `{decision.get('status')}`",
+            f"- Handoff allowed: `{decision.get('handoff_allowed')}`",
+            f"- Decision: {decision.get('decision')}",
+            f"- Human message: {decision.get('human_message')}",
+            f"- Operator next step: {decision.get('operator_next_step')}",
+            "",
+            "### Missing Before Handoff",
+            "",
+        ]
+    )
+    missing = [str(item) for item in (decision.get("missing_before_handoff") or []) if str(item).strip()]
+    lines.extend(f"- {item}" for item in (missing or ["none"]))
+    lines.extend(["", "### Required Actions", ""])
+    actions = [str(item) for item in (decision.get("required_actions") or []) if str(item).strip()]
+    lines.extend(f"- {item}" for item in (actions or ["none"]))
+    lines.extend(["", "### Decision Evidence", ""])
+    evidence_items = [str(item) for item in (decision.get("evidence") or []) if str(item).strip()]
+    lines.extend(f"- {item}" for item in (evidence_items or ["none"]))
     lines.extend(["", "## Claim Upgrade Checklist", ""])
     for item in report.get("claim_upgrade_checklist", []):
         evidence = ", ".join(item.get("required_evidence") or [])

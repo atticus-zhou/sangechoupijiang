@@ -643,6 +643,7 @@ def _public_claim_report(report: dict) -> dict:
     recovery = report.get("claim_upgrade_recovery") or {}
     promotion_gate = report.get("real_quality_promotion_gate") or {}
     real_model_evidence = report.get("real_model_evidence_requirements") or {}
+    handoff_decision = report.get("downstream_handoff_decision") or {}
     return {
         "mode": "no_key_demo_claim_report",
         "office_id": "comic_production",
@@ -705,6 +706,16 @@ def _public_claim_report(report: dict) -> dict:
                 }
                 for step in (recovery.get("steps") or [])
             ],
+        },
+        "downstream_handoff_decision": {
+            "status": handoff_decision.get("status", ""),
+            "decision": handoff_decision.get("decision", ""),
+            "human_message": handoff_decision.get("human_message", ""),
+            "handoff_allowed": bool(handoff_decision.get("handoff_allowed")),
+            "operator_next_step": handoff_decision.get("operator_next_step", ""),
+            "missing_before_handoff": list(handoff_decision.get("missing_before_handoff") or []),
+            "required_actions": list(handoff_decision.get("required_actions") or []),
+            "evidence": list(handoff_decision.get("evidence") or []),
         },
         "next_action": report.get("next_action", ""),
         "evidence": {
@@ -2406,6 +2417,7 @@ async def get_public_showcase_demo_api():
                 "forbidden_public_claims": comic_claim.get("forbidden_public_claims", [])[:3],
                 "claim_upgrade_checklist": comic_claim.get("claim_upgrade_checklist", [])[:3],
                 "claim_upgrade_recovery": comic_claim.get("claim_upgrade_recovery", {}),
+                "downstream_handoff_decision": comic_claim.get("downstream_handoff_decision", {}),
                 "real_quality_promotion_gate": comic_claim.get("real_quality_promotion_gate", {}),
                 "real_model_evidence_requirements": comic_claim.get("real_model_evidence_requirements", {}),
                 "next_action": comic_claim.get("next_action", ""),

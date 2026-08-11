@@ -161,6 +161,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertTrue(claim_payload["claim_upgrade_recovery"]["required"])
         self.assertIn("prompt_package", claim_payload["claim_upgrade_recovery"]["preserves"])
         self.assertIn("visual_review", claim_payload["claim_upgrade_recovery"]["rebuilds"])
+        decision = claim_payload["downstream_handoff_decision"]
+        self.assertEqual(decision["status"], "structure_demo_only")
+        self.assertFalse(decision["handoff_allowed"])
+        self.assertIn("不能交给下游", decision["decision"])
+        self.assertIn("真实模型生成的非 fixture 图片", decision["missing_before_handoff"])
+        self.assertIn("regenerate_images", "\n".join(decision["required_actions"]))
         self.assertNotIn("E:\\", json.dumps(claim_payload, ensure_ascii=False))
         research_claim = showcase["portfolio_embed"]["research_claim_boundary"]
         self.assertEqual(research_claim["uri"], "downloads/research/claim-report.json")

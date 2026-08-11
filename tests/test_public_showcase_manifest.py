@@ -198,6 +198,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(claim["claim_upgrade_recovery"]["recovery_action"], "regenerate_images")
         self.assertIn("prompt_package", claim["claim_upgrade_recovery"]["preserves"])
         self.assertIn("visual_review", claim["claim_upgrade_recovery"]["rebuilds"])
+        decision = claim["downstream_handoff_decision"]
+        self.assertEqual(decision["status"], "structure_demo_only")
+        self.assertFalse(decision["handoff_allowed"])
+        self.assertIn("不能交给下游", decision["decision"])
+        self.assertIn("真实模型生成的非 fixture 图片", decision["missing_before_handoff"])
+        self.assertIn("regenerate_images", "\n".join(decision["required_actions"]))
         self.assertIn("不能宣称真实模型画质已验证", "\n".join(claim["forbidden_public_claims"]))
         self.assertEqual(claim["evidence"]["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
         self.assertEqual(claim["evidence"]["trace_uri"], "/api/demo/comic-production/files/trace.json")
@@ -404,6 +410,8 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertTrue(any(item["id"] == "run_real_models" for item in claim["claim_upgrade_checklist"]))
         self.assertEqual(claim["claim_upgrade_recovery"]["recovery_action"], "regenerate_images")
         self.assertTrue(claim["claim_upgrade_recovery"]["required"])
+        self.assertEqual(claim["downstream_handoff_decision"]["status"], "structure_demo_only")
+        self.assertFalse(claim["downstream_handoff_decision"]["handoff_allowed"])
         self.assertNotIn("E:\\", json.dumps(claim, ensure_ascii=False))
 
     def test_favicon_request_does_not_create_browser_console_noise(self):

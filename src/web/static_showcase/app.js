@@ -329,8 +329,41 @@
       grid.appendChild(gateCard);
     }
 
+    renderDownstreamHandoffDecision(grid, claim.downstream_handoff_decision || {});
     renderClaimUpgradeRecovery(grid, claim.claim_upgrade_recovery || {});
     renderQualityUpgradePath(grid, qualityUpgradePath);
+  }
+
+  function renderDownstreamHandoffDecision(grid, decision) {
+    if (!grid || !decision || !decision.status) return;
+    const card = element('article', 'card claim-card downstream-handoff-card');
+    card.appendChild(element('h3', '', '\u80fd\u5426\u4ea4\u7ed9\u4e0b\u6e38'));
+    addTextRow(card, '\u72b6\u6001', decision.status);
+    addTextRow(card, '\u53ef\u4ea4\u63a5', decision.handoff_allowed ? '\u53ef\u4ee5' : '\u4e0d\u53ef\u4ee5');
+    card.appendChild(element('p', '', text(decision.decision || '\u9700\u8981\u5148\u8865\u9f50\u751f\u4ea7\u8bc1\u636e\u3002')));
+    if (decision.human_message) {
+      card.appendChild(element('small', '', text(decision.human_message)));
+    }
+    if (decision.operator_next_step) {
+      card.appendChild(element('p', 'claim-recovery-next', text(decision.operator_next_step)));
+    }
+    const missing = Array.isArray(decision.missing_before_handoff) ? decision.missing_before_handoff : [];
+    if (missing.length) {
+      const list = element('ul', 'proof-list downstream-missing-list');
+      missing.slice(0, 6).forEach(function (item) {
+        list.appendChild(element('li', '', text(item)));
+      });
+      card.appendChild(list);
+    }
+    const actions = Array.isArray(decision.required_actions) ? decision.required_actions : [];
+    if (actions.length) {
+      const steps = element('ol', 'quality-upgrade-steps downstream-action-steps');
+      actions.slice(0, 5).forEach(function (item) {
+        steps.appendChild(element('li', '', text(item)));
+      });
+      card.appendChild(steps);
+    }
+    grid.appendChild(card);
   }
 
   function renderClaimUpgradeRecovery(grid, recovery) {
