@@ -1275,6 +1275,62 @@ def _public_showcase_quality_upgrade_path(claim: dict) -> dict:
     }
 
 
+def _public_showcase_recovery_drill(claim: dict) -> dict:
+    evidence = claim.get("evidence") or {}
+    return {
+        "title": "公开样例失败恢复演练",
+        "summary": "当访客追问“这些图是不是真实模型生成”时，产品不能嘴硬宣称；它应该把当前证据等级、缺口、恢复动作和重新验收路径讲清楚。",
+        "trigger": "固定样例的图片证据仍是 fixture_only，或者真实生产时图片缺失、风格跑偏、资产引用断链。",
+        "current_evidence_level": evidence.get("visual_evidence_level", "fixture_only"),
+        "recommended_action": "regenerate_images",
+        "recovery_endpoint": "/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+        "trace_endpoint": "/api/tasks/{task_id}/comic-v2-trace.json",
+        "preserve_policy": [
+            "保留已确认故事和故事版本",
+            "保留已审核资产拆解包",
+            "保留已通过提示词门禁的提示词包",
+            "保留旧 Word 画布和旧 handoff manifest 作为历史证据",
+        ],
+        "clear_policy": [
+            "清理本轮图片生产证据",
+            "清理本轮视觉质检结果",
+            "清理依赖旧图片的当前交付声明",
+        ],
+        "operator_steps": [
+            {
+                "order": 1,
+                "owner": "使用者",
+                "action": "在本地模型页补齐并测试工部生图模型、刑部视觉理解模型和必要文本模型。",
+                "visible_feedback": "模型页显示对应部门测试通过；公开展示仍保持 no-key，不读取这些 Key。",
+            },
+            {
+                "order": 2,
+                "owner": "工部",
+                "action": "按资产身份证、视觉母版和提示词包重新生成基础资产图。",
+                "visible_feedback": "图片记录必须出现 provider、model、prompt_hash、非 fixture 标记和本地文件引用。",
+            },
+            {
+                "order": 3,
+                "owner": "刑部",
+                "action": "逐张检查人物一致性、白底资产、古风/现代风格、道具归属、场景空间图和引用链。",
+                "visible_feedback": "失败图片进入 rework_instructions，并说明是重写提示词、重新生图还是人工放行。",
+            },
+            {
+                "order": 4,
+                "owner": "礼部 / 史部",
+                "action": "重新组装 Word 制片画布、handoff manifest、trace.json 和真实生产声明报告。",
+                "visible_feedback": "trace 的 claim_level 不再停留在 demo_structure_only，且下游接手决策必须重新计算。",
+            },
+        ],
+        "acceptance": [
+            "trace.json 里 image_production_evidence.evidence_level 升级为 model_reviewed。",
+            "claim report 不能再包含 fixture_only 作为当前图片证据。",
+            "downstream_handoff_decision.handoff_allowed 只能在质量门禁通过后变为 true。",
+            "旧交付物仍可在历史里下载，但不会覆盖最新生产版本。",
+        ],
+    }
+
+
 def _public_showcase_portfolio_ci_proof() -> dict:
     return {
         "status": "repo_static_checks",
@@ -2357,6 +2413,7 @@ async def get_public_showcase_demo_api():
             "portfolio_integration": _public_showcase_portfolio_integration(),
             "office_extension_story": _public_showcase_office_extension_story(extension_blueprint),
             "office_launch_matrix": _public_showcase_office_launch_matrix(office_governance),
+            "public_recovery_drill": _public_showcase_recovery_drill(comic_claim),
             "handoff_inventory": {
                 "uri": "/api/demo/comic-production/handoff-inventory",
                 "status": comic_inventory.get("status", ""),

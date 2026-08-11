@@ -202,6 +202,14 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(upgrade_path["recovery_action"], "regenerate_images")
         self.assertEqual(upgrade_path["trace_endpoint"], "/api/tasks/{task_id}/comic-v2-trace.json")
         self.assertEqual(len(upgrade_path["steps"]), 3)
+        recovery_drill = showcase["portfolio_embed"]["public_recovery_drill"]
+        self.assertEqual(recovery_drill["current_evidence_level"], "fixture_only")
+        self.assertEqual(recovery_drill["recommended_action"], "regenerate_images")
+        self.assertEqual(recovery_drill["recovery_endpoint"], "/api/workspaces/{workspace_id}/comic/v2/quality/recover")
+        self.assertEqual(len(recovery_drill["operator_steps"]), 4)
+        self.assertIn("旧 Word 画布", " ".join(recovery_drill["preserve_policy"]))
+        self.assertIn("视觉质检", " ".join(recovery_drill["clear_policy"]))
+        self.assertIn("model_reviewed", " ".join(recovery_drill["acceptance"]))
         script_text = "\n".join(
             item["product_response"] for item in showcase["portfolio_embed"]["interview_demo_script"]
         )
@@ -400,6 +408,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("claim-recovery-card", static_script)
         self.assertIn("claim-recovery-card", style_text)
         self.assertIn("claim-recovery-steps", style_text)
+        self.assertIn("public_recovery_drill", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
+        self.assertIn("renderPublicRecoveryDrill", static_script)
+        self.assertIn("public-recovery-drill-card", style_text)
+        self.assertIn("public-recovery-policy-grid", style_text)
         self.assertIn("renderImageReworkSummary", static_script)
         self.assertIn("image-rework-summary", static_script)
         self.assertIn("image-rework-summary", style_text)

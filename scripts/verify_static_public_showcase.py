@@ -730,6 +730,15 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the claim upgrade checklist")
         if "claim.claim_upgrade_recovery" not in app_text or "claim-recovery-card" not in app_text:
             errors.append("static showcase page must render the claim recovery playbook")
+        if "portfolio.public_recovery_drill" not in app_text or "public-recovery-drill-card" not in style_text:
+            errors.append("static showcase page must render the public recovery drill")
+        recovery_drill = (showcase.get("portfolio_embed") or {}).get("public_recovery_drill") or {}
+        if recovery_drill.get("recommended_action") != "regenerate_images":
+            errors.append("static showcase public recovery drill must recommend regenerate_images for fixture-only demo evidence")
+        if len(recovery_drill.get("operator_steps") or []) < 4:
+            errors.append("static showcase public recovery drill must expose at least four operator steps")
+        if not recovery_drill.get("preserve_policy") or not recovery_drill.get("clear_policy") or not recovery_drill.get("acceptance"):
+            errors.append("static showcase public recovery drill must explain preserve, clear, and acceptance policies")
         if "claim.downstream_handoff_decision" not in app_text or "downstream-handoff-card" not in app_text:
             errors.append("static showcase page must render the downstream handoff decision card")
         if "portfolio.research_claim_boundary" not in app_text or "research-claim-card" not in app_text:

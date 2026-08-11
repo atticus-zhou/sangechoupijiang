@@ -332,6 +332,7 @@
     renderDownstreamHandoffDecision(grid, claim.downstream_handoff_decision || {});
     renderClaimUpgradeRecovery(grid, claim.claim_upgrade_recovery || {});
     renderQualityUpgradePath(grid, qualityUpgradePath);
+    renderPublicRecoveryDrill(grid, portfolio.public_recovery_drill || {});
   }
 
   function renderDownstreamHandoffDecision(grid, decision) {
@@ -404,6 +405,47 @@
       li.appendChild(element('strong', '', text(item.owner || 'operator')));
       li.appendChild(element('p', '', text(item.action || '')));
       li.appendChild(element('small', '', '证据：' + text(item.evidence || '') + '；预期：' + text(item.expected || '')));
+      steps.appendChild(li);
+    });
+    card.appendChild(steps);
+    grid.appendChild(card);
+  }
+
+  function renderPublicRecoveryDrill(grid, drill) {
+    if (!grid || !drill || !drill.recommended_action) return;
+    const card = element('article', 'card claim-card public-recovery-drill-card');
+    card.appendChild(element('h3', '', text(drill.title || '公开样例失败恢复演练')));
+    card.appendChild(element('p', '', text(drill.summary || '公开样例只证明结构，真实质量需要重新补证。')));
+    addTextRow(card, '触发条件', drill.trigger);
+    addTextRow(card, '当前证据', drill.current_evidence_level);
+    addTextRow(card, '恢复动作', drill.recommended_action);
+    addTextRow(card, '恢复接口', drill.recovery_endpoint);
+
+    const policies = element('div', 'public-recovery-policy-grid');
+    [
+      ['保留什么', drill.preserve_policy || []],
+      ['清理什么', drill.clear_policy || []],
+      ['验收标准', drill.acceptance || []],
+    ].forEach(function (group) {
+      const panel = element('div', 'public-recovery-policy');
+      panel.appendChild(element('strong', '', group[0]));
+      const list = element('ul', 'proof-list');
+      (Array.isArray(group[1]) ? group[1] : []).slice(0, 5).forEach(function (item) {
+        list.appendChild(element('li', '', text(item)));
+      });
+      panel.appendChild(list);
+      policies.appendChild(panel);
+    });
+    card.appendChild(policies);
+
+    const steps = element('ol', 'public-recovery-steps');
+    (Array.isArray(drill.operator_steps) ? drill.operator_steps : []).forEach(function (item) {
+      const li = element('li', '');
+      li.appendChild(element('strong', '', text(item.owner || 'operator')));
+      li.appendChild(element('p', '', text(item.action || '')));
+      if (item.visible_feedback) {
+        li.appendChild(element('small', '', '页面反馈：' + text(item.visible_feedback)));
+      }
       steps.appendChild(li);
     });
     card.appendChild(steps);
