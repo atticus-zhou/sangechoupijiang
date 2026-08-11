@@ -29,6 +29,7 @@ dist/public-showcase/index.html
 - 嵌入已有个人网站时，把 `dist/public-showcase/*` 复制到个人网站仓库的 `public/three-stooges/`，再链接到 `/three-stooges/`。
 - 必须保留 `index.html`、`data.js`、`app.js`、`style.css`、`assets/public-showcase-desktop.png`、`downloads/`、`data/comic_production_claim_report.json`、`export-manifest.json` 和 `portfolio-deploy-manifest.json`。
 - `data/comic_production_claim_report.json` 必须保留 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺哪些证据，后者说明失败后如何保留 story/asset/prompt、用 `regenerate_images` 重建图片证据和视觉质检，再重建 Word、handoff manifest 和 claim report。
+- `showcase.json` 和 `data.js` 必须保留 `portfolio_embed.public_recovery_drill`：公开页会把它渲染成失败恢复演练卡，说明 `fixture_only` 样例如何通过 `regenerate_images` 回到真实图片生成、刑部质检和重新交付，而不是让访客误以为 demo 图片已经代表真实画质。
 - 禁止把 `config.yaml`、`.env`、API Key、Cookie、`user_data/`、`output/`、浏览器 Profile 或真实用户工作区复制进公开站点。
 
 `python scripts/verify_public_demo_mode.py --format markdown` 和 `python scripts/verify_static_public_showcase.py --format markdown` 都会检查这份接入协议。如果后续修改了个人网站接入方式，必须同时更新接口、静态页和验证器。

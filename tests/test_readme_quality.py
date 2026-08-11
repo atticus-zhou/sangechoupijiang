@@ -201,6 +201,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("不能交给 Libtv", text)
         self.assertIn("rework_instructions", text)
         self.assertIn("claim_upgrade_recovery", text)
+        self.assertIn("public_recovery_drill", text)
+        self.assertIn("保留故事/资产/提示词/旧 Word", text)
         self.assertIn("废片/返工", text)
         self.assertIn("regenerate_images", text)
         self.assertIn("fixture_only", text)
