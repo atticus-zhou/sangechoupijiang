@@ -7319,6 +7319,74 @@ def _comic_v2_image_evidence_recovery_action(image_evidence: dict, prompt_count:
     }
 
 
+def _comic_v2_history_recovery_action(
+    *,
+    label: str,
+    method: str,
+    path: str,
+    workspace_id: str,
+    office_id: str,
+    focus: str,
+    action: str = "",
+    body: dict | None = None,
+    description: str = "",
+) -> dict:
+    playbooks = {
+        "revise_assets": {
+            "expected_stage": "asset_review",
+            "preserves": ["已确认故事", "视觉母版", "历史交付记录"],
+            "clears": ["提示词包", "图片生产记录", "当前交付物"],
+            "operator_steps": ["回到资产审核区", "按退回意见增删改人物、道具和场景", "确认新版资产拆解后再继续生产"],
+            "description": "资产拆解不可信时，先修正人物、道具、场景清单，避免后面图片和 Word 画布继续放大错误。",
+        },
+        "regenerate_prompts": {
+            "expected_stage": "prompt_planning",
+            "preserves": ["已确认故事", "视觉母版", "已批准资产拆解包"],
+            "clears": ["提示词包", "图片生产记录", "当前交付物"],
+            "operator_steps": ["保留已审核资产", "重新生成资产提示词和镜头执行提示词", "通过提示词门禁后再生图"],
+            "description": "资产清单可以保留，但提示词不够像导演或没有继承视觉母版，需要回到工部/兵部重写。",
+        },
+        "regenerate_images": {
+            "expected_stage": "image_generation",
+            "preserves": ["已确认故事", "视觉母版", "资产拆解包", "提示词包"],
+            "clears": ["图片生产记录", "当前交付物"],
+            "operator_steps": ["保留故事、资产和提示词", "用真实模型重新生成基础资产图", "重跑刑部视觉质检后再组装 Word"],
+            "description": "提示词已有，但图片缺失、来源不明或质检失败，需要重新生成并保留可追溯证据。",
+        },
+        "rebuild_delivery": {
+            "expected_stage": "document_generation",
+            "preserves": ["已确认故事", "视觉母版", "资产拆解包", "提示词包", "图片生产记录"],
+            "clears": ["当前交付物"],
+            "operator_steps": ["保留已生产图片和提示词", "重新生成 Word 制片画布", "重新生成引用清单和生产追溯包"],
+            "description": "上游资产可用，但 Word 画布、引用清单或质量清单不完整，需要重新组装交付物。",
+        },
+        "open_workspace": {
+            "expected_stage": "manual_review",
+            "preserves": ["当前项目全部记录"],
+            "clears": [],
+            "operator_steps": ["回到项目工作台", "查看当前阶段提示", "按页面推荐继续处理"],
+            "description": "系统还不能判断唯一恢复动作，需要先回到项目页查看当前阶段。",
+        },
+    }
+    playbook = playbooks.get(action) or playbooks["open_workspace"]
+    result = {
+        "label": label,
+        "method": method,
+        "path": path,
+        "workspace_id": workspace_id,
+        "office_id": office_id,
+        "focus": focus,
+        "expected_stage": playbook["expected_stage"],
+        "preserves": playbook["preserves"],
+        "clears": playbook["clears"],
+        "operator_steps": playbook["operator_steps"],
+        "description": description or playbook["description"],
+    }
+    if body is not None:
+        result["body"] = body
+    return result
+
+
 def _history_delivery_summary(enriched: dict) -> dict:
     trace = enriched.get("comic_v2_trace") or {}
     workspace_id = enriched.get("workspace_id") or ""
@@ -7447,51 +7515,56 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "description": benchmark_recovery.get("description") or "",
         })
     elif workspace_id and not legacy_package and "制片包质量基准" in missing_items and not quality_benchmark:
-        recovery_actions.append({
-            "label": "补齐 V3 引用与质量清单",
-            "method": "POST",
-            "path": f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
-            "body": {"action": "rebuild_delivery"},
-            "workspace_id": workspace_id,
-            "office_id": enriched.get("office_id") or "comic_production",
-            "focus": "delivery",
-        })
+        recovery_actions.append(_comic_v2_history_recovery_action(
+            label="补齐 V3 引用与质量清单",
+            method="POST",
+            path=f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+            body={"action": "rebuild_delivery"},
+            workspace_id=workspace_id,
+            office_id=enriched.get("office_id") or "comic_production",
+            focus="delivery",
+            action="rebuild_delivery",
+        ))
     if workspace_id and not legacy_package and ("Word 制片画布" in missing_items or "引用清单" in missing_items):
-        recovery_actions.append({
-            "label": "重新生成 Word 制片画布",
-            "method": "POST",
-            "path": f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
-            "workspace_id": workspace_id,
-            "office_id": enriched.get("office_id") or "",
-            "focus": "delivery",
-        })
+        recovery_actions.append(_comic_v2_history_recovery_action(
+            label="重新生成 Word 制片画布",
+            method="POST",
+            path=f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
+            workspace_id=workspace_id,
+            office_id=enriched.get("office_id") or "",
+            focus="delivery",
+            action="rebuild_delivery",
+        ))
     if workspace_id and not legacy_package and "视觉质检问题" in missing_items and not benchmark_action:
-        recovery_actions.append({
-            "label": "重新生成并质检基础资产图",
-            "method": "POST",
-            "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
-            "workspace_id": workspace_id,
-            "office_id": enriched.get("office_id") or "",
-            "focus": "images",
-        })
+        recovery_actions.append(_comic_v2_history_recovery_action(
+            label="重新生成并质检基础资产图",
+            method="POST",
+            path=f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
+            workspace_id=workspace_id,
+            office_id=enriched.get("office_id") or "",
+            focus="images",
+            action="regenerate_images",
+        ))
     if workspace_id and not legacy_package and "提示词质量门禁" in missing_items and not benchmark_action:
-        recovery_actions.append({
-            "label": "重新生成提示词",
-            "method": "POST",
-            "path": f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan",
-            "workspace_id": workspace_id,
-            "office_id": enriched.get("office_id") or "",
-            "focus": "prompts",
-        })
+        recovery_actions.append(_comic_v2_history_recovery_action(
+            label="重新生成提示词",
+            method="POST",
+            path=f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan",
+            workspace_id=workspace_id,
+            office_id=enriched.get("office_id") or "",
+            focus="prompts",
+            action="regenerate_prompts",
+        ))
     if workspace_id and status in {"pending", "needs_review"} and not recovery_actions:
-        recovery_actions.append({
-            "label": "回到项目继续处理",
-            "method": "GET",
-            "path": f"/api/workspaces/{workspace_id}",
-            "workspace_id": workspace_id,
-            "office_id": "comic_production",
-            "focus": "workspace",
-        })
+        recovery_actions.append(_comic_v2_history_recovery_action(
+            label="回到项目继续处理",
+            method="GET",
+            path=f"/api/workspaces/{workspace_id}",
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            focus="workspace",
+            action="open_workspace",
+        ))
     return {
         "status": status,
         "asset_count": asset_count,

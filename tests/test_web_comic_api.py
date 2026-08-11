@@ -1451,39 +1451,34 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(summary["prompt_quality_status"], "needs_review")
             self.assertGreater(summary["prompt_quality_issue_count"], 0)
             actions = summary["recovery_actions"]
-            self.assertIn(
-                {
-                    "label": "重新生成 Word 制片画布",
-                    "method": "POST",
-                    "path": f"/api/workspaces/{workspace_id}/comic/v2/delivery/build",
-                    "workspace_id": workspace_id,
-                    "office_id": "comic_production",
-                    "focus": "delivery",
-                },
-                actions,
-            )
-            self.assertIn(
-                {
-                    "label": "重新生成并质检基础资产图",
-                    "method": "POST",
-                    "path": f"/api/workspaces/{workspace_id}/comic/v2/images/generate",
-                    "workspace_id": workspace_id,
-                    "office_id": "comic_production",
-                    "focus": "images",
-                },
-                actions,
-            )
-            self.assertIn(
-                {
-                    "label": "重新生成提示词",
-                    "method": "POST",
-                    "path": f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan",
-                    "workspace_id": workspace_id,
-                    "office_id": "comic_production",
-                    "focus": "prompts",
-                },
-                actions,
-            )
+            action_by_focus = {action["focus"]: action for action in actions}
+            delivery_action = action_by_focus["delivery"]
+            self.assertEqual(delivery_action["label"], "重新生成 Word 制片画布")
+            self.assertEqual(delivery_action["method"], "POST")
+            self.assertEqual(delivery_action["path"], f"/api/workspaces/{workspace_id}/comic/v2/delivery/build")
+            self.assertEqual(delivery_action["workspace_id"], workspace_id)
+            self.assertEqual(delivery_action["office_id"], "comic_production")
+            self.assertEqual(delivery_action["expected_stage"], "document_generation")
+            self.assertIn("图片生产记录", delivery_action["preserves"])
+            self.assertIn("当前交付物", delivery_action["clears"])
+            self.assertGreaterEqual(len(delivery_action["operator_steps"]), 3)
+            self.assertIn("Word", delivery_action["description"])
+
+            image_action = action_by_focus["images"]
+            self.assertEqual(image_action["label"], "重新生成并质检基础资产图")
+            self.assertEqual(image_action["path"], f"/api/workspaces/{workspace_id}/comic/v2/images/generate")
+            self.assertEqual(image_action["expected_stage"], "image_generation")
+            self.assertIn("提示词包", image_action["preserves"])
+            self.assertIn("图片生产记录", image_action["clears"])
+            self.assertIn("重新生成基础资产图", " ".join(image_action["operator_steps"]))
+
+            prompt_action = action_by_focus["prompts"]
+            self.assertEqual(prompt_action["label"], "重新生成提示词")
+            self.assertEqual(prompt_action["path"], f"/api/workspaces/{workspace_id}/comic/v2/prompts/plan")
+            self.assertEqual(prompt_action["expected_stage"], "prompt_planning")
+            self.assertIn("已批准资产拆解包", prompt_action["preserves"])
+            self.assertIn("提示词包", prompt_action["clears"])
+            self.assertIn("视觉母版", prompt_action["description"])
         finally:
             conn = sqlite3.connect("user_data/config.db")
             conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
