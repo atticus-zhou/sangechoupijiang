@@ -561,6 +561,17 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for marker in ("three_view", "expression_sheet", "turnaround", "top_down", "clean_background_required"):
             if marker not in asset_matrix_text:
                 errors.append(f"static asset requirement matrix is missing marker: {marker}")
+        asset_usage_map = portfolio.get("asset_usage_map") or {}
+        if asset_usage_map.get("manifest_uri") != "downloads/comic-production/files/handoff_manifest.json":
+            errors.append("static asset usage map must point to the local handoff manifest download")
+        if asset_usage_map.get("ready_assets") != asset_usage_map.get("total_assets"):
+            errors.append("static asset usage map must mark every demo asset ready")
+        if int(asset_usage_map.get("image_roles") or 0) < int(asset_usage_map.get("total_assets") or 0):
+            errors.append("static asset usage map must expose image roles for demo assets")
+        asset_usage_text = json.dumps(asset_usage_map, ensure_ascii=False)
+        for marker in ("identity_baseline_image_id", "referenced_by_shots", "downstream_instruction", "三视图"):
+            if marker not in asset_usage_text:
+                errors.append(f"static asset usage map is missing marker: {marker}")
         asset_image_production_spec = portfolio.get("asset_image_production_spec") or {}
         asset_spec_types = {
             item.get("asset_type"): item
@@ -743,6 +754,10 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the downstream handoff decision card")
         if "portfolio.research_claim_boundary" not in app_text or "research-claim-card" not in app_text:
             errors.append("static showcase page must render the research claim boundary")
+        if "portfolio.asset_usage_map" not in app_text or "renderAssetUsageMap" not in app_text:
+            errors.append("static showcase page must render the asset usage map")
+        if "asset-usage-map" not in index_text or "asset-usage-card" not in style_text:
+            errors.append("static showcase markup/styles must include the asset usage map")
         if "research-capture-playbook-card" not in app_text or "research-capture-steps" not in app_text:
             errors.append("static showcase page must render the research evidence capture playbook")
         if "showcase.download_catalog" not in app_text or "renderDownloadCatalog" not in app_text:

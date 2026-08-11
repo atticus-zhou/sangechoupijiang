@@ -79,6 +79,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     reproducibility = portfolio_embed.get("reproducibility_checklist") or []
     downstream_quick_start = portfolio_embed.get("downstream_quick_start") or []
     asset_requirement_matrix = portfolio_embed.get("asset_requirement_matrix") or {}
+    asset_usage_map = portfolio_embed.get("asset_usage_map") or {}
     asset_image_production_spec = portfolio_embed.get("asset_image_production_spec") or {}
     release_badge = portfolio_embed.get("release_badge") or {}
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
@@ -147,6 +148,14 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("three_view", "expression_sheet", "turnaround", "top_down", "clean_background_required"):
         if marker not in asset_matrix_text:
             errors.append(f"portfolio asset requirement matrix is missing marker: {marker}")
+    if asset_usage_map.get("ready_assets") != asset_usage_map.get("total_assets"):
+        errors.append("portfolio asset usage map must mark every demo asset ready")
+    if int(asset_usage_map.get("image_roles") or 0) < int(asset_usage_map.get("total_assets") or 0):
+        errors.append("portfolio asset usage map must expose image roles for demo assets")
+    asset_usage_text = json.dumps(asset_usage_map, ensure_ascii=False)
+    for marker in ("identity_baseline_image_id", "referenced_by_shots", "downstream_instruction", "三视图"):
+        if marker not in asset_usage_text:
+            errors.append(f"portfolio asset usage map is missing marker: {marker}")
     asset_spec_types = {
         item.get("asset_type"): item
         for item in asset_image_production_spec.get("asset_types") or []
@@ -367,6 +376,10 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             and item.get("output")
             and item.get("acceptance")
         ),
+        "asset_usage_map_ready_assets": asset_usage_map.get("ready_assets", 0),
+        "asset_usage_map_total_assets": asset_usage_map.get("total_assets", 0),
+        "asset_usage_map_image_roles": asset_usage_map.get("image_roles", 0),
+        "asset_usage_map_referenced_assets": asset_usage_map.get("referenced_assets", 0),
         "release_badge_status": release_badge.get("status", ""),
         "release_badge_signal_count": len(release_badge.get("signals") or []),
         "release_badge_claim_real_quality": release_badge.get("can_claim_real_quality"),
@@ -657,6 +670,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 最快验收路线：{manifest.get('fast_review_count')} 步，其中 {manifest.get('fast_review_ready_count')} 步可复核",
         f"- 交付物阅读顺序：{manifest.get('reading_guide_count')} 步，其中 {manifest.get('reading_guide_ready_count')} 步可复核",
         f"- 下游生产 quick-start：{manifest.get('downstream_quick_start_count')} 步，其中 {manifest.get('downstream_quick_start_ready_count')} 步可执行",
+        f"- 资产使用地图：{manifest.get('asset_usage_map_ready_assets')}/{manifest.get('asset_usage_map_total_assets')} 个资产 ready，{manifest.get('asset_usage_map_image_roles')} 个图片角色，{manifest.get('asset_usage_map_referenced_assets')} 个资产被镜头引用",
         f"- 面试演示脚本：{manifest.get('interview_script_count')} 步，其中 {manifest.get('interview_script_ready_count')} 步可复用",
         f"- 复现与验收清单：{manifest.get('reproducibility_count')} 步，其中 {manifest.get('reproducibility_ready_count')} 步可执行",
         f"- 发布状态铭牌：{manifest.get('release_badge_status')}，信号 {manifest.get('release_badge_signal_count')} 条，真实画质声明 {manifest.get('release_badge_claim_real_quality')}",

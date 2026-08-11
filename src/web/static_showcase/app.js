@@ -608,6 +608,52 @@
     });
   }
 
+  function renderAssetUsageMap() {
+    const portfolio = showcase.portfolio_embed || {};
+    const usage = portfolio.asset_usage_map || {};
+    const items = Array.isArray(usage.items) ? usage.items : [];
+    const target = document.getElementById('asset-usage-map');
+    if (!target || !items.length) return;
+
+    const intro = element('article', 'card asset-usage-summary');
+    intro.appendChild(element('h3', '', usage.title || '资产使用地图'));
+    intro.appendChild(element('p', '', usage.summary || '说明每个资产在下游镜头生产中如何复用。'));
+    addTextRow(intro, 'Manifest', usage.manifest_uri);
+    addTextRow(intro, 'Release gate', usage.release_gate);
+    addTextRow(intro, 'Ready', text(usage.ready_assets || 0) + '/' + text(usage.total_assets || items.length));
+    addTextRow(intro, 'Image roles', usage.image_roles);
+    target.appendChild(intro);
+
+    items.forEach(function (item) {
+      const card = element('article', 'card asset-usage-card');
+      const head = element('div', 'asset-matrix-head');
+      head.appendChild(element('h3', '', item.name || item.asset_id));
+      head.appendChild(element('span', 'status-pill', item.type_label || item.asset_type));
+      head.appendChild(element('span', 'status-pill', item.handoff_ready ? 'ready' : 'needs review'));
+      card.appendChild(head);
+      addTextRow(card, '身份基准', [
+        item.identity_baseline_image_kind,
+        item.identity_baseline_image_id,
+      ].filter(Boolean).join(' · '));
+      addTextRow(card, '故事用途', item.story_purpose);
+      addTextRow(card, '下游说明', item.downstream_instruction);
+      const roleList = element('ul', 'asset-ref-list');
+      (item.image_roles || []).slice(0, 3).forEach(function (role) {
+        const li = element('li', '');
+        li.appendChild(element('strong', '', role.image_kind || role.production_role || 'image'));
+        li.appendChild(document.createTextNode(' · ' + text(role.file || role.image_id || 'missing')));
+        if (role.use_for) li.appendChild(element('small', '', role.use_for));
+        roleList.appendChild(li);
+      });
+      card.appendChild(roleList);
+      const shots = (item.referenced_by_shots || []).map(function (shot) {
+        return shot.shot_id + (shot.is_primary_first_frame ? ' 首帧' : '');
+      }).filter(Boolean);
+      addTextRow(card, '引用镜头', shots.join(' / '));
+      target.appendChild(card);
+    });
+  }
+
   function renderAssetRequirementMatrix() {
     const portfolio = showcase.portfolio_embed || {};
     const matrix = portfolio.asset_requirement_matrix || {};
@@ -919,6 +965,7 @@
   renderReadingGuide();
   renderDownloadCatalog();
   renderDownstreamQuickStart();
+  renderAssetUsageMap();
   renderAssetProductionSpec();
   renderAssetRequirementMatrix();
   renderShotContract();

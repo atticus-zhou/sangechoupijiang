@@ -460,6 +460,7 @@ async def get_comic_production_demo_api():
     demo_delivery = _ensure_comic_production_demo_delivery()
     quality_benchmark = _comic_v2_handoff_quality_benchmark(demo_delivery["handoff_manifest"])
     asset_requirement_matrix = _public_showcase_asset_requirement_matrix(demo_delivery["handoff_manifest"])
+    asset_usage_map = _public_showcase_asset_usage_map(demo_delivery["handoff_manifest"])
     return {
         "mode": "no_key_demo",
         "office_id": "comic_production",
@@ -497,6 +498,7 @@ async def get_comic_production_demo_api():
         ],
         "quality_benchmark": quality_benchmark,
         "asset_requirement_matrix": asset_requirement_matrix,
+        "asset_usage_map": asset_usage_map,
         "source_story_preview": story[:360],
         "asset_count": len(assets),
         "shot_count": len(shots),
@@ -1592,6 +1594,55 @@ def _public_showcase_asset_requirement_matrix(manifest_path: Path | None) -> dic
     }
 
 
+def _public_showcase_asset_usage_map(manifest_path: Path | None) -> dict:
+    if not manifest_path or not manifest_path.exists():
+        return {
+            "title": "资产使用地图",
+            "summary": "公开样例还没有生成 handoff manifest，暂时无法展示资产使用关系。",
+            "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            "ready_assets": 0,
+            "total_assets": 0,
+            "image_roles": 0,
+            "items": [],
+        }
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    items = []
+    for item in payload.get("asset_usage_map") or []:
+        refs = item.get("referenced_by_shots") or []
+        roles = item.get("image_roles") or []
+        items.append({
+            "asset_id": item.get("asset_id", ""),
+            "name": item.get("name", "") or item.get("asset_id", ""),
+            "asset_type": item.get("asset_type", ""),
+            "type_label": item.get("type_label", ""),
+            "story_purpose": item.get("story_purpose", ""),
+            "identity_baseline_image_id": item.get("identity_baseline_image_id", ""),
+            "identity_baseline_image_kind": item.get("identity_baseline_image_kind", ""),
+            "image_role_count": len(roles),
+            "referenced_shot_count": len(refs),
+            "primary_first_frame_shots": [
+                ref.get("shot_id", "")
+                for ref in refs
+                if ref.get("is_primary_first_frame")
+            ],
+            "image_roles": roles,
+            "referenced_by_shots": refs,
+            "downstream_instruction": item.get("downstream_instruction", ""),
+            "handoff_ready": bool(item.get("handoff_ready")),
+        })
+    return {
+        "title": "资产使用地图",
+        "summary": "这张表说明每个人物、道具、场景在下游生产里怎么复用：哪张是身份基准图、每张图的角色是什么、被哪些镜头引用，以及操作者应该如何绑定参考图。",
+        "manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
+        "release_gate": "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
+        "ready_assets": sum(1 for item in items if item.get("handoff_ready")),
+        "total_assets": len(items),
+        "image_roles": sum(int(item.get("image_role_count") or 0) for item in items),
+        "referenced_assets": sum(1 for item in items if item.get("referenced_shot_count")),
+        "items": items,
+    }
+
+
 def _public_showcase_asset_image_production_spec() -> dict:
     return {
         "title": "资产图片生产规范",
@@ -2291,6 +2342,7 @@ async def get_public_showcase_demo_api():
     extension_blueprint = list_office_extension_blueprint()
     office_governance = audit_office_extension_governance()
     asset_requirement_matrix = comic_demo.get("asset_requirement_matrix") or {}
+    asset_usage_map = comic_demo.get("asset_usage_map") or {}
     featured_demos = [
         _public_showcase_demo(
             comic_demo,
@@ -2413,6 +2465,7 @@ async def get_public_showcase_demo_api():
             "deliverable_reading_guide": _public_showcase_deliverable_reading_guide(),
             "downstream_quick_start": _public_showcase_downstream_quick_start(),
             "asset_requirement_matrix": asset_requirement_matrix,
+            "asset_usage_map": asset_usage_map,
             "asset_image_production_spec": _public_showcase_asset_image_production_spec(),
             "shot_contract": _public_showcase_shot_contract(),
             "interview_demo_script": _public_showcase_interview_demo_script(),

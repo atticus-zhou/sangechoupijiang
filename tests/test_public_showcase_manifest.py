@@ -132,6 +132,15 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("turnaround", asset_matrix_text)
         self.assertIn("top_down", asset_matrix_text)
         self.assertIn("clean_background_required", asset_matrix_text)
+        asset_usage_map = embed["asset_usage_map"]
+        self.assertEqual(asset_usage_map["manifest_uri"], "/api/demo/comic-production/files/handoff_manifest.json")
+        self.assertEqual(asset_usage_map["ready_assets"], asset_usage_map["total_assets"])
+        self.assertGreaterEqual(asset_usage_map["image_roles"], asset_matrix["total_assets"])
+        asset_usage_text = json.dumps(asset_usage_map, ensure_ascii=False)
+        self.assertIn("identity_baseline_image_id", asset_usage_text)
+        self.assertIn("referenced_by_shots", asset_usage_text)
+        self.assertIn("downstream_instruction", asset_usage_text)
+        self.assertIn("三视图", asset_usage_text)
         asset_spec = embed["asset_image_production_spec"]
         self.assertEqual(
             {item["asset_type"] for item in asset_spec["asset_types"]},

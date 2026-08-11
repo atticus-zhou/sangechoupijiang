@@ -211,6 +211,22 @@ a {
   gap: 16px;
 }
 
+.asset-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.asset-usage-summary {
+  grid-column: 1 / -1;
+  border-color: rgba(246, 177, 103, 0.28);
+}
+
+.asset-usage-card {
+  border-color: rgba(246, 177, 103, 0.22);
+}
+
 .asset-spec-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1135,6 +1151,7 @@ noscript {
     .catalog-grid,
     .extension-check-grid,
     .public-recovery-policy-grid,
+    .asset-usage-grid,
     .asset-spec-grid,
     .asset-matrix-grid,
     .shot-contract-grid,

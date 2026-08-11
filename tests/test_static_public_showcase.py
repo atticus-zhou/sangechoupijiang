@@ -341,6 +341,15 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("turnaround", asset_matrix_text)
         self.assertIn("top_down", asset_matrix_text)
         asset_spec = showcase["portfolio_embed"]["asset_image_production_spec"]
+        asset_usage_map = showcase["portfolio_embed"]["asset_usage_map"]
+        self.assertEqual(asset_usage_map["manifest_uri"], "downloads/comic-production/files/handoff_manifest.json")
+        self.assertEqual(asset_usage_map["ready_assets"], asset_usage_map["total_assets"])
+        self.assertGreaterEqual(asset_usage_map["image_roles"], asset_matrix["total_assets"])
+        asset_usage_text = json.dumps(asset_usage_map, ensure_ascii=False)
+        self.assertIn("identity_baseline_image_id", asset_usage_text)
+        self.assertIn("referenced_by_shots", asset_usage_text)
+        self.assertIn("downstream_instruction", asset_usage_text)
+        self.assertIn("三视图", asset_usage_text)
         self.assertEqual(
             {item["asset_type"] for item in asset_spec["asset_types"]},
             {"character", "prop", "scene"},
@@ -391,6 +400,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("research-capture-playbook-card", static_script)
         self.assertIn("renderAssetRequirementMatrix", static_script)
         self.assertIn("asset_requirement_matrix", static_script)
+        self.assertIn("renderAssetUsageMap", static_script)
+        self.assertIn("asset_usage_map", static_script)
+        self.assertIn("asset-usage-map", index_text)
+        self.assertIn("asset-usage-card", style_text)
         self.assertIn("renderAssetProductionSpec", static_script)
         self.assertIn("asset_image_production_spec", static_script)
         self.assertIn("asset-spec-grid", index_text)
