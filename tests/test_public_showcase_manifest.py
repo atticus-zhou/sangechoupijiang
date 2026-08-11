@@ -221,6 +221,14 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("pending_evidence_disclosed", research_requirements["blocking_check_ids"])
         self.assertIn("placeholder_sources_disclosed", research_requirements["blocking_check_ids"])
         self.assertIn("final_report_not_claimed", research_requirements["blocking_check_ids"])
+        research_handoff = research_claim["evidence_handoff"][0]
+        self.assertEqual(research_handoff["priority"], "P0")
+        self.assertIn("evidence_01", research_handoff["suggested_file_name"])
+        self.assertIn("截图", research_handoff["acceptance"])
+        embedded_research_handoff = embed["research_claim_boundary"]["evidence_handoff"][0]
+        self.assertEqual(embedded_research_handoff["priority"], "P0")
+        self.assertIn("evidence_01", embedded_research_handoff["suggested_file_name"])
+        self.assertIn("截图", embedded_research_handoff["acceptance"])
         upgrade_path = embed["quality_upgrade_path"]
         self.assertEqual(upgrade_path["current_public_level"], "demo_structure_only")
         self.assertEqual(upgrade_path["current_image_evidence"], "fixture_only")

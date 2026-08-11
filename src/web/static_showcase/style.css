@@ -636,6 +636,14 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.research-evidence-handoff-item .handoff-acceptance {
+  padding: 9px 10px;
+  border: 1px solid rgba(239, 184, 78, 0.22);
+  border-radius: 8px;
+  background: rgba(239, 184, 78, 0.06);
+  color: #f3d38a;
+}
+
 .mini-label {
   margin: 12px 0 0;
   color: var(--muted);

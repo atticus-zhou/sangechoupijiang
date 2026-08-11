@@ -161,6 +161,10 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     for item in evidence_handoff:
         if not item.get("owner") or not item.get("target_evidence") or not item.get("why_needed") or not item.get("upgrades"):
             errors.append(f"research evidence handoff item is incomplete: {item.get('title') or item.get('id')}")
+        if not item.get("priority") or not item.get("suggested_file_name") or not item.get("acceptance"):
+            errors.append(f"research evidence handoff item must include priority, suggested file name, and acceptance: {item.get('title') or item.get('id')}")
+        if item.get("suggested_file_name") and "evidence_" not in str(item.get("suggested_file_name")):
+            errors.append(f"research evidence handoff item must follow evidence file naming: {item.get('title') or item.get('id')}")
     if len(evidence_gap_cards) < 3:
         errors.append("research demo must expose at least 3 executable evidence gap cards")
     for item in evidence_gap_cards:
