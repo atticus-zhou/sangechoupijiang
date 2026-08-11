@@ -4,6 +4,18 @@
 
 ## 1. 先注册 OfficeProfile
 
+开始写代码前，先离线导出新办公室启动包：
+
+```text
+python scripts/export_office_creation_template.py --format markdown
+python scripts/export_office_creation_template.py --format json --output docs/new-office-template.local.json
+```
+
+这个命令不需要启动网页、不调用模型、不读取 API Key，也不写用户工作区。它把
+`office_profile_skeleton`、`public_demo_contract_skeleton`、上线门禁、
+最小实现包、候选办公室阻塞原因和必跑验证命令一次性导出，适合先给新办公室做
+PRD 或技术拆解。
+
 新办公室必须先在 `src/offices.py` 注册独立的 `OfficeProfile`，并使用全新的 `office_id`。不要复用 `research`、`comic` 或 `comic_production` 的底层 id。
 
 每个办公室至少声明：

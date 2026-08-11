@@ -354,6 +354,15 @@ office_models:
 
 新办公室进入公开展示前，还必须满足 `creation_template.required_launch_gates` 中的上线门槛：`no_key_demo`、`model_preflight`、`end_to_end_test`、`sample_delivery`、`failure_recovery`、`history_trace`、`schema_gate`、`readme_documentation` 和 `secret_scan`。
 
+不想先启动网页时，可以离线导出同一份启动包：
+
+```powershell
+python scripts/export_office_creation_template.py --format markdown
+python scripts/export_office_creation_template.py --format json --output docs/new-office-template.local.json
+```
+
+这条命令不会调用模型、不会读取 API Key、不会写用户工作区；它只导出 `office_profile_skeleton`、`public_demo_contract_skeleton`、上线门禁、最小实现包、候选办公室阻塞原因和必跑验证命令。
+
 同一个接口还会返回 `extension_blueprint`，把新办公室从注册到上线拆成可执行步骤：注册 `OfficeProfile`、隔离运行时状态、建立无 Key demo、接入 schema/recovery、补文档和验证命令。新增办公室时先按这份蓝图走，不要直接复制研究办公室或漫剧办公室的临时代码。完整执行协议见 `docs/OFFICE_EXTENSION_PROTOCOL.md`，启动检查清单见 `docs/NEW_OFFICE_STARTER_CHECKLIST.md`；扩展治理脚本会检查这些文档没有丢失关键边界。
 
 `extension_blueprint` 还会列出未来办公室候选和暂不开放原因。当前候选包括：

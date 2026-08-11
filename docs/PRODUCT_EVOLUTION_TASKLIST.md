@@ -89,6 +89,7 @@
 - [x] 新办公室必须复用平台协议，而不是复制一套临时代码。
 - [x] 每新增一个办公室，都必须同时提供无 Key 演示、模型预检、端到端测试、失败处理和样例交付物。
 - [x] `/api/offices/protocols` 已暴露新办公室创建模板，后续办公室扩展必须先对齐这份模板。
+- [x] 新办公室创建模板已提供离线导出命令：`python scripts/export_office_creation_template.py --format markdown`，开发者不需要启动网页、填写 API Key 或调用模型，也能先拿到办公室 Profile 骨架、公开演示契约、上线门禁、最小实现包和必跑验证清单。
 - [x] `/api/offices/protocols` 已暴露 `extension_blueprint`，明确新增办公室必须按注册 Profile、隔离运行时、无 Key demo、schema/recovery、文档和验证门禁的顺序推进。
 - [x] `/api/offices/protocols` 和 `/api/demo/public-showcase` 已暴露 `office_launch_matrix`，明确 `AI 漫剧制片办公室` 是当前主推办公室，`研究办公室` 可公开展示固定样例，旧 `AI 漫剧办公室` 只保留为兼容入口。
 - [x] 新办公室公开演示必须满足 `required_demo_contract`，不能只提供一个能打开的接口。

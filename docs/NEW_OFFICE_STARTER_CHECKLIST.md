@@ -13,6 +13,17 @@ evidence.
 Before copying any existing office implementation, read `/api/offices/protocols`
 or call `list_office_creation_template()` and start from:
 
+- Offline command:
+
+  ```powershell
+  python scripts/export_office_creation_template.py --format markdown
+  python scripts/export_office_creation_template.py --format json --output docs/new-office-template.local.json
+  ```
+
+  The command does not call models, read API keys, or write a workspace. It
+  exports the same creation template and extension blueprint that the protocol
+  API exposes, so a new office can be planned before any route or UI is copied.
+
 - `office_profile_skeleton`: the minimum `OfficeProfile` shape for a new
   office, including office-scoped duties, model requirements, schema gates,
   recovery actions, and the `preserves` / `clears` contract for retries.
