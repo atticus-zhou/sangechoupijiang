@@ -47,8 +47,8 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 静态包包含：
 
 - 一个无需后端即可打开的公开展示页。
-- 首次打开时的最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵、查看声明边界和复现命令。
-- A five-step visitor path for quickly checking the public page, Word canvas, handoff manifest, asset matrix, claim boundary, and reproducibility commands.
+- 首次打开时的最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵和资产使用地图、查看声明边界和复现命令。
+- A five-step visitor path for quickly checking the public page, Word canvas, handoff manifest, asset matrix, asset usage map, claim boundary, and reproducibility commands.
 - 三条首次使用路径：
   - `public_demo`：不需要 API Key，只看固定样例、下载物、阅读指南和公开安全边界，适合面试官或作品集访客。
   - `local_real_use`：使用者在本机填写自己的 API Key，测试各办公室部门模型后，再运行真实调研或 AI 漫剧制片。
@@ -180,6 +180,29 @@ matrix in the personal website repository:
 npm run check:showcase
 Select-String -Path public\three-stooges\index.html -Pattern "资产图片规格矩阵|ASSET REQUIREMENTS"
 Select-String -Path public\three-stooges\showcase.json -Pattern "asset_requirement_matrix|three_view|top_down"
+```
+
+## Asset Usage Map In The Static Package
+
+The static package must also carry `asset_usage_map`. This is the reviewer-facing
+bridge between the asset files and the downstream video workflow:
+
+- it tells which image is the identity baseline for each character, prop, or
+  scene;
+- it explains every image role, such as three-view identity, expression sheet,
+  prop turnaround, scene wide shot, or top-down layout;
+- it lists which shots reference each asset and whether the asset is used as a
+  primary first-frame reference;
+- it gives downstream operators a short reuse instruction so they do not guess
+  how to bind images into Libtv, Xiaoyunque, or another video tool.
+
+After copying the static package, verify the usage map in the personal website
+repository:
+
+```powershell
+npm run check:showcase
+Select-String -Path public\three-stooges\index.html -Pattern "asset-usage-map"
+Select-String -Path public\three-stooges\showcase.json -Pattern "asset_usage_map|identity_baseline_image_id|referenced_by_shots"
 ```
 
 If the local static package is ready but `https://www.atticus.asia/three-stooges/`

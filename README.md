@@ -156,7 +156,7 @@ python scripts/check_no_secrets.py
 7. 生成基础资产图，并进行跨图一致性和视觉质检。
 8. 输出页面式 Word 制片画布，交给下游视频生成或剪辑平台使用。
 
-V2 的目标交付不是一部成片，而是一份可生产的制片包：人物图、道具图、场景图、镜头提示词、视频提示词、资产引用链路和 Word 画布。生成 Word 时会同时生成 `*_handoff_manifest.json`，用于追踪故事版本、视觉母版、资产 ID、图片记录、镜头引用和 Word 文件之间的对应关系。
+V2 的目标交付不是一部成片，而是一份可生产的制片包：人物图、道具图、场景图、镜头提示词、视频提示词、资产引用链路和 Word 画布。生成 Word 时会同时生成 `*_handoff_manifest.json`，用于追踪故事版本、视觉母版、资产 ID、图片记录、镜头引用和 Word 文件之间的对应关系。其中 `asset_usage_map` 会进一步说明每个资产的身份基准图、图片角色、引用镜头和下游复用规则，避免下游操作者在一堆图片里猜哪张图该锁脸、哪张图该当首帧、哪个道具出现在哪个镜头。
 
 历史页可以下载 Word 画布，也可以查看制片追溯：故事版本、风格版本、资产版本、提示词数量、视觉质检结果和交付审计。追溯 JSON 还会暴露 `image_production_evidence` 和 `image_quality_summary`，用来区分当前图片证据是固定样例、缺图、部分真实模型，还是已经通过真实模型视觉质检；同时记录可用图、废片/返工图、返工率、失败图片 ID 和 `rework_instructions`。每条返工指令都会说明责任部门、卡在哪个阶段、优先级、给用户看的原因、建议按钮和操作步骤，避免用户只看到一个内部 action 却不知道下一步该做什么。
 
@@ -212,7 +212,7 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 ```
 
 这条命令会从线上地址读取首页、`showcase.json`、导出清单、访客验收指南、声明报告、样例 Word 和 handoff manifest。它通过时，才能说明这个 URL 本身可打开、可下载，并且仍保持无 Key demo 边界。
-静态展示包会同时带上最快验收路线、七份下载物、八个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对资产图片规格矩阵 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级、恢复建议和 `downstream_handoff_decision` 串成一份可复核链路；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist`、`claim_upgrade_recovery` 和同一张下游接手决策卡：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据，决策卡则明确当前状态是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`，以及现在能不能交给下游。公开页面还会读取 `portfolio_embed.public_recovery_drill`，把“访客质疑真实画质时如何处理”做成一张恢复演练卡：它必须说明当前证据是 `fixture_only`、恢复动作是 `regenerate_images`、保留故事/资产/提示词/旧 Word、清理图片证据和视觉质检、再由工部和刑部补跑真实模型证据。
+静态展示包会同时带上最快验收路线、七份下载物、八个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对资产图片规格矩阵和资产使用地图 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级、恢复建议和 `downstream_handoff_decision` 串成一份可复核链路；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist`、`claim_upgrade_recovery` 和同一张下游接手决策卡：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据，决策卡则明确当前状态是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`，以及现在能不能交给下游。公开页面还会读取 `portfolio_embed.asset_usage_map`，把“每个资产怎么被下游复用”展示成访客可读卡片；同时读取 `portfolio_embed.public_recovery_drill`，把“访客质疑真实画质时如何处理”做成一张恢复演练卡：它必须说明当前证据是 `fixture_only`、恢复动作是 `regenerate_images`、保留故事/资产/提示词/旧 Word、清理图片证据和视觉质检、再由工部和刑部补跑真实模型证据。
 
 `python scripts/verify_public_comic_trace_bundle.py --format markdown` 会单独检查公开追溯包：确认它不需要 API Key、不调用真实模型、不写工作区，且资产、图片、镜头、质量声明、图片证据等级、升级清单和下游接手决策都完整。它已经接入发布总门禁，后续如果 `trace.json` 缺失、泄漏本地路径、把 fixture 图片说成真实画质，或没有明确写出 demo 当前不能交给下游，`python scripts/verify_release_readiness.py --format markdown` 会失败。
 

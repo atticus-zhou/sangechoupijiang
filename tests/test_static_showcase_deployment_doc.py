@@ -43,6 +43,11 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("核对资产图片规格矩阵", text)
         self.assertIn("three_view", text)
         self.assertIn("top_down", text)
+        self.assertIn("Asset Usage Map In The Static Package", text)
+        self.assertIn("asset_usage_map", text)
+        self.assertIn("identity_baseline_image_id", text)
+        self.assertIn("referenced_by_shots", text)
+        self.assertIn("资产使用地图", text)
         self.assertIn("npm run check:showcase", text)
 
     def test_readme_links_the_static_deployment_path(self):
