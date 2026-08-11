@@ -212,9 +212,9 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 ```
 
 这条命令会从线上地址读取首页、`showcase.json`、导出清单、访客验收指南、声明报告、样例 Word 和 handoff manifest。它通过时，才能说明这个 URL 本身可打开、可下载，并且仍保持无 Key demo 边界。
-静态展示包会同时带上最快验收路线、七份下载物、八个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对资产图片规格矩阵 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级和恢复建议串成一份可复核链路；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据。
+静态展示包会同时带上最快验收路线、七份下载物、八个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对资产图片规格矩阵 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级、恢复建议和 `downstream_handoff_decision` 串成一份可复核链路；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist`、`claim_upgrade_recovery` 和同一张下游接手决策卡：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据，决策卡则明确当前状态是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`，以及现在能不能交给下游。
 
-`python scripts/verify_public_comic_trace_bundle.py --format markdown` 会单独检查公开追溯包：确认它不需要 API Key、不调用真实模型、不写工作区，且资产、图片、镜头、质量声明、图片证据等级和升级清单都完整。它已经接入发布总门禁，后续如果 `trace.json` 缺失、泄漏本地路径或把 fixture 图片说成真实画质，`python scripts/verify_release_readiness.py --format markdown` 会失败。
+`python scripts/verify_public_comic_trace_bundle.py --format markdown` 会单独检查公开追溯包：确认它不需要 API Key、不调用真实模型、不写工作区，且资产、图片、镜头、质量声明、图片证据等级、升级清单和下游接手决策都完整。它已经接入发布总门禁，后续如果 `trace.json` 缺失、泄漏本地路径、把 fixture 图片说成真实画质，或没有明确写出 demo 当前不能交给下游，`python scripts/verify_release_readiness.py --format markdown` 会失败。
 
 静态展示包还会显示办公室公开状态矩阵，避免访客把旧入口和主力入口混在一起：
 
@@ -497,7 +497,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 
 声明报告里的 `real_quality_promotion_gate` 是最终升级门。它会逐项检查制片包结构、manifest 内置质量基准、真实模型图片、视觉质检、图片返工数、导演式提示词、blocker 和 `production_quality_verified`。只要有一项缺失，就只能显示 `evidence_missing`，不能把这次交付说成真实生产质量。
 
-历史页的追溯接口 `/api/tasks/{task_id}/comic-v2-trace.json` 会返回 `image_production_evidence` 和 `image_quality_summary`。当它显示 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown` 时，说明当前制片包只能证明结构或部分流程，不能证明真实画质。`image_quality_summary` 会列出 total/usable/waste-or-rework、返工率、失败图片 ID 和 `rework_instructions`；返工指令会说明某张图应该补跑视觉质检、保留提示词重新生图，还是退回提示词重写。此时可以对 `/api/workspaces/{workspace_id}/comic/v2/quality/recover` 提交 `{"action":"regenerate_images"}`：系统会保留已确认故事、资产拆解、提示词包和旧交付记录，把项目退回图片生成/质检阶段，用真实模型重新补齐图片证据。
+历史页的追溯接口 `/api/tasks/{task_id}/comic-v2-trace.json` 会返回 `image_production_evidence`、`image_quality_summary` 和 `downstream_handoff_decision`。当图片证据显示 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown` 时，说明当前制片包只能证明结构或部分流程，不能证明真实画质；此时下游决策通常会保持 `structure_demo_only` 或 `blocked`，`handoff_allowed=false`，不能交给 Libtv、小云雀或其他视频平台当作最终生产素材。`image_quality_summary` 会列出 total/usable/waste-or-rework、返工率、失败图片 ID 和 `rework_instructions`；返工指令会说明某张图应该补跑视觉质检、保留提示词重新生图，还是退回提示词重写。此时可以对 `/api/workspaces/{workspace_id}/comic/v2/quality/recover` 提交 `{"action":"regenerate_images"}`：系统会保留已确认故事、资产拆解、提示词包和旧交付记录，把项目退回图片生成/质检阶段，用真实模型重新补齐图片证据。只有 `downstream_handoff_decision.status=ready_for_downstream` 且 `handoff_allowed=true` 时，才可以把这份制片包描述为可交给下游继续生产。
 
 ## 当前边界
 

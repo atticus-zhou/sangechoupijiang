@@ -16,6 +16,7 @@
 - 下游 quick-start：handoff manifest 必须提供 `downstream_quick_start`，按确认制片画布、锁定基础资产、逐镜头生成视频、执行质量复核、归档交付证据五步说明接手顺序。
 - 制片包质量基准：交叉检查故事证据、资产身份证、提示词专属性、导演执行合同、视觉质检和生产谱系，防止“字段齐全但内容仍是模板”的假完成。
 - 图片质量摘要：`image_quality_summary` 必须能说明总图片数、可用图片数、废片/返工图片数、返工率、失败图片 ID 和 `rework_instructions`，让下游知道哪些图能用、哪些图必须先修。每条 `rework_instructions` 都必须像一张单图返工卡：包含责任部门、阻塞阶段、优先级、给用户看的原因、建议按钮文案和操作步骤，不能只留下内部 action。
+- 下游接手决策卡：`downstream_handoff_decision` 必须同时出现在公开 claim report、公开 `trace.json` 和历史追溯接口里，直接告诉操作者状态是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`，`handoff_allowed` 是否为 true，还缺哪些证据，以及下一步应该补跑图片、补跑视觉质检、重组 Word，还是可以交给下游。
 
 ## 资产最低标准
 
@@ -97,7 +98,7 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 旧版制片画布如果没有 handoff manifest v3，历史页会标记为“旧版不可审计”。它仍可下载留档，但不能证明故事、资产、图片、镜头和质检来自同一版本；继续生产时应使用当前 V2 流程重新生成，而不是为旧文件伪造质量通过结论。
 
-如果任一命令失败，不能把当前制片包说成“可交给下游视频平台继续生产”。真实模型产物没有得到 `production_quality_verified` 时，也不能宣称画风和人物一致性已经被完整验证。
+如果任一命令失败，不能把当前制片包说成“可交给下游视频平台继续生产”。真实模型产物没有得到 `production_quality_verified` 时，也不能宣称画风和人物一致性已经被完整验证。公开页面和历史页不能让用户自己猜结果：必须展示 `downstream_handoff_decision`。当它是 `structure_demo_only` 或 `blocked`，且 `handoff_allowed=false` 时，只能把包当作结构样例或待修复材料；只有 `status=ready_for_downstream` 且 `handoff_allowed=true`，才允许进入 Libtv、小云雀或其他视频平台。
 
 ## 机器可读镜头合同
 

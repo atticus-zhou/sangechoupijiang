@@ -11,6 +11,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("handoff manifest", text)
         self.assertIn("data/comic_production_claim_report.json", text)
         self.assertIn("claim_upgrade_recovery", text)
+        self.assertIn("downstream_handoff_decision", text)
         self.assertIn("regenerate_images", text)
         self.assertIn("AI 漫剧 Word 制片画布", text)
         self.assertIn("七份下载物", text)
@@ -59,6 +60,17 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("no-key-release-evidence", text)
         self.assertIn("GitHub 公共 API", text)
         self.assertIn("npm run prepare:vercel-prebuilt", text)
+
+    def test_downstream_handoff_doc_explains_operator_decision_card(self):
+        text = Path("docs/COMIC_DOWNSTREAM_HANDOFF.md").read_text(encoding="utf-8")
+
+        self.assertIn("downstream_handoff_decision", text)
+        self.assertIn("structure_demo_only", text)
+        self.assertIn("ready_for_downstream", text)
+        self.assertIn("blocked", text)
+        self.assertIn("handoff_allowed=false", text)
+        self.assertIn("不能把当前制片包说成", text)
+        self.assertIn("Libtv、小云雀", text)
 
     def test_readme_links_public_release_handoff_doc(self):
         text = Path("README.md").read_text(encoding="utf-8")

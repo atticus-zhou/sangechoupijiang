@@ -9,7 +9,7 @@
 - 首页公开展示页和 `/api/demo/public-showcase` 清单。
 - 由 `python scripts/export_public_showcase.py` 生成的 `dist/public-showcase` 静态站点；它可以在没有 FastAPI 后端的情况下托管到个人网站或 Vercel。
 - AI 漫剧制片办公室固定样例：故事、资产引用链路、样例 Word 制片画布、handoff manifest、下游交接门禁。
-- AI 漫剧真实生产声明报告：`data/comic_production_claim_report.json` 会公开 `claim_upgrade_checklist` 和 `claim_upgrade_recovery`，说明当前 demo 为什么不能宣称真实画质、后续要保留什么、重建什么，以及如何用 `regenerate_images` 补齐真实图片和视觉质检证据。
+- AI 漫剧真实生产声明报告：`data/comic_production_claim_report.json` 会公开 `claim_upgrade_checklist`、`claim_upgrade_recovery` 和 `downstream_handoff_decision`，说明当前 demo 为什么不能宣称真实画质、后续要保留什么、重建什么、如何用 `regenerate_images` 补齐真实图片和视觉质检证据，以及当前是否允许交给下游继续生产。
 - 下游生产 quick-start：从确认制片画布、锁定基础资产、逐镜头生成视频、质量复核到归档证据的 5 步接手顺序。
 - 研究办公室固定样例：阶段报告、来源清单、数据表、截图计划、证据缺口说明、可执行补证卡和补证操作手册。
 - 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵、查看声明边界和复现命令。
@@ -43,7 +43,7 @@
 
 - AI 漫剧 Word 制片画布：确认故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单处在同一套制片包里。
 - AI 漫剧 handoff manifest：确认 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考和 `production_lineage` 能追踪每个素材和镜头的来源。
-- AI 漫剧真实生产声明：确认 `claim_upgrade_recovery.recovery_action=regenerate_images`，并核对 `preserves`、`rebuilds` 和 `steps` 是否清楚说明从结构 demo 升级到真实模型质量证据的恢复路线。
+- AI 漫剧真实生产声明：确认 `claim_upgrade_recovery.recovery_action=regenerate_images`，并核对 `preserves`、`rebuilds` 和 `steps` 是否清楚说明从结构 demo 升级到真实模型质量证据的恢复路线；同时检查 `downstream_handoff_decision.status` 和 `handoff_allowed`，避免把 `structure_demo_only` 的样例误交给 Libtv、小云雀或其他视频平台。
 - 下游生产 quick-start：确认接手顺序不是一句“可交给下游”，而是明确了负责人、输入、动作、产出和验收标准。
 - 研究办公室阶段报告：确认结论、来源、数据表、截图计划和证据缺口分开呈现。
 - 研究办公室证据清单：确认来源、数据、截图计划、缺口、待补证据交接表、证据补齐卡和人工确认项没有被伪装成已完成采集。

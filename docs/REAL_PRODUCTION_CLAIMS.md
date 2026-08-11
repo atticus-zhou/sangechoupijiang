@@ -22,6 +22,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 报告还会输出 `claim_upgrade_checklist`。它不是宣传文案，而是补证据清单：固定样例会列出还缺真实模型图片、视觉质检和重新写入质量基准；真实质量已验证的 manifest 会提示保留证据包，并在故事、资产、模型或提示词有重大改动后重新验证。
 
+报告和追溯包还会输出 `downstream_handoff_decision`。这张卡不是质量分数，而是操作者决策：`structure_demo_only` 表示只能公开展示结构，不能交给下游；`blocked` 表示当前真实项目仍有阻塞；`ready_for_downstream` 且 `handoff_allowed=true` 才表示可以把 Word 画布、资产图片和 handoff manifest 交给 Libtv、小云雀或其他视频平台继续生产。公开展示页、历史页和 README 都应该展示这张卡，避免把“看起来完整”的 demo 误说成可投产成品。
+
 ## Real Quality Promotion Gate
 
 `real_quality_promotion_gate` is the final machine-readable gate before any public `real_quality_verified` claim. It must show `ready=true` only when `package_quality_ready=true`, `stored_benchmark_matches=true`, `visual_evidence_level=model_reviewed`, `image_quality_summary.waste_or_rework_images=0`, `prompt_quality_summary.status=ready`, `blocker_count=0`, and `production_quality_verified=true`. If any check is missing, the gate must stay `evidence_missing` and expose the missing check IDs plus the next action.
