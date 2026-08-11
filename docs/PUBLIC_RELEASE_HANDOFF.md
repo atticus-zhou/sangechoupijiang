@@ -8,12 +8,12 @@
 
 - 首页公开展示页和 `/api/demo/public-showcase` 清单。
 - 由 `python scripts/export_public_showcase.py` 生成的 `dist/public-showcase` 静态站点；它可以在没有 FastAPI 后端的情况下托管到个人网站或 Vercel。
-- AI 漫剧制片办公室固定样例：故事、资产引用链路、样例 Word 制片画布、handoff manifest、下游交接门禁。
+- AI 漫剧制片办公室固定样例：故事、资产引用链路、资产使用地图、样例 Word 制片画布、handoff manifest、下游交接门禁。
 - AI 漫剧真实生产声明报告：`data/comic_production_claim_report.json` 会公开 `claim_upgrade_checklist`、`claim_upgrade_recovery` 和 `downstream_handoff_decision`，说明当前 demo 为什么不能宣称真实画质、后续要保留什么、重建什么、如何用 `regenerate_images` 补齐真实图片和视觉质检证据，以及当前是否允许交给下游继续生产。
 - 公开样例失败恢复演练：`portfolio_embed.public_recovery_drill` 会在静态页展示给访客，说明当图片证据还是 `fixture_only` 或真实生产图片缺失/跑偏时，系统应保留故事、资产、提示词和旧交付归档，清理图片生产证据和视觉质检结果，再由工部/刑部补跑真实模型图片与质检。
 - 下游生产 quick-start：从确认制片画布、锁定基础资产、逐镜头生成视频、质量复核到归档证据的 5 步接手顺序。
 - 研究办公室固定样例：阶段报告、来源清单、数据表、截图计划、证据缺口说明、可执行补证卡和补证操作手册。
-- 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵、查看声明边界和复现命令。
+- 公开静态页最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵和资产使用地图、查看声明边界和复现命令。
 - 第一次运行清单、模型配置说明、办公室协议、办公室上线门禁和隔离验证。
 - GitHub README、部署边界、安全说明和 release readiness 结果。
 - GitHub Actions 的 `Release readiness` workflow；它只运行无 Key 发布门禁和 secret scan，不需要作者 API Key，并上传 `no-key-release-evidence` artifact 保存审计输出。
@@ -31,7 +31,7 @@
 ## 面试官或访客建议路径
 
 1. 打开个人网站上的静态展示页，或从本地首页进入公开展示页。
-2. 按页面里的最快验收路线走：先确认无 Key 和声明边界，再下载 Word 制片画布，再核对 handoff manifest 和资产图片规格矩阵，最后查看复现命令。
+2. 按页面里的最快验收路线走：先确认无 Key 和声明边界，再下载 Word 制片画布，再核对 handoff manifest、资产图片规格矩阵和资产使用地图，最后查看复现命令。
 3. 查看 `/api/demo/public-showcase` 对应的产品定位、发布状态铭牌、访客路径、3 分钟演示脚本、推荐 demo 和安全边界。
 4. 先看 AI 漫剧制片办公室固定样例，下载 Word 制片画布和 handoff manifest。
 5. 查看下游生产 quick-start，确认 Word 画布之后如何交给视频工具、人工剪辑或后续平台继续生产。
@@ -43,7 +43,8 @@
 公开演示交付物应该按文件检查，而不是只看页面截图：
 
 - AI 漫剧 Word 制片画布：确认故事、视觉母版、人物/道具/场景资产、镜头提示词和下游执行清单处在同一套制片包里。
-- AI 漫剧 handoff manifest：确认 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考和 `production_lineage` 能追踪每个素材和镜头的来源。
+- AI 漫剧 handoff manifest：确认 `story_version`、`style_version`、`asset_id`、`image_id`、`shot_id`、首帧参考、`production_lineage` 和 `asset_usage_map` 能追踪每个素材和镜头的来源。
+- AI 漫剧资产使用地图：确认每个资产都有身份基准图、图片角色、引用镜头、下游复用说明和 `handoff_ready=true`；它回答的是“下游拿到这些图以后，哪张用来锁脸，哪张用来当首帧，哪个道具或场景应该在哪些镜头里复用”。
 - AI 漫剧真实生产声明：确认 `claim_upgrade_recovery.recovery_action=regenerate_images`，并核对 `preserves`、`rebuilds` 和 `steps` 是否清楚说明从结构 demo 升级到真实模型质量证据的恢复路线；同时检查 `downstream_handoff_decision.status` 和 `handoff_allowed`，避免把 `structure_demo_only` 的样例误交给 Libtv、小云雀或其他视频平台。
 - 公开恢复演练卡：确认 `portfolio_embed.public_recovery_drill.recommended_action=regenerate_images`，并核对 `preserve_policy`、`clear_policy`、`operator_steps` 和 `acceptance` 是否能让访客看懂“哪些旧证据保留、哪些证据作废、谁补跑、怎样才算恢复成功”。
 - 下游生产 quick-start：确认接手顺序不是一句“可交给下游”，而是明确了负责人、输入、动作、产出和验收标准。

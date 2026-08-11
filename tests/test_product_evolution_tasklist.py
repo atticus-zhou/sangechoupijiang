@@ -111,6 +111,7 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("- [x] 三省六部必须产出可审核的故事合同、视觉母版、资产清单、镜头执行卡、提示词包和 Word 制片画布。", text)
         self.assertIn("- [x] 用户能在关键节点确认、修改、退回，退回意见必须真实影响下一版结果。", text)
         self.assertIn("- [x] 最终 Word 画布能被下游图片/视频工具理解，而不是只适合展示给人看。", text)
+        self.assertIn("资产使用地图", text)
         self.assertIn("阶段 B 产品闭环", text)
 
 

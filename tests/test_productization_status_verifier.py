@@ -46,6 +46,8 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         comic_quality = next(item for item in module.REQUIREMENTS if item["id"] == "P10")
         self.assertIn("python scripts/verify_comic_v2_production_benchmark.py --format markdown", comic_quality["markers"])
         self.assertIn("asset_requirement_matrix", comic_quality["markers"])
+        self.assertIn("asset_usage_map", comic_quality["markers"])
+        self.assertIn("资产使用地图", comic_quality["markers"])
         self.assertIn("three_view", comic_quality["markers"])
         self.assertIn("expression_sheet", comic_quality["markers"])
         self.assertIn("turnaround", comic_quality["markers"])

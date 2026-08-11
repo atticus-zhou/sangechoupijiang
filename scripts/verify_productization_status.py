@@ -227,6 +227,8 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "handoff manifest v3",
             "docs/REAL_PRODUCTION_CLAIMS.md",
             "asset_requirement_matrix",
+            "asset_usage_map",
+            "资产使用地图",
             "three_view",
             "expression_sheet",
             "turnaround",

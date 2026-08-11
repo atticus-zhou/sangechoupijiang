@@ -76,7 +76,7 @@ docs/REAL_PRODUCTION_CLAIMS.md
 | P7 | 新办公室可以继续扩展，同时不会污染已有办公室的模型配置、历史和产物 | 已具备办公室隔离、扩展治理、可读演示契约门禁、`extension_blueprint` 扩展蓝图、starter checklist、未来办公室候选和暂不开放原因；候选包括 `short_video_ads`、`ecommerce_selection`、`story_ip`、`technical_project`，并要求后续办公室补齐 `future_schema_validators` 和 `future_recovery_events` 证据 | `python scripts/verify_office_isolation.py --format markdown`、`python scripts/verify_office_extension_governance.py --format markdown`、`/api/offices/protocols`、`required_demo_contract`（参观路径、证明点、下载物、阅读指南、面试脚本和公开安全边界）、`docs/NEW_OFFICE_STARTER_CHECKLIST.md` |
 | P8 | 公开仓库不应包含用户密钥、Cookie、数据库、输出目录或运行日志 | 已具备安全扫描、GitHub Actions 无 Key 门禁和部署边界文档 | `python scripts/check_no_secrets.py`、`.github/workflows/release-readiness.yml`、`.gitignore`、`docs/DEPLOYMENT_MODES.md` |
 | P9 | 新用户能看懂每个部门需要什么模型，以及最小可跑和完整制片配置的区别 | 已具备模型配置指南和离线一致性验证 | `docs/MODEL_CONFIGURATION.md`、`python scripts/verify_model_configuration_guidance.py --format markdown`、模型页面测试按钮 |
-| P10 | AI 漫剧制片包能被下游视频平台或剪辑流程接手，而不是只生成一个 Word 文件 | 已具备人物三视图、镜头视频包、下游交接门禁、机器可读导演合同和诚实的质量声明 | `docs/COMIC_DOWNSTREAM_HANDOFF.md`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、handoff manifest v3 |
+| P10 | AI 漫剧制片包能被下游视频平台或剪辑流程接手，而不是只生成一个 Word 文件 | 已具备人物三视图、镜头视频包、资产使用地图、下游交接门禁、机器可读导演合同和诚实的质量声明 | `docs/COMIC_DOWNSTREAM_HANDOFF.md`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、`python scripts/verify_static_public_showcase.py --format markdown`、handoff manifest v3 的 `asset_usage_map` |
 
 ## 当前可公开展示的形态
 

@@ -282,13 +282,14 @@
 - [x] 每个镜头执行卡必须引用真实资产 ID。
 - [x] Word 中必须嵌入已批准图片。
 - [x] Word 中必须包含失败重试策略。
+- [x] handoff manifest 必须包含资产使用地图，说明每个资产的身份基准图、图片角色、引用镜头和下游复用规则。
 - [x] Word 必须通过结构审计。
 - [x] 条件允许时，Word 必须渲染成页面图片进行视觉 QA。
 
 验收标准：
 
 - [x] 下游用户能看懂哪个画面对应哪个资产、哪个提示词。
-- [x] handoff manifest v3 保留完整故事、完整视觉母版、图片质检证据、机器可读导演合同、下游 quick-start 交接步骤，并内置五维制片包质量基准。
+- [x] handoff manifest v3 保留完整故事、完整视觉母版、图片质检证据、机器可读导演合同、资产使用地图、下游 quick-start 交接步骤，并内置五维制片包质量基准。
 - [x] 无 Key 样例与真实模型质量声明分离；固定样例不能冒充真实画风和一致性验证。
 - [x] 没有孤立空页、严重挤压、断裂表格或缺图。
 - [x] 交付物能作为作品集展示材料。
@@ -409,7 +410,7 @@
 - [x] 条件允许时渲染页面检查。
 - [x] 下载链接必须可用。
   说明：无 Key 演示下载链接已纳入 `/api/offices/{office_id}/launch-gates` 的 `evidence_links`，并在办公室大厅展示；AI 漫剧制片办公室样例 Word 指向 `/api/demo/comic-production/files/word_canvas.docx`，研究办公室阶段报告指向 `/api/demo/research/files/report.md`。
-  说明：AI 漫剧 Word 和 handoff manifest 由 `python scripts/verify_comic_v2_delivery.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 覆盖；这些检查会审计 DOCX 结构、嵌入图片数量、图片记录、引用链路、quick-start 和下游交接字段。
+  说明：AI 漫剧 Word 和 handoff manifest 由 `python scripts/verify_comic_v2_delivery.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 覆盖；这些检查会审计 DOCX 结构、嵌入图片数量、图片记录、引用链路、资产使用地图、quick-start 和下游交接字段。
 
 发布前：
 
