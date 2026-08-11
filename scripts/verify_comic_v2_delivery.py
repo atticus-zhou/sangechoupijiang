@@ -21,6 +21,7 @@ from src.comic_office.v2.contracts import build_contract_bundle
 from src.comic_office.v2.delivery import build_delivery_from_v2
 from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage
 from src.comic_office.v2.prompt_director import build_asset_prompt_plan, build_shot_card
+from src.comic_office.v2.visual_review import REVIEW_DIMENSIONS
 
 
 def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
@@ -69,6 +70,20 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
                     "status": "pass",
                     "handoff_ready": True,
                     "fixture": True,
+                    "issues": [],
+                    "failed_dimensions": [],
+                    "missing_dimensions": [],
+                    "scores": _fixture_visual_scores(asset_type=asset.asset_type, image_kind=image_kind),
+                    "evidence": [
+                        "fixture image generated from deterministic placeholder",
+                        "asset id, style id, story version, and reference chain are preserved",
+                        "fixture record is for structure and handoff demonstration only",
+                    ],
+                    "consistency_status": "pass",
+                    "recovery_action": "",
+                    "recovery_reason": "",
+                    "rework_label": "",
+                    "operator_steps": [],
                     "summary": "无 Key 固定样例，仅验证流程、引用和交付结构。",
                 },
                 production_role=prompt.production_role,
@@ -306,6 +321,25 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     if not result["handoff_ready"]:
         raise AssertionError(json.dumps(result, ensure_ascii=False, indent=2))
     return result
+
+
+def _fixture_visual_scores(*, asset_type: str, image_kind: str) -> dict[str, int]:
+    scores = {
+        "identity_consistency": 92,
+        "style_consistency": 90,
+        "era_media": 90,
+        "spatial_structure": 88,
+        "asset_purity": 90,
+        "anatomy": 88,
+        "purpose_fit": 92,
+    }
+    if asset_type in {"character", "prop"}:
+        scores["asset_purity"] = 96
+        scores["spatial_structure"] = 86 if image_kind in {"three_view", "turnaround"} else 88
+    if asset_type == "scene":
+        scores["spatial_structure"] = 94
+        scores["asset_purity"] = 86
+    return {dimension: scores.get(dimension, 88) for dimension in REVIEW_DIMENSIONS}
 
 
 def _write_placeholder_image(path: Path, name: str, image_kind: str, asset_type: str) -> None:

@@ -36,6 +36,11 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(audit["prompt_quality_summary"]["shot_prompt_count"], 2)
         self.assertEqual(audit["prompt_quality_summary"]["director_prompt_count"], 2)
         self.assertEqual(audit["prompt_quality_summary"]["issue_count"], 0)
+        real_model_evidence = audit["real_model_evidence_requirements"]
+        self.assertEqual(real_model_evidence["seven_dimension_scored_reviews"], 7)
+        self.assertNotIn("seven_dimension_scores", real_model_evidence["missing_check_ids"])
+        self.assertIn("non_fixture_images", real_model_evidence["missing_check_ids"])
+        self.assertIn("provider_model_bound", real_model_evidence["missing_check_ids"])
         self.assertIn("不证明真实模型", audit["limitations"][0])
         self.assertEqual(audit["recommended_recovery"], {})
 

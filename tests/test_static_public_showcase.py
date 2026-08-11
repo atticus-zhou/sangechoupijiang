@@ -90,16 +90,16 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             "rework": sum(item["waste_or_rework_images"] for item in handoff_inventory["items"]),
         }
         self.assertEqual(image_totals["total"], len(handoff_inventory["items"]) * 7)
-        self.assertEqual(image_totals["usable"], image_totals["total"] - 7)
-        self.assertEqual(image_totals["rework"], 7)
+        self.assertEqual(image_totals["usable"], image_totals["total"])
+        self.assertEqual(image_totals["rework"], 0)
         demo_items = [
             item
             for item in handoff_inventory["items"]
             if item["quality_claim"] == "demo_structure_verified"
         ]
         self.assertTrue(demo_items)
-        self.assertTrue(any(item["usable_images"] == 7 for item in demo_items))
-        self.assertTrue(any(item["waste_or_rework_images"] == 7 for item in demo_items))
+        self.assertTrue(all(item["usable_images"] == 7 for item in demo_items))
+        self.assertTrue(all(item["waste_or_rework_images"] == 0 for item in demo_items))
         self.assertTrue(all("image_quality_summary" in item for item in demo_items))
         self.assertTrue(all(isinstance(item["failed_image_ids"], list) for item in demo_items))
         self.assertTrue(all(isinstance(item["rework_action_summary"], list) for item in demo_items))
@@ -108,20 +108,16 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             for item in demo_items
             for instruction in item["image_quality_summary"].get("rework_instructions", [])
         ]
-        self.assertGreaterEqual(len(rework_cards), 7)
-        self.assertTrue(all(card["reason"].strip() for card in rework_cards))
-        self.assertTrue(all(card["user_message"].strip() for card in rework_cards))
-        self.assertTrue(all(card["next_button_label"].strip() for card in rework_cards))
-        self.assertTrue(all(card["operator_steps"] for card in rework_cards))
+        self.assertEqual(rework_cards, [])
         demos = {item["office_id"]: item for item in showcase["featured_demos"]}
         comic_benchmark = demos["comic_production"]["quality_benchmark"]
         self.assertEqual(comic_benchmark["status"], "demo_structure_verified")
         self.assertFalse(comic_benchmark["production_quality_verified"])
         image_quality = comic_benchmark["image_quality_summary"]
         self.assertEqual(image_quality["total_images"], 7)
-        self.assertEqual(image_quality["usable_images"], 0)
-        self.assertEqual(image_quality["waste_or_rework_images"], 7)
-        self.assertEqual(image_quality["waste_or_rework_rate"], 1)
+        self.assertEqual(image_quality["usable_images"], 7)
+        self.assertEqual(image_quality["waste_or_rework_images"], 0)
+        self.assertEqual(image_quality["waste_or_rework_rate"], 0)
         prompt_quality = comic_benchmark["prompt_quality_summary"]
         self.assertEqual(prompt_quality["status"], "ready")
         self.assertEqual(prompt_quality["clean_asset_prompt_count"], 7)
@@ -153,7 +149,8 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(real_model_evidence["ready_for_real_quality_claim"])
         self.assertIn("non_fixture_images", real_model_evidence["missing_check_ids"])
         self.assertIn("provider_model_bound", real_model_evidence["missing_check_ids"])
-        self.assertIn("seven_dimension_scores", real_model_evidence["missing_check_ids"])
+        self.assertNotIn("seven_dimension_scores", real_model_evidence["missing_check_ids"])
+        self.assertEqual(real_model_evidence["seven_dimension_scored_reviews"], 7)
         self.assertGreaterEqual(len(real_model_evidence["checks"]), 6)
         self.assertGreaterEqual(len(claim_payload["claim_upgrade_checklist"]), 3)
         self.assertTrue(all(item["required_evidence"] for item in claim_payload["claim_upgrade_checklist"]))

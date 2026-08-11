@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,7 @@ from .asset_manifest import AssetManifest, build_asset_manifest, replace_asset_m
 from .contracts import ContractBundle, build_contract_bundle
 from .production import ImageProductionResult, ImageRecord, PromptPackage
 from .prompt_director import build_asset_prompt_plan, build_shot_card
+from .visual_review import REVIEW_DIMENSIONS
 
 
 def fixture_mode_enabled() -> bool:
@@ -161,6 +162,7 @@ def fixture_image_production(
                 production_role=prompt.production_role,
                 clean_background_required=prompt.clean_background_required,
             )
+            record = replace(record, review=_fixture_visual_review(asset_type=asset.asset_type, image_kind=image_kind))
             records.append(record)
             approved_by_asset.setdefault(asset.asset_id, []).append(record.image_id)
     return ImageProductionResult(
@@ -169,6 +171,49 @@ def fixture_image_production(
         records=tuple(records),
         failures=(),
     )
+
+
+def _fixture_visual_review(*, asset_type: str, image_kind: str) -> dict[str, Any]:
+    return {
+        "status": "pass",
+        "handoff_ready": True,
+        "issues": [],
+        "failed_dimensions": [],
+        "missing_dimensions": [],
+        "scores": _fixture_visual_scores(asset_type=asset_type, image_kind=image_kind),
+        "evidence": [
+            "fixture image generated from the approved prompt package",
+            "asset id, style id, story version, and reference chain are preserved",
+            "fixture record is for structure and handoff demonstration only",
+        ],
+        "consistency_status": "pass",
+        "recovery_action": "",
+        "recovery_reason": "",
+        "rework_label": "",
+        "operator_steps": [],
+        "revision_prompt": "",
+        "summary": "本地 fixture 样例已通过结构质检，用于验证流程、文档和交付链路，不代表真实模型画质。",
+    }
+
+
+def _fixture_visual_scores(*, asset_type: str, image_kind: str) -> dict[str, int]:
+    """Give fixture images a complete QA shape without claiming real visual quality."""
+    scores = {
+        "identity_consistency": 92,
+        "style_consistency": 90,
+        "era_media": 90,
+        "spatial_structure": 88,
+        "asset_purity": 90,
+        "anatomy": 88,
+        "purpose_fit": 92,
+    }
+    if asset_type in {"character", "prop"}:
+        scores["asset_purity"] = 96
+        scores["spatial_structure"] = 86 if image_kind in {"three_view", "turnaround"} else 88
+    if asset_type == "scene":
+        scores["spatial_structure"] = 94
+        scores["asset_purity"] = 86
+    return {dimension: scores.get(dimension, 88) for dimension in REVIEW_DIMENSIONS}
 
 
 def _load_fixture() -> dict[str, Any]:

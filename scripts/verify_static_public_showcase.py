@@ -384,9 +384,13 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append("static claim report must expose real_model_evidence_requirements.status=evidence_missing")
             if real_model_evidence.get("ready_for_real_quality_claim") is not False:
                 errors.append("static claim report must expose ready_for_real_quality_claim=false")
-            for marker in ("non_fixture_images", "provider_model_bound", "seven_dimension_scores"):
+            for marker in ("non_fixture_images", "provider_model_bound"):
                 if marker not in (real_model_evidence.get("missing_check_ids") or []):
                     errors.append(f"static claim report real evidence is missing check id: {marker}")
+            if "seven_dimension_scores" in (real_model_evidence.get("missing_check_ids") or []):
+                errors.append("static claim report should not list seven_dimension_scores as missing after fixture QA is scored")
+            if int(real_model_evidence.get("seven_dimension_scored_reviews") or 0) <= 0:
+                errors.append("static claim report should expose scored fixture visual reviews")
             if len(real_model_evidence.get("checks") or []) < 6:
                 errors.append("static claim report must include detailed real model evidence checks")
             claim_upgrade_checklist = claim_payload.get("claim_upgrade_checklist") or []

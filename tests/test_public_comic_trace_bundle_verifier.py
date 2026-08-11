@@ -39,7 +39,7 @@ class PublicComicTraceBundleVerifierTests(unittest.TestCase):
         self.assertFalse(payload["real_model_evidence_ready"])
         self.assertIn("non_fixture_images", payload["real_model_evidence_missing_checks"])
         self.assertIn("provider_model_bound", payload["real_model_evidence_missing_checks"])
-        self.assertIn("seven_dimension_scores", payload["real_model_evidence_missing_checks"])
+        self.assertNotIn("seven_dimension_scores", payload["real_model_evidence_missing_checks"])
         self.assertEqual(payload["downstream_handoff_status"], "structure_demo_only")
         self.assertFalse(payload["downstream_handoff_allowed"])
         self.assertGreaterEqual(payload["upgrade_checklist_count"], 3)
