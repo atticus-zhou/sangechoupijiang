@@ -109,6 +109,17 @@ def _collect_trace_errors(trace: dict[str, Any]) -> list[str]:
 
     if trace.get("claim_level") != "demo_structure_only":
         errors.append("trace claim_level must remain demo_structure_only")
+    handoff_decision = trace.get("downstream_handoff_decision") or {}
+    if handoff_decision.get("status") != "structure_demo_only":
+        errors.append("trace must expose downstream_handoff_decision.status=structure_demo_only")
+    if handoff_decision.get("handoff_allowed") is not False:
+        errors.append("trace must not allow downstream handoff for fixture demos")
+    if "不能交给下游" not in str(handoff_decision.get("decision") or ""):
+        errors.append("trace downstream handoff decision must explain the demo-only boundary")
+    if "真实模型生成的非 fixture 图片" not in (handoff_decision.get("missing_before_handoff") or []):
+        errors.append("trace downstream decision must list missing non-fixture images")
+    if "regenerate_images" not in "\n".join(str(item) for item in (handoff_decision.get("required_actions") or [])):
+        errors.append("trace downstream decision must point to regenerate_images")
     checklist = trace.get("claim_upgrade_checklist") or []
     if len(checklist) < 3:
         errors.append("trace bundle must include the claim upgrade checklist")
@@ -147,6 +158,7 @@ def verify_public_comic_trace_bundle() -> dict[str, Any]:
     image_evidence = trace.get("image_production_evidence") or {}
     quality = trace.get("quality_benchmark") or {}
     real_model_evidence = quality.get("real_model_evidence_requirements") or {}
+    handoff_decision = trace.get("downstream_handoff_decision") or {}
     return {
         "status": "passed" if not errors else "failed",
         "mode": "public_comic_trace_bundle",
@@ -173,6 +185,8 @@ def verify_public_comic_trace_bundle() -> dict[str, Any]:
         "real_model_evidence_status": real_model_evidence.get("status", ""),
         "real_model_evidence_ready": real_model_evidence.get("ready_for_real_quality_claim"),
         "real_model_evidence_missing_checks": list(real_model_evidence.get("missing_check_ids") or []),
+        "downstream_handoff_status": handoff_decision.get("status", ""),
+        "downstream_handoff_allowed": handoff_decision.get("handoff_allowed"),
         "upgrade_checklist_count": len(trace.get("claim_upgrade_checklist") or []) if trace else 0,
         "reproducibility_command_count": len((trace.get("reproducibility") or {}).get("verification_commands") or []) if trace else 0,
         "errors": errors,
@@ -198,6 +212,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Image evidence: {payload.get('image_evidence_level')} / supports_real_quality={payload.get('supports_real_quality_claim')}",
         f"- Real model evidence: {payload.get('real_model_evidence_status')} / ready={payload.get('real_model_evidence_ready')}",
         f"- Missing real model checks: {', '.join(payload.get('real_model_evidence_missing_checks') or [])}",
+        f"- Downstream handoff: {payload.get('downstream_handoff_status')} / allowed={payload.get('downstream_handoff_allowed')}",
         f"- Upgrade checklist: {payload.get('upgrade_checklist_count')} items",
         f"- Reproducibility commands: {payload.get('reproducibility_command_count')}",
     ]

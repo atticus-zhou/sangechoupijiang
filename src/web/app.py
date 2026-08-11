@@ -53,7 +53,11 @@ from src.comic_office.v2.fixture_flow import (
 )
 from src.comic_office.v2.planner import PlannerError, plan_contract, revise_visual_bible
 from src.comic_office.v2.pipeline import ComicProductionV2, not_started_state
-from src.comic_office.v2.claim_report import claim_level_from_benchmark, claim_upgrade_checklist
+from src.comic_office.v2.claim_report import (
+    claim_level_from_benchmark,
+    claim_upgrade_checklist,
+    downstream_handoff_decision_card,
+)
 from src.comic_office.v2.production import (
     ProductionError,
     direct_asset_prompts,
@@ -804,6 +808,7 @@ def _public_comic_trace_from_handoff(manifest_path: Path, word_canvas_path: Path
         "quality_benchmark": quality_benchmark,
         "claim_level": claim_level,
         "claim_upgrade_checklist": claim_upgrade_checklist(claim_level, quality_benchmark),
+        "downstream_handoff_decision": downstream_handoff_decision_card(claim_level, quality_benchmark),
         "prompt_quality": prompt_quality,
         "prompt_quality_status": prompt_quality.get("status", ""),
         "image_production_evidence": _comic_v2_image_production_evidence(image_assets, quality_benchmark),
@@ -7121,6 +7126,11 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         prompt_quality = audit_prompt_package(prompt_payload)
     quality_benchmark = handoff_meta.get("quality_benchmark") or word_meta.get("quality_benchmark") or {}
     claim_level = claim_level_from_benchmark(quality_benchmark) if quality_benchmark else ""
+    downstream_handoff_decision = (
+        downstream_handoff_decision_card(claim_level, quality_benchmark)
+        if quality_benchmark
+        else {}
+    )
     image_production_evidence = _comic_v2_image_production_evidence(image_assets, quality_benchmark)
     return {
         "story_id": word_meta.get("story_id", ""),
@@ -7135,6 +7145,7 @@ def _comic_v2_history_trace(artifacts: list[dict], word_canvas: dict | None) -> 
         "quality_benchmark": quality_benchmark,
         "claim_level": claim_level,
         "claim_upgrade_checklist": claim_upgrade_checklist(claim_level, quality_benchmark) if quality_benchmark else [],
+        "downstream_handoff_decision": downstream_handoff_decision,
         "prompt_package_title": prompt_package.get("title", ""),
         "asset_prompt_count": prompt_meta.get("asset_prompt_count", 0),
         "shot_prompt_count": prompt_meta.get("shot_prompt_count", 0),

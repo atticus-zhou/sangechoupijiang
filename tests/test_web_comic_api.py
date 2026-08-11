@@ -1111,7 +1111,12 @@ class WebComicApiTests(unittest.TestCase):
                             "本图种 three_view 用于锁定角色脸型、发型、体型、服装主色和年龄感。",
                         ],
                         "reference_policy": "人物资产用于后续镜头身份一致性参考；镜头生成时继承脸型、发型、服装和年龄感。",
-                        "generator_prompt": "资产ID character_001，风格身份 ink wash fantasy，林昭人物三视图，纯白或近白色干净背景。",
+                        "generator_prompt": (
+                            "资产ID character_001，资产名称 林昭，风格身份 ink wash fantasy，"
+                            "林昭人物三视图，正面、侧面、背面并排，纯白或近白色干净背景，"
+                            "锁定角色脸型、发型、体型、青灰长衫、二十岁左右年龄感，"
+                            "作为后续镜头身份一致性参考，不加入剧情动作。"
+                        ),
                         "negative_prompt": ["禁止剧情动作", "禁止剧情场景", "禁止文字水印"],
                     }
                 ],
@@ -1132,7 +1137,19 @@ class WebComicApiTests(unittest.TestCase):
                                 "first_frame_file": "char_001_three_view.png",
                             }
                         ],
-                        "generator_prompt": "首帧参考 char_001_three_view.png，故事目的：主角推门进入月塔；动作链：停步、抬眼、前推；表演意图：警觉；摄影：缓慢前推；灯光：月光侧逆光；严格继承参考资产身份。",
+                        "generator_prompt": (
+                            "原文依据：林昭推门进入月塔，听见塔内传来旧铃声。"
+                            "镜头形式：固定镜头一镜到底，中景平视，首帧参考 char_001_three_view.png。"
+                            "参考资产：林昭 char_001，继承脸型、发型、青灰长衫和年龄感。"
+                            "故事目的：让观众确认主角主动进入危险空间。"
+                            "动作链：停步、抬眼、右手推门、身体前倾半步。"
+                            "动作表演：警觉、压住呼吸、眼神先看门缝再看塔内。"
+                            "摄影：缓慢前推，轻微手持呼吸感。"
+                            "灯光：冷月光从门缝侧逆光切入，室内暗部保留细节。"
+                            "台词：无台词。"
+                            "声音：旧铃声、门轴低响、远处风声。"
+                            "连续性要求：严格继承参考资产身份，保持林昭脸型、发型、服装主色和时代质感。"
+                        ),
                         "negative_prompt": ["禁止资产身份漂移", "禁止动作顺序混乱", "禁止文字水印"],
                     }
                 ],
@@ -1273,6 +1290,10 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace["quality_benchmark"]["package_quality_score"], 96)
             self.assertTrue(trace["quality_benchmark"]["production_quality_verified"])
             self.assertEqual(trace["claim_level"], "real_quality_verified")
+            self.assertEqual(trace["downstream_handoff_decision"]["status"], "ready_for_downstream")
+            self.assertTrue(trace["downstream_handoff_decision"]["handoff_allowed"])
+            self.assertEqual(trace["downstream_handoff_decision"]["missing_before_handoff"], [])
+            self.assertIn("handoff manifest", trace["downstream_handoff_decision"]["operator_next_step"])
             self.assertEqual(
                 [item["id"] for item in trace["claim_upgrade_checklist"]],
                 ["keep_evidence_bundle", "repeat_after_major_edit"],
@@ -1309,6 +1330,7 @@ class WebComicApiTests(unittest.TestCase):
             self.assertEqual(trace_response.status_code, 200)
             self.assertEqual(trace_response.json()["story_id"], "story_123")
             self.assertEqual(trace_response.json()["claim_level"], "real_quality_verified")
+            self.assertEqual(trace_response.json()["downstream_handoff_decision"]["status"], "ready_for_downstream")
             self.assertEqual(trace_response.json()["prompt_quality_status"], "ready")
             self.assertEqual(trace_response.json()["shots"][0]["shot_id"], "shot_001")
         finally:
