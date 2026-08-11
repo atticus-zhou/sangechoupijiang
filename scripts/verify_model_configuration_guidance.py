@@ -64,6 +64,7 @@ CHECKS: list[dict[str, Any]] = [
             "DEEPSEEK_API_KEY",
             "DASHSCOPE_API_KEY",
             "ARK_API_KEY",
+            "OPENAI_API_KEY",
             "config.yaml",
             ".gitignore",
             "不要提交真实 Key",
@@ -118,6 +119,10 @@ CHECKS: list[dict[str, Any]] = [
             "当前优先作为生图槽位使用",
             "文本规划交给中书省、兵部等文本部门",
             "把普通文本模型填到刑部后期待它看图",
+            "Provider 怎么填",
+            "阿里云百炼/通义千问 API Key",
+            "火山方舟/豆包 Seedream API Key",
+            "千问 VL",
         ],
     },
     {

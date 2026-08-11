@@ -47,6 +47,7 @@ PRODUCTION_BENCHMARK_COMMAND = (
     "python scripts/verify_comic_v2_production_benchmark.py "
     "--manifest output/your_project/xxx_handoff_manifest.json --format markdown"
 )
+MODEL_CAPABILITY_MATRIX = REPO_ROOT / "docs" / "MODEL_CAPABILITY_MATRIX.json"
 
 
 def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any]:
@@ -457,14 +458,14 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
             {
                 "level": "minimum_text",
                 "title": "最小可跑配置",
-                "required_models": ["中书省文本模型", "门下省文本模型", "兵部文本模型", "户部文本模型", "礼部文本模型"],
+                "required_models": _comic_required_models("text"),
                 "can_do": "聊故事、锁定剧本方向、拆资产、生成镜头和提示词草案。",
                 "ready_when": "模型页面的文本部门测试通过，doctor 不再提示核心文本模型缺失。",
             },
             {
                 "level": "full_comic_production",
                 "title": "完整制片配置",
-                "required_models": ["工部生图模型", "刑部视觉理解模型"],
+                "required_models": _comic_required_models("image_generation") + _comic_required_models("vision_understanding"),
                 "can_do": "生成基础资产图、执行视觉质检、输出完整 Word 制片画布和 handoff manifest。",
                 "ready_when": "doctor 的 `真实生产前检查` 显示 ready_for_real_run，且工部/刑部测试通过。",
             },
@@ -495,6 +496,31 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
         ],
         "blocking_reasons": blocking,
     }
+
+
+def _comic_required_models(capability: str) -> list[str]:
+    labels = {
+        "text": "文本模型",
+        "image_generation": "生图模型",
+        "vision_understanding": "视觉理解模型",
+    }
+    try:
+        matrix = json.loads(MODEL_CAPABILITY_MATRIX.read_text(encoding="utf-8"))
+        departments = matrix["offices"]["comic_production"]["departments"]
+    except Exception:
+        fallback = {
+            "text": ["中书省", "门下省", "尚书省", "吏部", "户部", "礼部", "兵部"],
+            "image_generation": ["工部"],
+            "vision_understanding": ["刑部"],
+        }
+        return [f"{name}{labels.get(capability, '模型')}" for name in fallback.get(capability, [])]
+
+    suffix = labels.get(capability, "模型")
+    return [
+        f"{department.get('display_name', department.get('department_id', '未知部门'))}{suffix}"
+        for department in departments
+        if department.get("required_capability") == capability
+    ]
 
 
 def _developer_extension_path(product: dict[str, Any]) -> dict[str, Any]:

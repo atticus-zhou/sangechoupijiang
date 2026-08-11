@@ -95,6 +95,12 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertIn("office_models.comic_production.xingbu", text)
         self.assertIn("常见误填", text)
         self.assertIn("把豆包 Seedream 填到兵部", text)
+        self.assertIn("Provider 怎么填", text)
+        self.assertIn("阿里云百炼/通义千问 API Key", text)
+        self.assertIn("provider", text)
+        self.assertIn("dashscope", text)
+        self.assertIn("doubao", text)
+        self.assertIn("千问 VL", text)
         self.assertIn("当前优先作为生图槽位使用", text)
         self.assertIn("文本规划交给中书省、兵部等文本部门", text)
         self.assertIn("不需要在工部同一槽位再填一个文本模型", text)
@@ -105,6 +111,18 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         matrix = json.loads(Path("docs/MODEL_CAPABILITY_MATRIX.json").read_text(encoding="utf-8"))
         self.assertEqual(matrix["schema"], "three_cobblers_model_capability_matrix_v1")
         self.assertIn("API keys", matrix["safe_key_rule"])
+        self.assertEqual(
+            matrix["capability_kinds"]["image_generation"]["provider_examples"][0]["provider"],
+            "doubao",
+        )
+        self.assertEqual(
+            matrix["capability_kinds"]["vision_understanding"]["provider_examples"][0]["provider"],
+            "dashscope",
+        )
+        self.assertIn(
+            "DASHSCOPE_API_KEY",
+            [item["api_key_env"] for item in matrix["capability_kinds"]["text"]["provider_examples"]],
+        )
 
         comic = {
             item["department_id"]: item["required_capability"]

@@ -5,17 +5,30 @@
     "text": {
       "label": "文本模型",
       "means": "能稳定理解中文需求、输出结构化 JSON 或长文本，用于规划、审核、提示词和交付说明。",
-      "examples": ["deepseek-chat", "qwen-plus", "qwen-max", "gpt-4.1", "gpt-5"]
+      "examples": ["deepseek-chat", "qwen-plus", "qwen-max", "gpt-4.1", "gpt-5"],
+      "provider_examples": [
+        {"provider": "deepseek", "api_key_env": "DEEPSEEK_API_KEY", "model_examples": ["deepseek-chat", "deepseek-reasoner"]},
+        {"provider": "dashscope", "api_key_env": "DASHSCOPE_API_KEY", "model_examples": ["qwen-plus", "qwen-max", "qwen-turbo"]},
+        {"provider": "openai", "api_key_env": "OPENAI_API_KEY", "model_examples": ["gpt-4.1", "gpt-5"]}
+      ]
     },
     "image_generation": {
       "label": "图片生成模型",
       "means": "能根据提示词生成基础人物、道具、场景或镜头首帧图片。",
-      "examples": ["doubao-seedream-5", "qwen-image", "minimax-image"]
+      "examples": ["doubao-seedream-5", "qwen-image", "minimax-image"],
+      "provider_examples": [
+        {"provider": "doubao", "api_key_env": "ARK_API_KEY", "model_examples": ["doubao-seedream-5", "doubao-seedream-4-5"], "status": "current_verified_image_generation_adapter"}
+      ],
+      "future_examples": ["qwen-image", "minimax-image"]
     },
     "vision_understanding": {
       "label": "视觉理解模型",
       "means": "能读取生成图片，检查人物一致性、画风漂移、道具错误、场景不符和交付风险。",
-      "examples": ["qwen-vl-plus", "qwen-vl-max", "gpt-4.1", "gpt-5"]
+      "examples": ["qwen-vl-plus", "qwen-vl-max", "gpt-4.1", "gpt-5"],
+      "provider_examples": [
+        {"provider": "dashscope", "api_key_env": "DASHSCOPE_API_KEY", "model_examples": ["qwen-vl-plus", "qwen-vl-max"]},
+        {"provider": "openai", "api_key_env": "OPENAI_API_KEY", "model_examples": ["gpt-4.1", "gpt-5"]}
+      ]
     },
     "browser_or_human_evidence": {
       "label": "浏览器/人工证据",

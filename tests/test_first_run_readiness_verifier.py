@@ -126,6 +126,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertEqual([item["level"] for item in model_ladder], ["no_key_demo", "minimum_text", "full_comic_production"])
         ladder_text = json.dumps(model_ladder, ensure_ascii=False)
         self.assertIn("中书省文本模型", ladder_text)
+        self.assertIn("尚书省文本模型", ladder_text)
+        self.assertIn("吏部文本模型", ladder_text)
         self.assertIn("工部生图模型", ladder_text)
         self.assertIn("刑部视觉理解模型", ladder_text)
         self.assertIn("ready_for_real_run", ladder_text)

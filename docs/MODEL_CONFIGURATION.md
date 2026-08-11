@@ -61,6 +61,23 @@
 
 如果只有文本模型，也可以先跑到故事、资产拆解和提示词规划阶段；系统会在生图和视觉质检前提醒你补模型。
 
+## Provider 怎么填
+
+页面里的 provider 和模型厂商不是一回事，而是系统底层识别的调用通道。按下面填最稳：
+
+| 你手里的模型/Key | provider 填什么 | 常见模型名 | 适合放在哪 |
+| --- | --- | --- | --- |
+| DeepSeek API Key | `deepseek` | `deepseek-chat`、`deepseek-reasoner` | 文本部门：中书省、门下省、尚书省、吏部、户部、礼部、兵部 |
+| 阿里云百炼/通义千问 API Key | `dashscope` | 文本：`qwen-plus`、`qwen-max`；视觉：`qwen-vl-plus`、`qwen-vl-max` | 文本部门或刑部视觉理解 |
+| 火山方舟/豆包 Seedream API Key | `doubao` | `doubao-seedream-5`、`doubao-seedream-4-5` | AI 漫剧制片办公室工部生图 |
+| OpenAI API Key | `openai` | `gpt-4.1`、`gpt-5` | 文本部门或刑部视觉理解 |
+
+`千问 VL` 指的是“能看图的千问模型”，不是普通文本千问。它应该放在刑部，用来检查人物一致性、画风漂移、道具错误和场景是否符合故事；如果把 `qwen-plus` 这类文本模型填到刑部，故事和提示词仍可能生成，但图片质检会缺少可靠视觉证据。
+
+`豆包 Seedream` 是生图模型。它应该放在 AI 漫剧制片办公室的工部，用来生成干净人物资产、道具资产、场景广角图和俯视图；它不适合放到兵部，因为兵部要写镜头卡、动作链和视频提示词。
+
+如果你使用的是阿里云百炼控制台，Key 对应这里的 `DASHSCOPE_API_KEY`；如果你使用的是火山方舟控制台，Key 对应这里的 `ARK_API_KEY`。公开展示页、GitHub README 和静态样例都不需要这些 Key。
+
 ## 推荐环境变量
 
 推荐把 Key 放进本机环境变量，不要写进 GitHub：
@@ -69,6 +86,7 @@
 $env:DEEPSEEK_API_KEY="your-deepseek-key"
 $env:DASHSCOPE_API_KEY="your-qwen-key"
 $env:ARK_API_KEY="your-doubao-or-volcengine-key"
+$env:OPENAI_API_KEY="your-openai-key"
 ```
 
 `config.example.yaml` 默认使用这些变量：
