@@ -376,14 +376,20 @@ def _public_demo_path() -> dict[str, Any]:
             {
                 "file": "AI 漫剧 handoff manifest",
                 "uri": "/api/demo/comic-production/files/handoff_manifest.json",
-                "look_for": "story_version、style_version、asset_id、image_id、shot_id、首帧参考和 production_lineage。",
-                "proves": "资产、图片、镜头、提示词和 Word 画布之间有引用链路，后续可以追溯和恢复。",
+                "look_for": "story_version、style_version、asset_id、image_id、shot_id、首帧参考、production_lineage 和 asset_usage_map。",
+                "proves": "资产、图片、镜头、提示词、Word 画布和下游复用说明之间有引用链路，后续可以追溯和恢复。",
             },
             {
                 "file": "AI 漫剧资产规格矩阵",
                 "uri": "/api/demo/public-showcase",
                 "look_for": "portfolio_embed.asset_requirement_matrix 中的人物 three_view、expression_sheet，道具 turnaround，场景 wide、top_down，以及 clean_background_required。",
                 "proves": "公开样例不仅有 Word 和 manifest，还声明了下游继续制片前必须具备的基础资产图片标准。",
+            },
+            {
+                "file": "AI 漫剧资产使用地图",
+                "uri": "/api/demo/public-showcase",
+                "look_for": "portfolio_embed.asset_usage_map 中每个资产的 identity_baseline_image、image_roles、referenced_shots、downstream_instruction 和 handoff_ready。",
+                "proves": "下游操作者能看懂哪张图用来锁脸、哪张图用作首帧、哪个道具或场景应该在哪些镜头里复用。",
             },
             {
                 "file": "研究办公室阶段报告",
