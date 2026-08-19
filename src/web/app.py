@@ -138,6 +138,34 @@ async def favicon_api():
     return Response(status_code=204)
 
 
+def _build_health_payload() -> dict:
+    offices = list_offices()
+    return {
+        "status": "ok",
+        "service": "sangechoupijiang",
+        "display_name": "三个臭皮匠",
+        "version": app.version,
+        "mode": "local_fastapi",
+        "public_safe": True,
+        "requires_model_credentials": False,
+        "calls_real_models": False,
+        "office_count": len(offices),
+        "office_ids": [office.get("id") for office in offices],
+        "checks": {
+            "offices": "/api/offices",
+            "system_preflight": "/api/system/preflight",
+            "office_protocols": "/api/offices/protocols",
+        },
+    }
+
+
+@app.get("/health")
+@app.get("/api/health")
+async def health_api():
+    """Return a no-key liveness payload for local deploy and public handoff checks."""
+    return _build_health_payload()
+
+
 @contextmanager
 def _demo_delivery_lock(lock_path: Path):
     """Serialize deterministic demo delivery writes across local verifier processes."""

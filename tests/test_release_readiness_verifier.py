@@ -34,6 +34,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "development_checklist",
                 "github_release_contract",
                 "public_docs_readability",
+                "runtime_health",
                 "public_demo",
                 "static_showcase_export",
                 "static_showcase",
@@ -72,6 +73,10 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         github_contract = next(item for item in payload["checks"] if item["id"] == "github_release_contract")
         self.assertIn("artifact=no-key-release-evidence", github_contract["summary"])
         self.assertIn("failures=0", github_contract["summary"])
+        runtime_health = next(item for item in payload["checks"] if item["id"] == "runtime_health")
+        self.assertIn("endpoint=/health", runtime_health["summary"])
+        self.assertIn("credentials=False", runtime_health["summary"])
+        self.assertIn("real_models=False", runtime_health["summary"])
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("fast_review=5/5", public_demo["summary"])
         self.assertIn("reading_guide=", public_demo["summary"])

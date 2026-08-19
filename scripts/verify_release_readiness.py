@@ -45,6 +45,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_public_docs_readability.py", "--format", "json"],
     },
     {
+        "id": "runtime_health",
+        "title": "Runtime health endpoint contract",
+        "command": ["scripts/verify_runtime_health_contract.py", "--format", "json"],
+    },
+    {
         "id": "public_demo",
         "title": "Public no-key demo",
         "command": ["scripts/verify_public_demo_mode.py", "--format", "json"],
@@ -216,6 +221,16 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"text_integrity={parsed.get('text_integrity_status')}; "
                 f"backend={parsed.get('requires_backend')}; "
                 f"api_key={parsed.get('requires_api_key')}; "
+                f"real_models={parsed.get('calls_real_models')}"
+            )
+        if check_id == "runtime_health":
+            return (
+                f"endpoint={parsed.get('endpoint')}; "
+                f"alias={parsed.get('alias')}; "
+                f"service={parsed.get('service')}; "
+                f"offices={parsed.get('office_count')}; "
+                f"public_safe={parsed.get('public_safe')}; "
+                f"credentials={parsed.get('requires_model_credentials')}; "
                 f"real_models={parsed.get('calls_real_models')}"
             )
         if check_id == "portfolio_showcase_sync":
