@@ -149,10 +149,14 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         errors.append("research demo must describe account or human-gated evidence")
     if "不宣称全自动" not in public_demo_boundary:
         errors.append("research demo must state it does not claim full automation")
-    if len(reading_guide) < 2:
-        errors.append("research demo must provide a report/evidence reading guide")
+    if len(reading_guide) < 3:
+        errors.append("research demo must provide a report/evidence/claim reading guide")
+    reading_guide_uris = {str(item.get("uri") or "") for item in reading_guide}
+    if "/api/demo/research/claim-report" not in reading_guide_uris:
+        errors.append("research demo reading guide must include the staged delivery claim report")
     for item in reading_guide:
-        if not str(item.get("uri") or "").startswith("/api/demo/research/files/"):
+        uri = str(item.get("uri") or "")
+        if not (uri.startswith("/api/demo/research/files/") or uri == "/api/demo/research/claim-report"):
             errors.append(f"research reading guide item has invalid uri: {item.get('title') or item.get('uri')}")
         if not item.get("look_for") or not item.get("proves"):
             errors.append(f"research reading guide item missing look_for/proves: {item.get('title') or item.get('uri')}")
@@ -286,10 +290,14 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         "reading_guide_ready_count": sum(
             1
             for item in reading_guide
-            if str(item.get("uri") or "").startswith("/api/demo/research/files/")
+            if (
+                str(item.get("uri") or "").startswith("/api/demo/research/files/")
+                or str(item.get("uri") or "") == "/api/demo/research/claim-report"
+            )
             and item.get("look_for")
             and item.get("proves")
         ),
+        "reading_guide_uris": sorted(reading_guide_uris),
         "evidence_handoff_count": len(evidence_handoff),
         "evidence_handoff_ready_count": sum(
             1

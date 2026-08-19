@@ -384,10 +384,27 @@ async def get_office_preflight_api(office_id: str):
     )
 
 
+def _public_model_capability_matrix() -> dict:
+    """Return a no-secret, human-facing copy of the model capability matrix."""
+    matrix = json.loads(json.dumps(load_model_capability_matrix(), ensure_ascii=False))
+    provider_labels = {
+        "deepseek": "DeepSeek 本地密钥",
+        "dashscope": "千问/DashScope 本地密钥",
+        "openai": "OpenAI 本地密钥",
+        "doubao": "豆包/火山方舟本地密钥",
+    }
+    for capability in (matrix.get("capability_kinds") or {}).values():
+        for provider in capability.get("provider_examples") or []:
+            provider_name = str(provider.get("provider") or "")
+            provider.pop("api_key_env", None)
+            provider["local_secret_label"] = provider_labels.get(provider_name, "本地密钥")
+    return matrix
+
+
 @app.get("/api/model-capability-matrix")
 async def get_model_capability_matrix_api():
     """Return the public, no-key model capability matrix."""
-    return load_model_capability_matrix()
+    return _public_model_capability_matrix()
 
 
 @app.get("/api/offices/{office_id}/model-capabilities")
@@ -998,6 +1015,13 @@ async def get_research_demo_api():
                 "uri": "/api/demo/research/files/evidence_manifest.json",
                 "look_for": "来源、数据点、竞品记录、截图计划、待人工确认项和权限缺口是否可追踪。",
                 "proves": "后续补飞瓜、抖音或电商后台截图时，用户知道该补哪一页、为什么补、补完影响哪条结论。",
+            },
+            {
+                "order": 3,
+                "title": "最后确认阶段性交付声明",
+                "uri": "/api/demo/research/claim-report",
+                "look_for": "claim_level、can_claim_full_automation、forbidden_public_claims、claim_upgrade_checklist 和 evidence_capture_playbook 是否说清楚公开边界。",
+                "proves": "研究办公室可以公开展示阶段性交付、证据缺口和补证流程，但不能宣称全自动飞瓜会员级采集或最终验证报告。",
             },
         ],
         "objective": plan.get("objective", ""),
