@@ -82,6 +82,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("工部生图模型 + 刑部视觉理解模型", text)
         self.assertIn("真实项目跑完后，再做三步验收", text)
         self.assertIn("python scripts/audit_comic_v2_handoffs.py --format markdown", text)
+        self.assertIn("Recommended Manifest", text)
+        self.assertIn("Duplicate Groups", text)
         self.assertIn(
             "python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown",
             text,

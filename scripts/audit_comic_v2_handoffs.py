@@ -45,6 +45,14 @@ def audit_handoff_inventory(roots: list[Path] | None = None) -> dict[str, Any]:
     demo_only = [item for item in manifests if item["quality_claim"] == "demo_structure_verified"]
     needs_review = [item for item in manifests if item["quality_claim"] == "needs_review"]
     legacy = [item for item in manifests if item["quality_claim"] == "legacy_unverifiable"]
+    duplicate_groups = _duplicate_groups(manifests)
+    recommended_manifest = _recommended_manifest(manifests)
+    recommended_path = recommended_manifest.get("path") if recommended_manifest else ""
+    for item in manifests:
+        group = next((group for group in duplicate_groups if item["path"] in group["paths"]), None)
+        item["duplicate_group_id"] = group["group_id"] if group else ""
+        item["duplicate_group_size"] = int(group["count"]) if group else 1
+        item["is_recommended_manifest"] = item["path"] == recommended_path
     return {
         "status": "passed" if manifests else "warning",
         "mode": "comic_v2_handoff_inventory",
@@ -59,6 +67,10 @@ def audit_handoff_inventory(roots: list[Path] | None = None) -> dict[str, Any]:
             "真实模型质量已验证" if production_verified else "暂无真实模型质量通过证据；只能展示结构样例或历史交付"
         ),
         "next_action": _inventory_next_action(production_verified, demo_only, needs_review, legacy),
+        "recommended_manifest": recommended_manifest,
+        "duplicate_group_count": len(duplicate_groups),
+        "duplicate_groups": duplicate_groups,
+        "operator_hint": _operator_hint(recommended_manifest, duplicate_groups),
         "manifests": manifests,
         "skipped_roots": skipped,
     }
@@ -125,6 +137,7 @@ def _audit_manifest_path(path: Path) -> dict[str, Any] | None:
         "image_count": len(payload.get("images") or []),
         "shot_count": len(payload.get("shots") or []),
         "updated_at": _updated_at(path),
+        "fingerprint": _manifest_fingerprint(payload, claim),
     }
 
 
@@ -155,6 +168,94 @@ def _updated_at(path: Path) -> str:
         return path.stat().st_mtime_ns.__str__()
     except OSError:
         return ""
+
+
+def _manifest_fingerprint(payload: dict[str, Any], claim: str) -> str:
+    story = payload.get("story") or {}
+    manifest = payload.get("manifest") or {}
+    package = payload.get("prompt_package") or {}
+    return "|".join([
+        str(claim or ""),
+        str(story.get("story_id") or story.get("source_hash") or story.get("title") or ""),
+        str(story.get("story_version") or ""),
+        str((payload.get("style") or {}).get("style_id") or ""),
+        str(manifest.get("manifest_hash") or manifest.get("manifest_id") or ""),
+        str(manifest.get("manifest_version") or ""),
+        str(package.get("package_id") or ""),
+        str(package.get("prompt_count") or ""),
+        str(package.get("shot_count") or ""),
+    ])
+
+
+def _duplicate_groups(manifests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for item in manifests:
+        fingerprint = str(item.get("fingerprint") or "")
+        if fingerprint:
+            grouped.setdefault(fingerprint, []).append(item)
+    groups = []
+    for index, (_fingerprint, items) in enumerate(
+        sorted(grouped.items(), key=lambda pair: (-len(pair[1]), pair[1][0].get("title", ""))),
+        start=1,
+    ):
+        if len(items) < 2:
+            continue
+        recommended = _recommended_manifest(items) or items[0]
+        groups.append({
+            "group_id": f"dup_{index:02d}",
+            "count": len(items),
+            "title": recommended.get("title") or "",
+            "quality_claim": recommended.get("quality_claim") or "",
+            "visual_evidence_level": recommended.get("visual_evidence_level") or "",
+            "recommended_path": recommended.get("path") or "",
+            "paths": [item.get("path") or "" for item in items],
+            "operator_action": (
+                "这些文件属于同一制片包的重复导出或验证副本；优先查看 recommended_path，其他路径作为历史证据保留。"
+            ),
+        })
+    return groups
+
+
+def _recommended_manifest(manifests: list[dict[str, Any]]) -> dict[str, Any]:
+    if not manifests:
+        return {}
+    priority = {
+        "production_quality_verified": 0,
+        "needs_review": 1,
+        "demo_structure_verified": 2,
+        "legacy_unverifiable": 3,
+    }
+    return sorted(
+        manifests,
+        key=lambda item: (
+            priority.get(str(item.get("quality_claim") or ""), 9),
+            -int(item.get("package_quality_score") or 0),
+            -(1 if item.get("word_canvas_exists") else 0),
+            -_int_value(item.get("updated_at")),
+            str(item.get("path") or ""),
+        ),
+        reverse=False,
+    )[0]
+
+
+def _operator_hint(recommended_manifest: dict[str, Any], duplicate_groups: list[dict[str, Any]]) -> str:
+    if not recommended_manifest:
+        return "没有找到可审计制片包。"
+    prefix = (
+        f"优先查看 `{recommended_manifest.get('path')}`。"
+        f"它当前声明为 {recommended_manifest.get('quality_claim')}，"
+        f"图片证据等级为 {recommended_manifest.get('visual_evidence_level')}。"
+    )
+    if duplicate_groups:
+        return prefix + f" 另有 {len(duplicate_groups)} 组重复导出，保留为历史证据，不需要逐份打开。"
+    return prefix
+
+
+def _int_value(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _manifest_next_action(claim: str, benchmark: dict[str, Any], recovery: dict[str, Any]) -> str:
@@ -240,14 +341,46 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"Legacy unverifiable: `{result.get('legacy_unverifiable_count')}`",
         f"Public claim: {result.get('safe_public_claim')}",
         f"Next action: {result.get('next_action')}",
+        f"Operator hint: {result.get('operator_hint')}",
         "",
-        "| Claim | Score | Visual evidence | Images | Usable | Rework | Rework rate | Title | Word | Recovery | Stage | Impact | Manifest |",
-        "| --- | ---: | --- | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- |",
+        "## Recommended Manifest",
+        "",
     ]
+    recommended = result.get("recommended_manifest") or {}
+    if recommended:
+        lines.extend([
+            f"- Title: {recommended.get('title')}",
+            f"- Claim: `{recommended.get('quality_claim')}`",
+            f"- Visual evidence: `{recommended.get('visual_evidence_level')}`",
+            f"- Path: `{recommended.get('path')}`",
+            "",
+        ])
+    else:
+        lines.extend(["- none", ""])
+    if result.get("duplicate_groups"):
+        lines.extend([
+            "## Duplicate Groups",
+            "",
+            "| Group | Count | Claim | Recommended path |",
+            "| --- | ---: | --- | --- |",
+        ])
+        for group in result.get("duplicate_groups", []):
+            lines.append(
+                f"| {group.get('group_id')} | {group.get('count')} | "
+                f"{group.get('quality_claim')} | `{group.get('recommended_path')}` |"
+            )
+        lines.append("")
+    lines.extend([
+        "| Recommended | Duplicate group | Claim | Score | Visual evidence | Images | Usable | Rework | Rework rate | Title | Word | Recovery | Stage | Impact | Manifest |",
+        "| --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- |",
+    ])
     for item in result.get("manifests", []):
         recovery = item.get("recommended_recovery") or {}
+        duplicate_label = item.get("duplicate_group_id") or "unique"
         lines.append(
-            f"| {item.get('quality_claim')} | {item.get('package_quality_score')}/100 | "
+            f"| {'yes' if item.get('is_recommended_manifest') else ''} | "
+            f"{duplicate_label} ({item.get('duplicate_group_size', 1)}) | "
+            f"{item.get('quality_claim')} | {item.get('package_quality_score')}/100 | "
             f"{item.get('visual_evidence_level')} | "
             f"{item.get('total_images', 0)} | "
             f"{item.get('usable_images', 0)} | "

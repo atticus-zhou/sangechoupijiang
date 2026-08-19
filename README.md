@@ -283,6 +283,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 python scripts/verify_comic_v2_production_benchmark.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
 ```
 
+第一条盘点命令会在顶部给出 `Recommended Manifest` 和重复导出分组。输出目录里如果有很多同名验证副本，先打开推荐路径；`Duplicate Groups` 里的其他路径作为历史证据保留，不需要逐个打开判断。
+
 只有交付物清点可追溯、真实生产声明显示 `can_claim_real_quality=True`，并且制片质量基准显示 `production_quality_verified` 或等价通过状态时，才把这次产物对外描述为真实生产质量。否则只能说它完成了结构、流程或部分模型验证。
 
 常见首次运行问题可以直接看：

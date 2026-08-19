@@ -94,6 +94,8 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 第四条命令用于盘点已经生成过的本地交付物。它默认扫描 `output` 下的 AI 漫剧 V2 handoff manifest，不调用模型、不读取 API Key，并把结果分成 `production_quality_verified`、`demo_structure_verified`、`needs_review` 和 `legacy_unverifiable`。当本地有多次实验产物时，先看这份盘点，再决定展示哪一份、修复哪一份、丢弃哪一份。即使是 `demo_structure_verified`，盘点表也必须显示恢复动作：保留故事合同、资产清单、提示词包和旧 Word 归档，清掉 fixture 图片证据，再从工部/刑部补跑真实图片生成与七维视觉质检。
 
+盘点表顶部的 `Recommended Manifest` 是本轮优先查看对象；如果下面出现 `Duplicate Groups`，说明这些路径是同一制片包在不同验证脚本或导出目录下的重复副本。操作者应先打开推荐路径，其他重复路径保留为历史证据，不需要逐个打开判断。
+
 无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、且其他维度全部通过时，才会得到 `production_quality_verified`。
 
 历史追溯中的 `image_production_evidence` 是判断图片是否可交付的第一信号。如果它是 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown`，下游只能把当前包当作结构样例或待补证据包。接着看 `image_quality_summary.rework_instructions`：它会按图片说明要补跑视觉质检、保留提示词重新生图，还是退回提示词重写，并给出责任部门、阻塞阶段、优先级、用户提示、建议按钮和操作步骤。此时使用质量恢复动作 `regenerate_images`，保留已确认故事、资产拆解、提示词包和旧版 Word/manifest 归档，重新生成图片并补视觉质检；补齐之前不要把包交给 Libtv、小云雀或其他视频平台当作最终生产素材。
