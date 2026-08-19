@@ -10,6 +10,7 @@ output/
 data/chroma/
 tmp_canvas_media/
 tmp_canvas_render/
+tmp/
 _docx_inputs/
 docx_analysis.json
 dist/

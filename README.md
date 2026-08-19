@@ -46,9 +46,18 @@ http://127.0.0.1:8080/
 python scripts/doctor.py
 python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_model_configuration_guidance.py --format markdown
+python scripts/export_github_onboarding_packet.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
 ```
+
+如果你想把“首次运行说明、模型配置、公开边界和安全验证结果”打成一个本地证明包，可以运行：
+
+```powershell
+python scripts/export_github_onboarding_packet.py --format markdown
+```
+
+它会生成 `tmp/github-onboarding-packet/` 和 `tmp/github-onboarding-packet.zip`。这个包不调用真实模型、不读取 `config.yaml`、不写工作区，只包含公开文档、`config.example.yaml` 和验证报告，适合给刚从 GitHub 下载项目的人快速复核。
 
 ## 公开展示与部署边界
 
@@ -108,6 +117,7 @@ office_models:
 python scripts/verify_productization_status.py --format markdown
 python scripts/verify_public_docs_readability.py --format markdown
 python scripts/verify_model_configuration_guidance.py --format markdown
+python scripts/export_github_onboarding_packet.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/check_no_secrets.py
 ```
