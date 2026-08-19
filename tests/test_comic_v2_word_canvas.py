@@ -165,8 +165,10 @@ class ComicV2WordCanvasTests(unittest.TestCase):
             self.assertIn("多 Agent 交接与验收", text)
             self.assertIn("交给", text)
             self.assertIn("验收", text)
-            self.assertIn("资产拆解", text)
-            self.assertIn("基础图片生产", text)
+            self.assertIn("内阁 / 中书省", text)
+            self.assertIn("吏部 / 户部", text)
+            self.assertIn("工部 / 刑部", text)
+            self.assertIn("人工审核点不能被后续 Agent 跳过", text)
             self.assertIn("handoff manifest", text)
 
     def test_audit_counts_images_and_reports_missing_references(self):

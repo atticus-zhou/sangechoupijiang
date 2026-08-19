@@ -516,7 +516,7 @@ def _production_lineage(
             "human_checkpoint": "人物、道具、场景拆解需要用户审核；退回意见必须进入下一版拆解。",
             "handoff_to": "提示词与镜头执行包",
             "acceptance_criteria": "每个资产都有原文证据、故事用途、计划图片和审核状态。",
-            "output": f"{len(manifest.items)} assets · manifest v{manifest.version}",
+            "output": f"{len(manifest.items)} 个资产 · 拆解包 v{manifest.version}",
         },
         {
             "stage": "prompt_package",
@@ -527,7 +527,7 @@ def _production_lineage(
             "human_checkpoint": "用户确认资产拆解后，兵部才能生成镜头、动作链和可执行提示词。",
             "handoff_to": "基础图片生产",
             "acceptance_criteria": "资产提示词和镜头卡引用已审核资产，并把负面提示词单独列出。",
-            "output": f"{len(prompt_package.prompts)} asset prompts · {len(prompt_package.shots)} shot cards",
+            "output": f"{len(prompt_package.prompts)} 条资产提示词 · {len(prompt_package.shots)} 张镜头执行卡",
         },
         {
             "stage": "image_production",
@@ -538,7 +538,7 @@ def _production_lineage(
             "human_checkpoint": "失败、低分或风格不一致的图片需要重新生成或人工放行。",
             "handoff_to": "一致性质检",
             "acceptance_criteria": "人物和道具基础图保持干净白底，场景图保留空间信息。",
-            "output": f"{len(image_result.records)} image records",
+            "output": f"{len(image_result.records)} 张基础资产图",
         },
         {
             "stage": "visual_review",
@@ -549,7 +549,7 @@ def _production_lineage(
             "human_checkpoint": "交付前必须检查人物脸型、服装、道具、场景风格和引用关系。",
             "handoff_to": "Word 画布交付",
             "acceptance_criteria": "图片通过身份、风格、时代、空间和用途检查，风险项有处理结论。",
-            "output": f"{len(image_result.failures)} failures",
+            "output": f"{len(image_result.failures)} 个风险项",
         },
         {
             "stage": "delivery",
@@ -560,7 +560,7 @@ def _production_lineage(
             "human_checkpoint": "最终 Word 画布和引用清单必须一起交付，方便外部视频平台按图引用。",
             "handoff_to": "下游视频平台",
             "acceptance_criteria": "Word 画布、图片、镜头卡和 handoff manifest 可下载且引用一致。",
-            "output": f"{audit.embedded_images} embedded images",
+            "output": f"{audit.embedded_images} 张嵌入图片",
         },
     ]
 

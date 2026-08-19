@@ -334,6 +334,12 @@ class ComicV2DeliveryTests(unittest.TestCase):
                 self.assertTrue(stage["human_checkpoint"])
                 self.assertTrue(stage["handoff_to"])
                 self.assertTrue(stage["acceptance_criteria"])
+                self.assertNotIn("asset prompts", stage["output"])
+                self.assertNotIn("image records", stage["output"])
+                self.assertNotIn("failures", stage["output"])
+            self.assertIn("条资产提示词", lineage[3]["output"])
+            self.assertIn("张基础资产图", lineage[4]["output"])
+            self.assertIn("个风险项", lineage[5]["output"])
             quick_start = handoff["downstream_quick_start"]
             self.assertEqual([step["step"] for step in quick_start], [1, 2, 3, 4, 5])
             self.assertEqual(quick_start[0]["input_refs"], [delivery.path.name])
