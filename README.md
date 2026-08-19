@@ -297,7 +297,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 
 | 阶段 | 需要什么 | 通过后能做什么 |
 | --- | --- | --- |
-| 公开无 Key 演示 | 不需要模型 | 查看固定样例、下载七份交付物、阅读 quick-start 和安全边界 |
+| 公开无 Key 演示 | 不需要模型 | 查看固定样例、下载八份交付物、阅读 quick-start 和安全边界 |
 | 最小可跑配置 | 文本部门通过测试 | 聊故事、锁定剧本方向、拆资产、生成镜头和提示词草案 |
 | 完整制片配置 | 工部生图模型 + 刑部视觉理解模型通过测试 | 生成基础资产图、执行视觉质检、输出完整 Word 制片画布和 handoff manifest |
 

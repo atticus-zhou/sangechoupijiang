@@ -31,7 +31,7 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("自己的 API Key", text)
         self.assertIn("避免模型配置、工作区、历史和产物串线", text)
         self.assertIn("不需要 Python 后端", text)
-        self.assertIn("七份样例下载物", text)
+        self.assertIn("八份样例下载物", text)
         self.assertIn("最快验收路线", text)
         self.assertIn("九个可复核文件目录", text)
         self.assertIn("研究办公室阶段性交付声明", text)

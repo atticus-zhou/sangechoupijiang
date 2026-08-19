@@ -136,7 +136,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "data/comic_production_claim_report.json",
             "claim_upgrade_recovery",
             "regenerate_images",
-            "七份样例下载物",
+            "八份样例下载物",
             "下游生产 quick-start",
         ],
     },

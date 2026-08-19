@@ -482,7 +482,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "integration_options": portfolio_integration.get("integration_options") or [],
             "operator_checklist": [
                 "确认只发布 dist/public-showcase 里的静态文件。",
-                "确认七份样例下载物都能从页面下载。",
+                "确认八份样例下载物都能从页面下载。",
                 "确认公开页面没有真实生产入口、API Key、Cookie、用户数据或运行产物。",
                 "确认页面仍显示 demo-only、safe_public_demo 和 demo_structure_only。",
                 "在个人网站仓库运行 npm run doctor:deploy，先区分本地包、Vercel 授权和线上旧部署。",
