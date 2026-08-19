@@ -2,145 +2,6 @@
 
 [![Release readiness](https://github.com/atticus-zhou/sangechoupijiang/actions/workflows/release-readiness.yml/badge.svg)](https://github.com/atticus-zhou/sangechoupijiang/actions/workflows/release-readiness.yml)
 
-三个臭皮匠是一个本地优先的多 Agent 协作工作台。它把复杂任务拆成不同“办公室”，再由一组分工明确的 Agent 协同完成，让用户拿到可审查、可追溯、可下载的交付物，而不是只拿到一段聊天回复。
-
-当前状态：早期产品原型，适合本地体验、作品集展示和继续二次开发；还不是可以直接开放给陌生用户使用的 SaaS。
-
-## 现在能看什么
-
-- **公开无 Key 演示**：适合面试官或访客查看固定样例、下载交付物、理解产品边界。它不读取真实 `config.yaml`，不调用真实模型，不暴露 API Key。
-- **本地真实使用**：适合你或开发者在自己的机器上配置模型 Key 后运行真实任务。配置和产物默认留在本机。
-- **开发者扩展**：适合继续新增办公室。新增办公室必须通过模型隔离、工作区隔离、schema、恢复动作、样例交付和安全扫描。
-
-## 两个主要办公室
-
-### AI 漫剧制片办公室
-
-目标不是直接生成成片，而是生成可以交给视频生成、剪辑或下游制片流程继续使用的制片包：故事、视觉母版、人物/道具/场景资产、提示词包、图片证据、镜头执行说明、Word 制片画布和 `handoff_manifest.json`。
-
-公开样例目前能证明“结构、流程、追溯链路、Word 画布和下载物”是存在的；真实画质、一致性和模型输出质量必须用你自己的模型重新跑，并通过真实生产声明检查后才能对外宣称。
-
-### 研究办公室
-
-目标是把产品/行业调研拆成需求理解、资料收集、证据整理、图表建议、截图计划和报告交付。公开样例目前只声明为 staged demo：它会展示证据缺口、补证清单和人工账号/截图边界，但不会假装已经完成飞瓜会员级全自动采集。
-
-## 第一次运行
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item config.example.yaml config.yaml
-python run.py --port 8080
-```
-
-然后打开：
-
-```text
-http://127.0.0.1:8080/
-```
-
-如果页面没有反应，先确认后端是否还活着：
-
-```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8080/health
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8080/api/first-run-guide
-python scripts/verify_runtime_health_contract.py --format markdown
-python scripts/verify_first_run_guide_contract.py --format markdown
-```
-
-第一次从 GitHub 下载后，建议先跑这些不调用真实模型的检查：
-
-```powershell
-python scripts/doctor.py
-python scripts/verify_first_run_readiness.py --format markdown
-python scripts/verify_model_configuration_guidance.py --format markdown
-python scripts/export_github_onboarding_packet.py --format markdown
-python scripts/verify_release_readiness.py --format markdown
-python scripts/check_no_secrets.py
-```
-
-如果你想把“首次运行说明、模型配置、公开边界和安全验证结果”打成一个本地证明包，可以运行：
-
-```powershell
-python scripts/export_github_onboarding_packet.py --format markdown
-```
-
-它会生成 `tmp/github-onboarding-packet/` 和 `tmp/github-onboarding-packet.zip`。这个包不调用真实模型、不读取 `config.yaml`、不写工作区，只包含公开文档、`config.example.yaml` 和验证报告，适合给刚从 GitHub 下载项目的人快速复核。
-
-## 公开展示与部署边界
-
-如果只是放到个人网站或 Vercel 做作品集展示，不要开放真实生产入口，也不要让访客填写或使用你的 API Key。推荐导出静态展示包：
-
-```powershell
-python scripts/export_public_showcase.py
-python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
-```
-
-输出目录是 `dist/public-showcase/index.html`。如果复制到个人网站的 `public/three-stooges/`，还需要在个人网站仓库运行线上检查。线上 URL 只有在 `npm run check:online` 通过后，才能说已经部署成功。
-
-当前核心文档：
-
-- [docs/FIRST_RUN_DECISION_CARD.md](docs/FIRST_RUN_DECISION_CARD.md)：第一次使用时该选哪条路。
-- [docs/MODEL_CONFIGURATION.md](docs/MODEL_CONFIGURATION.md)：每个部门需要什么类型的模型。
-- [docs/DEPLOYMENT_MODES.md](docs/DEPLOYMENT_MODES.md)：公开演示、本地真实使用和未来 SaaS 的边界。
-- [docs/PUBLIC_RELEASE_HANDOFF.md](docs/PUBLIC_RELEASE_HANDOFF.md)：公开交接和发布检查清单。
-- [docs/PRODUCTIZATION_STATUS.md](docs/PRODUCTIZATION_STATUS.md)：当前产品化状态证据表。
-- [docs/REAL_PRODUCTION_CLAIMS.md](docs/REAL_PRODUCTION_CLAIMS.md)：什么情况下可以宣称真实生产质量。
-- [docs/COMIC_DOWNSTREAM_HANDOFF.md](docs/COMIC_DOWNSTREAM_HANDOFF.md)：AI 漫剧制片包如何交给下游。
-
-## 模型配置原则
-
-- `office_models` 会覆盖全局 `models`。
-- 不同办公室的模型配置、工作区、历史和产物必须隔离。
-- 文本模型、图片生成模型、视觉理解模型是不同能力，不要混填。
-- AI 漫剧制片办公室的完整生产通常需要：文本模型、图片生成模型、视觉理解模型。
-- 研究办公室的真实证据采集还需要人工账号、浏览器/截图能力或可追溯来源，不应该只靠文本模型假装完成。
-
-最小示例：
-
-```yaml
-office_models:
-  comic_production:
-    zhongshu:
-      provider: deepseek
-      model: deepseek-chat
-      api_key: ${DEEPSEEK_API_KEY}
-    bingbu:
-      provider: deepseek
-      model: deepseek-chat
-      api_key: ${DEEPSEEK_API_KEY}
-    gongbu:
-      provider: doubao
-      model: doubao-seedream-5
-      api_key: ${ARK_API_KEY}
-    xingbu:
-      provider: dashscope
-      model: qwen-vl-max
-      api_key: ${DASHSCOPE_API_KEY}
-```
-
-## 发布前检查
-
-```powershell
-python scripts/verify_productization_status.py --format markdown
-python scripts/verify_public_docs_readability.py --format markdown
-python scripts/verify_model_configuration_guidance.py --format markdown
-python scripts/export_github_onboarding_packet.py --format markdown
-python scripts/verify_release_readiness.py --format markdown
-python scripts/check_no_secrets.py
-```
-
-只有这些检查通过，并且线上展示 URL 也通过个人网站的 `npm run check:online`，才能说公开展示链路已经准备好。
-
----
-
-以下保留的是历史开发记录和旧门禁标记，后续会继续分批清理为正常中文文档。
-
-# 三个臭皮匠
-
-[![Release readiness](https://github.com/atticus-zhou/sangechoupijiang/actions/workflows/release-readiness.yml/badge.svg)](https://github.com/atticus-zhou/sangechoupijiang/actions/workflows/release-readiness.yml)
-
 三个臭皮匠是一个本地优先的多 Agent 协作工作台。它把复杂任务拆成不同“办公室”，再由一组分工明确的 Agent 协同完成，让用户拿到可审核、可追溯、可下载的交付物，而不是只拿到一段聊天回复。
 
 > 当前状态：早期产品原型。适合本地体验、作品展示和继续二次开发，还不是可以直接托管给陌生用户使用的 SaaS。
@@ -206,6 +67,8 @@ python scripts/verify_github_release_evidence.py --format markdown
 
 这些命令会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力。
 
+## 公开展示与部署边界
+
 如果只想放到个人网站或 Vercel 展示，不需要启动真实 FastAPI 后端。可以导出一个不调用真实模型的静态展示包：
 
 ```powershell
@@ -222,7 +85,7 @@ python scripts/verify_portfolio_showcase_sync.py --format markdown
 - `local_real_use`：使用者填写自己的本地 API Key，配置 `config.yaml`，先在模型页测试每个办公室部门，再在本机运行真实调研或 AI 漫剧制片。
 - `developer_extension`：首次审计不需要 API Key；新增办公室前，先看办公室协议、隔离检查和 `python scripts/verify_office_extension_governance.py --format markdown`，确认不会和现有办公室串线。
 
-输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。
+输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。线上 URL 只有在 `npm run check:online` 通过后，才能说已经部署成功。
 如果你把静态包复制到个人网站 `public/three-stooges/`，再运行 `python scripts/verify_portfolio_showcase_sync.py --format markdown`。它会逐个比对 `dist/public-showcase` 和个人网站拷贝的文件哈希：通过只能说明个人网站仓库里的静态拷贝和产品本体一致，不能说明线上 Vercel 已经刷新；线上仍必须由个人网站仓库的 `npm run check:online` 证明。其他开发者没有我的个人网站目录时，这条检查会显示 `skipped`；复制到自己的作品集目录后，可以用 `--target-dir` 指向自己的 `public/three-stooges`。
 如果已经部署到任意公开静态域名，再用产品仓库里的线上检查器复核真实 URL：
 
@@ -321,7 +184,7 @@ python scripts/verify_first_run_readiness.py --format markdown
 - `office_models` 会覆盖全局 `models`。
 - 没配置的部门会继续使用全局 `models` 里的同名部门。
 - 不同办公室的模型配置、工作区、历史和产物必须隔离。
-- 文本模型、生图模型和视觉理解模型是不同能力，不要混填。
+- 文本模型、图片生成模型、视觉理解模型是不同能力，不要混填。
 
 ### AI 漫剧制片办公室推荐能力
 
