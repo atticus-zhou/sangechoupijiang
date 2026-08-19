@@ -96,6 +96,7 @@ function navigate(page) {
     else if (page === 'prompts') loadPrompts();
     else if (page === 'history') loadHistory();
     if (page === 'offices') loadSystemPreflight();
+    if (page === 'offices') loadFirstRunGuide();
     if (page === 'offices') loadOfficeHallAvailability();
     if (page === 'offices') loadOfficeLaunchGates();
 }
@@ -3818,6 +3819,58 @@ async function loadSystemPreflight() {
         </div>`;
         return null;
     }
+}
+
+async function loadFirstRunGuide() {
+    const target = document.getElementById('first-run-guide-panel');
+    if (!target) return null;
+    target.innerHTML = '<div class="first-run-loading">正在整理第一次使用路线...</div>';
+    try {
+        const result = await API.get('/api/first-run-guide');
+        renderFirstRunGuide(result);
+        return result;
+    } catch (e) {
+        target.innerHTML = `<div class="first-run-error">第一次使用指南加载失败：${escapeHtml(e.message || String(e))}</div>`;
+        return null;
+    }
+}
+
+function renderFirstRunGuide(result) {
+    const target = document.getElementById('first-run-guide-panel');
+    if (!target || !result) return;
+    const paths = Array.isArray(result.paths) ? result.paths : [];
+    const quickChecks = Array.isArray(result.quick_checks) ? result.quick_checks : [];
+    target.innerHTML = `
+        <section class="first-run-card">
+            <div class="first-run-head">
+                <div>
+                    <strong>${escapeHtml(result.title || '第一次使用应该先做什么')}</strong>
+                    <p>${escapeHtml(result.summary || '')}</p>
+                </div>
+                <span>${escapeHtml(result.status || 'ready')}</span>
+            </div>
+            <div class="first-run-next">${escapeHtml(result.primary_next_action || '')}</div>
+            <div class="first-run-paths">
+                ${paths.slice(0, 3).map(path => `
+                    <article class="first-run-path ${path.requires_model_credentials ? 'needs-key' : 'no-key'}">
+                        <div>
+                            <strong>${escapeHtml(path.label || path.id || '')}</strong>
+                            <span>${path.requires_model_credentials ? '需要模型 Key' : '不需要模型 Key'}</span>
+                        </div>
+                        <p>${escapeHtml(path.fit_for || '')}</p>
+                        <ul>
+                            ${(path.first_actions || []).slice(0, 3).map(action => `<li>${escapeHtml(action)}</li>`).join('')}
+                        </ul>
+                    </article>
+                `).join('')}
+            </div>
+            <div class="first-run-checks">
+                ${quickChecks.slice(0, 5).map(item => `
+                    <code title="${escapeHtml(item.command || '')}">${escapeHtml(item.label || item.id || '')}</code>
+                `).join('')}
+            </div>
+        </section>
+    `;
 }
 
 async function loadOfficeHallAvailability() {

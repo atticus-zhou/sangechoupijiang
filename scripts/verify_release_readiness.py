@@ -50,6 +50,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_runtime_health_contract.py", "--format", "json"],
     },
     {
+        "id": "first_run_guide",
+        "title": "First-run guide API contract",
+        "command": ["scripts/verify_first_run_guide_contract.py", "--format", "json"],
+    },
+    {
         "id": "public_demo",
         "title": "Public no-key demo",
         "command": ["scripts/verify_public_demo_mode.py", "--format", "json"],
@@ -229,6 +234,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"alias={parsed.get('alias')}; "
                 f"service={parsed.get('service')}; "
                 f"offices={parsed.get('office_count')}; "
+                f"public_safe={parsed.get('public_safe')}; "
+                f"credentials={parsed.get('requires_model_credentials')}; "
+                f"real_models={parsed.get('calls_real_models')}"
+            )
+        if check_id == "first_run_guide":
+            return (
+                f"endpoint={parsed.get('endpoint')}; "
+                f"paths={parsed.get('path_count')}; "
+                f"quick_checks={parsed.get('quick_check_count')}; "
                 f"public_safe={parsed.get('public_safe')}; "
                 f"credentials={parsed.get('requires_model_credentials')}; "
                 f"real_models={parsed.get('calls_real_models')}"

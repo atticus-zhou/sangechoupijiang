@@ -35,6 +35,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "github_release_contract",
                 "public_docs_readability",
                 "runtime_health",
+                "first_run_guide",
                 "public_demo",
                 "static_showcase_export",
                 "static_showcase",
@@ -77,6 +78,11 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("endpoint=/health", runtime_health["summary"])
         self.assertIn("credentials=False", runtime_health["summary"])
         self.assertIn("real_models=False", runtime_health["summary"])
+        first_run_guide = next(item for item in payload["checks"] if item["id"] == "first_run_guide")
+        self.assertIn("endpoint=/api/first-run-guide", first_run_guide["summary"])
+        self.assertIn("paths=3", first_run_guide["summary"])
+        self.assertIn("quick_checks=5", first_run_guide["summary"])
+        self.assertIn("credentials=False", first_run_guide["summary"])
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("fast_review=5/5", public_demo["summary"])
         self.assertIn("reading_guide=", public_demo["summary"])

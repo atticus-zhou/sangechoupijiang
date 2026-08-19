@@ -196,6 +196,22 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".preflight-modes", css)
         self.assertIn(".preflight-limited", css)
 
+    def test_office_hall_renders_first_run_guide(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="first-run-guide-panel"', html)
+        self.assertIn("async function loadFirstRunGuide", js)
+        self.assertIn("/api/first-run-guide", js)
+        self.assertIn("function renderFirstRunGuide", js)
+        self.assertIn("if (page === 'offices') loadFirstRunGuide()", js)
+        self.assertIn("first-run-paths", js)
+        self.assertIn("first-run-checks", js)
+        self.assertIn(".first-run-guide-panel", css)
+        self.assertIn(".first-run-paths", css)
+        self.assertIn(".first-run-checks", css)
+
     def test_office_hall_cards_render_office_availability(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
         js = APP_JS.read_text(encoding="utf-8")

@@ -44,7 +44,9 @@ http://127.0.0.1:8080/
 
 ```powershell
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8080/health
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8080/api/first-run-guide
 python scripts/verify_runtime_health_contract.py --format markdown
+python scripts/verify_first_run_guide_contract.py --format markdown
 ```
 
 第一次从 GitHub 下载后，建议先跑这些不调用真实模型的检查：
