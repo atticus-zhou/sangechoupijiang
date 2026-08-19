@@ -693,6 +693,11 @@ def list_office_extension_blueprint() -> dict:
                 "name": "短视频投放办公室",
                 "user_job": "把产品卖点、素材、投放脚本和复盘数据组织成可执行的短视频投放工作流。",
                 "not_ready_reason": "还缺可复现的投放样例、平台数据边界、素材审核规则和失败恢复动作。",
+                "priority_rank": 2,
+                "priority_label": "第二候选",
+                "product_rationale": "它能承接 AI 漫剧制片办公室的素材和研究办公室的卖点洞察，但要等素材质量、投放数据口径和复盘 schema 更稳定。",
+                "reuse_from_existing_offices": ["comic_production", "research"],
+                "defer_until": "AI 漫剧素材包能稳定交付可用图片/提示词，且研究办公室能提供可追溯的卖点和人群证据。",
                 "required_before_public": [
                     "no_key_demo",
                     "model_preflight",
@@ -708,6 +713,11 @@ def list_office_extension_blueprint() -> dict:
                 "name": "电商选品办公室",
                 "user_job": "把市场需求、平台榜单、竞品价格带、评论痛点和供应链假设整理成选品决策包。",
                 "not_ready_reason": "还缺真实数据来源边界、证据缺口标注、表格 schema 和可下载样例交付物。",
+                "priority_rank": 1,
+                "priority_label": "优先候选",
+                "product_rationale": "它最容易复用研究办公室的来源、数据表、竞品表、截图计划和阶段性交付声明，也最容易让访客理解产物价值。",
+                "reuse_from_existing_offices": ["research"],
+                "defer_until": "研究办公室证据采集/人工补证流程稳定，并能提供一份完整的选品样例包。",
                 "required_before_public": [
                     "no_key_demo",
                     "source_trace",
@@ -723,6 +733,11 @@ def list_office_extension_blueprint() -> dict:
                 "name": "小说或短剧 IP 办公室",
                 "user_job": "把一个故事 IP 拆成受众定位、人物资产、改编路线、分集卖点和可交付企划案。",
                 "not_ready_reason": "还缺版权/素材边界、故事评审 schema、人工确认节点和作品集级样例。",
+                "priority_rank": 3,
+                "priority_label": "第三候选",
+                "product_rationale": "它和 AI 漫剧制片办公室的故事/资产链路相近，适合作为后续垂直化分支，但现在容易造成办公室职责重叠。",
+                "reuse_from_existing_offices": ["comic_production"],
+                "defer_until": "AI 漫剧制片办公室的故事合同、资产 manifest、提示词包和 Word 画布协议足够稳定，可被抽象复用。",
                 "required_before_public": [
                     "no_key_demo",
                     "human_checkpoints",
@@ -738,6 +753,11 @@ def list_office_extension_blueprint() -> dict:
                 "name": "技术项目办公室",
                 "user_job": "把技术需求拆成方案、任务、风险、实现记录、测试证据和可交接文档。",
                 "not_ready_reason": "还缺代码仓库权限边界、测试证据采集、变更审计和失败恢复协议。",
+                "priority_rank": 4,
+                "priority_label": "暂缓候选",
+                "product_rationale": "它价值高，但会直接碰到仓库权限、代码执行、安全扫描和外部部署证据，产品风险比内容/调研类办公室更高。",
+                "reuse_from_existing_offices": [],
+                "defer_until": "办公室隔离、权限授权、代码变更审计、CI 证据采集和失败回滚协议都能被独立验证。",
                 "required_before_public": [
                     "office_id_isolation",
                     "repo_boundary",
@@ -749,6 +769,41 @@ def list_office_extension_blueprint() -> dict:
                 ],
             },
         ],
+        "future_office_prioritization": {
+            "status": "decision_ready_but_not_started",
+            "decision_rule": "优先选择复用现有证据链最多、可下载交付物最清楚、权限风险最低、与当前主力办公室不重叠的办公室。",
+            "recommended_order": [
+                {
+                    "rank": 1,
+                    "office_id": "ecommerce_selection",
+                    "why_now": "最能复用研究办公室的数据、竞品、截图计划和 staged claim 边界，最容易形成可验收样例。",
+                    "first_deliverable": "选品决策包：来源清单、竞品价格带、评论痛点、机会判断、证据缺口和阶段性交付声明。",
+                },
+                {
+                    "rank": 2,
+                    "office_id": "short_video_ads",
+                    "why_now": "能承接研究洞察和漫剧素材，但需要更明确的平台数据、素材审核和投放复盘边界。",
+                    "first_deliverable": "短视频投放包：卖点脚本、素材清单、投放假设、复盘表和素材风险声明。",
+                },
+                {
+                    "rank": 3,
+                    "office_id": "story_ip",
+                    "why_now": "适合作为 AI 漫剧制片办公室的垂直分支，但必须避免重复内阁和资产拆解职责。",
+                    "first_deliverable": "IP 改编企划包：受众定位、人物关系、改编路线、分集卖点和版权/素材边界。",
+                },
+                {
+                    "rank": 4,
+                    "office_id": "technical_project",
+                    "why_now": "价值高但权限和安全边界最复杂，应该等平台级审计、CI 证据和回滚协议更成熟。",
+                    "first_deliverable": "技术交接包：需求拆解、实现记录、测试证据、风险清单和部署边界。",
+                },
+            ],
+            "do_not_start_until": [
+                "现有 AI 漫剧制片办公室和研究办公室的公开门禁继续通过。",
+                "新办公室能先写出无 Key 样例交付物和 public_claim_report。",
+                "新办公室有独立 office_id、模型配置、工作区、历史、schema gate 和恢复动作。",
+            ],
+        },
         "future_platform_backlog": [
             {
                 "id": "future_schema_validators",

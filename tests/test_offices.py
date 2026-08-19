@@ -120,8 +120,24 @@ class OfficeProfileTests(unittest.TestCase):
         for candidate in blueprint["future_office_candidates"]:
             self.assertTrue(candidate["user_job"])
             self.assertTrue(candidate["not_ready_reason"])
+            self.assertIsInstance(candidate["priority_rank"], int)
+            self.assertTrue(candidate["priority_label"])
+            self.assertTrue(candidate["product_rationale"])
+            self.assertTrue(candidate["defer_until"])
             self.assertIn("schema_gate", candidate["required_before_public"])
             self.assertIn("public_claim_report", candidate["required_before_public"])
+        prioritized = sorted(blueprint["future_office_candidates"], key=lambda item: item["priority_rank"])
+        self.assertEqual(
+            [item["id"] for item in prioritized],
+            ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"],
+        )
+        prioritization = blueprint["future_office_prioritization"]
+        self.assertEqual(prioritization["status"], "decision_ready_but_not_started")
+        self.assertEqual(
+            [item["office_id"] for item in prioritization["recommended_order"]],
+            ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"],
+        )
+        self.assertGreaterEqual(len(prioritization["do_not_start_until"]), 3)
         backlog_ids = {item["id"] for item in blueprint["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
         self.assertTrue(all(item["evidence_required"] for item in blueprint["future_platform_backlog"]))

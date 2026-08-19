@@ -27,6 +27,12 @@ EXPECTED_BACKLOG = {
     "future_schema_validators",
     "future_recovery_events",
 }
+EXPECTED_PRIORITY_ORDER = [
+    "ecommerce_selection",
+    "short_video_ads",
+    "story_ip",
+    "technical_project",
+]
 REQUIRED_PUBLIC_BLOCKERS = {
     "sample_delivery",
     "schema_gate",
@@ -58,6 +64,14 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         errors.append("candidate is missing user_job")
     if not candidate.get("not_ready_reason"):
         errors.append("candidate is missing not_ready_reason")
+    if not isinstance(candidate.get("priority_rank"), int):
+        errors.append("candidate is missing integer priority_rank")
+    if not candidate.get("priority_label"):
+        errors.append("candidate is missing priority_label")
+    if not candidate.get("product_rationale"):
+        errors.append("candidate is missing product_rationale")
+    if not candidate.get("defer_until"):
+        errors.append("candidate is missing defer_until")
     if len(required) < 5:
         errors.append("candidate must list at least five public-readiness requirements")
     if missing_core_blockers:
@@ -71,6 +85,11 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         "name": candidate.get("name", ""),
         "user_job": candidate.get("user_job", ""),
         "not_ready_reason": candidate.get("not_ready_reason", ""),
+        "priority_rank": candidate.get("priority_rank"),
+        "priority_label": candidate.get("priority_label", ""),
+        "product_rationale": candidate.get("product_rationale", ""),
+        "reuse_from_existing_offices": candidate.get("reuse_from_existing_offices", []),
+        "defer_until": candidate.get("defer_until", ""),
         "required_before_public": required,
         "blocking_backlog_ids": blocking_backlog,
         "missing_core_blockers": missing_core_blockers,
@@ -84,6 +103,8 @@ def verify_future_office_backlog() -> dict[str, Any]:
     blueprint = audit.get("extension_blueprint") or {}
     candidates = blueprint.get("future_office_candidates") or []
     backlog = blueprint.get("future_platform_backlog") or []
+    prioritization = blueprint.get("future_office_prioritization") or {}
+    recommended_order = prioritization.get("recommended_order") or []
     launch_matrix = audit.get("launch_matrix") or []
 
     candidate_ids = {str(item.get("id") or "") for item in candidates}
@@ -98,6 +119,25 @@ def verify_future_office_backlog() -> dict[str, Any]:
         errors.append(f"missing future office candidates: {', '.join(missing_candidates)}")
     if missing_backlog:
         errors.append(f"missing future platform backlog items: {', '.join(missing_backlog)}")
+    ranks = [item.get("priority_rank") for item in candidates]
+    if sorted(ranks) != [1, 2, 3, 4]:
+        errors.append("future office candidates must have unique priority ranks 1..4")
+    ranked_candidate_ids = [
+        str(item.get("id") or "")
+        for item in sorted(candidates, key=lambda item: int(item.get("priority_rank") or 999))
+    ]
+    if ranked_candidate_ids != EXPECTED_PRIORITY_ORDER:
+        errors.append("future office candidate priority order must be ecommerce_selection, short_video_ads, story_ip, technical_project")
+    recommended_ids = [str(item.get("office_id") or "") for item in sorted(recommended_order, key=lambda item: int(item.get("rank") or 999))]
+    if recommended_ids != EXPECTED_PRIORITY_ORDER:
+        errors.append("future office prioritization recommended_order must match candidate priority order")
+    if prioritization.get("status") != "decision_ready_but_not_started":
+        errors.append("future office prioritization must stay decision_ready_but_not_started")
+    if not prioritization.get("decision_rule") or len(prioritization.get("do_not_start_until") or []) < 3:
+        errors.append("future office prioritization must include a decision rule and do-not-start gates")
+    for item in recommended_order:
+        if not item.get("why_now") or not item.get("first_deliverable"):
+            errors.append(f"future office prioritization item is incomplete: {item.get('office_id') or item.get('rank')}")
     for report in reports:
         errors.extend(f"{report['id']}: {error}" for error in report["errors"])
         launch = launch_by_id.get(report["id"])
@@ -122,6 +162,11 @@ def verify_future_office_backlog() -> dict[str, Any]:
         "candidate_ids": sorted(candidate_id for candidate_id in candidate_ids if candidate_id),
         "backlog_count": len(backlog),
         "backlog_ids": sorted(backlog_id for backlog_id in backlog_ids if backlog_id),
+        "priority_order": ranked_candidate_ids,
+        "prioritization_status": prioritization.get("status", ""),
+        "decision_rule": prioritization.get("decision_rule", ""),
+        "recommended_order": recommended_order,
+        "do_not_start_until": prioritization.get("do_not_start_until", []),
         "reports": reports,
         "errors": errors,
     }
@@ -137,14 +182,17 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- Candidates: {payload.get('blocked_candidate_count')}/{payload.get('candidate_count')} blocked until evidence",
         f"- Platform backlog: {payload.get('backlog_count')} items ({', '.join(payload.get('backlog_ids') or [])})",
+        f"- Priority order: {', '.join(payload.get('priority_order') or [])}",
+        f"- Prioritization: {payload.get('prioritization_status')} — {payload.get('decision_rule')}",
         "",
-        "| Candidate | Status | Required before public | Platform blockers |",
-        "| --- | --- | --- | --- |",
+        "| Candidate | Priority | Status | Required before public | Platform blockers |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for item in payload.get("reports") or []:
         lines.append(
-            "| {id} | {status} | {required} | {backlog} |".format(
+            "| {id} | {priority} | {status} | {required} | {backlog} |".format(
                 id=item.get("id", ""),
+                priority=f"{item.get('priority_rank')}. {item.get('priority_label')}",
                 status=item.get("status", ""),
                 required=", ".join(item.get("required_before_public") or []),
                 backlog=", ".join(item.get("blocking_backlog_ids") or []) or "-",

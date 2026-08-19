@@ -653,6 +653,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append(f"static portfolio CI proof must preserve boundary marker: {marker}")
         extension_checklist = office_extension_story.get("starter_checklist") or []
         future_candidates = office_extension_story.get("future_office_candidates") or []
+        future_prioritization = office_extension_story.get("future_office_prioritization") or {}
         future_backlog = office_extension_story.get("future_platform_backlog") or []
         office_launch_matrix = portfolio.get("office_launch_matrix") or {}
         launch_matrix_summary = office_launch_matrix.get("summary") or {}
@@ -676,6 +677,21 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for item in future_candidates:
             if not item.get("user_job") or not item.get("not_ready_reason") or not item.get("required_before_public"):
                 errors.append(f"static showcase future office candidate is incomplete: {item.get('id')}")
+            if not item.get("priority_rank") or not item.get("product_rationale") or not item.get("defer_until"):
+                errors.append(f"static showcase future office candidate lacks prioritization detail: {item.get('id')}")
+        expected_priority_order = ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"]
+        priority_order = [
+            item.get("id")
+            for item in sorted(future_candidates, key=lambda item: int(item.get("priority_rank") or 999))
+        ]
+        if priority_order != expected_priority_order:
+            errors.append("static showcase future office candidates must expose product priority order")
+        if [item.get("office_id") for item in (future_prioritization.get("recommended_order") or [])] != expected_priority_order:
+            errors.append("static showcase future office prioritization must expose recommended order")
+        if future_prioritization.get("status") != "decision_ready_but_not_started":
+            errors.append("static showcase future office prioritization must stay decision_ready_but_not_started")
+        if not future_prioritization.get("decision_rule") or len(future_prioritization.get("do_not_start_until") or []) < 3:
+            errors.append("static showcase future office prioritization must explain decision rule and start gates")
         backlog_ids = {item.get("id") for item in future_backlog}
         for backlog_id in ("future_schema_validators", "future_recovery_events"):
             if backlog_id not in backlog_ids:
@@ -852,6 +868,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "office_extension_phase_count": len(extension_phases),
             "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
             "office_extension_candidate_count": len(future_candidates),
+            "office_extension_priority_order": priority_order,
+            "office_extension_prioritization_status": future_prioritization.get("status", ""),
             "office_extension_backlog_count": len(future_backlog),
             "office_launch_public_ready_count": launch_matrix_summary.get("public_ready_count", 0),
             "office_launch_office_count": launch_matrix_summary.get("office_count", 0),

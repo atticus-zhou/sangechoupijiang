@@ -388,6 +388,38 @@ a {
   color: var(--muted);
 }
 
+.office-priority-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.office-priority-item {
+  min-height: 220px;
+  padding: 16px;
+  border: 1px solid rgba(99, 167, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(13, 22, 36, 0.66);
+}
+
+.office-priority-item strong {
+  display: block;
+  margin: 12px 0 8px;
+  color: #eef6ff;
+  font-size: 17px;
+}
+
+.office-priority-item p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.compact-list {
+  margin-top: 8px;
+}
+
 .shot-contract-grid {
   display: grid;
   grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
@@ -1150,6 +1182,8 @@ noscript {
     .fast-review-list,
     .catalog-grid,
     .extension-check-grid,
+    .office-priority-grid,
+    .launch-matrix-grid,
     .public-recovery-policy-grid,
     .asset-usage-grid,
     .asset-spec-grid,

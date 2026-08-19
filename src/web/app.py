@@ -2242,6 +2242,7 @@ def _public_showcase_office_extension_story(blueprint: dict) -> dict:
     steps = list(blueprint.get("implementation_steps") or [])
     candidates = list(blueprint.get("future_office_candidates") or [])
     backlog = list(blueprint.get("future_platform_backlog") or [])
+    prioritization = blueprint.get("future_office_prioritization") or {}
     return {
         "title": "新办公室扩展路径",
         "summary": "未来任何办公室都不能只做一个入口就出现在公开产品里；它必须先证明产品价值、安全边界、office_id 隔离、人工确认节点、样例交付物、结构与失败恢复、无 Key 演示行为和发布检查。",
@@ -2276,10 +2277,29 @@ def _public_showcase_office_extension_story(blueprint: dict) -> dict:
                 "name": item.get("name", ""),
                 "user_job": item.get("user_job", ""),
                 "not_ready_reason": item.get("not_ready_reason", ""),
+                "priority_rank": item.get("priority_rank"),
+                "priority_label": item.get("priority_label", ""),
+                "product_rationale": item.get("product_rationale", ""),
+                "reuse_from_existing_offices": item.get("reuse_from_existing_offices", []),
+                "defer_until": item.get("defer_until", ""),
                 "required_before_public": item.get("required_before_public", []),
             }
             for item in candidates
         ],
+        "future_office_prioritization": {
+            "status": prioritization.get("status", ""),
+            "decision_rule": prioritization.get("decision_rule", ""),
+            "recommended_order": [
+                {
+                    "rank": item.get("rank"),
+                    "office_id": item.get("office_id", ""),
+                    "why_now": item.get("why_now", ""),
+                    "first_deliverable": item.get("first_deliverable", ""),
+                }
+                for item in (prioritization.get("recommended_order") or [])
+            ],
+            "do_not_start_until": prioritization.get("do_not_start_until", []),
+        },
         "future_platform_backlog": [
             {
                 "id": item.get("id", ""),

@@ -370,6 +370,21 @@ class PublicShowcaseManifestTests(unittest.TestCase):
             {"short_video_ads", "ecommerce_selection", "story_ip", "technical_project"},
         )
         self.assertTrue(all(item["not_ready_reason"] for item in extension_story["future_office_candidates"]))
+        self.assertEqual(
+            [
+                item["id"]
+                for item in sorted(
+                    extension_story["future_office_candidates"],
+                    key=lambda item: item["priority_rank"],
+                )
+            ],
+            ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"],
+        )
+        self.assertEqual(
+            [item["office_id"] for item in extension_story["future_office_prioritization"]["recommended_order"]],
+            ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"],
+        )
+        self.assertIn("复用现有证据链", extension_story["future_office_prioritization"]["decision_rule"])
         backlog_ids = {item["id"] for item in extension_story["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
         launch_matrix = embed["office_launch_matrix"]

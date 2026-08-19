@@ -855,6 +855,36 @@
       target.appendChild(matrixCard);
     }
 
+    const prioritization = story.future_office_prioritization || {};
+    const recommendedOrder = Array.isArray(prioritization.recommended_order)
+      ? prioritization.recommended_order
+      : [];
+    if (recommendedOrder.length) {
+      const priorityCard = element('article', 'card extension-verifier-card');
+      priorityCard.appendChild(element('h3', '', '下一间办公室怎么选'));
+      priorityCard.appendChild(element('p', '', prioritization.decision_rule || '优先做复用现有能力最多、交付物最清楚、权限风险最低的办公室。'));
+      const priorityGrid = element('div', 'office-priority-grid');
+      recommendedOrder.forEach(function (item) {
+        const block = element('div', 'office-priority-item');
+        block.appendChild(element('span', 'status-pill', '第 ' + text(item.rank || '') + ' 位'));
+        block.appendChild(element('strong', '', item.office_id || 'future_office'));
+        block.appendChild(element('p', '', item.why_now || ''));
+        addTextRow(block, '首个交付物', item.first_deliverable);
+        priorityGrid.appendChild(block);
+      });
+      priorityCard.appendChild(priorityGrid);
+      const gates = Array.isArray(prioritization.do_not_start_until) ? prioritization.do_not_start_until : [];
+      if (gates.length) {
+        const list = element('ul', 'proof-list compact-list');
+        gates.forEach(function (gate) {
+          list.appendChild(element('li', '', gate));
+        });
+        priorityCard.appendChild(element('h4', '', '暂不启动条件'));
+        priorityCard.appendChild(list);
+      }
+      target.appendChild(priorityCard);
+    }
+
     const grid = element('div', 'extension-check-grid');
     checklist.forEach(function (item) {
       const card = element('article', 'card extension-check-card');
@@ -869,12 +899,20 @@
     const candidates = Array.isArray(story.future_office_candidates) ? story.future_office_candidates : [];
     if (candidates.length) {
       const candidateGrid = element('div', 'extension-check-grid');
-      candidates.forEach(function (candidate) {
+      candidates
+        .slice()
+        .sort(function (a, b) {
+          return Number(a.priority_rank || 999) - Number(b.priority_rank || 999);
+        })
+        .forEach(function (candidate) {
         const card = element('article', 'card extension-check-card');
-        card.appendChild(element('span', 'status-pill', '未来候选'));
+        card.appendChild(element('span', 'status-pill', candidate.priority_label || '未来候选'));
         card.appendChild(element('h3', '', candidate.name || candidate.id));
         card.appendChild(element('p', '', candidate.user_job));
+        addTextRow(card, '产品判断', candidate.product_rationale);
         addTextRow(card, '暂不开放原因', candidate.not_ready_reason);
+        addTextRow(card, '启动条件', candidate.defer_until);
+        addTextRow(card, '复用基础', (candidate.reuse_from_existing_offices || []).join(' / ') || '待设计');
         addTextRow(card, '上线前证据', (candidate.required_before_public || []).join(' / '));
         candidateGrid.appendChild(card);
       });
