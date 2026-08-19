@@ -337,8 +337,18 @@ OFFICE_PROFILES = {
 }
 
 
-def list_offices() -> list[dict]:
-    return [office.to_dict() for office in OFFICE_PROFILES.values()]
+def list_offices(*, include_legacy: bool = False) -> list[dict]:
+    """Return public office profiles.
+
+    Legacy offices remain addressable for old workspaces and migration help, but
+    they should not appear in the hall or health payload by default.
+    """
+    offices = []
+    for office in OFFICE_PROFILES.values():
+        if not include_legacy and office.id in LEGACY_OFFICE_IDS:
+            continue
+        offices.append(_office_public_dict(office))
+    return offices
 
 
 def list_office_protocols() -> list[dict]:
@@ -928,6 +938,15 @@ def _office_protocol(office: OfficeProfile) -> dict:
         "artifact_types": office.artifact_types,
         "acceptance_criteria": office.acceptance_criteria,
     }
+
+
+def _office_public_dict(office: OfficeProfile) -> dict:
+    payload = office.to_dict()
+    is_legacy = office.id in LEGACY_OFFICE_IDS
+    payload["role"] = "legacy" if is_legacy else ("primary" if office.id in PRIMARY_OFFICE_IDS else "available")
+    payload["legacy_migration"] = LEGACY_OFFICE_MIGRATIONS.get(office.id, {})
+    payload["publicly_listed"] = not is_legacy
+    return payload
 
 
 def get_office(office_id: str) -> OfficeProfile:

@@ -36,9 +36,20 @@ class OfficeProfileTests(unittest.TestCase):
 
     def test_office_list_is_serializable(self):
         offices = list_offices()
+        office_ids = {office["id"] for office in offices}
 
         self.assertEqual(offices[0]["id"], "research")
         self.assertIn("artifact_types", offices[0])
+        self.assertIn("comic_production", office_ids)
+        self.assertNotIn("comic", office_ids)
+        self.assertTrue(all(office["publicly_listed"] for office in offices))
+
+        all_offices = list_offices(include_legacy=True)
+        by_id = {office["id"]: office for office in all_offices}
+        self.assertIn("comic", by_id)
+        self.assertEqual(by_id["comic"]["role"], "legacy")
+        self.assertFalse(by_id["comic"]["publicly_listed"])
+        self.assertEqual(by_id["comic"]["legacy_migration"]["target_office_id"], "comic_production")
 
     def test_public_office_protocol_text_is_readable(self):
         payload = {
