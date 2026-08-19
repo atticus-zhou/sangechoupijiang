@@ -742,6 +742,12 @@ async def get_comic_production_demo_api():
                 "uri": "/api/demo/comic-production/files/trace.json",
             },
             {
+                "type": "production_acceptance",
+                "title": "生产验收卡",
+                "status": "downloadable",
+                "uri": "/api/demo/comic-production/production-acceptance",
+            },
+            {
                 "type": "downstream_handoff_gate",
                 "title": "下游交接门禁说明",
                 "status": "documented",
@@ -803,6 +809,14 @@ async def get_comic_production_claim_report_demo_api():
     delivery = _ensure_comic_production_demo_delivery()
     report = build_claim_report(delivery["handoff_manifest"])
     return _public_claim_report(report)
+
+
+@app.get("/api/demo/comic-production/production-acceptance")
+async def get_comic_production_acceptance_demo_api():
+    """Return one public-safe acceptance card for the fixed comic demo package."""
+    delivery = _ensure_comic_production_demo_delivery()
+    report = build_claim_report(delivery["handoff_manifest"])
+    return _public_production_acceptance(delivery["handoff_manifest"], _public_claim_report(report))
 
 
 @app.get("/api/demo/comic-production/real-quality-upgrade-plan")
@@ -1024,6 +1038,163 @@ def _public_claim_report(report: dict) -> dict:
             "visual_evidence_level": evidence.get("visual_evidence_level", ""),
             "stored_benchmark_matches": bool(evidence.get("stored_benchmark_matches")),
             "production_quality_verified": bool(evidence.get("production_quality_verified")),
+        },
+    }
+
+
+def _public_production_acceptance(manifest_path: Path | None, claim: dict) -> dict:
+    """Build a no-key, no-local-path acceptance card from the fixed demo manifest."""
+    payload: dict = {}
+    if manifest_path and Path(manifest_path).exists():
+        payload = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    assets = payload.get("assets") or []
+    images = payload.get("images") or []
+    shots = payload.get("shots") or []
+    benchmark = _comic_v2_handoff_quality_benchmark(Path(manifest_path) if manifest_path else None)
+    prompt_summary = benchmark.get("prompt_quality_summary") or {}
+    image_summary = benchmark.get("image_quality_summary") or {}
+    asset_matrix = _public_showcase_asset_requirement_matrix(Path(manifest_path) if manifest_path else None)
+    asset_usage = _public_showcase_asset_usage_map(Path(manifest_path) if manifest_path else None)
+    decision = claim.get("downstream_handoff_decision") or {}
+    gate = claim.get("real_quality_promotion_gate") or {}
+
+    structure_ready = bool(assets and images and shots)
+    assets_ready = (
+        int(asset_matrix.get("ready_assets") or 0) == int(asset_matrix.get("total_assets") or 0)
+        and int(asset_matrix.get("missing_required_images") or 0) == 0
+        and int(asset_usage.get("ready_assets") or 0) == int(asset_usage.get("total_assets") or 0)
+    )
+    clean_base_assets = sum(
+        1
+        for image in images
+        if image.get("clean_background_required") is True
+    )
+    prompts_ready = (
+        prompt_summary.get("status") == "ready"
+        and int(prompt_summary.get("issue_count") or 0) == 0
+        and int(prompt_summary.get("clean_asset_prompt_count") or 0) == int(prompt_summary.get("asset_prompt_count") or 0)
+        and int(prompt_summary.get("director_prompt_count") or 0) == int(prompt_summary.get("shot_prompt_count") or 0)
+    )
+    delivery_ready = bool((payload.get("word_canvas") or {}).get("relative_path")) and bool(payload.get("manifest"))
+    real_quality_ready = bool(claim.get("can_claim_real_quality"))
+    public_demo_safe = bool(claim.get("can_publicly_show")) and claim.get("claim_level") == "demo_structure_only"
+
+    checklist = [
+        {
+            "id": "structure_handoff",
+            "label": "结构化制片包可交接",
+            "passed": structure_ready,
+            "evidence": f"assets={len(assets)}; images={len(images)}; shots={len(shots)}",
+        },
+        {
+            "id": "asset_identity_chain",
+            "label": "资产身份证和引用链路完整",
+            "passed": assets_ready,
+            "evidence": (
+                f"requirements={asset_matrix.get('ready_assets')}/{asset_matrix.get('total_assets')}; "
+                f"usage_map={asset_usage.get('ready_assets')}/{asset_usage.get('total_assets')}; "
+                f"image_roles={asset_usage.get('image_roles')}"
+            ),
+        },
+        {
+            "id": "clean_base_assets",
+            "label": "人物和道具基础资产保持干净背景",
+            "passed": clean_base_assets >= 4,
+            "evidence": f"clean_background_asset_images={clean_base_assets}",
+        },
+        {
+            "id": "director_prompts",
+            "label": "提示词具备导演执行信息",
+            "passed": prompts_ready,
+            "evidence": (
+                f"asset_prompts={prompt_summary.get('clean_asset_prompt_count')}/"
+                f"{prompt_summary.get('asset_prompt_count')}; "
+                f"director_prompts={prompt_summary.get('director_prompt_count')}/"
+                f"{prompt_summary.get('shot_prompt_count')}; "
+                f"issues={prompt_summary.get('issue_count')}"
+            ),
+        },
+        {
+            "id": "word_canvas_and_manifest",
+            "label": "Word 画布和 handoff manifest 可下载复核",
+            "passed": delivery_ready,
+            "evidence": "word_canvas=/api/demo/comic-production/files/word_canvas.docx; manifest=/api/demo/comic-production/files/handoff_manifest.json",
+        },
+        {
+            "id": "real_quality_boundary",
+            "label": "真实画质声明边界清楚",
+            "passed": public_demo_safe or real_quality_ready,
+            "evidence": (
+                f"claim_level={claim.get('claim_level')}; "
+                f"can_publicly_show={claim.get('can_publicly_show')}; "
+                f"can_claim_real_quality={claim.get('can_claim_real_quality')}"
+            ),
+        },
+    ]
+    failed = [item for item in checklist if not item["passed"]]
+    downstream_status = "ready_for_downstream" if real_quality_ready else "structure_demo_only"
+    human_decision = "这份包可以作为公开无 Key 样例展示流程、结构、引用链和 Word 画布；但当前仍是结构演示，不能说已经达到真实模型画质。"
+    if real_quality_ready:
+        human_decision = "这份包已经具备真实生产质量证据，可以交给下游视频生成或剪辑流程继续使用。"
+    if failed:
+        downstream_status = "blocked"
+        human_decision = "这份包还不能对外交接；先按失败项补齐资产、提示词、画布或声明证据。"
+
+    return {
+        "mode": "no_key_demo_production_acceptance",
+        "office_id": "comic_production",
+        "uri": "/api/demo/comic-production/production-acceptance",
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "writes_workspace": False,
+        "status": "passed" if not failed else "failed",
+        "accepted_for_public_demo": public_demo_safe and not failed,
+        "accepted_for_real_downstream": real_quality_ready and not failed,
+        "downstream_status": downstream_status,
+        "human_decision": human_decision,
+        "operator_next_step": "真实创作时，用真实 handoff manifest 重新运行生产基准和声明检查；只有 can_claim_real_quality=True 后才交给下游当成真实画质样例。",
+        "checklist": checklist,
+        "failure_count": len(failed),
+        "failed_check_ids": [item["id"] for item in failed],
+        "claim_level": claim.get("claim_level", ""),
+        "quality_claim": benchmark.get("status", ""),
+        "package_quality_score": benchmark.get("package_quality_score", 0),
+        "production_quality_verified": bool(benchmark.get("production_quality_verified")),
+        "visual_evidence_level": benchmark.get("visual_evidence_level", ""),
+        "image_quality_summary": {
+            "total_images": image_summary.get("total_images", 0),
+            "usable_images": image_summary.get("usable_images", 0),
+            "waste_or_rework_images": image_summary.get("waste_or_rework_images", 0),
+            "waste_or_rework_rate": image_summary.get("waste_or_rework_rate", 0),
+        },
+        "prompt_quality_summary": {
+            "status": prompt_summary.get("status", ""),
+            "issue_count": prompt_summary.get("issue_count", 0),
+            "asset_prompt_count": prompt_summary.get("asset_prompt_count", 0),
+            "clean_asset_prompt_count": prompt_summary.get("clean_asset_prompt_count", 0),
+            "shot_prompt_count": prompt_summary.get("shot_prompt_count", 0),
+            "director_prompt_count": prompt_summary.get("director_prompt_count", 0),
+        },
+        "downstream_handoff_decision": {
+            "status": decision.get("status", ""),
+            "handoff_allowed": bool(decision.get("handoff_allowed")),
+            "missing_before_handoff": list(decision.get("missing_before_handoff") or []),
+        },
+        "real_quality_promotion_gate": {
+            "ready": bool(gate.get("ready")),
+            "status": gate.get("status", ""),
+            "blocking_count": int(gate.get("blocking_count") or 0),
+            "next_action": gate.get("next_action", ""),
+        },
+        "evidence": {
+            "word_canvas_uri": "/api/demo/comic-production/files/word_canvas.docx",
+            "handoff_manifest_uri": "/api/demo/comic-production/files/handoff_manifest.json",
+            "trace_uri": "/api/demo/comic-production/files/trace.json",
+            "claim_report_uri": "/api/demo/comic-production/claim-report",
+            "asset_requirement_ready": asset_matrix.get("ready_assets", 0),
+            "asset_requirement_total": asset_matrix.get("total_assets", 0),
+            "asset_usage_map_items": asset_usage.get("total_assets", 0),
+            "quick_start_step_count": len(payload.get("downstream_quick_start") or []),
         },
     }
 
@@ -1493,6 +1664,10 @@ def _public_showcase_deliverable_guidance(item_type: str) -> tuple[str, list[str
             "用于判断这份公开样例到底能对外说到什么程度，重点看 claim_level、production_quality_verified 和禁止宣传的内容。",
             ["明确 demo-only 边界", "不宣称真实模型画质已验证", "给出下一步真实生产验证动作"],
         ),
+        "production_acceptance": (
+            "用于快速判断这份制片包到底能不能展示、能不能交给下游，以及如果不能还缺哪些证据。",
+            ["给出人能看懂的验收结论", "区分公开结构样例和真实下游可接手", "列出资产、提示词、画布和真实质量边界检查"],
+        ),
     }
     return guidance.get(
         item_type,
@@ -1763,27 +1938,34 @@ def _public_showcase_deliverable_reading_guide() -> list[dict]:
         },
         {
             "order": 5,
+            "title": "再看 AI 漫剧生产验收卡",
+            "uri": "/api/demo/comic-production/production-acceptance",
+            "look_for": "accepted_for_public_demo、accepted_for_real_downstream、downstream_status、checklist 和 human_decision 是否清楚。",
+            "proves": "访客不需要读完所有 JSON，也能知道当前样例只是结构演示，还是已经具备真实下游交接证据。",
+        },
+        {
+            "order": 6,
             "title": "再看 AI 漫剧交付盘点",
             "uri": "/api/demo/comic-production/handoff-inventory",
             "look_for": "production_verified_count、demo_only_count、needs_review_count 和 safe_public_claim 是否说明真实质量证据边界。",
             "proves": "公开展示不会把本地样例或历史产物误标成真实模型质量通过；多份制片包可以被统一盘点和分类。",
         },
         {
-            "order": 6,
+            "order": 7,
             "title": "再看研究办公室阶段报告",
             "uri": "/api/demo/research/files/report.md",
             "look_for": "报告结论、来源清单、数据表、截图计划和证据缺口是否分开呈现。",
             "proves": "研究办公室展示的是 staged delivery，不把未确认信息包装成完整自动化采集结果。",
         },
         {
-            "order": 7,
+            "order": 8,
             "title": "最后看研究办公室证据清单",
             "uri": "/api/demo/research/files/evidence_manifest.json",
             "look_for": "来源、数据、截图计划、缺口和人工确认项是否可追踪。",
             "proves": "公开演示保留证据边界，方便访客判断哪些已确认、哪些需要真实账号或人工补证。",
         },
         {
-            "order": 8,
+            "order": 9,
             "title": "最后确认研究办公室声明边界",
             "uri": "/api/demo/research/claim-report",
             "look_for": "claim_level、forbidden_public_claims、evidence_boundaries 和 claim_upgrade_checklist 是否明确说明不能宣称全自动平台采集。",
@@ -2419,7 +2601,7 @@ def _public_showcase_reproducibility_checklist() -> list[dict]:
             "order": 3,
             "title": "导出可托管静态展示包",
             "command": "python scripts/export_public_showcase.py && python scripts/verify_static_public_showcase.py --format markdown",
-            "expected": "看到 dist/public-showcase/index.html、7 个下载物、8 个可复核文件、7/7 阅读指南，并且 requires_backend=False。",
+            "expected": "看到 dist/public-showcase/index.html、8 个下载物、9 个可复核文件、9/9 阅读指南，并且 requires_backend=False。",
             "if_fails": "不要部署到 Vercel；先修复静态下载路径、data.js、截图资产或 claim report。",
         },
         {
@@ -2663,6 +2845,7 @@ async def get_public_showcase_demo_api():
     comic_demo = await get_comic_production_demo_api()
     comic_inventory = await get_comic_production_handoff_inventory_demo_api()
     comic_claim = await get_comic_production_claim_report_demo_api()
+    comic_acceptance = await get_comic_production_acceptance_demo_api()
     research_demo = await get_research_demo_api()
     research_claim = _research_claim_report_from_demo(research_demo)
     extension_blueprint = list_office_extension_blueprint()
@@ -2825,6 +3008,17 @@ async def get_public_showcase_demo_api():
             },
             "quality_upgrade_path": _public_showcase_quality_upgrade_path(comic_claim),
             "real_quality_upgrade_plan": _public_real_quality_upgrade_plan(comic_claim),
+            "production_acceptance": {
+                "uri": comic_acceptance.get("uri", "/api/demo/comic-production/production-acceptance"),
+                "status": comic_acceptance.get("status", ""),
+                "accepted_for_public_demo": comic_acceptance.get("accepted_for_public_demo", False),
+                "accepted_for_real_downstream": comic_acceptance.get("accepted_for_real_downstream", False),
+                "downstream_status": comic_acceptance.get("downstream_status", ""),
+                "human_decision": comic_acceptance.get("human_decision", ""),
+                "failure_count": comic_acceptance.get("failure_count", 0),
+                "checklist": comic_acceptance.get("checklist", []),
+                "real_quality_promotion_gate": comic_acceptance.get("real_quality_promotion_gate", {}),
+            },
             "research_claim_boundary": {
                 "uri": research_claim.get("uri", "/api/demo/research/claim-report"),
                 "claim_level": research_claim.get("claim_level", ""),

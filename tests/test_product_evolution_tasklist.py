@@ -97,7 +97,7 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("- [x] 个人网站展示产品定位、办公室大厅、主流程截图、样例交付物和 GitHub 链接。", text)
         self.assertIn("- [x] 在线公开版只开放无 Key 演示模式，不消耗作者额度。", text)
         self.assertIn("不依赖 FastAPI 后端的静态站点", text)
-        self.assertIn("真实产品截图、七份下载物、阅读指南、下游生产 quick-start 和安全边界", text)
+        self.assertIn("真实产品截图、八份下载物、阅读指南、下游生产 quick-start 和安全边界", text)
         self.assertIn("- [x] GitHub README 能让面试官、开发者和普通用户分别看懂怎么体验、怎么运行、怎么扩展。", text)
         self.assertIn("- [x] 所有公开展示都不暴露 API Key、Cookie、登录态、用户数据和运行产物。", text)
         self.assertIn("portfolio_embed", text)

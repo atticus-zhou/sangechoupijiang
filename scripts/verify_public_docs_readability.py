@@ -85,7 +85,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "claim_upgrade_recovery",
             "regenerate_images",
             "python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase",
-            "七份下载物",
+            "八份下载物",
             "下游生产 quick-start",
         ],
     },
