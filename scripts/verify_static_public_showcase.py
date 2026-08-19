@@ -358,6 +358,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         real_production_claim = portfolio.get("real_production_claim") or {}
         research_claim_boundary = portfolio.get("research_claim_boundary") or {}
         quality_upgrade_path = portfolio.get("quality_upgrade_path") or {}
+        real_quality_upgrade_plan = portfolio.get("real_quality_upgrade_plan") or {}
         office_extension_story = portfolio.get("office_extension_story") or {}
         portfolio_integration = portfolio.get("portfolio_integration") or {}
         claim_uri = str(real_production_claim.get("uri") or "")
@@ -417,6 +418,30 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append("static claim report must list missing non-fixture model images before handoff")
             if "regenerate_images" not in "\n".join(str(item) for item in (handoff_decision.get("required_actions") or [])):
                 errors.append("static claim report handoff decision must point to regenerate_images")
+        if real_quality_upgrade_plan.get("target_claim_level") != "real_quality_verified":
+            errors.append("static showcase must expose a real-quality upgrade target")
+        if real_quality_upgrade_plan.get("upgrade_status") != "blocked_until_real_model_evidence":
+            errors.append("static showcase upgrade plan must stay blocked until real model evidence exists")
+        if real_quality_upgrade_plan.get("calls_real_models") is not False or real_quality_upgrade_plan.get("requires_api_key") is not False:
+            errors.append("static showcase real-quality upgrade plan must be no-key and no-model")
+        upgrade_department_ids = {
+            item.get("department_id")
+            for item in (real_quality_upgrade_plan.get("model_preflight_departments") or [])
+        }
+        for department_id in ("gongbu", "xingbu", "bingbu"):
+            if department_id not in upgrade_department_ids:
+                errors.append(f"static showcase real-quality upgrade plan missing department: {department_id}")
+        upgrade_steps = real_quality_upgrade_plan.get("operator_steps") or []
+        if [item.get("phase") for item in upgrade_steps] != ["preflight", "recover_images", "visual_review", "rebuild_delivery", "release_claim"]:
+            errors.append("static showcase real-quality upgrade plan must preserve operator step order")
+        upgrade_evidence = real_quality_upgrade_plan.get("evidence_contract") or {}
+        if upgrade_evidence.get("ready_for_real_quality_claim") is not False:
+            errors.append("static showcase upgrade evidence must not be ready for real quality claim")
+        for marker in ("non_fixture_images", "provider_model_bound"):
+            if marker not in (upgrade_evidence.get("missing_check_ids") or []):
+                errors.append(f"static showcase upgrade evidence missing marker: {marker}")
+        if real_quality_upgrade_plan.get("recovery_action") != "regenerate_images":
+            errors.append("static showcase real-quality upgrade plan must use regenerate_images")
         research_claim_uri = str(research_claim_boundary.get("uri") or "")
         research_claim_path = temp_dir / research_claim_uri
         research_claim_payload = {}
@@ -852,6 +877,10 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "claim_upgrade_checklist_count": len(claim_upgrade_checklist),
             "claim_upgrade_recovery_action": claim_upgrade_recovery.get("recovery_action", ""),
             "claim_upgrade_recovery_step_count": len(claim_upgrade_recovery.get("steps") or []),
+            "real_quality_upgrade_status": real_quality_upgrade_plan.get("upgrade_status", ""),
+            "real_quality_upgrade_step_count": len(real_quality_upgrade_plan.get("operator_steps") or []),
+            "real_quality_upgrade_department_count": len(real_quality_upgrade_plan.get("model_preflight_departments") or []),
+            "real_quality_upgrade_recovery_action": real_quality_upgrade_plan.get("recovery_action", ""),
             "research_claim_report_ready": bool(
                 research_claim_payload.get("claim_level") == "staged_research_demo"
                 and research_claim_payload.get("can_claim_full_automation") is False
@@ -937,6 +966,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Comic claim report: {payload.get('claim_report_uri')} / ready={payload.get('claim_report_ready')}",
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
         f"- Claim upgrade recovery: action={payload.get('claim_upgrade_recovery_action')} / steps={payload.get('claim_upgrade_recovery_step_count')}",
+        f"- Real quality upgrade plan: status={payload.get('real_quality_upgrade_status')} / steps={payload.get('real_quality_upgrade_step_count')} / models={payload.get('real_quality_upgrade_department_count')} / recovery={payload.get('real_quality_upgrade_recovery_action')}",
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')} / capture_steps={payload.get('research_capture_playbook_step_count')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",

@@ -205,6 +205,18 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(upgrade_path["recovery_action"], "regenerate_images")
         self.assertEqual(upgrade_path["trace_endpoint"], "/api/tasks/{task_id}/comic-v2-trace.json")
         self.assertEqual(len(upgrade_path["steps"]), 3)
+        real_upgrade = showcase["portfolio_embed"]["real_quality_upgrade_plan"]
+        self.assertEqual(real_upgrade["current_claim_level"], "demo_structure_only")
+        self.assertEqual(real_upgrade["target_claim_level"], "real_quality_verified")
+        self.assertEqual(real_upgrade["upgrade_status"], "blocked_until_real_model_evidence")
+        self.assertEqual(real_upgrade["recovery_action"], "regenerate_images")
+        self.assertEqual(len(real_upgrade["operator_steps"]), 5)
+        self.assertEqual(
+            {item["department_id"] for item in real_upgrade["model_preflight_departments"]},
+            {"gongbu", "xingbu", "bingbu"},
+        )
+        self.assertFalse(real_upgrade["evidence_contract"]["ready_for_real_quality_claim"])
+        self.assertIn("provider_model_bound", real_upgrade["evidence_contract"]["missing_check_ids"])
         recovery_drill = showcase["portfolio_embed"]["public_recovery_drill"]
         self.assertEqual(recovery_drill["current_evidence_level"], "fixture_only")
         self.assertEqual(recovery_drill["recommended_action"], "regenerate_images")
@@ -434,6 +446,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("catalog-card", style_text)
         self.assertIn("hash-code", style_text)
         self.assertIn("quality_upgrade_path", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
+        self.assertIn("real_quality_upgrade_plan", json.dumps(showcase["portfolio_embed"], ensure_ascii=False))
+        self.assertIn("renderRealQualityUpgradePlan", static_script)
+        self.assertIn("real-quality-upgrade-plan-card", static_script)
+        self.assertIn("real-quality-model-grid", style_text)
         self.assertIn("renderQualityUpgradePath", static_script)
         self.assertIn("claim-upgrade-card", static_script)
         self.assertIn("claim-recovery-card", static_script)
@@ -512,6 +528,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Comic claim report: data/comic_production_claim_report.json / ready=True", completed.stdout)
         self.assertIn("Claim upgrade checklist: 4 items", completed.stdout)
         self.assertIn("Claim upgrade recovery: action=regenerate_images / steps=3", completed.stdout)
+        self.assertIn("Real quality upgrade plan: status=blocked_until_real_model_evidence / steps=5 / models=3 / recovery=regenerate_images", completed.stdout)
         self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Research claim report: downloads/research/claim-report.json / ready=True / level=staged_research_demo / full_automation=False", completed.stdout)
         self.assertIn("Research claim upgrade checklist: 3 items / evidence_handoff=3 / capture_steps=5", completed.stdout)

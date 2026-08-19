@@ -781,6 +781,53 @@ h3 {
   margin-top: 16px;
 }
 
+.real-quality-upgrade-plan-card {
+  grid-column: 1 / -1;
+  border-color: rgba(99, 167, 255, 0.32);
+  background: linear-gradient(180deg, rgba(18, 33, 58, 0.9), rgba(16, 23, 34, 0.96));
+}
+
+.real-quality-model-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.real-quality-model-item {
+  padding: 14px;
+  border: 1px solid rgba(99, 167, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(99, 167, 255, 0.07);
+}
+
+.real-quality-model-item strong,
+.real-quality-step-list strong {
+  display: block;
+  color: #eef6ff;
+}
+
+.real-quality-model-item small,
+.real-quality-step-list small {
+  display: block;
+  margin-top: 4px;
+  color: #9fb5d1;
+}
+
+.real-quality-model-item p,
+.real-quality-step-list p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.real-quality-step-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding-left: 22px;
+}
+
 .public-recovery-drill-card {
   grid-column: 1 / -1;
   border-color: rgba(239, 99, 87, 0.3);
@@ -1184,6 +1231,7 @@ noscript {
     .extension-check-grid,
     .office-priority-grid,
     .launch-matrix-grid,
+    .real-quality-model-grid,
     .public-recovery-policy-grid,
     .asset-usage-grid,
     .asset-spec-grid,

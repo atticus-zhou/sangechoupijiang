@@ -85,6 +85,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     handoff_inventory = portfolio_embed.get("handoff_inventory") or {}
     real_production_claim = portfolio_embed.get("real_production_claim") or {}
     quality_upgrade_path = portfolio_embed.get("quality_upgrade_path") or {}
+    real_quality_upgrade_plan = portfolio_embed.get("real_quality_upgrade_plan") or {}
     portfolio_integration = portfolio_embed.get("portfolio_integration") or {}
     portfolio_ci_proof = portfolio_integration.get("portfolio_ci_proof") or {}
     deployment_ci_verification = public_deployment.get("ci_verification") or {}
@@ -228,6 +229,23 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for item in quality_upgrade_path.get("steps") or []:
         if not item.get("owner") or not item.get("action") or not item.get("evidence") or not item.get("expected"):
             errors.append(f"quality upgrade path step is incomplete: {item.get('order') or item.get('owner')}")
+    if real_quality_upgrade_plan.get("target_claim_level") != "real_quality_verified":
+        errors.append("portfolio embed must expose the real-quality upgrade target")
+    if real_quality_upgrade_plan.get("upgrade_status") != "blocked_until_real_model_evidence":
+        errors.append("portfolio embed real-quality upgrade plan must stay blocked until real model evidence exists")
+    if real_quality_upgrade_plan.get("calls_real_models") is not False or real_quality_upgrade_plan.get("requires_api_key") is not False:
+        errors.append("portfolio embed real-quality upgrade plan must be no-key and no-model")
+    upgrade_department_ids = {
+        item.get("department_id")
+        for item in (real_quality_upgrade_plan.get("model_preflight_departments") or [])
+    }
+    for department_id in ("gongbu", "xingbu", "bingbu"):
+        if department_id not in upgrade_department_ids:
+            errors.append(f"real-quality upgrade plan missing department: {department_id}")
+    if [item.get("phase") for item in (real_quality_upgrade_plan.get("operator_steps") or [])] != ["preflight", "recover_images", "visual_review", "rebuild_delivery", "release_claim"]:
+        errors.append("real-quality upgrade plan must preserve operator step order")
+    if real_quality_upgrade_plan.get("recovery_action") != "regenerate_images":
+        errors.append("real-quality upgrade plan must use regenerate_images")
     if portfolio_integration.get("recommended_path") != "static_export":
         errors.append("portfolio integration must recommend static_export for public websites")
     integration_static = portfolio_integration.get("static_export") or {}
@@ -413,6 +431,10 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "real_production_can_claim_real_quality": real_production_claim.get("can_claim_real_quality"),
         "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
         "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
+        "real_quality_upgrade_status": real_quality_upgrade_plan.get("upgrade_status", ""),
+        "real_quality_upgrade_step_count": len(real_quality_upgrade_plan.get("operator_steps") or []),
+        "real_quality_upgrade_department_count": len(real_quality_upgrade_plan.get("model_preflight_departments") or []),
+        "real_quality_upgrade_recovery_action": real_quality_upgrade_plan.get("recovery_action", ""),
         "portfolio_integration_option_count": len(integration_options),
         "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
         "portfolio_ci_status": portfolio_ci_proof.get("status", ""),
@@ -696,6 +718,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 漫剧交付恢复动作：{inventory.get('recovery_item_count')} 份可恢复，动作 {', '.join(inventory.get('recovery_actions') or []) or '无'}，阶段 {inventory.get('recovery_stage_count')}",
         f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
+        f"- 真实质量升级操作面板：status={manifest.get('real_quality_upgrade_status')} / steps={manifest.get('real_quality_upgrade_step_count')} / models={manifest.get('real_quality_upgrade_department_count')} / recovery={manifest.get('real_quality_upgrade_recovery_action')}",
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
         f"- New office extension: checklist={manifest.get('office_extension_checklist_count')} / phases={manifest.get('office_extension_phase_count')} / doc={manifest.get('office_extension_doc')}",
         f"- Future office candidates: {manifest.get('office_extension_candidate_count')} / backlog={manifest.get('office_extension_backlog_count')}",

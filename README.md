@@ -506,6 +506,20 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 
 声明报告里的 `real_quality_promotion_gate` 是最终升级门。它会逐项检查制片包结构、manifest 内置质量基准、真实模型图片、视觉质检、图片返工数、导演式提示词、blocker 和 `production_quality_verified`。只要有一项缺失，就只能显示 `evidence_missing`，不能把这次交付说成真实生产质量。
 
+如果你要把无 Key 样例升级成真实模型质量验证，可以先看操作面板：
+
+```text
+GET /api/demo/comic-production/real-quality-upgrade-plan
+```
+
+也可以在本地运行：
+
+```powershell
+python scripts/verify_comic_real_quality_upgrade_plan.py --format markdown
+```
+
+这条路径不会读取 API Key、不会调用真实模型、不会写用户工作区。它只列出从 `demo_structure_only` 升级到 `real_quality_verified` 之前必须补齐的模型预检、图片返工、视觉质检、交付重建和发布声明步骤。当前公开样例会保持 `blocked_until_real_model_evidence`，直到真实模型图片、视觉质检和下游交付证据全部进入 manifest。
+
 历史页的追溯接口 `/api/tasks/{task_id}/comic-v2-trace.json` 会返回 `image_production_evidence`、`image_quality_summary` 和 `downstream_handoff_decision`。当图片证据显示 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown` 时，说明当前制片包只能证明结构或部分流程，不能证明真实画质；此时下游决策通常会保持 `structure_demo_only` 或 `blocked`，`handoff_allowed=false`，不能交给 Libtv、小云雀或其他视频平台当作最终生产素材。`image_quality_summary` 会列出 total/usable/waste-or-rework、返工率、失败图片 ID 和 `rework_instructions`；返工指令会说明某张图应该补跑视觉质检、保留提示词重新生图，还是退回提示词重写。此时可以对 `/api/workspaces/{workspace_id}/comic/v2/quality/recover` 提交 `{"action":"regenerate_images"}`：系统会保留已确认故事、资产拆解、提示词包和旧交付记录，把项目退回图片生成/质检阶段，用真实模型重新补齐图片证据。只有 `downstream_handoff_decision.status=ready_for_downstream` 且 `handoff_allowed=true` 时，才可以把这份制片包描述为可交给下游继续生产。
 
 ## 当前边界

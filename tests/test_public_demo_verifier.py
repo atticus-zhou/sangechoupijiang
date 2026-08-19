@@ -81,6 +81,10 @@ class PublicDemoVerifierTests(unittest.TestCase):
         )
         self.assertEqual(payload["showcase_manifest"]["real_production_claim_level"], "demo_structure_only")
         self.assertFalse(payload["showcase_manifest"]["real_production_can_claim_real_quality"])
+        self.assertEqual(payload["showcase_manifest"]["real_quality_upgrade_status"], "blocked_until_real_model_evidence")
+        self.assertEqual(payload["showcase_manifest"]["real_quality_upgrade_step_count"], 5)
+        self.assertEqual(payload["showcase_manifest"]["real_quality_upgrade_department_count"], 3)
+        self.assertEqual(payload["showcase_manifest"]["real_quality_upgrade_recovery_action"], "regenerate_images")
         self.assertEqual(
             payload["showcase_manifest"]["static_export_command"],
             "python scripts/export_public_showcase.py",
@@ -174,6 +178,9 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("claim report", result.stdout)
         self.assertIn("upgrade_checklist=", result.stdout)
         self.assertIn("recovery=regenerate_images", result.stdout)
+        self.assertIn("真实质量升级操作面板", result.stdout)
+        self.assertIn("status=blocked_until_real_model_evidence", result.stdout)
+        self.assertIn("steps=5", result.stdout)
         self.assertIn("action=regenerate_images", result.stdout)
         self.assertIn("source=dist/public-showcase", result.stdout)
         self.assertIn("New office extension: checklist=8 / phases=8 / doc=docs/NEW_OFFICE_STARTER_CHECKLIST.md", result.stdout)

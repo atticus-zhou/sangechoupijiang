@@ -191,6 +191,7 @@
     const promotionGate = claim.real_quality_promotion_gate || {};
     const researchClaim = portfolio.research_claim_boundary || {};
     const qualityUpgradePath = portfolio.quality_upgrade_path || {};
+    const realQualityUpgradePlan = portfolio.real_quality_upgrade_plan || {};
     const grid = document.getElementById('claim-grid');
     const level = document.getElementById('claim-level');
     if (!grid || !level) return;
@@ -343,8 +344,53 @@
 
     renderDownstreamHandoffDecision(grid, claim.downstream_handoff_decision || {});
     renderClaimUpgradeRecovery(grid, claim.claim_upgrade_recovery || {});
+    renderRealQualityUpgradePlan(grid, realQualityUpgradePlan);
     renderQualityUpgradePath(grid, qualityUpgradePath);
     renderPublicRecoveryDrill(grid, portfolio.public_recovery_drill || {});
+  }
+
+  function renderRealQualityUpgradePlan(grid, plan) {
+    if (!grid || !plan || !plan.target_claim_level) return;
+    const card = element('article', 'card claim-card real-quality-upgrade-plan-card');
+    card.appendChild(element('h3', '', '\u771f\u5b9e\u8d28\u91cf\u5347\u7ea7\u64cd\u4f5c\u9762\u677f'));
+    addTextRow(card, '\u5f53\u524d\u58f0\u660e', plan.current_claim_level);
+    addTextRow(card, '\u76ee\u6807\u58f0\u660e', plan.target_claim_level);
+    addTextRow(card, '\u5347\u7ea7\u72b6\u6001', plan.upgrade_status);
+    addTextRow(card, '\u6062\u590d\u52a8\u4f5c', plan.recovery_action);
+    if (plan.next_action) {
+      card.appendChild(element('p', '', text(plan.next_action)));
+    }
+    const departments = Array.isArray(plan.model_preflight_departments)
+      ? plan.model_preflight_departments
+      : [];
+    if (departments.length) {
+      const departmentGrid = element('div', 'real-quality-model-grid');
+      departments.forEach(function (item) {
+        const block = element('div', 'real-quality-model-item');
+        block.appendChild(element('strong', '', text(item.department_name || item.department_id)));
+        block.appendChild(element('small', '', text(item.human_label || item.required_capability)));
+        block.appendChild(element('p', '', text(item.why || '')));
+        departmentGrid.appendChild(block);
+      });
+      card.appendChild(departmentGrid);
+    }
+    const steps = Array.isArray(plan.operator_steps) ? plan.operator_steps : [];
+    if (steps.length) {
+      const list = element('ol', 'real-quality-step-list');
+      steps.forEach(function (step) {
+        const li = element('li', '');
+        li.appendChild(element('strong', '', text(step.phase || step.order)));
+        li.appendChild(element('p', '', text(step.action || '')));
+        li.appendChild(element('small', '', '\u9a8c\u6536\uff1a' + text(step.done_when || '')));
+        list.appendChild(li);
+      });
+      card.appendChild(list);
+    }
+    const evidence = plan.evidence_contract || {};
+    if (Array.isArray(evidence.missing_check_ids) && evidence.missing_check_ids.length) {
+      card.appendChild(element('code', 'hash-code', '\u5f85\u8865\u8bc1\u636e\uff1a' + evidence.missing_check_ids.map(text).join(' / ')));
+    }
+    grid.appendChild(card);
   }
 
   function renderDownstreamHandoffDecision(grid, decision) {

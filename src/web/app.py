@@ -661,6 +661,137 @@ async def get_comic_production_claim_report_demo_api():
     return _public_claim_report(report)
 
 
+@app.get("/api/demo/comic-production/real-quality-upgrade-plan")
+async def get_comic_real_quality_upgrade_plan_demo_api():
+    """Return the no-key operator plan for upgrading the demo to real image quality evidence."""
+    delivery = _ensure_comic_production_demo_delivery()
+    report = build_claim_report(delivery["handoff_manifest"])
+    return _public_real_quality_upgrade_plan(_public_claim_report(report))
+
+
+def _public_real_quality_upgrade_plan(claim: dict) -> dict:
+    """Translate the claim report into a human-operable real-quality upgrade plan."""
+    gate = claim.get("real_quality_promotion_gate") or {}
+    real_model_evidence = claim.get("real_model_evidence_requirements") or {}
+    recovery = claim.get("claim_upgrade_recovery") or {}
+    decision = claim.get("downstream_handoff_decision") or {}
+    checklist = list(claim.get("claim_upgrade_checklist") or [])
+    model_preflight_departments = [
+        {
+            "department_id": "gongbu",
+            "department_name": "工部",
+            "required_capability": "image_generation",
+            "human_label": "生图模型",
+            "why": "重新生成人物、道具和场景基础资产图，清除 fixture 图片证据。",
+        },
+        {
+            "department_id": "xingbu",
+            "department_name": "刑部",
+            "required_capability": "vision_understanding",
+            "human_label": "视觉理解模型",
+            "why": "逐张检查身份、画风、时代、空间、纯净度、结构和用途七个维度。",
+        },
+        {
+            "department_id": "bingbu",
+            "department_name": "兵部",
+            "required_capability": "text",
+            "human_label": "文本/镜头模型",
+            "why": "必要时重写导演式镜头提示词和视频执行说明。",
+        },
+    ]
+    operator_steps = [
+        {
+            "order": 1,
+            "phase": "preflight",
+            "owner": "使用者 / 模型页",
+            "action": "先在 AI 漫剧制片办公室模型页测试工部、刑部、兵部模型。",
+            "done_when": "生图、视觉理解和文本镜头能力都通过；Key 只留在本地配置或私有部署环境。",
+            "blocks_if_missing": ["gongbu", "xingbu", "bingbu"],
+        },
+        {
+            "order": 2,
+            "phase": "recover_images",
+            "owner": "工部 / 尚书省",
+            "action": "执行 regenerate_images，保留故事、资产和提示词，重新生成基础资产图。",
+            "done_when": "每张图片都写入非 fixture 标记、provider、model、image_id 和生成记录。",
+            "preserves": recovery.get("preserves", []),
+            "rebuilds": ["image_production_evidence"],
+        },
+        {
+            "order": 3,
+            "phase": "visual_review",
+            "owner": "刑部",
+            "action": "对真实模型图片执行七维视觉质检，并标记 handoff_ready。",
+            "done_when": "real_model_evidence_requirements.ready_for_real_quality_claim=true，且没有废片或返工图。",
+            "required_evidence": [
+                "review.status=pass",
+                "handoff_ready=true",
+                "seven_dimension_scores",
+                "waste_or_rework_images=0",
+            ],
+        },
+        {
+            "order": 4,
+            "phase": "rebuild_delivery",
+            "owner": "礼部 / 刑部",
+            "action": "重新生成 Word 画布、handoff manifest、trace 和 claim report。",
+            "done_when": "stored_benchmark_matches=true 且 production_quality_verified=true。",
+            "rebuilds": recovery.get("rebuilds", []),
+        },
+        {
+            "order": 5,
+            "phase": "release_claim",
+            "owner": "使用者 / 发布门禁",
+            "action": "重跑真实生产声明和发布门禁，再决定能否对外说真实质量已验证。",
+            "done_when": "claim_level=real_quality_verified，downstream_handoff_decision.handoff_allowed=true。",
+            "commands": [
+                "python scripts/verify_comic_real_production_claim.py --manifest <handoff_manifest> --format markdown",
+                "python scripts/verify_comic_v2_production_benchmark.py --manifest <handoff_manifest> --format markdown",
+                "python scripts/check_no_secrets.py",
+            ],
+        },
+    ]
+    return {
+        "mode": "no_key_real_quality_upgrade_plan",
+        "office_id": "comic_production",
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "writes_workspace": False,
+        "current_claim_level": claim.get("claim_level", ""),
+        "target_claim_level": "real_quality_verified",
+        "current_downstream_status": decision.get("status", ""),
+        "handoff_allowed_now": bool(decision.get("handoff_allowed")),
+        "can_claim_real_quality_now": bool(claim.get("can_claim_real_quality")),
+        "upgrade_status": "ready" if gate.get("ready") else "blocked_until_real_model_evidence",
+        "blocking_checks": gate.get("missing_check_ids", []),
+        "next_action": gate.get("next_action") or recovery.get("next_action") or claim.get("next_action", ""),
+        "model_preflight_departments": model_preflight_departments,
+        "operator_steps": operator_steps,
+        "evidence_contract": {
+            "total_images": real_model_evidence.get("total_images", 0),
+            "non_fixture_images": real_model_evidence.get("non_fixture_images", 0),
+            "provider_model_images": real_model_evidence.get("provider_model_images", 0),
+            "review_records": real_model_evidence.get("review_records", 0),
+            "handoff_ready_reviews": real_model_evidence.get("handoff_ready_reviews", 0),
+            "seven_dimension_scored_reviews": real_model_evidence.get("seven_dimension_scored_reviews", 0),
+            "missing_check_ids": real_model_evidence.get("missing_check_ids", []),
+            "ready_for_real_quality_claim": bool(real_model_evidence.get("ready_for_real_quality_claim")),
+        },
+        "claim_upgrade_checklist": checklist,
+        "recovery_action": recovery.get("recovery_action", ""),
+        "recovery_endpoint": recovery.get("recovery_endpoint", ""),
+        "preserves": recovery.get("preserves", []),
+        "rebuilds": recovery.get("rebuilds", []),
+        "verification_commands": [
+            "python scripts/verify_comic_real_production_claim.py --manifest <handoff_manifest> --format markdown",
+            "python scripts/verify_comic_v2_production_benchmark.py --manifest <handoff_manifest> --format markdown",
+            "python scripts/verify_comic_v2_downstream_handoff.py --manifest <handoff_manifest> --format markdown",
+            "python scripts/check_no_secrets.py",
+        ],
+        "public_boundary": "这个接口只说明如何升级到真实质量证据；它不读取 API Key、不调用模型、不写工作区，也不能替代真实模型重跑。",
+    }
+
+
 def _public_claim_report(report: dict) -> dict:
     evidence = report.get("evidence") or {}
     recovery = report.get("claim_upgrade_recovery") or {}
@@ -2548,6 +2679,7 @@ async def get_public_showcase_demo_api():
                 "next_action": comic_inventory.get("next_action", ""),
             },
             "quality_upgrade_path": _public_showcase_quality_upgrade_path(comic_claim),
+            "real_quality_upgrade_plan": _public_real_quality_upgrade_plan(comic_claim),
             "research_claim_boundary": {
                 "uri": research_claim.get("uri", "/api/demo/research/claim-report"),
                 "claim_level": research_claim.get("claim_level", ""),

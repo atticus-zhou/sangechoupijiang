@@ -42,6 +42,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_downstream_handoff",
                 "comic_production_benchmark",
                 "comic_real_production_claim",
+                "comic_real_quality_upgrade_plan",
                 "public_comic_trace_bundle",
                 "comic_handoff_inventory",
                 "research_readiness",
@@ -118,6 +119,13 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("upgrade_checklist=4", comic_claim["summary"])
         self.assertIn("recovery=regenerate_images", comic_claim["summary"])
         self.assertIn("recovery_steps=3", comic_claim["summary"])
+        comic_upgrade = next(item for item in payload["checks"] if item["id"] == "comic_real_quality_upgrade_plan")
+        self.assertIn("current=demo_structure_only", comic_upgrade["summary"])
+        self.assertIn("target=real_quality_verified", comic_upgrade["summary"])
+        self.assertIn("status=blocked_until_real_model_evidence", comic_upgrade["summary"])
+        self.assertIn("steps=5", comic_upgrade["summary"])
+        self.assertIn("models=gongbu,xingbu,bingbu", comic_upgrade["summary"])
+        self.assertIn("recovery=regenerate_images", comic_upgrade["summary"])
         public_trace = next(item for item in payload["checks"] if item["id"] == "public_comic_trace_bundle")
         self.assertIn("assets=3", public_trace["summary"])
         self.assertIn("images=7", public_trace["summary"])
@@ -131,7 +139,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("production_verified=0", comic_inventory["summary"])
         self.assertIn("demo_only=", comic_inventory["summary"])
         research_readiness = next(item for item in payload["checks"] if item["id"] == "research_readiness")
-        self.assertIn("reading_guide=2/2", research_readiness["summary"])
+        self.assertIn("reading_guide=3/3", research_readiness["summary"])
         self.assertIn("handoff=3/3", research_readiness["summary"])
         self.assertIn("capture=5/5", research_readiness["summary"])
         self.assertIn("claim=staged_research_demo", research_readiness["summary"])
@@ -196,6 +204,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("AI comic production quality benchmark", completed.stdout)
         self.assertIn("AI comic real production claim boundary", completed.stdout)
+        self.assertIn("AI comic real quality upgrade plan", completed.stdout)
         self.assertIn("Public AI comic trace bundle", completed.stdout)
         self.assertIn("Office schema gate registry", completed.stdout)
         self.assertIn("bindings=11/11", completed.stdout)
@@ -226,11 +235,13 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("prompt_quality=ready", completed.stdout)
         self.assertIn("prompt_issues=0", completed.stdout)
         self.assertIn("claim_level=demo_structure_only", completed.stdout)
+        self.assertIn("target=real_quality_verified", completed.stdout)
+        self.assertIn("status=blocked_until_real_model_evidence", completed.stdout)
         self.assertIn("assets=3; images=7; shots=2; claim=demo_structure_only; visual=fixture_only; real_quality=False; supports_real_quality=False", completed.stdout)
         self.assertIn("upgrade_checklist=3", completed.stdout)
         self.assertIn("recovery=regenerate_images", completed.stdout)
         self.assertIn("production_verified=0", completed.stdout)
-        self.assertIn("reading_guide=2/2", completed.stdout)
+        self.assertIn("reading_guide=3/3", completed.stdout)
         self.assertIn("handoff=3/3", completed.stdout)
         self.assertIn("claim=staged_research_demo", completed.stdout)
         self.assertIn("full_auto=False", completed.stdout)

@@ -253,6 +253,21 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("image_production_evidence", upgrade_path["rebuilds"])
         self.assertEqual([item["order"] for item in upgrade_path["steps"]], [1, 2, 3])
         self.assertTrue(all(item["owner"] and item["action"] and item["evidence"] and item["expected"] for item in upgrade_path["steps"]))
+        real_upgrade = embed["real_quality_upgrade_plan"]
+        self.assertEqual(real_upgrade["current_claim_level"], "demo_structure_only")
+        self.assertEqual(real_upgrade["target_claim_level"], "real_quality_verified")
+        self.assertEqual(real_upgrade["upgrade_status"], "blocked_until_real_model_evidence")
+        self.assertEqual(real_upgrade["recovery_action"], "regenerate_images")
+        self.assertEqual(
+            {item["department_id"] for item in real_upgrade["model_preflight_departments"]},
+            {"gongbu", "xingbu", "bingbu"},
+        )
+        self.assertEqual(
+            [item["phase"] for item in real_upgrade["operator_steps"]],
+            ["preflight", "recover_images", "visual_review", "rebuild_delivery", "release_claim"],
+        )
+        self.assertFalse(real_upgrade["evidence_contract"]["ready_for_real_quality_claim"])
+        self.assertIn("non_fixture_images", real_upgrade["evidence_contract"]["missing_check_ids"])
         handoff_guide = next(
             item for item in embed["deliverable_reading_guide"] if "handoff manifest" in item["title"]
         )

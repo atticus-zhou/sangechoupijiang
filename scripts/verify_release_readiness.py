@@ -85,6 +85,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_real_production_claim.py", "--format", "json"],
     },
     {
+        "id": "comic_real_quality_upgrade_plan",
+        "title": "AI comic real quality upgrade plan",
+        "command": ["scripts/verify_comic_real_quality_upgrade_plan.py", "--format", "json"],
+    },
+    {
         "id": "public_comic_trace_bundle",
         "title": "Public AI comic trace bundle",
         "command": ["scripts/verify_public_comic_trace_bundle.py", "--format", "json"],
@@ -260,6 +265,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"upgrade_checklist={len(parsed.get('claim_upgrade_checklist') or [])}; "
                 f"recovery={recovery.get('recovery_action')}; "
                 f"recovery_steps={len(recovery.get('steps') or [])}"
+            )
+        if check_id == "comic_real_quality_upgrade_plan":
+            return (
+                f"current={parsed.get('current_claim_level')}; "
+                f"target={parsed.get('target_claim_level')}; "
+                f"status={parsed.get('upgrade_status')}; "
+                f"steps={parsed.get('operator_step_count')}; "
+                f"models={','.join(parsed.get('model_preflight_departments') or [])}; "
+                f"recovery={parsed.get('recovery_action')}"
             )
         if check_id == "public_comic_trace_bundle":
             return (
