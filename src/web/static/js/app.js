@@ -3488,7 +3488,7 @@ const MODEL_REQUIREMENTS = {
         hubu: { type: '文本 + 数据整理模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '整理竞品表、价格带、销量字段和评论痛点。' },
         bingbu: { type: '文本 + 网页取证辅助模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key；截图识别建议千问 VL', use: '规划平台数据采集、截图目标和证据提取。' },
         xingbu: { type: '文本/视觉质检模型', key: '普通质检用文本 Key；截图识别建议千问 VL API Key', use: '核验数据年份、来源质量、截图内容和报告完整度。' },
-        gongbu: { type: '文本生成模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '生成调研报告、老板简报、表格和可导出材料。' },
+        gongbu: { type: '浏览器/人工证据能力', key: '不在这里填模型 Key；优先使用登录后的浏览器、人工上传截图或平台导出', use: '归档截图证据、平台页面和第三方后台材料；不能用普通文本模型伪装自动取证。', capability: 'browser_or_human_evidence' },
     },
     comic_production: {
         neige: { type: '文本创作模型', key: 'DeepSeek / 千问 / GPT 等文本 API Key', use: '和人对话，确认故事合约。' },
@@ -3554,6 +3554,7 @@ function modelRequirementFromContract(agentId) {
     const requiredFor = department.required_for || [];
     const kind = department.required_capability || 'text';
     return {
+        capability: kind,
         type: capabilityKindLabel(kind),
         key: capabilityKeyHint(kind),
         use: requiredFor.length ? requiredFor.join('、') : '',
@@ -3577,7 +3578,13 @@ function modelRequirement(agentId) {
     };
 }
 
+function isEvidenceOnlyRequirement(requirement) {
+    return requirement.capability === 'browser_or_human_evidence'
+        || String(requirement.type || '').includes('浏览器/人工证据');
+}
+
 function modelRequirementTest(requirement) {
+    if (isEvidenceOnlyRequirement(requirement)) return '这里不测试 API Key；请到工作台上传截图、打开登录页或导入平台证据。';
     const type = requirement.type || '';
     if (type.includes('生图')) return '点击测试会调用一次生图接口，确认 API Key、模型名和图片生成能力可用。';
     if (type.includes('视觉') || type.includes('图片理解')) return '点击测试会调用一次视觉理解接口，确认图片识别和质检能力可用。';
@@ -3615,7 +3622,7 @@ function renderModelRequirementSummary() {
         <div class="model-summary-head">
             <div>
                 <strong>${escapeHtml(OFFICE_LABELS[MODEL_OFFICE_ID] || OFFICE_LABELS.research)}模型需求</strong>
-                <span>先按下面清单补齐关键部门，再逐个测试。每个办公室的 Key 和模型配置互相隔离。</span>
+                <span>先按下面清单补齐关键部门；能用 API Key 测试的部门逐个测试，浏览器/人工证据能力到工作台处理。</span>
             </div>
             <em class="model-contract-source">${escapeHtml(sourceLabel)}</em>
         </div>
@@ -3696,22 +3703,15 @@ async function loadModels() {
         const curModel = cfg.model || 'deepseek-chat';
         const modelsForProvider = PROVIDER_MODELS[prov] || [];
         const requirement = modelRequirement(id);
+        const evidenceOnly = isEvidenceOnlyRequirement(requirement);
         const hasAdvanced = cfg.api_base || (cfg.temperature && cfg.temperature !== 0.3) || (cfg.max_tokens && cfg.max_tokens !== 4096);
-        return `
-        <div class="card model-card">
-            <div class="model-card-head">
-                <h4>${name} <span class="agent-tag">${escapeHtml(agentDesc(id))}</span></h4>
-                <span id="model-test-status-${id}" class="badge badge-info model-test-status">未测试</span>
-            </div>
-            <div class="model-requirement">
-                <strong>需要：${escapeHtml(requirement.type || '文本模型')}</strong>
-                <span>${escapeHtml(requirement.key || '填写对应模型供应商的 API Key')}</span>
-                <p>${escapeHtml(requirement.use || '')}</p>
-                <div class="model-requirement-meta">
-                    <span><b>测试方式</b>${escapeHtml(requirement.test || '')}</span>
-                    <span><b>缺失影响</b>${escapeHtml(requirement.impact || '')}</span>
-                </div>
-            </div>
+        const configControls = evidenceOnly
+            ? `
+            <div class="model-evidence-only">
+                <strong>这个部门不靠 API Key 自动完成</strong>
+                <span>请在工作台上传截图证据、打开登录窗口，或导入第三方平台导出的资料。文本模型只能辅助整理，不能替代真实取证。</span>
+            </div>`
+            : `
             <div class="form-row">
                 <div>
                     <label>Provider</label>
@@ -3731,13 +3731,37 @@ async function loadModels() {
                     <label>API Key</label>
                     <input type="password" value="" placeholder="${cfg.has_api_key ? '已配置，留空保持不变' : '尚未配置，请填写'}" onchange="updateModel('${id}', 'api_key', this.value)">
                 </div>
-            </div>
+            </div>`;
+        const actionControls = evidenceOnly
+            ? `
+            <div class="model-card-actions">
+                <button class="btn-ghost btn-sm" onclick="navigate('workbench')">去工作台处理证据</button>
+                <span id="model-test-detail-${id}" class="model-test-detail">这里不会调用模型测试；请用截图上传、登录窗口或平台导出来证明证据能力。</span>
+            </div>`
+            : `
             <div class="model-card-actions">
                 <button class="btn-ghost btn-sm" onclick="testModel('${id}', this)">测试此部门</button>
                 <span id="model-test-detail-${id}" class="model-test-detail">测试会进行一次最小调用；生图部门会生成一张测试图。</span>
+            </div>`;
+        return `
+        <div class="card model-card">
+            <div class="model-card-head">
+                <h4>${name} <span class="agent-tag">${escapeHtml(agentDesc(id))}</span></h4>
+                <span id="model-test-status-${id}" class="badge badge-info model-test-status">未测试</span>
             </div>
-            <span class="advanced-toggle" onclick="toggleAdvanced('${id}')">${hasAdvanced ? '▼' : '▶'} 高级选项</span>
-            <div class="advanced-row" id="advanced-${id}" style="${hasAdvanced ? '' : 'display:none'}">
+            <div class="model-requirement">
+                <strong>需要：${escapeHtml(requirement.type || '文本模型')}</strong>
+                <span>${escapeHtml(requirement.key || '填写对应模型供应商的 API Key')}</span>
+                <p>${escapeHtml(requirement.use || '')}</p>
+                <div class="model-requirement-meta">
+                    <span><b>测试方式</b>${escapeHtml(requirement.test || '')}</span>
+                    <span><b>缺失影响</b>${escapeHtml(requirement.impact || '')}</span>
+                </div>
+            </div>
+            ${configControls}
+            ${actionControls}
+            <span class="advanced-toggle" onclick="toggleAdvanced('${id}')" style="${evidenceOnly ? 'display:none' : ''}">${hasAdvanced ? '▼' : '▶'} 高级选项</span>
+            <div class="advanced-row" id="advanced-${id}" style="${evidenceOnly || !hasAdvanced ? 'display:none' : ''}">
                 <div class="form-row">
                     <div>
                         <label>Temperature (0-2)</label>
@@ -4160,6 +4184,12 @@ async function updateModel(agentId, key, value) {
 }
 
 async function testModel(agentId, button) {
+    if (isEvidenceOnlyRequirement(modelRequirement(agentId))) {
+        const result = { status: 'evidence_only', detail: '这个部门通过工作台截图、登录窗口或平台导出来验证，不进行 API Key 测试。' };
+        setModelTestState(agentId, result);
+        toast(`${agentName(agentId)}：请到工作台处理证据`, 'success');
+        return result;
+    }
     const original = button ? button.textContent : '';
     if (button) {
         button.disabled = true;
@@ -4190,13 +4220,28 @@ async function testAllModels() {
         button.disabled = true;
         button.textContent = '测试中...';
     }
-    Object.keys(AGENT_NAMES).forEach(id => setModelTestState(id, { status: 'running', detail: '等待测试结果...' }));
+    const allAgentIds = Object.keys(AGENT_NAMES);
+    const testableAgentIds = allAgentIds.filter(id => !isEvidenceOnlyRequirement(modelRequirement(id)));
+    const evidenceOnlyAgentIds = allAgentIds.filter(id => isEvidenceOnlyRequirement(modelRequirement(id)));
+    testableAgentIds.forEach(id => setModelTestState(id, { status: 'running', detail: '等待测试结果...' }));
+    evidenceOnlyAgentIds.forEach(id => setModelTestState(id, {
+        status: 'evidence_only',
+        detail: '此部门跳过 API Key 测试；请在工作台上传截图、打开登录窗口或导入平台证据。',
+    }));
     try {
-        const data = await API.post('/api/config/models/test?office_id=' + encodeURIComponent(MODEL_OFFICE_ID), {});
-        const results = data.results || [];
+        const results = [];
+        for (const agentId of testableAgentIds) {
+            try {
+                const result = await API.post('/api/config/models/' + agentId + '/test?office_id=' + encodeURIComponent(MODEL_OFFICE_ID), {});
+                results.push({ ...result, agent: agentId });
+            } catch (e) {
+                results.push({ agent: agentId, status: 'error', detail: e.message || String(e) });
+            }
+        }
         results.forEach(item => setModelTestState(item.agent, item));
         const failed = results.filter(item => item.status !== 'ok');
-        toast(failed.length ? `有 ${failed.length} 个部门需要检查` : '当前办公室全部部门测试通过', failed.length ? 'error' : 'success');
+        const skipped = evidenceOnlyAgentIds.length ? `，${evidenceOnlyAgentIds.length} 个证据部门已跳过 API Key 测试` : '';
+        toast(failed.length ? `有 ${failed.length} 个部门需要检查${skipped}` : `当前办公室可测试部门全部通过${skipped}`, failed.length ? 'error' : 'success');
     } catch (e) {
         toast('一键测试失败：' + (e.message || e), 'error');
     } finally {
@@ -4229,6 +4274,7 @@ function modelStatusText(result) {
     const status = result.status || 'not_run';
     const kind = result.kind === 'image' ? '生图' : result.kind === 'vision' ? '视觉' : '文本';
     if (status === 'ok') return `${kind}通过`;
+    if (status === 'evidence_only') return '证据入口';
     if (status === 'running') return '测试中';
     if (status === 'missing_key') return '未配置';
     if (status === 'api_error') return '接口失败';
@@ -4240,6 +4286,7 @@ function modelStatusText(result) {
 
 function modelStatusDetail(result) {
     if (result.status === 'ok') return result.detail || '模型已连通。';
+    if (result.status === 'evidence_only') return result.detail || '此部门不进行 API Key 测试。';
     if (result.status === 'missing_key') return 'API Key 为空，请先填写并保存。';
     if (result.status === 'running') return result.detail || '正在测试...';
     if (result.status === 'not_run') return result.detail || '测试会进行一次最小调用；生图部门会生成一张测试图。';

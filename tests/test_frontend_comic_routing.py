@@ -62,6 +62,11 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("Word 制片画布会复用已确认文本、提示词包和本地组装链路", js)
         self.assertIn("requirement.test", js)
         self.assertIn("requirement.impact", js)
+        self.assertIn("isEvidenceOnlyRequirement", js)
+        self.assertIn("这个部门不靠 API Key 自动完成", js)
+        self.assertIn("去工作台处理证据", js)
+        self.assertIn("证据部门已跳过 API Key 测试", js)
+        self.assertIn("status: 'evidence_only'", js)
         self.assertIn("测试方式", js)
         self.assertIn("缺失影响", js)
         self.assertIn("bingbu: '镜头提示词'", js)
@@ -123,6 +128,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("full_ready_when", js)
         self.assertIn(".model-contract-source", css)
         self.assertIn(".model-contract-modes", css)
+        self.assertIn(".model-evidence-only", css)
 
     def test_model_page_renders_new_user_setup_path(self):
         html = INDEX_HTML.read_text(encoding="utf-8")

@@ -101,6 +101,10 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertIn("dashscope", text)
         self.assertIn("doubao", text)
         self.assertIn("千问 VL", text)
+        self.assertIn("研究办公室工部", text)
+        self.assertIn("不是普通 API Key 槽位", text)
+        self.assertIn("在研究办公室工部填文本 Key 后期待自动截图", text)
+        self.assertIn("到工作台上传截图、打开登录窗口或导入平台导出文件", text)
         self.assertIn("当前优先作为生图槽位使用", text)
         self.assertIn("文本规划交给中书省、兵部等文本部门", text)
         self.assertIn("不需要在工部同一槽位再填一个文本模型", text)
@@ -150,6 +154,12 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertEqual(research["bingbu"], "text")
         self.assertEqual(research["xingbu"], "vision_understanding")
         self.assertEqual(research["gongbu"], "browser_or_human_evidence")
+        gongbu = next(
+            item for item in matrix["offices"]["research"]["departments"]
+            if item["department_id"] == "gongbu"
+        )
+        self.assertIn("不在模型页填写普通 API Key", gongbu["model_page_hint"])
+        self.assertIn("manual_screenshot_upload", gongbu["evidence_input_methods"])
 
 
 if __name__ == "__main__":

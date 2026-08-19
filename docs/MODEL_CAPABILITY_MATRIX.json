@@ -112,7 +112,9 @@
           "required_capability": "browser_or_human_evidence",
           "required_for": ["截图证据", "平台页面归档", "第三方后台证据"],
           "human_test_label": "检查截图/浏览器证据能力",
-          "missing_impact": "仍可生成阶段报告，但不能宣称完成登录平台后的自动截图取证。"
+          "missing_impact": "仍可生成阶段报告，但不能宣称完成登录平台后的自动截图取证。",
+          "model_page_hint": "不在模型页填写普通 API Key；到工作台上传截图、打开登录窗口或导入平台导出文件。",
+          "evidence_input_methods": ["logged_in_browser", "manual_screenshot_upload", "platform_export"]
         }
       ],
       "minimum_ready_when": "核心文本部门通过后，可以产出阶段报告、来源清单、数据表和截图计划。",
