@@ -2796,6 +2796,7 @@ async def get_public_showcase_demo_api():
             "shot_contract": _public_showcase_shot_contract(),
             "interview_demo_script": _public_showcase_interview_demo_script(),
             "first_run_paths": _public_showcase_first_run_paths(),
+            "first_run_guide": _build_first_run_guide_payload(),
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
             "post_run_validation": _public_showcase_post_run_validation(),
             "portfolio_integration": _public_showcase_portfolio_integration(),

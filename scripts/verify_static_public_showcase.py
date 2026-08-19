@@ -532,6 +532,15 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for marker in ("verify_public_demo_mode.py", "doctor.py", "verify_office_extension_governance.py"):
             if marker not in first_run_text:
                 errors.append(f"static first-run paths are missing marker: {marker}")
+        first_run_guide = portfolio.get("first_run_guide") or {}
+        if first_run_guide.get("mode") != "guided_first_run":
+            errors.append("static showcase must embed the guided first-run API contract")
+        if first_run_guide.get("requires_model_credentials") is not False:
+            errors.append("static first-run guide must not require model credentials at the top level")
+        if first_run_guide.get("calls_real_models") is not False:
+            errors.append("static first-run guide must not call real models")
+        if len(first_run_guide.get("quick_checks") or []) < 5:
+            errors.append("static first-run guide must expose at least five quick checks")
 
         reproducibility = portfolio.get("reproducibility_checklist") or []
         if len(reproducibility) < 5:
@@ -807,6 +816,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the real output validation checklist")
         if "portfolio.first_run_paths" not in app_text or "renderFirstRunPaths" not in app_text:
             errors.append("static showcase page must render the first-run paths")
+        if "portfolio.first_run_guide" not in app_text or "renderFirstRunGuideChecks" not in app_text:
+            errors.append("static showcase page must render the guided first-run quick checks")
         if "portfolio.shot_contract" not in app_text or "renderShotContract" not in app_text:
             errors.append("static showcase page must render the shot contract")
         if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
@@ -827,6 +838,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase stylesheet must style the office launch matrix")
         if "first-run-grid" not in style_text or "first-run-card" not in style_text:
             errors.append("static showcase stylesheet must style the first-run paths")
+        if "first-run-guide-checks" not in style_text or "first-run-command-list" not in style_text:
+            errors.append("static showcase stylesheet must style the guided first-run quick checks")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
             errors.append("static showcase stylesheet must style the reviewable download catalog")
         for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "第一次打开，先看这五步", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):

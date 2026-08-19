@@ -312,6 +312,17 @@ class PublicShowcaseManifestTests(unittest.TestCase):
             self.assertTrue(item["start_here"])
             self.assertTrue(item["success_signal"])
 
+        first_run_guide = embed["first_run_guide"]
+        self.assertEqual(first_run_guide["mode"], "guided_first_run")
+        self.assertFalse(first_run_guide["requires_model_credentials"])
+        self.assertFalse(first_run_guide["calls_real_models"])
+        self.assertEqual(
+            {item["id"] for item in first_run_guide["paths"]},
+            {"public_demo", "local_real_use", "developer_extension"},
+        )
+        self.assertEqual(len(first_run_guide["quick_checks"]), 5)
+        self.assertTrue(any(item["id"] == "runtime_health" for item in first_run_guide["quick_checks"]))
+
         reproducibility = embed["reproducibility_checklist"]
         self.assertEqual([item["order"] for item in reproducibility], [1, 2, 3, 4, 5])
         self.assertIn("7 个下载物", reproducibility[2]["expected"])

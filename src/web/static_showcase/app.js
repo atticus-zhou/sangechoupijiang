@@ -844,6 +844,24 @@
     });
   }
 
+  function renderFirstRunGuideChecks() {
+    const portfolio = showcase.portfolio_embed || {};
+    const guide = portfolio.first_run_guide || {};
+    const quickChecks = Array.isArray(guide.quick_checks) ? guide.quick_checks : [];
+    const checks = document.getElementById('first-run-guide-checks');
+    if (!checks || !quickChecks.length) return;
+    checks.appendChild(element('h3', '', guide.title || '第一次使用快速检查'));
+    checks.appendChild(element('p', '', guide.primary_next_action || guide.summary || ''));
+    const commandList = element('div', 'first-run-command-list');
+    quickChecks.forEach(function (item) {
+      const row = element('div', 'first-run-command-row');
+      row.appendChild(element('span', '', item.label || item.id || ''));
+      row.appendChild(element('code', '', item.command || ''));
+      commandList.appendChild(row);
+    });
+    checks.appendChild(commandList);
+  }
+
   function renderPostRunValidation() {
     const portfolio = showcase.portfolio_embed || {};
     const checklist = Array.isArray(portfolio.post_run_validation) ? portfolio.post_run_validation : [];
@@ -1055,6 +1073,7 @@
   renderShotContract();
   renderInterviewScript();
   renderFirstRunPaths();
+  renderFirstRunGuideChecks();
   renderReproducibilityChecklist();
   renderPostRunValidation();
   renderOfficeExtensionStory();
