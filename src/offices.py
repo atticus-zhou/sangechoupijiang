@@ -1,12 +1,13 @@
 """Office profiles for project-oriented multi-agent workflows.
 
 An office is a product/workflow context. It reuses the same agents, but gives
-them office-specific duties, expected artifacts, and acceptance standards.
+them office-specific duties, expected artifacts, launch gates, and acceptance
+standards.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,14 @@ class OfficeProfile:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def _default_artifact_contract() -> dict:
+    return {
+        "id_field": "artifact_id",
+        "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
+        "trace_rule": "所有交付产物必须能追溯到来源、版本、责任 Agent 和上游引用。",
+    }
 
 
 RESEARCH_OFFICE = OfficeProfile(
@@ -149,9 +158,7 @@ RESEARCH_OFFICE = OfficeProfile(
 COMIC_OFFICE = OfficeProfile(
     id="comic",
     name="AI漫剧办公室",
-    description=(
-        "用于 AI 漫剧前期制作：完善剧本、拆人物/道具/场景、制定风格圣经、镜头提示词、视频提示词和一致性检查。"
-    ),
+    description="用于 AI 漫剧前期制作：完善剧本、拆人物/道具/场景、制定风格圣经、镜头提示词、视频提示词和一致性检查。",
     input_types=["灵感", "完整剧本", "已有角色设定", "参考风格"],
     output_types=["剧本方向", "人物表", "道具表", "场景表", "提示词包", "交付清单"],
     agent_duties={
@@ -204,10 +211,9 @@ COMIC_OFFICE = OfficeProfile(
     ],
     default_template=(
         "Create an AI comic-drama pre-production package from this idea. "
-        "Do not produce the final edited video. Produce script direction, "
-        "character sheets, prop sheets, scene sheets, style bible, shot prompts, "
-        "video prompts, image prompts, negative prompts, consistency "
-        "checklist, and delivery manifest. User idea: {user_input}"
+        "Do not produce the final edited video. Produce script direction, character sheets, prop sheets, "
+        "scene sheets, style bible, shot prompts, video prompts, image prompts, negative prompts, "
+        "consistency checklist, and delivery manifest. User idea: {user_input}"
     ),
 )
 
@@ -219,7 +225,7 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
         "隔离版 AI 漫剧制片办公室。它把已确认故事转换成结构化生产链：故事合约、部门交接、资产表、镜头提示词、视频提示词、质检和 Word 画布。"
     ),
     input_types=["灵感", "完整剧本", "已有角色设定", "参考风格"],
-    output_types=["故事合同", "视觉母版", "资产身份证", "镜头生产包", "提示词包", "Word 制片画布"],
+    output_types=["故事合约", "视觉母版", "资产身份证", "镜头生产包", "提示词包", "Word 制片画布"],
     agent_duties={
         "neige": "先和人类创作者对齐故事方向，在生产开始前冻结故事合约。",
         "zhongshu": "把确认稿转成生产任务书，列清需要填写的资产槽位、验收规则和部门交接要求。",
@@ -255,7 +261,7 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
         "word_canvas",
     ],
     model_requirements=[
-        {"agent": "zhongshu", "model_kind": "text", "purpose": "故事合同、视觉母版和资产拆解初稿"},
+        {"agent": "zhongshu", "model_kind": "text", "purpose": "故事合约、视觉母版和资产拆解初稿"},
         {"agent": "menxia", "model_kind": "text", "purpose": "故事、视觉母版和资产拆解审核"},
         {"agent": "bingbu", "model_kind": "text", "purpose": "镜头执行卡、动作链和视频提示词"},
         {"agent": "hubu", "model_kind": "text", "purpose": "资产登记、资源台账和引用关系"},
@@ -272,7 +278,7 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
     artifact_contract={
         "id_field": "artifact_id",
         "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
-        "trace_rule": "故事合同、视觉母版、资产、图片、镜头、提示词和 Word 画布必须保持可追溯引用链路。",
+        "trace_rule": "故事合约、视觉母版、资产、图片、镜头、提示词和 Word 画布必须保持可追溯引用链路。",
     },
     schema_gates=[
         {"schema_id": "comic_contract", "owner_agent": "zhongshu", "stage": "story_contract", "artifact_type": "story_contract"},
@@ -284,7 +290,12 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
         {"schema_id": "image_review_result", "owner_agent": "xingbu", "stage": "image_quality_review", "artifact_type": "image_quality_report"},
     ],
     recovery_actions=[
-        {"stage": "visual_bible_planning", "label": "重新生成故事合同与视觉母版", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/plan-confirmed"},
+        {
+            "stage": "visual_bible_planning",
+            "label": "重新生成故事合约与视觉母版",
+            "method": "POST",
+            "path_template": "/api/workspaces/{workspace_id}/comic/v2/plan-confirmed",
+        },
         {"stage": "asset_planning", "label": "重新生成资产拆解包", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/assets/plan"},
         {"stage": "asset_review", "label": "重新生成资产拆解包", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/assets/plan"},
         {"stage": "prompt_planning", "label": "重新生成资产与镜头提示词", "method": "POST", "path_template": "/api/workspaces/{workspace_id}/comic/v2/prompts/plan"},
@@ -312,10 +323,9 @@ COMIC_PRODUCTION_OFFICE = OfficeProfile(
     ],
     default_template=(
         "Create an isolated AI comic-drama production package from the confirmed story. "
-        "Follow the production office chain: story contract, Zhongshu production brief, "
-        "Menxia review, Shangshu dispatch plan, Libu continuity bible, Hubu asset registry, "
-        "Bingbu shot/video prompt plan, Gongbu assembly, Xingbu QA, and final Word canvas. "
-        "User idea or confirmed story: {user_input}"
+        "Follow the production office chain: story contract, Zhongshu production brief, Menxia review, "
+        "Shangshu dispatch plan, Libu continuity bible, Hubu asset registry, Bingbu shot/video prompt plan, "
+        "Gongbu assembly, Xingbu QA, and final Word canvas. User idea or confirmed story: {user_input}"
     ),
 )
 
@@ -455,23 +465,9 @@ def list_office_creation_template() -> dict:
                     "purpose": "说明这个部门需要文本、视觉、图片、数据或工具能力中的哪一种。",
                 }
             ],
-            "human_checkpoints": [
-                {
-                    "id": "checkpoint_id",
-                    "title": "人类需要确认的节点",
-                    "owner": "menxia",
-                    "required": True,
-                }
-            ],
+            "human_checkpoints": [{"id": "checkpoint_id", "title": "人类需要确认的节点", "owner": "menxia", "required": True}],
             "artifact_contract": _default_artifact_contract(),
-            "schema_gates": [
-                {
-                    "schema_id": "new_office_sample_schema",
-                    "owner_agent": "gongbu",
-                    "stage": "sample_stage",
-                    "artifact_type": "sample_artifact",
-                }
-            ],
+            "schema_gates": [{"schema_id": "new_office_sample_schema", "owner_agent": "gongbu", "stage": "sample_stage", "artifact_type": "sample_artifact"}],
             "recovery_actions": [
                 {
                     "stage": "sample_stage",
@@ -489,22 +485,9 @@ def list_office_creation_template() -> dict:
             "default_template": "Use this office workflow for: {user_input}",
         },
         "public_demo_contract_skeleton": {
-            "viewer_path": [
-                {
-                    "title": "访客第一步应该看什么",
-                    "body": "解释这个页面如何读，而不是介绍抽象功能。",
-                    "focus": "用户目标、证据、交付物或声明边界",
-                }
-            ],
+            "viewer_path": [{"title": "访客第一步应该看什么", "body": "解释这个页面如何读，而不是介绍抽象功能。", "focus": "用户目标、证据、交付物或声明边界"}],
             "proof_points": ["这个 demo 实际证明了什么"],
-            "downloadable_deliverables": [
-                {
-                    "type": "sample_delivery",
-                    "title": "样例交付物",
-                    "uri": "/api/demo/new-office/files/sample.ext",
-                    "status": "downloadable",
-                }
-            ],
+            "downloadable_deliverables": [{"type": "sample_delivery", "title": "样例交付物", "uri": "/api/demo/new-office/files/sample.ext", "status": "downloadable"}],
             "deliverable_reading_guide": [
                 {
                     "order": 1,
@@ -514,21 +497,8 @@ def list_office_creation_template() -> dict:
                     "proves": "这份文件证明的产品能力边界。",
                 }
             ],
-            "interview_demo_script": [
-                {
-                    "order": 1,
-                    "visitor_action": "面试官或访客点击什么。",
-                    "product_response": "产品给出什么反馈。",
-                    "proof": "这一步证明什么。",
-                    "boundary": "这一步不能被夸大成什么。",
-                }
-            ],
-            "post_run_validation": [
-                {
-                    "command": "python scripts/verify_new_office_readiness.py --format markdown",
-                    "expected": "说明真实任务跑完后哪些证据必须通过。",
-                }
-            ],
+            "interview_demo_script": [{"order": 1, "visitor_action": "面试官或访客点击什么。", "product_response": "产品给出什么反馈。", "proof": "这一步证明什么。", "boundary": "这一步不能被夸大成什么。"}],
+            "post_run_validation": [{"command": "python scripts/verify_new_office_readiness.py --format markdown", "expected": "说明真实任务跑完后哪些证据必须通过。"}],
             "public_claim_report": {
                 "claim_level": "demo_only",
                 "allowed_public_claims": ["可以公开说的能力"],
@@ -562,130 +532,29 @@ def list_office_extension_blueprint() -> dict:
         "purpose": "Give future offices a concrete path from idea to public-demo-ready workflow without sharing model config, history, artifacts, or runtime output with existing offices.",
         "starter_checklist_doc": "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
         "implementation_steps": [
-            {
-                "order": 1,
-                "id": "register_profile",
-                "title": "Register an OfficeProfile",
-                "owner": "platform",
-                "files": ["src/offices.py"],
-                "done_when": "The office has a unique id, agent duties, model requirements, checkpoints, artifact contract, schema gates, recovery actions, acceptance criteria, and default template.",
-            },
-            {
-                "order": 2,
-                "id": "isolate_runtime",
-                "title": "Isolate runtime state",
-                "owner": "platform",
-                "files": ["src/config_manager.py", "src/office_runtime.py"],
-                "done_when": "Model config, workspace id, artifacts, history, output paths, and recovery actions are scoped by office_id.",
-            },
-            {
-                "order": 3,
-                "id": "build_no_key_demo",
-                "title": "Build a no-key demo contract",
-                "owner": "office",
-                "files": ["src/web/app.py", "tests/fixtures/"],
-                "done_when": "The demo returns viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, public_claim_report, and public_safety_boundaries without calling real models.",
-            },
-            {
-                "order": 4,
-                "id": "wire_schema_and_recovery",
-                "title": "Wire schema gates and recovery",
-                "owner": "office",
-                "files": ["src/offices.py", "src/web/app.py", "tests/"],
-                "done_when": "Every long-running stage has a schema or artifact gate, a human-readable failure state, and a recovery action that explains what is preserved and what is cleared.",
-            },
-            {
-                "order": 5,
-                "id": "document_and_verify",
-                "title": "Document, verify, and expose launch gates",
-                "owner": "release",
-                "files": ["README.md", "docs/", "scripts/verify_office_extension_governance.py"],
-                "done_when": "README explains the office, launch-gates are ready or honestly blocked, no-key demo verifies, release readiness passes, and secret scan is clean.",
-            },
+            {"order": 1, "id": "register_profile", "title": "Register an OfficeProfile", "owner": "platform", "files": ["src/offices.py"], "done_when": "The office has a unique id, agent duties, model requirements, checkpoints, artifact contract, schema gates, recovery actions, acceptance criteria, and default template."},
+            {"order": 2, "id": "isolate_runtime", "title": "Isolate runtime state", "owner": "platform", "files": ["src/config_manager.py", "src/office_runtime.py"], "done_when": "Model config, workspace id, artifacts, history, output paths, and recovery actions are scoped by office_id."},
+            {"order": 3, "id": "build_no_key_demo", "title": "Build a no-key demo contract", "owner": "office", "files": ["src/web/app.py", "tests/fixtures/"], "done_when": "The demo returns viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, public_claim_report, and public_safety_boundaries without calling real models."},
+            {"order": 4, "id": "wire_schema_and_recovery", "title": "Wire schema gates and recovery", "owner": "office", "files": ["src/offices.py", "src/web/app.py", "tests/"], "done_when": "Every long-running stage has a schema or artifact gate, a human-readable failure state, and a recovery action that explains what is preserved and what is cleared."},
+            {"order": 5, "id": "document_and_verify", "title": "Document, verify, and expose launch gates", "owner": "release", "files": ["README.md", "docs/", "scripts/verify_office_extension_governance.py"], "done_when": "README explains the office, launch-gates are ready or honestly blocked, no-key demo verifies, release readiness passes, and secret scan is clean."},
         ],
         "minimum_implementation_package": [
-            {
-                "file": "src/offices.py",
-                "proves": "The office has a unique OfficeProfile, declared model requirements, human checkpoints, artifact contract, schema gates, recovery actions, and acceptance criteria.",
-            },
-            {
-                "file": "src/web/app.py",
-                "proves": "The office exposes no-key demo endpoints, launch-gate evidence, model preflight, runtime status, post-run validation, public claim reporting, and downloadable sample artifacts without sharing another office's routes.",
-            },
-            {
-                "file": "src/office_preflight.py",
-                "proves": "The office explains missing text, image, vision, data, or tool capabilities before a user starts an expensive task.",
-            },
-            {
-                "file": "tests/",
-                "proves": "The new workflow has API, schema gate, post-run validation, recovery, history, and no-key demo coverage before it is shown as available.",
-            },
-            {
-                "file": "README.md and docs/",
-                "proves": "A stranger can understand what the office does, what it can download, what is demo-only, which claims are allowed or forbidden, which commands reproduce the result, and which checks prove a real run is safe to claim.",
-            },
-            {
-                "file": "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
-                "proves": "Future offices have a repeatable product, safety, isolation, workflow, demo, quality, public-demo, and release checklist before feature work starts.",
-            },
+            {"file": "src/offices.py", "proves": "The office has a unique OfficeProfile, declared model requirements, human checkpoints, artifact contract, schema gates, recovery actions, and acceptance criteria."},
+            {"file": "src/web/app.py", "proves": "The office exposes no-key demo endpoints, launch-gate evidence, model preflight, runtime status, post-run validation, public claim reporting, and downloadable sample artifacts without sharing another office's routes."},
+            {"file": "src/office_preflight.py", "proves": "The office explains missing text, image, vision, data, or tool capabilities before a user starts an expensive task."},
+            {"file": "tests/", "proves": "The new workflow has API, schema gate, post-run validation, recovery, history, and no-key demo coverage before it is shown as available."},
+            {"file": "README.md and docs/", "proves": "A stranger can understand what the office does, what it can download, what is demo-only, which claims are allowed or forbidden, which commands reproduce the result, and which checks prove a real run is safe to claim."},
+            {"file": "docs/NEW_OFFICE_STARTER_CHECKLIST.md", "proves": "Future offices have a repeatable product, safety, isolation, workflow, demo, quality, public-demo, and release checklist before feature work starts."},
         ],
         "starter_checklist": [
-            {
-                "order": 1,
-                "id": "define_user_job",
-                "phase": "product",
-                "question": "What painful job does this office finish for a human user?",
-                "evidence": "A one-paragraph user job, expected input, expected output, and the reason this should be an office instead of a single prompt.",
-            },
-            {
-                "order": 2,
-                "id": "declare_boundaries",
-                "phase": "safety",
-                "question": "What must this office not claim or not touch?",
-                "evidence": "Public safety boundaries, forbidden claims, and the list of keys, cookies, browser profiles, runtime output, and user data that must stay out of public assets.",
-            },
-            {
-                "order": 3,
-                "id": "scope_runtime_state",
-                "phase": "isolation",
-                "question": "Which model config, workspace, history, artifacts, and output paths are scoped by office_id?",
-                "evidence": "Tests proving shared display department names do not share API keys, providers, workspace state, artifacts, or recovery actions.",
-            },
-            {
-                "order": 4,
-                "id": "design_human_checkpoints",
-                "phase": "workflow",
-                "question": "Where should the human review or correct the workflow before expensive generation continues?",
-                "evidence": "Named checkpoints, what is preserved when a user rejects a stage, and which recovery action restarts only the affected stage.",
-            },
-            {
-                "order": 5,
-                "id": "create_sample_deliverables",
-                "phase": "demo",
-                "question": "What downloadable sample proves the office produces more than UI text?",
-                "evidence": "At least one no-key sample deliverable, a manifest or audit file, and a reading guide explaining what each file proves.",
-            },
-            {
-                "order": 6,
-                "id": "add_schema_and_recovery_gates",
-                "phase": "quality",
-                "question": "How does the office prevent free-form model output from becoming an unverifiable blob?",
-                "evidence": "Schema gates, post-run validation commands, failure states, preserved fields, cleared fields, and retry endpoints.",
-            },
-            {
-                "order": 7,
-                "id": "ship_public_demo_contract",
-                "phase": "public_demo",
-                "question": "Can a stranger understand and verify the office without an API key?",
-                "evidence": "viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, public_claim_report, and public_safety_boundaries.",
-            },
-            {
-                "order": 8,
-                "id": "wire_release_gate",
-                "phase": "release",
-                "question": "Which single command proves the office is safe to show or honestly blocked?",
-                "evidence": "Office-specific tests plus verify_office_isolation, verify_public_demo_mode, verify_office_extension_governance, verify_release_readiness, and check_no_secrets.",
-            },
+            {"order": 1, "id": "define_user_job", "phase": "product", "question": "What painful job does this office finish for a human user?", "evidence": "A one-paragraph user job, expected input, expected output, and the reason this should be an office instead of a single prompt."},
+            {"order": 2, "id": "declare_boundaries", "phase": "safety", "question": "What must this office not claim or not touch?", "evidence": "Public safety boundaries, forbidden claims, and the list of keys, cookies, browser profiles, runtime output, and user data that must stay out of public assets."},
+            {"order": 3, "id": "scope_runtime_state", "phase": "isolation", "question": "Which model config, workspace, history, artifacts, and output paths are scoped by office_id?", "evidence": "Tests proving shared display department names do not share API keys, providers, workspace state, artifacts, or recovery actions."},
+            {"order": 4, "id": "design_human_checkpoints", "phase": "workflow", "question": "Where should the human review or correct the workflow before expensive generation continues?", "evidence": "Named checkpoints, what is preserved when a user rejects a stage, and which recovery action restarts only the affected stage."},
+            {"order": 5, "id": "create_sample_deliverables", "phase": "demo", "question": "What downloadable sample proves the office produces more than UI text?", "evidence": "At least one no-key sample deliverable, a manifest or audit file, and a reading guide explaining what each file proves."},
+            {"order": 6, "id": "add_schema_and_recovery_gates", "phase": "quality", "question": "How does the office prevent free-form model output from becoming an unverifiable blob?", "evidence": "Schema gates, post-run validation commands, failure states, preserved fields, cleared fields, and retry endpoints."},
+            {"order": 7, "id": "ship_public_demo_contract", "phase": "public_demo", "question": "Can a stranger understand and verify the office without an API key?", "evidence": "viewer_path, proof_points, downloadable_deliverables, deliverable_reading_guide, interview_demo_script, post_run_validation, public_claim_report, and public_safety_boundaries."},
+            {"order": 8, "id": "wire_release_gate", "phase": "release", "question": "Which single command proves the office is safe to show or honestly blocked?", "evidence": "Office-specific tests plus verify_office_isolation, verify_public_demo_mode, verify_office_extension_governance, verify_release_readiness, and check_no_secrets."},
         ],
         "future_office_candidates": [
             {
@@ -698,15 +567,7 @@ def list_office_extension_blueprint() -> dict:
                 "product_rationale": "它能承接 AI 漫剧制片办公室的素材和研究办公室的卖点洞察，但要等素材质量、投放数据口径和复盘 schema 更稳定。",
                 "reuse_from_existing_offices": ["comic_production", "research"],
                 "defer_until": "AI 漫剧素材包能稳定交付可用图片/提示词，且研究办公室能提供可追溯的卖点和人群证据。",
-                "required_before_public": [
-                    "no_key_demo",
-                    "model_preflight",
-                    "sample_delivery",
-                    "schema_gate",
-                    "failure_recovery",
-                    "public_claim_report",
-                    "public_safety_boundaries",
-                ],
+                "required_before_public": ["no_key_demo", "model_preflight", "sample_delivery", "schema_gate", "failure_recovery", "public_claim_report", "public_safety_boundaries"],
             },
             {
                 "id": "ecommerce_selection",
@@ -718,15 +579,7 @@ def list_office_extension_blueprint() -> dict:
                 "product_rationale": "它最容易复用研究办公室的来源、数据表、竞品表、截图计划和阶段性交付声明，也最容易让访客理解产物价值。",
                 "reuse_from_existing_offices": ["research"],
                 "defer_until": "研究办公室证据采集/人工补证流程稳定，并能提供一份完整的选品样例包。",
-                "required_before_public": [
-                    "no_key_demo",
-                    "source_trace",
-                    "sample_delivery",
-                    "schema_gate",
-                    "history_trace",
-                    "public_claim_report",
-                    "release_gate",
-                ],
+                "required_before_public": ["no_key_demo", "source_trace", "sample_delivery", "schema_gate", "history_trace", "public_claim_report", "release_gate"],
             },
             {
                 "id": "story_ip",
@@ -737,16 +590,8 @@ def list_office_extension_blueprint() -> dict:
                 "priority_label": "第三候选",
                 "product_rationale": "它和 AI 漫剧制片办公室的故事/资产链路相近，适合作为后续垂直化分支，但现在容易造成办公室职责重叠。",
                 "reuse_from_existing_offices": ["comic_production"],
-                "defer_until": "AI 漫剧制片办公室的故事合同、资产 manifest、提示词包和 Word 画布协议足够稳定，可被抽象复用。",
-                "required_before_public": [
-                    "no_key_demo",
-                    "human_checkpoints",
-                    "sample_delivery",
-                    "schema_gate",
-                    "recovery_actions",
-                    "public_claim_report",
-                    "public_safety_boundaries",
-                ],
+                "defer_until": "AI 漫剧制片办公室的故事合约、资产 manifest、提示词包和 Word 画布协议足够稳定，可被抽象复用。",
+                "required_before_public": ["no_key_demo", "human_checkpoints", "sample_delivery", "schema_gate", "recovery_actions", "public_claim_report", "public_safety_boundaries"],
             },
             {
                 "id": "technical_project",
@@ -758,48 +603,20 @@ def list_office_extension_blueprint() -> dict:
                 "product_rationale": "它价值高，但会直接碰到仓库权限、代码执行、安全扫描和外部部署证据，产品风险比内容/调研类办公室更高。",
                 "reuse_from_existing_offices": [],
                 "defer_until": "办公室隔离、权限授权、代码变更审计、CI 证据采集和失败回滚协议都能被独立验证。",
-                "required_before_public": [
-                    "office_id_isolation",
-                    "repo_boundary",
-                    "sample_delivery",
-                    "schema_gate",
-                    "failure_recovery",
-                    "public_claim_report",
-                    "secret_scan",
-                ],
+                "required_before_public": ["office_id_isolation", "repo_boundary", "sample_delivery", "schema_gate", "failure_recovery", "public_claim_report", "secret_scan"],
             },
         ],
         "future_office_prioritization": {
             "status": "decision_ready_but_not_started",
             "decision_rule": "优先选择复用现有证据链最多、可下载交付物最清楚、权限风险最低、与当前主力办公室不重叠的办公室。",
             "recommended_order": [
-                {
-                    "rank": 1,
-                    "office_id": "ecommerce_selection",
-                    "why_now": "最能复用研究办公室的数据、竞品、截图计划和 staged claim 边界，最容易形成可验收样例。",
-                    "first_deliverable": "选品决策包：来源清单、竞品价格带、评论痛点、机会判断、证据缺口和阶段性交付声明。",
-                },
-                {
-                    "rank": 2,
-                    "office_id": "short_video_ads",
-                    "why_now": "能承接研究洞察和漫剧素材，但需要更明确的平台数据、素材审核和投放复盘边界。",
-                    "first_deliverable": "短视频投放包：卖点脚本、素材清单、投放假设、复盘表和素材风险声明。",
-                },
-                {
-                    "rank": 3,
-                    "office_id": "story_ip",
-                    "why_now": "适合作为 AI 漫剧制片办公室的垂直分支，但必须避免重复内阁和资产拆解职责。",
-                    "first_deliverable": "IP 改编企划包：受众定位、人物关系、改编路线、分集卖点和版权/素材边界。",
-                },
-                {
-                    "rank": 4,
-                    "office_id": "technical_project",
-                    "why_now": "价值高但权限和安全边界最复杂，应该等平台级审计、CI 证据和回滚协议更成熟。",
-                    "first_deliverable": "技术交接包：需求拆解、实现记录、测试证据、风险清单和部署边界。",
-                },
+                {"rank": 1, "office_id": "ecommerce_selection", "why_now": "最能复用研究办公室的数据、竞品、截图计划和 staged claim 边界，最容易形成可验收样例。", "first_deliverable": "选品决策包：来源清单、竞品价格带、评论痛点、机会判断、证据缺口和阶段性交付声明。"},
+                {"rank": 2, "office_id": "short_video_ads", "why_now": "能承接研究洞察和漫剧素材，但需要更明确的平台数据、素材审核和投放复盘边界。", "first_deliverable": "短视频投放包：卖点脚本、素材清单、投放假设、复盘表和素材风险声明。"},
+                {"rank": 3, "office_id": "story_ip", "why_now": "适合作为 AI 漫剧制片办公室的垂直分支，但必须避免重复内阁和资产拆解职责。", "first_deliverable": "IP 改编企划包：受众定位、人物关系、改编路线、分集卖点和版权/素材边界。"},
+                {"rank": 4, "office_id": "technical_project", "why_now": "价值高但权限和安全边界最复杂，应该等平台级审计、CI 证据和回滚协议更成熟。", "first_deliverable": "技术交接包：需求拆解、实现记录、测试证据、风险清单和部署边界。"},
             ],
             "do_not_start_until": [
-                "现有 AI 漫剧制片办公室和研究办公室的公开门禁继续通过。",
+                "现有 AI 漫剧制片办公室和研究办公室的公开门禁持续通过。",
                 "新办公室能先写出无 Key 样例交付物和 public_claim_report。",
                 "新办公室有独立 office_id、模型配置、工作区、历史、schema gate 和恢复动作。",
             ],
@@ -878,6 +695,7 @@ LAUNCH_GATE_EVIDENCE = {
     },
 }
 
+
 LAUNCH_GATE_EVIDENCE_LINKS = {
     "research": {
         "sample_delivery": [
@@ -885,58 +703,16 @@ LAUNCH_GATE_EVIDENCE_LINKS = {
             {"label": "证据清单", "uri": "/api/demo/research/files/evidence_manifest.json"},
             {"label": "阶段性交付声明", "uri": "/api/demo/research/claim-report"},
         ],
-        "no_key_demo": [
-            {"label": "研究办公室无 Key 演示", "uri": "/api/demo/research"},
-        ],
+        "no_key_demo": [{"label": "研究办公室无 Key 演示", "uri": "/api/demo/research"}],
     },
     "comic_production": {
         "sample_delivery": [
             {"label": "Word 制片画布", "uri": "/api/demo/comic-production/files/word_canvas.docx"},
             {"label": "引用清单", "uri": "/api/demo/comic-production/files/handoff_manifest.json"},
         ],
-        "no_key_demo": [
-            {"label": "AI 漫剧制片办公室无 Key 演示", "uri": "/api/demo/comic-production"},
-        ],
+        "no_key_demo": [{"label": "AI 漫剧制片办公室无 Key 演示", "uri": "/api/demo/comic-production"}],
     },
 }
-
-LAUNCH_GATE_LABELS.update(
-    {
-        "no_key_demo": "无 Key 演示",
-        "model_preflight": "模型预检",
-        "end_to_end_test": "端到端测试",
-        "sample_delivery": "样例交付物",
-        "failure_recovery": "失败恢复",
-        "history_trace": "历史追踪",
-        "schema_gate": "结构化验收",
-        "readme_documentation": "README 文档",
-        "secret_scan": "密钥安全扫描",
-    }
-)
-
-LAUNCH_GATE_EVIDENCE_LINKS.update(
-    {
-        "research": {
-            "sample_delivery": [
-                {"label": "阶段调研报告", "uri": "/api/demo/research/files/report.md"},
-                {"label": "证据清单", "uri": "/api/demo/research/files/evidence_manifest.json"},
-                {"label": "阶段性交付声明", "uri": "/api/demo/research/claim-report"},
-            ],
-            "no_key_demo": [
-                {"label": "研究办公室无 Key 演示", "uri": "/api/demo/research"},
-            ],
-        },
-        "comic_production": {
-            "sample_delivery": [
-                {"label": "Word 制片画布", "uri": "/api/demo/comic-production/files/word_canvas.docx"},
-                {"label": "引用清单", "uri": "/api/demo/comic-production/files/handoff_manifest.json"},
-            ],
-            "no_key_demo": [
-                {"label": "AI 漫剧制片办公室无 Key 演示", "uri": "/api/demo/comic-production"},
-            ],
-        },
-    }
-)
 
 
 PRIMARY_OFFICE_IDS = {"comic_production"}
@@ -950,23 +726,12 @@ LEGACY_OFFICE_MIGRATIONS = {
     }
 }
 
+
 PRIMARY_OFFICE_STANDARDS = {
-    "showcaseable": {
-        "label": "可展示",
-        "required_gates": ["no_key_demo", "readme_documentation"],
-    },
-    "trial_ready": {
-        "label": "可试用",
-        "required_gates": ["model_preflight", "end_to_end_test"],
-    },
-    "deliverable": {
-        "label": "可交付",
-        "required_gates": ["sample_delivery", "schema_gate"],
-    },
-    "traceable": {
-        "label": "可追溯",
-        "required_gates": ["history_trace", "failure_recovery", "secret_scan"],
-    },
+    "showcaseable": {"label": "可展示", "required_gates": ["no_key_demo", "readme_documentation"]},
+    "trial_ready": {"label": "可试用", "required_gates": ["model_preflight", "end_to_end_test"]},
+    "deliverable": {"label": "可交付", "required_gates": ["sample_delivery", "schema_gate"]},
+    "traceable": {"label": "可追溯", "required_gates": ["history_trace", "failure_recovery", "secret_scan"]},
 }
 
 
@@ -989,11 +754,7 @@ def audit_office_launch_gates(office_id: str) -> dict:
                 "status": status,
                 "evidence": evidence or "No concrete evidence is declared for this office yet.",
                 "evidence_links": LAUNCH_GATE_EVIDENCE_LINKS.get(office.id, {}).get(gate_id, []),
-                "next_action": (
-                    "Keep this evidence current when the office workflow changes."
-                    if status == "passed"
-                    else _launch_gate_next_action(gate_id)
-                ),
+                "next_action": "Keep this evidence current when the office workflow changes." if status == "passed" else _launch_gate_next_action(gate_id),
             }
         )
 
@@ -1017,18 +778,10 @@ def audit_office_extension_governance() -> dict:
     for office in OFFICE_PROFILES.values():
         launch_audit = audit_office_launch_gates(office.id)
         gate_statuses = {gate["id"]: gate["status"] for gate in launch_audit["gates"]}
-        missing_profile_fields = [
-            field
-            for field in required_profile_fields
-            if not _has_profile_field_value(office, field)
-        ]
+        missing_profile_fields = [field for field in required_profile_fields if not _has_profile_field_value(office, field)]
         standards = []
         for standard_id, standard in PRIMARY_OFFICE_STANDARDS.items():
-            missing_gates = [
-                gate_id
-                for gate_id in standard["required_gates"]
-                if gate_statuses.get(gate_id) != "passed"
-            ]
+            missing_gates = [gate_id for gate_id in standard["required_gates"] if gate_statuses.get(gate_id) != "passed"]
             standards.append(
                 {
                     "id": standard_id,
@@ -1039,47 +792,24 @@ def audit_office_extension_governance() -> dict:
                 }
             )
         is_legacy = office.id in LEGACY_OFFICE_IDS
-        legacy_migration = LEGACY_OFFICE_MIGRATIONS.get(office.id, {})
-        can_be_primary = not is_legacy and not missing_profile_fields and all(
-            standard["status"] == "passed" for standard in standards
-        )
+        can_be_primary = not is_legacy and not missing_profile_fields and all(standard["status"] == "passed" for standard in standards)
         office_audits.append(
             {
                 "office_id": office.id,
                 "office_name": office.name,
-                "role": (
-                    "primary"
-                    if office.id in PRIMARY_OFFICE_IDS
-                    else "legacy"
-                    if is_legacy
-                    else "available"
-                ),
-                "protocol_status": (
-                    "legacy_needs_upgrade"
-                    if is_legacy and missing_profile_fields
-                    else "passed"
-                    if not missing_profile_fields
-                    else "needs_work"
-                ),
+                "role": "primary" if office.id in PRIMARY_OFFICE_IDS else "legacy" if is_legacy else "available",
+                "protocol_status": "legacy_needs_upgrade" if is_legacy and missing_profile_fields else "passed" if not missing_profile_fields else "needs_work",
                 "missing_profile_fields": missing_profile_fields,
                 "launch_gate_status": launch_audit["status"],
-                "legacy_migration": legacy_migration,
+                "legacy_migration": LEGACY_OFFICE_MIGRATIONS.get(office.id, {}),
                 "primary_standards": standards,
                 "can_be_primary": can_be_primary,
                 "primary_allowed": office.id in PRIMARY_OFFICE_IDS and can_be_primary,
             }
         )
 
-    protocol_errors = [
-        item["office_id"]
-        for item in office_audits
-        if item["role"] != "legacy" and item["protocol_status"] != "passed"
-    ]
-    primary_errors = [
-        item["office_id"]
-        for item in office_audits
-        if item["office_id"] in PRIMARY_OFFICE_IDS and not item["primary_allowed"]
-    ]
+    protocol_errors = [item["office_id"] for item in office_audits if item["role"] != "legacy" and item["protocol_status"] != "passed"]
+    primary_errors = [item["office_id"] for item in office_audits if item["office_id"] in PRIMARY_OFFICE_IDS and not item["primary_allowed"]]
     launch_matrix = _build_office_launch_matrix(office_audits)
     return {
         "status": "passed" if not protocol_errors and not primary_errors else "failed",
@@ -1094,10 +824,7 @@ def audit_office_extension_governance() -> dict:
         "offices": office_audits,
         "launch_matrix": launch_matrix,
         "launch_matrix_summary": _summarize_office_launch_matrix(launch_matrix),
-        "errors": {
-            "protocol_errors": protocol_errors,
-            "primary_errors": primary_errors,
-        },
+        "errors": {"protocol_errors": protocol_errors, "primary_errors": primary_errors},
     }
 
 
@@ -1111,11 +838,7 @@ def _build_office_launch_matrix(office_audits: list[dict]) -> list[dict]:
             blocked_by.append("protocol_needs_upgrade")
         if item.get("launch_gate_status") != "ready":
             blocked_by.append("launch_gates_need_work")
-        failed_standards = [
-            standard.get("id")
-            for standard in item.get("primary_standards", [])
-            if standard.get("status") != "passed"
-        ]
+        failed_standards = [standard.get("id") for standard in item.get("primary_standards", []) if standard.get("status") != "passed"]
         blocked_by.extend(f"standard:{standard_id}" for standard_id in failed_standards if standard_id)
         can_show_publicly = item.get("role") != "legacy" and item.get("launch_gate_status") == "ready"
         can_be_primary = bool(item.get("can_be_primary"))
@@ -1204,14 +927,6 @@ def _office_protocol(office: OfficeProfile) -> dict:
         "recovery_actions": office.recovery_actions,
         "artifact_types": office.artifact_types,
         "acceptance_criteria": office.acceptance_criteria,
-    }
-
-
-def _default_artifact_contract() -> dict:
-    return {
-        "id_field": "artifact_id",
-        "required_metadata": ["office_id", "source", "version", "responsible_agent", "reference_chain"],
-        "trace_rule": "所有交付产物必须能追溯到来源、版本、责任 Agent 和上游引用。",
     }
 
 

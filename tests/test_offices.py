@@ -40,6 +40,22 @@ class OfficeProfileTests(unittest.TestCase):
         self.assertEqual(offices[0]["id"], "research")
         self.assertIn("artifact_types", offices[0])
 
+    def test_public_office_protocol_text_is_readable(self):
+        payload = {
+            "offices": list_offices(),
+            "creation_template": list_office_creation_template(),
+            "extension_blueprint": list_office_extension_blueprint(),
+            "launch_matrix": audit_office_extension_governance()["launch_matrix"],
+        }
+        text = str(payload)
+        mojibake_markers = ["�", "鈥", "涓€", "鐮", "婕", "鍔", "绗", "杩", "璇", "鎶"]
+
+        for marker in mojibake_markers:
+            self.assertNotIn(marker, text)
+        self.assertIn("AI漫剧制片办公室", text)
+        self.assertIn("研究办公室", text)
+        self.assertIn("电商选品办公室", text)
+
     def test_new_office_template_declares_productization_gates(self):
         template = list_office_creation_template()
 
