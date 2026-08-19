@@ -68,6 +68,7 @@ python scripts/verify_static_public_showcase.py --format markdown --existing-dir
 python scripts/verify_portfolio_showcase_sync.py --format markdown
 python scripts/verify_comic_v2_downstream_handoff.py --format markdown
 python scripts/verify_comic_v2_production_benchmark.py --format markdown
+python scripts/verify_comic_v2_production_acceptance.py --format markdown
 python scripts/verify_research_office_readiness.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_github_release_evidence.py --format markdown
@@ -91,6 +92,7 @@ python scripts/check_no_secrets.py
 - `python scripts/verify_comic_v2_delivery.py --format markdown` 能证明 AI 漫剧 Word 画布结构、资产 ID、镜头 ID、图片记录和交付审计可用。
 - `python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 能证明人物三视图、表情、道具、场景广角/俯视图、镜头视频包、首帧参考图和失败重试策略可交接。
 - `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 能证明故事、资产、提示词、镜头、视觉质检和谱系已经交叉校验，并明确区分无 Key 结构样例与真实模型质量证据。
+- `python scripts/verify_comic_v2_production_acceptance.py --format markdown` 能把上面的证据收束成一张给人看的验收卡，明确当前是公开结构样例、真实下游可接手，还是需要补证据。
 - `python scripts/verify_research_office_readiness.py --format markdown` 能证明研究办公室只公开阶段性样例、证据边界、待补证据交接表、证据补齐卡和补证操作手册，不伪装成全自动平台采集。
 - `python scripts/verify_release_readiness.py --format markdown` 能串联全部 no-key 发布门禁。
 - `python scripts/verify_github_release_evidence.py --format markdown` 能通过 GitHub 公共 API 复核最新 `Release readiness` workflow 是否成功，以及 `no-key-release-evidence` artifact 是否存在；如果公共 API 被限流，脚本会退回读取公开 Actions 页面并标注 `github_actions_html_fallback`。也可以加 `--head-sha <commit>` 读取公开 commit checks 页面并标注 `github_commit_checks_html_fallback`，证明该提交的 release gate 是否成功；但不会把未通过 API 复核的 artifact 当作已验证证据。

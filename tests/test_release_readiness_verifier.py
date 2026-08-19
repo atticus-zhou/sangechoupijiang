@@ -44,6 +44,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_downstream_handoff",
                 "comic_production_benchmark",
                 "comic_real_production_claim",
+                "comic_production_acceptance",
                 "comic_real_quality_upgrade_plan",
                 "public_comic_trace_bundle",
                 "comic_handoff_inventory",
@@ -98,7 +99,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("post_run=3/3", static_showcase["summary"])
         self.assertIn("visitor_route=7", static_showcase["summary"])
         self.assertIn("download_acceptance=8", static_showcase["summary"])
-        self.assertIn("handoff_recovery=6:regenerate_images", static_showcase["summary"])
+        self.assertIn("handoff_recovery=8:regenerate_images", static_showcase["summary"])
         self.assertIn("backend=False", static_showcase["summary"])
         self.assertIn("prompt_quality=ready", static_showcase["summary"])
         self.assertIn("prompt_issues=0", static_showcase["summary"])
@@ -130,6 +131,13 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("upgrade_checklist=4", comic_claim["summary"])
         self.assertIn("recovery=regenerate_images", comic_claim["summary"])
         self.assertIn("recovery_steps=3", comic_claim["summary"])
+        comic_acceptance = next(item for item in payload["checks"] if item["id"] == "comic_production_acceptance")
+        self.assertIn("public_demo=True", comic_acceptance["summary"])
+        self.assertIn("real_downstream=False", comic_acceptance["summary"])
+        self.assertIn("downstream=structure_demo_only", comic_acceptance["summary"])
+        self.assertIn("claim=demo_structure_only", comic_acceptance["summary"])
+        self.assertIn("failures=0", comic_acceptance["summary"])
+        self.assertIn("prompt_quality=ready", comic_acceptance["summary"])
         comic_upgrade = next(item for item in payload["checks"] if item["id"] == "comic_real_quality_upgrade_plan")
         self.assertIn("current=demo_structure_only", comic_upgrade["summary"])
         self.assertIn("target=real_quality_verified", comic_upgrade["summary"])
@@ -215,6 +223,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("AI comic production quality benchmark", completed.stdout)
         self.assertIn("AI comic real production claim boundary", completed.stdout)
+        self.assertIn("AI comic production acceptance card", completed.stdout)
         self.assertIn("AI comic real quality upgrade plan", completed.stdout)
         self.assertIn("Public AI comic trace bundle", completed.stdout)
         self.assertIn("Office schema gate registry", completed.stdout)
@@ -231,7 +240,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("fast_review=5/5", completed.stdout)
         self.assertIn("quick_start=5/5", completed.stdout)
         self.assertIn("badge=safe_public_demo", completed.stdout)
-        self.assertIn("downloads=7; catalog=8; fast_review=5/5; reading_guide=8/8; quick_start=5/5; post_run=3/3; visitor_route=7; download_acceptance=8; handoff_recovery=6:regenerate_images; backend=False", completed.stdout)
+        self.assertIn("downloads=7; catalog=8; fast_review=5/5; reading_guide=8/8; quick_start=5/5; post_run=3/3; visitor_route=7; download_acceptance=8; handoff_recovery=8:regenerate_images; backend=False", completed.stdout)
         self.assertIn("compared=", completed.stdout)
         self.assertIn("mismatched=0", completed.stdout)
         self.assertIn("live_external=True", completed.stdout)
@@ -246,6 +255,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("prompt_quality=ready", completed.stdout)
         self.assertIn("prompt_issues=0", completed.stdout)
         self.assertIn("claim_level=demo_structure_only", completed.stdout)
+        self.assertIn("public_demo=True; real_downstream=False; downstream=structure_demo_only; claim=demo_structure_only; failures=0; prompt_quality=ready", completed.stdout)
         self.assertIn("target=real_quality_verified", completed.stdout)
         self.assertIn("status=blocked_until_real_model_evidence", completed.stdout)
         self.assertIn("assets=3; images=7; shots=2; claim=demo_structure_only; visual=fixture_only; real_quality=False; supports_real_quality=False", completed.stdout)

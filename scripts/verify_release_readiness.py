@@ -95,6 +95,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_real_production_claim.py", "--format", "json"],
     },
     {
+        "id": "comic_production_acceptance",
+        "title": "AI comic production acceptance card",
+        "command": ["scripts/verify_comic_v2_production_acceptance.py", "--format", "json"],
+    },
+    {
         "id": "comic_real_quality_upgrade_plan",
         "title": "AI comic real quality upgrade plan",
         "command": ["scripts/verify_comic_real_quality_upgrade_plan.py", "--format", "json"],
@@ -294,6 +299,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"upgrade_checklist={len(parsed.get('claim_upgrade_checklist') or [])}; "
                 f"recovery={recovery.get('recovery_action')}; "
                 f"recovery_steps={len(recovery.get('steps') or [])}"
+            )
+        if check_id == "comic_production_acceptance":
+            return (
+                f"public_demo={parsed.get('accepted_for_public_demo')}; "
+                f"real_downstream={parsed.get('accepted_for_real_downstream')}; "
+                f"downstream={parsed.get('downstream_status')}; "
+                f"claim={parsed.get('claim_level')}; "
+                f"failures={parsed.get('failure_count')}; "
+                f"prompt_quality={(parsed.get('prompt_quality_summary') or {}).get('status')}"
             )
         if check_id == "comic_real_quality_upgrade_plan":
             return (
