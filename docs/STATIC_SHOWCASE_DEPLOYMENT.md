@@ -48,7 +48,7 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 
 - 一个无需后端即可打开的公开展示页。
 - 首次打开时的最快验收路线：确认安全公开页、下载 Word 制片画布、核对 handoff manifest、核对资产图片规格矩阵和资产使用地图、查看声明边界和复现命令。
-- A five-step visitor path for quickly checking the public page, Word canvas, handoff manifest, asset matrix, asset usage map, claim boundary, and reproducibility commands.
+- A seven-step visitor route for quickly checking the public page, Word canvas, handoff manifest, trace bundle, production acceptance card, asset matrix, asset usage map, claim boundary, and reproducibility commands.
 - 三条首次使用路径：
   - `public_demo`：不需要 API Key，只看固定样例、下载物、阅读指南和公开安全边界，适合面试官或作品集访客。
   - `local_real_use`：使用者在本机填写自己的 API Key，测试各办公室部门模型后，再运行真实调研或 AI 漫剧制片。
@@ -143,7 +143,7 @@ Do not describe the personal website as live until `npm run check:online` passes
 
 The static package must also keep `data/visitor_acceptance_guide.json`.
 This file is the reviewer-facing route for the public demo: it records the
-seven-step visitor route, the nine reviewable downloads, the demo-only claim
+seven-step visitor route, the nine reviewable files, the demo-only claim
 boundaries, and the live-site rule that `/three-stooges/` is not public evidence
 until `npm run check:online` passes.
 

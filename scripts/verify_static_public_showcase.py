@@ -246,7 +246,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         if len(visitor_route) != 7:
             errors.append("visitor acceptance guide must include exactly seven route steps")
         if len(download_acceptance) != 9:
-            errors.append("visitor acceptance guide must include exactly nine reviewable downloads")
+            errors.append("visitor acceptance guide must include exactly nine reviewable files")
         visitor_route_titles = {str(item.get("title") or "") for item in visitor_route}
         for required_title in ("逐个检查可下载交付物", "最后确认线上状态不能跳过"):
             if required_title not in visitor_route_titles:
