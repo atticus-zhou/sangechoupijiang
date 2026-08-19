@@ -436,6 +436,15 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
     real = doctor.get("real_production") or {}
     if real.get("status") not in {"ready_for_real_run", ""}:
         blocking.append(f"real_production={real.get('status')}")
+    real_output_evidence = {
+        "has_verified_real_output": bool(real.get("has_verified_real_output")),
+        "verified_output_status": real.get("verified_output_status", "unknown"),
+        "summary": real.get("verified_output_summary", ""),
+        "next_action": real.get("verified_output_next_action", ""),
+        "public_claim_rule": (
+            "只有目标 manifest 通过 real claim 和 production benchmark 后，才能公开宣称真实画质已验证。"
+        ),
+    }
     return {
         "id": "local_real_use",
         "title": "本地真实使用",
@@ -482,7 +491,10 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
             f"comic_production.status={doctor.get('office', {}).get('status', '')}",
             f"real_production.status={real.get('status', '')}",
             f"real_production.full={real.get('can_start_full_production')}",
+            f"real_output_evidence.status={real_output_evidence['verified_output_status']}",
+            f"real_output_evidence.verified={real_output_evidence['has_verified_real_output']}",
         ],
+        "real_output_evidence": real_output_evidence,
         "post_run_validation": [
             {
                 "name": "交付物清点",

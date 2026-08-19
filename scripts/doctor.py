@@ -211,6 +211,150 @@ def _cell(value: object) -> str:
     return str(value or "").replace("\n", " ").replace("|", "／")
 
 
+def build_doctor_report(base_dir: Path | str = REPO_ROOT) -> dict:
+    """Return a readable local diagnosis for the real local product."""
+    root = Path(base_dir)
+    manager = ConfigManager(base_dir=str(root))
+    system = build_system_preflight(manager, base_dir=root)
+    office = build_office_preflight(
+        "comic_production",
+        manager.get_model_config,
+        base_dir=root,
+    )
+    real_production = _doctor_safe_real_production(
+        audit_comic_real_production_start_readiness(
+            manager.get_model_config,
+            base_dir=root,
+        )
+    )
+    offices = _build_office_availability(manager, root)
+    status = _overall_status(system.get("status", "blocked"), office.get("status", "blocked"))
+    return {
+        "product": "三个臭皮匠",
+        "mode": "local_real_product",
+        "status": status,
+        "summary": _summary(status),
+        "next_action": _next_action(system, office),
+        "system": system,
+        "office": office,
+        "real_production": real_production,
+        "offices": offices,
+    }
+
+
+def format_doctor_markdown(report: dict) -> str:
+    real = report.get("real_production") or {}
+    inventory = real.get("handoff_inventory") or {}
+    lines = [
+        "# 三个臭皮匠本地自检",
+        "",
+        f"- 状态：{report.get('status', '')}",
+        f"- 模式：{report.get('mode', '')}",
+        f"- 摘要：{report.get('summary', '')}",
+        f"- 下一步：{report.get('next_action', '')}",
+        "",
+        "## 系统启动检查",
+        "",
+        "| 项目 | 状态 | 影响 | 下一步 |",
+        "| --- | --- | --- | --- |",
+    ]
+    for item in report.get("system", {}).get("checks", []):
+        lines.append(_row(item.get("title"), item.get("status"), item.get("impact"), item.get("next_action")))
+
+    lines.extend([
+        "",
+        "## 办公室可用性",
+        "",
+        "| 办公室 | 状态 | 摘要 | 下一步 |",
+        "| --- | --- | --- | --- |",
+    ])
+    for item in report.get("offices", []):
+        lines.append(_row(item.get("name"), item.get("status"), item.get("summary"), item.get("next_action")))
+
+    lines.extend([
+        "",
+        "## 办公室上线门禁",
+        "",
+        "| 办公室 | 门禁状态 | 通过项 | 下一步 |",
+        "| --- | --- | --- | --- |",
+    ])
+    for item in report.get("offices", []):
+        passed = item.get("launch_gate_passed", 0)
+        total = item.get("launch_gate_total", 0)
+        lines.append(_row(item.get("name"), item.get("launch_gate_status"), f"{passed}/{total}", item.get("launch_gate_next_action")))
+
+    lines.extend([
+        "",
+        "## AI 漫剧制片办公室能力",
+        "",
+        "| 能力 | 状态 | 负责 | 影响 | 下一步 |",
+        "| --- | --- | --- | --- | --- |",
+    ])
+    for item in report.get("office", {}).get("capabilities", []):
+        responsible = "".join(part for part in (item.get("owner_label", ""), item.get("model_kind", "")) if part)
+        lines.append(_row(item.get("title"), item.get("status"), responsible, item.get("impact"), item.get("next_action")))
+
+    lines.extend([
+        "",
+        "## 真实生产前检查",
+        "",
+        f"- 启动条件：{real.get('start_readiness_status') or real.get('status', '')}",
+        f"- 启动说明：{real.get('summary', '')}",
+        f"- 下一步：{real.get('next_action', '')}",
+        f"- 完整制片包：{'可以开始' if real.get('can_start_full_production') else '暂不可以'}",
+        f"- 故事/资产/提示词：{'可以先做' if real.get('can_start_limited_planning') else '暂不可以'}",
+        f"- 真实产物证据：{real.get('verified_output_status', '')}",
+        f"- 证据说明：{real.get('verified_output_summary', '')}",
+        f"- 证据下一步：{real.get('verified_output_next_action', '')}",
+        f"- 交付盘点：{inventory.get('manifest_count', 0)} 份；真实质量通过 {inventory.get('production_verified_count', 0)} 份；结构样例 {inventory.get('demo_only_count', 0)} 份",
+        "",
+        "| 检查项 | 状态 | 负责 | 下一步 |",
+        "| --- | --- | --- | --- |",
+    ])
+    for item in real.get("required_capabilities", []):
+        responsible = " / ".join(part for part in (item.get("owner_label", ""), item.get("model_kind", "")) if part)
+        lines.append(_row(item.get("title"), item.get("status"), responsible, item.get("next_action") or item.get("impact")))
+
+    checklist = real.get("operator_checklist") or []
+    if checklist:
+        lines.extend(["", "开工前清单："])
+        lines.extend(f"- {item}" for item in checklist)
+
+    post_run = real.get("post_run_validation") or []
+    if post_run:
+        lines.extend([
+            "",
+            "## 真实生产后验收清单",
+            "",
+            "| 步骤 | 命令或动作 | 通过标准 | 失败处理 |",
+            "| ---: | --- | --- | --- |",
+        ])
+        for item in post_run:
+            lines.append(_row(
+                item.get("step"),
+                item.get("command") or item.get("title"),
+                item.get("passes_when"),
+                item.get("if_fails"),
+            ))
+    return "\n".join(lines)
+
+
+def _summary(status: str) -> str:
+    if status == "ready":
+        return "本地环境和 AI 漫剧制片办公室关键能力可用。"
+    if status == "partial":
+        return "本地环境可启动，但部分模型能力缺失；可以先推进不依赖该能力的阶段。"
+    return "存在阻塞项；请先按下一步建议修复后再开始真实生产。"
+
+
+def _next_action(system: dict, office: dict) -> str:
+    if system.get("status") == "blocked":
+        return system.get("next_action", "先修复本地启动条件。")
+    if office.get("status") in {"blocked", "partial", "missing"}:
+        return office.get("next_action", "打开模型页面补齐缺失能力。")
+    return "可以运行 python run.py --port 8080，并进入 AI 漫剧制片办公室。"
+
+
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")

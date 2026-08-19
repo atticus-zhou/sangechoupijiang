@@ -133,6 +133,146 @@ def audit_comic_real_production_start_readiness(
     }
 
 
+def audit_comic_real_production_start_readiness(
+    get_model_config: Callable[[str, str], ModelConfig],
+    *,
+    base_dir: Path | str | None = None,
+) -> dict:
+    """Return no-key readiness to start, plus whether any real output is verified."""
+    root = Path(base_dir) if base_dir is not None else REPO_ROOT
+    preflight = build_office_preflight("comic_production", get_model_config, base_dir=root)
+    inventory = audit_handoff_inventory([root / "output"])
+    capabilities = preflight.get("capabilities") or []
+    by_id = {item.get("id"): item for item in capabilities}
+    required_for_full_package = (
+        "story_planning",
+        "asset_planning",
+        "prompt_planning",
+        "image_generation",
+        "visual_review",
+        "local_output",
+    )
+    missing_full = [
+        item
+        for item in (by_id.get(check_id) for check_id in required_for_full_package)
+        if item and item.get("status") != "ok"
+    ]
+    blockers = [item for item in missing_full if item.get("status") == "blocked"]
+    missing_optional = [item for item in missing_full if item.get("status") != "blocked"]
+    if blockers:
+        status = "blocked"
+        can_start_full = False
+        can_start_limited = False
+        summary = "核心文本规划或本地输出能力还没有就绪，不建议开始真实漫剧生产。"
+        next_action = blockers[0].get("next_action") or preflight.get("next_action") or ""
+    elif missing_optional:
+        status = "limited_planning_only"
+        can_start_full = False
+        can_start_limited = True
+        summary = "可以先做故事、资产拆解和提示词规划，但还不能生成完整带图片与自动质检的制片包。"
+        next_action = missing_optional[0].get("next_action") or preflight.get("next_action") or ""
+    else:
+        status = "ready_for_real_run"
+        can_start_full = True
+        can_start_limited = True
+        summary = "当前模型配置和本地输出目录具备完整真实制片包的启动条件。"
+        next_action = "可以开始真实生产；完成后必须运行交付盘点和质量基准，确认是否达到 production_quality_verified。"
+
+    production_verified_count = int(inventory.get("production_verified_count", 0) or 0)
+    has_verified_output = production_verified_count > 0
+    verified_output_status = "real_quality_verified" if has_verified_output else "structure_demo_only"
+    verified_output_summary = (
+        f"已发现 {production_verified_count} 份真实质量通过的制片包，可以作为真实产物证据。"
+        if has_verified_output
+        else "当前只证明本机具备开跑条件，还没有发现真实质量通过的制片包；公开展示只能说有结构样例和本地生产能力。"
+    )
+    verified_output_next_action = (
+        "选择最近一份 production_quality_verified 产物进入公开样例或作品集说明。"
+        if has_verified_output
+        else "跑完一次真实任务后，先用 handoff audit、real claim 和 production benchmark 验证，再决定能否公开宣称真实画质。"
+    )
+
+    return {
+        "office_id": "comic_production",
+        "mode": "real_production_start_readiness",
+        "status": status,
+        "start_readiness_status": status,
+        "summary": summary,
+        "can_start_full_production": can_start_full,
+        "can_start_limited_planning": can_start_limited,
+        "has_verified_real_output": has_verified_output,
+        "verified_output_status": verified_output_status,
+        "verified_output_summary": verified_output_summary,
+        "verified_output_next_action": verified_output_next_action,
+        "calls_real_models": False,
+        "requires_api_key_to_check": False,
+        "writes_workspace": False,
+        "next_action": next_action,
+        "preflight_status": preflight.get("status", ""),
+        "preflight_summary": preflight.get("summary", ""),
+        "blocking_reasons": preflight.get("blocking_reasons", []),
+        "required_capabilities": [
+            {
+                "id": item.get("id", ""),
+                "title": item.get("title", ""),
+                "status": item.get("status", ""),
+                "owner_label": item.get("owner_label", ""),
+                "model_kind": item.get("model_kind", ""),
+                "impact": item.get("impact", ""),
+                "next_action": item.get("next_action", ""),
+            }
+            for item in capabilities
+            if item.get("id") in required_for_full_package
+        ],
+        "handoff_inventory": {
+            "manifest_count": inventory.get("manifest_count", 0),
+            "production_verified_count": production_verified_count,
+            "demo_only_count": inventory.get("demo_only_count", 0),
+            "needs_review_count": inventory.get("needs_review_count", 0),
+            "legacy_unverifiable_count": inventory.get("legacy_unverifiable_count", 0),
+            "safe_public_claim": inventory.get("safe_public_claim", ""),
+            "next_action": inventory.get("next_action", ""),
+        },
+        "operator_checklist": [
+            "先在模型页面测试中书省、门下省、尚书省、户部、礼部、兵部、工部、刑部的配置。",
+            "确认工部是生图模型，刑部是视觉理解模型，文本部门没有误填成纯生图模型。",
+            "开始真实生产前确认 output 目录可写，且公开部署没有暴露个人密钥。",
+            "真实生产完成后运行 python scripts/audit_comic_v2_handoffs.py --format markdown。",
+            "只有交付盘点和质量基准显示 production_quality_verified 时，才能把该包说成真实质量已验证。",
+        ],
+        "post_run_validation": [
+            {
+                "step": 1,
+                "title": "盘点本地制片包",
+                "command": "python scripts/audit_comic_v2_handoffs.py --format markdown",
+                "passes_when": "最近一份真实项目显示 production_quality_verified，或明确列出 needs_review 的责任部门和恢复动作。",
+                "if_fails": "先按表格里的 Recovery/Stage 修复；不要把 needs_review 或 legacy_unverifiable 当成可交付成品。",
+            },
+            {
+                "step": 2,
+                "title": "审计目标 manifest 的真实生产声明",
+                "command": "python scripts/verify_comic_real_production_claim.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown",
+                "passes_when": "Claim level 为 real_quality_verified，且 Can claim real quality 为 True。",
+                "if_fails": "把报告里的 Claim Upgrade Checklist 当成补证据清单；不要公开宣称真实画质已验证。",
+            },
+            {
+                "step": 3,
+                "title": "复核制片包质量基准",
+                "command": "python scripts/verify_comic_v2_production_benchmark.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown",
+                "passes_when": "package_quality_ready、production_quality_verified 和 stored_benchmark_matches 都成立。",
+                "if_fails": "按 recommended_recovery 退回图片、提示词、质检或交付组装阶段。",
+            },
+            {
+                "step": 4,
+                "title": "保留交付证据",
+                "command": "下载或归档 Word 画布、handoff manifest、提示词包、图片记录和追溯 JSON。",
+                "passes_when": "历史页和 manifest 能互相指向同一批故事、资产、图片、镜头和质量基准版本。",
+                "if_fails": "先重新生成交付包或追溯记录；不要只保留一个 Word 文件。",
+            },
+        ],
+    }
+
+
 def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict:
     """Audit product readiness for the AI comic production office."""
     root = Path(base_dir) if base_dir is not None else REPO_ROOT

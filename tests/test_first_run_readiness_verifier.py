@@ -140,6 +140,14 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("ready_for_real_run", ladder_text)
         self.assertIn("real_production.status=", "\n".join(paths["local_real_use"]["evidence"]))
         self.assertIn("real_production.full=", "\n".join(paths["local_real_use"]["evidence"]))
+        self.assertIn("real_output_evidence.status=", "\n".join(paths["local_real_use"]["evidence"]))
+        self.assertIn("real_output_evidence.verified=", "\n".join(paths["local_real_use"]["evidence"]))
+        real_output = paths["local_real_use"]["real_output_evidence"]
+        self.assertFalse(real_output["has_verified_real_output"])
+        self.assertEqual(real_output["verified_output_status"], "structure_demo_only")
+        self.assertIn("结构样例", real_output["summary"])
+        self.assertIn("production benchmark", real_output["next_action"])
+        self.assertIn("真实画质已验证", real_output["public_claim_rule"])
         validations = paths["local_real_use"]["post_run_validation"]
         self.assertEqual([item["name"] for item in validations], ["交付物清点", "真实生产声明", "制片质量基准"])
         validation_text = json.dumps(validations, ensure_ascii=False)
