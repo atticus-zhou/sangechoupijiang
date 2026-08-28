@@ -104,6 +104,23 @@ def format_markdown(result: dict[str, Any]) -> str:
         failed_ids = image_summary.get("failed_image_ids") or []
         if failed_ids:
             lines.append(f"- Failed image ids: `{', '.join(failed_ids[:8])}`")
+        by_asset_type = image_summary.get("by_asset_type") or {}
+        if by_asset_type:
+            lines.extend([
+                "",
+                "### Image Quality By Asset Type",
+                "",
+                "| Asset type | Total | Passed | Waste/rework | Rate | Failed image ids |",
+                "| --- | ---: | ---: | ---: | ---: | --- |",
+            ])
+            for asset_type in sorted(by_asset_type):
+                item = by_asset_type[asset_type] or {}
+                rate = round(float(item.get("waste_or_rework_rate") or 0) * 100)
+                failed_for_type = ", ".join((item.get("failed_image_ids") or [])[:5]) or "-"
+                lines.append(
+                    f"| {asset_type} | {item.get('total', 0)} | {item.get('passed', 0)} | "
+                    f"{item.get('waste_or_rework', 0)} | {rate}% | {failed_for_type} |"
+                )
         instructions = image_summary.get("rework_instructions") or []
         if instructions:
             lines.extend(["", "### Rework Instructions", ""])

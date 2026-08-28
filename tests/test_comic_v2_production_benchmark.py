@@ -30,6 +30,14 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(audit["image_quality_summary"]["usable_images"], 7)
         self.assertEqual(audit["image_quality_summary"]["waste_or_rework_images"], 0)
         self.assertEqual(audit["image_quality_summary"]["waste_or_rework_rate"], 0)
+        by_asset_type = audit["image_quality_summary"]["by_asset_type"]
+        self.assertEqual(by_asset_type["character"]["total"], 2)
+        self.assertEqual(by_asset_type["character"]["passed"], 2)
+        self.assertEqual(by_asset_type["prop"]["total"], 2)
+        self.assertEqual(by_asset_type["prop"]["passed"], 2)
+        self.assertEqual(by_asset_type["scene"]["total"], 3)
+        self.assertEqual(by_asset_type["scene"]["passed"], 3)
+        self.assertEqual(by_asset_type["scene"]["waste_or_rework_rate"], 0)
         self.assertEqual(audit["prompt_quality_summary"]["status"], "ready")
         self.assertEqual(audit["prompt_quality_summary"]["asset_prompt_count"], 7)
         self.assertEqual(audit["prompt_quality_summary"]["clean_asset_prompt_count"], 7)
@@ -204,6 +212,11 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(audit["image_quality_summary"]["usable_images"], 0)
         self.assertEqual(audit["image_quality_summary"]["waste_or_rework_images"], 7)
         self.assertEqual(audit["image_quality_summary"]["waste_or_rework_rate"], 1)
+        by_asset_type = audit["image_quality_summary"]["by_asset_type"]
+        self.assertEqual(by_asset_type["character"]["waste_or_rework"], 2)
+        self.assertEqual(by_asset_type["prop"]["waste_or_rework"], 2)
+        self.assertEqual(by_asset_type["scene"]["waste_or_rework"], 3)
+        self.assertEqual(by_asset_type["character"]["waste_or_rework_rate"], 1)
         self.assertIn("img_", audit["image_quality_summary"]["failed_image_ids"][0])
         instructions = audit["image_quality_summary"]["rework_instructions"]
         self.assertEqual(len(instructions), 7)
@@ -227,6 +240,9 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         audit = audit_handoff_manifest(manifest)
 
         first = audit["image_quality_summary"]["rework_instructions"][0]
+        by_asset_type = audit["image_quality_summary"]["by_asset_type"]
+        self.assertEqual(by_asset_type["character"]["waste_or_rework"], 1)
+        self.assertIn(manifest["images"][0]["image_id"], by_asset_type["character"]["failed_image_ids"])
         self.assertEqual(first["action"], "rerun_visual_review")
         self.assertEqual(first["label"], "补跑视觉质检")
         self.assertEqual(first["department"], "刑部")

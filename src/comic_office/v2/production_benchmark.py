@@ -514,19 +514,33 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
     rerun_review = 0
     regenerate_prompts = 0
     by_role: dict[str, int] = {}
+    by_asset_type: dict[str, dict[str, Any]] = {}
     failed_image_ids: list[str] = []
     rework_instructions: list[dict[str, Any]] = []
 
     for image in images:
         image_id = str(image.get("image_id") or image.get("asset_id") or "<unknown>")
         role = str(image.get("production_role") or image.get("image_kind") or "unlabeled")
+        asset_type = _image_asset_type(image)
         by_role[role] = by_role.get(role, 0) + 1
+        type_bucket = by_asset_type.setdefault(asset_type, {
+            "asset_type": asset_type,
+            "total": 0,
+            "approved": 0,
+            "reviewed": 0,
+            "passed": 0,
+            "waste_or_rework": 0,
+            "failed_image_ids": [],
+        })
+        type_bucket["total"] += 1
         if str(image.get("status") or "") == "approved":
             approved += 1
+            type_bucket["approved"] += 1
         review = image.get("review") or {}
         if not isinstance(review, dict) or not review:
             missing_review += 1
             failed_image_ids.append(image_id)
+            _mark_asset_type_rework(type_bucket, image_id)
             rework_instructions.append({
                 "image_id": image_id,
                 "asset_id": str(image.get("asset_id") or ""),
@@ -546,17 +560,20 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
             })
             continue
         reviewed += 1
+        type_bucket["reviewed"] += 1
         review_status = str(review.get("status") or "").strip().lower()
         handoff_ready = bool(review.get("handoff_ready"))
         score_ready = _review_scores_ready(review) if "scores" in review else handoff_ready
         if review_status == "pass" and handoff_ready and score_ready:
             passed += 1
+            type_bucket["passed"] += 1
         else:
             if review_status in {"fail", "failed", "不合格"}:
                 failed += 1
             else:
                 needs_review += 1
             failed_image_ids.append(image_id)
+            _mark_asset_type_rework(type_bucket, image_id)
         action = str(review.get("recovery_action") or "").strip()
         if image_id in failed_image_ids:
             failed_dimensions = list(review.get("failed_dimensions") or [])
@@ -594,6 +611,13 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
 
     usable = passed
     waste_or_rework = total - usable
+    for bucket in by_asset_type.values():
+        total_for_type = int(bucket["total"] or 0)
+        bucket["waste_or_rework_rate"] = (
+            round(int(bucket["waste_or_rework"] or 0) / total_for_type, 4)
+            if total_for_type
+            else 0
+        )
     return {
         "total_images": total,
         "approved_images": approved,
@@ -611,6 +635,7 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
         "failed_image_ids": failed_image_ids[:20],
         "rework_instructions": rework_instructions[:20],
         "by_production_role": by_role,
+        "by_asset_type": by_asset_type,
         "rework_action_summary": _rework_action_summary(rework_instructions),
         "summary": (
             f"共 {total} 张图片，{usable} 张可直接交付，{waste_or_rework} 张需要重生、重审或人工复核。"
@@ -618,6 +643,29 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
             else "尚未生成可统计的图片资产。"
         ),
     }
+
+
+def _image_asset_type(image: dict[str, Any]) -> str:
+    explicit = str(image.get("asset_type") or "").strip()
+    if explicit:
+        return explicit
+    asset_id = str(image.get("asset_id") or image.get("image_id") or "").strip().lower()
+    role = str(image.get("production_role") or image.get("image_kind") or "").strip().lower()
+    if asset_id.startswith("character_") or role.startswith("clean_character"):
+        return "character"
+    if asset_id.startswith("prop_") or role.startswith("clean_prop"):
+        return "prop"
+    if asset_id.startswith("scene_") or role.startswith("scene_"):
+        return "scene"
+    if role.startswith("shot_") or "first_frame" in role or "shot" in asset_id:
+        return "shot_reference"
+    return "unclassified"
+
+
+def _mark_asset_type_rework(bucket: dict[str, Any], image_id: str) -> None:
+    bucket["waste_or_rework"] += 1
+    if len(bucket["failed_image_ids"]) < 8:
+        bucket["failed_image_ids"].append(image_id)
 
 
 def _real_model_evidence_requirements(
