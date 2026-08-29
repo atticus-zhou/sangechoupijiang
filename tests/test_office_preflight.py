@@ -163,6 +163,14 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertGreaterEqual(len(payload["operator_checklist"]), 5)
         self.assertGreaterEqual(payload["handoff_inventory"]["manifest_count"], 1)
         self.assertEqual(payload["handoff_inventory"]["production_verified_count"], 0)
+        promotion_gate = payload["real_output_promotion_gate"]
+        self.assertEqual(promotion_gate["status"], "not_ready_to_promote")
+        self.assertFalse(promotion_gate["can_promote_to_public_real_quality"])
+        self.assertIn("真实质量", promotion_gate["user_facing_decision"])
+        self.assertEqual(
+            [item["id"] for item in promotion_gate["required_checks"]],
+            ["handoff_inventory", "real_claim", "production_benchmark"],
+        )
         self.assertNotIn("text-key", str(payload))
         self.assertNotIn("image-key", str(payload))
         self.assertNotIn("vision-key", str(payload))

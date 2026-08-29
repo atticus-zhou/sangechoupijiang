@@ -71,6 +71,11 @@ def audit_comic_real_production_start_readiness(
         if has_verified_output
         else "跑完一次真实任务后，先用 handoff audit、real claim 和 production benchmark 验证，再决定能否公开宣称真实画质。"
     )
+    real_output_promotion_gate = _real_output_promotion_gate(
+        inventory=inventory,
+        has_verified_output=has_verified_output,
+        production_verified_count=production_verified_count,
+    )
 
     return {
         "office_id": "comic_production",
@@ -84,6 +89,7 @@ def audit_comic_real_production_start_readiness(
         "verified_output_status": verified_output_status,
         "verified_output_summary": verified_output_summary,
         "verified_output_next_action": verified_output_next_action,
+        "real_output_promotion_gate": real_output_promotion_gate,
         "calls_real_models": False,
         "requires_api_key_to_check": False,
         "writes_workspace": False,
@@ -153,6 +159,70 @@ def audit_comic_real_production_start_readiness(
     }
 
 
+def _real_output_promotion_gate(
+    *,
+    inventory: dict,
+    has_verified_output: bool,
+    production_verified_count: int,
+) -> dict:
+    """Explain whether local outputs can be promoted from demo proof to real-quality evidence."""
+    manifest_count = int(inventory.get("manifest_count", 0) or 0)
+    needs_review_count = int(inventory.get("needs_review_count", 0) or 0)
+    legacy_unverifiable_count = int(inventory.get("legacy_unverifiable_count", 0) or 0)
+    demo_only_count = int(inventory.get("demo_only_count", 0) or 0)
+    if has_verified_output:
+        status = "ready_to_promote"
+        user_facing_decision = "可以选择一份真实质量通过的制片包，作为作品集或对外演示中的真实产物证据。"
+        next_action = "进入目标 manifest，重新跑真实生产声明和质量基准，确认要公开引用的是同一份产物。"
+        missing_evidence: list[str] = []
+    elif manifest_count <= 0:
+        status = "no_local_handoff"
+        user_facing_decision = "还没有发现本地制片包，当前只能展示固定样例和产品结构。"
+        next_action = "先在 AI 漫剧制片办公室跑完一次真实任务，生成 Word 画布和 handoff manifest。"
+        missing_evidence = ["本地 handoff manifest", "Word 制片画布", "图片生产记录", "质量基准"]
+    else:
+        status = "not_ready_to_promote"
+        user_facing_decision = "已有本地制片包，但还不能把它说成真实质量已验证。"
+        next_action = "选择最近一份真实项目 manifest，依次跑交付盘点、真实声明和质量基准；失败时按 recommended_recovery 退回对应阶段。"
+        missing_evidence = [
+            "production_quality_verified",
+            "真实模型图片来源记录",
+            "视觉质检通过记录",
+            "下游接手决策 ready_for_downstream",
+        ]
+    return {
+        "status": status,
+        "can_promote_to_public_real_quality": has_verified_output,
+        "user_facing_decision": user_facing_decision,
+        "next_action": next_action,
+        "missing_evidence": missing_evidence,
+        "counts": {
+            "manifest_count": manifest_count,
+            "production_verified_count": production_verified_count,
+            "demo_only_count": demo_only_count,
+            "needs_review_count": needs_review_count,
+            "legacy_unverifiable_count": legacy_unverifiable_count,
+        },
+        "required_checks": [
+            {
+                "id": "handoff_inventory",
+                "command": "python scripts/audit_comic_v2_handoffs.py --format markdown",
+                "proves": "本地到底有几份制片包、哪些是真实质量通过、哪些只是结构样例或待修复。",
+            },
+            {
+                "id": "real_claim",
+                "command": "python scripts/verify_comic_real_production_claim.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown",
+                "proves": "这份 manifest 能不能对外声明真实模型质量，不能时缺哪类证据。",
+            },
+            {
+                "id": "production_benchmark",
+                "command": "python scripts/verify_comic_v2_production_benchmark.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown",
+                "proves": "故事、资产、提示词、图片、质检和交付是否同时满足生产质量基准。",
+            },
+        ],
+    }
+
+
 def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict:
     """Audit product readiness for the AI comic production office."""
     root = Path(base_dir) if base_dir is not None else REPO_ROOT
@@ -206,10 +276,12 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
                 _contains(root / "src/product_readiness.py", "audit_comic_real_production_start_readiness"),
                 _contains(root / "src/product_readiness.py", "ready_for_real_run"),
                 _contains(root / "src/product_readiness.py", "limited_planning_only"),
+                _contains(root / "src/product_readiness.py", "real_output_promotion_gate"),
                 _contains(root / "src/web/app.py", "/api/offices/{office_id}/real-production-readiness"),
                 _contains(root / "src/web/static/js/app.js", "renderRealProductionReadiness"),
                 _contains(root / "src/web/static/js/app.js", "/api/offices/${officeId}/real-production-readiness"),
                 _contains(root / "tests/test_office_preflight.py", "test_comic_real_production_readiness_reports_full_ready_without_calling_models"),
+                _contains(root / "tests/test_office_preflight.py", "can_promote_to_public_real_quality"),
                 _contains(root / "tests/test_frontend_comic_routing.py", "renderRealProductionReadiness"),
                 _contains(root / "README.md", "/api/offices/comic_production/real-production-readiness"),
             ],
@@ -229,10 +301,12 @@ def audit_comic_production_readiness(base_dir: Path | str | None = None) -> dict
                 _contains(root / "scripts/doctor.py", "三个臭皮匠本地自检"),
                 _contains(root / "scripts/doctor.py", "办公室可用性"),
                 _contains(root / "scripts/doctor.py", '"offices"'),
+                _contains(root / "scripts/doctor.py", "真实产物晋级卡"),
                 _contains(root / "scripts/doctor.py", "build_system_preflight"),
                 _contains(root / "scripts/doctor.py", "build_office_preflight"),
                 _contains(root / "README.md", "python scripts/doctor.py"),
                 _contains(root / "tests/test_doctor_script.py", "DoctorScriptTests"),
+                _contains(root / "tests/test_doctor_script.py", "real_output_promotion_gate"),
             ],
             [
                 "scripts/doctor.py",

@@ -36,6 +36,15 @@ class ComicProductionReadinessTests(unittest.TestCase):
         from src.product_readiness import audit_comic_real_production_start_readiness
 
         real_run = audit_comic_real_production_start_readiness(ConfigManager().get_model_config)
+        promotion_gate = real_run["real_output_promotion_gate"]
+        self.assertEqual(promotion_gate["status"], "not_ready_to_promote")
+        self.assertFalse(promotion_gate["can_promote_to_public_real_quality"])
+        self.assertIn("还不能把它说成真实质量已验证", promotion_gate["user_facing_decision"])
+        self.assertIn("production_quality_verified", promotion_gate["missing_evidence"])
+        self.assertEqual(
+            [item["id"] for item in promotion_gate["required_checks"]],
+            ["handoff_inventory", "real_claim", "production_benchmark"],
+        )
         post_run = real_run["post_run_validation"]
         self.assertEqual([item["step"] for item in post_run], [1, 2, 3, 4])
         post_run_text = "\n".join(item["command"] for item in post_run)

@@ -4104,6 +4104,10 @@ function renderRealProductionReadiness(result, targetId = '') {
     const capabilities = Array.isArray(result.required_capabilities) ? result.required_capabilities : [];
     const inventory = result.handoff_inventory || {};
     const checklist = Array.isArray(result.operator_checklist) ? result.operator_checklist : [];
+    const promotionGate = result.real_output_promotion_gate || {};
+    const promotionCounts = promotionGate.counts || {};
+    const promotionChecks = Array.isArray(promotionGate.required_checks) ? promotionGate.required_checks : [];
+    const missingEvidence = Array.isArray(promotionGate.missing_evidence) ? promotionGate.missing_evidence : [];
     target.insertAdjacentHTML('beforeend', `
         <div class="preflight-card preflight-${escapeHtml(uiStatus)} product-readiness-card real-production-readiness-card">
             <div class="preflight-head">
@@ -4136,6 +4140,23 @@ function renderRealProductionReadiness(result, targetId = '') {
                 <div class="preflight-limited">
                     <b>开工前清单</b>
                     ${checklist.slice(0, 5).map(item => `<p><span>检查</span>${escapeHtml(item)}</p>`).join('')}
+                </div>
+            ` : ''}
+            ${promotionGate.status ? `
+                <div class="preflight-limited real-output-promotion-gate">
+                    <b>真实产物晋级卡</b>
+                    <p><span>判断</span>${escapeHtml(promotionGate.user_facing_decision || '')}</p>
+                    <p><span>公开声明</span>${promotionGate.can_promote_to_public_real_quality ? '可以宣称真实质量已验证' : '暂不能宣称真实质量已验证'}</p>
+                    <p><span>下一步</span>${escapeHtml(promotionGate.next_action || '')}</p>
+                    <p><span>盘点</span>manifest ${escapeHtml(promotionCounts.manifest_count || 0)} 份；真实质量通过 ${escapeHtml(promotionCounts.production_verified_count || 0)} 份；待修复 ${escapeHtml(promotionCounts.needs_review_count || 0)} 份</p>
+                    ${missingEvidence.length ? `<p><span>缺失证据</span>${missingEvidence.map(item => escapeHtml(item)).join('；')}</p>` : ''}
+                    ${promotionChecks.length ? `
+                        <div class="preflight-command-list">
+                            ${promotionChecks.map(item => `
+                                <code>${escapeHtml(item.command || '')}</code>
+                            `).join('')}
+                        </div>
+                    ` : ''}
                 </div>
             ` : ''}
         </div>

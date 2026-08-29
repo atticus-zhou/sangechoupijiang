@@ -183,6 +183,27 @@ def format_doctor_markdown(report: dict) -> str:
         lines.extend(["", "开工前清单："])
         lines.extend(f"- {item}" for item in checklist)
 
+    promotion_gate = real.get("real_output_promotion_gate") or {}
+    if promotion_gate:
+        counts = promotion_gate.get("counts") or {}
+        missing = "；".join(promotion_gate.get("missing_evidence") or []) or "无"
+        lines.extend([
+            "",
+            "## 真实产物晋级卡",
+            "",
+            f"- 状态：{promotion_gate.get('status', '')}",
+            f"- 是否可公开宣称真实质量：{'可以' if promotion_gate.get('can_promote_to_public_real_quality') else '不可以'}",
+            f"- 判断：{promotion_gate.get('user_facing_decision', '')}",
+            f"- 下一步：{promotion_gate.get('next_action', '')}",
+            f"- 缺失证据：{missing}",
+            f"- 盘点：manifest {counts.get('manifest_count', 0)} 份；真实质量通过 {counts.get('production_verified_count', 0)} 份；待修复 {counts.get('needs_review_count', 0)} 份；旧版不可审计 {counts.get('legacy_unverifiable_count', 0)} 份。",
+            "",
+            "| 验证 | 命令 | 证明什么 |",
+            "| --- | --- | --- |",
+        ])
+        for item in promotion_gate.get("required_checks") or []:
+            lines.append(_row(item.get("id"), item.get("command"), item.get("proves")))
+
     post_run = real.get("post_run_validation") or []
     if post_run:
         lines.extend([

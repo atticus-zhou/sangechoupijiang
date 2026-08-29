@@ -3243,6 +3243,25 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     margin-right: 6px;
     color: var(--warn);
 }
+.real-output-promotion-gate {
+    border-color: rgba(88, 166, 255, 0.22);
+    background: rgba(12, 20, 36, 0.62);
+}
+.preflight-command-list {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+}
+.preflight-command-list code {
+    display: block;
+    padding: 7px 9px;
+    border: 1px solid rgba(139, 148, 158, 0.16);
+    border-radius: var(--r-xs);
+    color: var(--text2);
+    background: rgba(3, 7, 18, 0.36);
+    white-space: normal;
+    word-break: break-word;
+}
 .preflight-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

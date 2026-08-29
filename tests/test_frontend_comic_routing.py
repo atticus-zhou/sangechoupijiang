@@ -4,6 +4,7 @@ import unittest
 
 APP_JS = Path("src/web/static/js/app.js")
 INDEX_HTML = Path("src/web/static/index.html")
+STYLE_CSS = Path("src/web/static/css/style.css")
 README = Path("README.md")
 
 
@@ -104,6 +105,14 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("function renderRealProductionReadiness", js)
         self.assertIn("真实生产前检查", js)
         self.assertIn("完整制片包", js)
+        self.assertIn("real_output_promotion_gate", js)
+        self.assertIn("真实产物晋级卡", js)
+        self.assertIn("公开声明", js)
+        self.assertIn("暂不能宣称真实质量已验证", js)
+        self.assertIn("preflight-command-list", js)
+        css = STYLE_CSS.read_text(encoding="utf-8")
+        self.assertIn(".real-output-promotion-gate", css)
+        self.assertIn(".preflight-command-list", css)
 
     def test_model_page_renders_current_office_model_requirement_summary(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
