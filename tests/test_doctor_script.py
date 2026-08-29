@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import unittest
+import ast
 from pathlib import Path
 
 
@@ -9,6 +10,19 @@ SCRIPT = Path("scripts/doctor.py")
 
 
 class DoctorScriptTests(unittest.TestCase):
+    def test_doctor_script_has_single_authoritative_entrypoints(self):
+        tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
+        functions = [
+            node.name
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+        ]
+
+        self.assertEqual(functions.count("build_doctor_report"), 1)
+        self.assertEqual(functions.count("format_doctor_markdown"), 1)
+        self.assertEqual(functions.count("_summary"), 1)
+        self.assertEqual(functions.count("_next_action"), 1)
+
     def test_doctor_outputs_user_facing_markdown(self):
         result = subprocess.run(
             [sys.executable, str(SCRIPT)],
