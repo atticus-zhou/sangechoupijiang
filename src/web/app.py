@@ -7852,6 +7852,9 @@ def _comic_v2_image_production_evidence(image_assets: list[dict], quality_benchm
         summary = "图片来源混合或缺少 provider/model，不能支撑真实质量声明。"
     benchmark_verified = bool(benchmark.get("production_quality_verified"))
     benchmark_image_summary = benchmark.get("image_quality_summary") or {}
+    by_asset_type = dict(benchmark_image_summary.get("by_asset_type") or {})
+    if not by_asset_type and image_assets:
+        by_asset_type = _comic_v2_image_asset_type_summary(image_assets)
     return {
         "total_images": total,
         "providers": providers,
@@ -7877,6 +7880,7 @@ def _comic_v2_image_production_evidence(image_assets: list[dict], quality_benchm
         "regenerate_prompt_count": int(benchmark_image_summary.get("regenerate_prompt_count") or 0),
         "failed_image_ids": list(benchmark_image_summary.get("failed_image_ids") or []),
         "rework_instructions": list(benchmark_image_summary.get("rework_instructions") or []),
+        "by_asset_type": by_asset_type,
         "evidence_level": evidence_level,
         "supports_real_quality_claim": evidence_level == "model_reviewed" and benchmark_verified,
         "summary": summary,
@@ -7896,6 +7900,64 @@ def _comic_v2_image_production_next_action(evidence_level: str, benchmark_verifi
     if evidence_level == "model_partial":
         return "补齐失败图片的重试、视觉质检或 provider/model 记录。"
     return "复核图片来源，清理 fixture/未知来源后重新生成质量基准。"
+
+
+def _comic_v2_image_asset_type_summary(image_assets: list[dict]) -> dict:
+    """Rebuild asset-type quality buckets for older history rows missing benchmark buckets."""
+    buckets: dict[str, dict] = {}
+    for image in image_assets:
+        asset_type = _comic_v2_infer_image_asset_type(image)
+        image_id = str(image.get("image_id") or image.get("asset_id") or "<unknown>")
+        bucket = buckets.setdefault(asset_type, {
+            "asset_type": asset_type,
+            "total": 0,
+            "approved": 0,
+            "reviewed": 0,
+            "passed": 0,
+            "waste_or_rework": 0,
+            "failed_image_ids": [],
+        })
+        bucket["total"] += 1
+        if str(image.get("status") or "").strip().lower() == "approved":
+            bucket["approved"] += 1
+        has_review = bool(image.get("review_status")) or bool(image.get("review_handoff_ready"))
+        if has_review:
+            bucket["reviewed"] += 1
+        is_passed = (
+            str(image.get("review_status") or "").strip().lower() == "pass"
+            and bool(image.get("review_handoff_ready"))
+        )
+        if is_passed:
+            bucket["passed"] += 1
+        else:
+            bucket["waste_or_rework"] += 1
+            if len(bucket["failed_image_ids"]) < 8:
+                bucket["failed_image_ids"].append(image_id)
+    for bucket in buckets.values():
+        total_for_type = int(bucket.get("total") or 0)
+        bucket["waste_or_rework_rate"] = (
+            round(int(bucket.get("waste_or_rework") or 0) / total_for_type, 4)
+            if total_for_type
+            else 0
+        )
+    return buckets
+
+
+def _comic_v2_infer_image_asset_type(image: dict) -> str:
+    explicit = str(image.get("asset_type") or "").strip()
+    if explicit:
+        return explicit
+    asset_id = str(image.get("asset_id") or image.get("image_id") or "").strip().lower()
+    role = str(image.get("production_role") or image.get("image_kind") or "").strip().lower()
+    if asset_id.startswith(("character_", "char_")) or role.startswith("clean_character"):
+        return "character"
+    if asset_id.startswith("prop_") or role.startswith("clean_prop"):
+        return "prop"
+    if asset_id.startswith("scene_") or role.startswith("scene_"):
+        return "scene"
+    if role.startswith("shot_") or "first_frame" in role or "shot" in asset_id:
+        return "shot_reference"
+    return "unclassified"
 
 
 def _comic_v2_history_image_asset(artifact: dict) -> dict:

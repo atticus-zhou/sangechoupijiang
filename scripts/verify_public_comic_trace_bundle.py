@@ -110,6 +110,13 @@ def _collect_trace_errors(trace: dict[str, Any]) -> list[str]:
         errors.append("image production evidence total_images must match trace images")
     if not image_evidence.get("next_action"):
         errors.append("image production evidence must include a next action")
+    by_asset_type = image_evidence.get("by_asset_type") or {}
+    for asset_type in ("character", "prop", "scene"):
+        bucket = by_asset_type.get(asset_type) or {}
+        if int(bucket.get("total") or 0) <= 0:
+            errors.append(f"image production evidence must expose {asset_type} quality totals")
+        if "waste_or_rework" not in bucket:
+            errors.append(f"image production evidence must expose {asset_type} waste_or_rework")
 
     if trace.get("claim_level") != "demo_structure_only":
         errors.append("trace claim_level must remain demo_structure_only")
@@ -186,6 +193,7 @@ def verify_public_comic_trace_bundle() -> dict[str, Any]:
         "production_quality_verified": quality.get("production_quality_verified"),
         "image_evidence_level": image_evidence.get("evidence_level", ""),
         "supports_real_quality_claim": image_evidence.get("supports_real_quality_claim"),
+        "asset_type_quality": image_evidence.get("by_asset_type") or {},
         "real_model_evidence_status": real_model_evidence.get("status", ""),
         "real_model_evidence_ready": real_model_evidence.get("ready_for_real_quality_claim"),
         "real_model_evidence_missing_checks": list(real_model_evidence.get("missing_check_ids") or []),
@@ -214,6 +222,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Claim level: {payload.get('claim_level')}",
         f"- Quality: {payload.get('quality_status')} / visual={payload.get('visual_evidence_level')} / real={payload.get('production_quality_verified')}",
         f"- Image evidence: {payload.get('image_evidence_level')} / supports_real_quality={payload.get('supports_real_quality_claim')}",
+        f"- Asset type quality: {_format_asset_type_quality(payload.get('asset_type_quality') or {})}",
         f"- Real model evidence: {payload.get('real_model_evidence_status')} / ready={payload.get('real_model_evidence_ready')}",
         f"- Missing real model checks: {', '.join(payload.get('real_model_evidence_missing_checks') or [])}",
         f"- Downstream handoff: {payload.get('downstream_handoff_status')} / allowed={payload.get('downstream_handoff_allowed')}",
@@ -224,6 +233,20 @@ def format_markdown(payload: dict[str, Any]) -> str:
         lines.extend(["", "## Errors", ""])
         lines.extend(f"- {item}" for item in payload["errors"])
     return "\n".join(lines) + "\n"
+
+
+def _format_asset_type_quality(by_asset_type: dict[str, Any]) -> str:
+    parts = []
+    for asset_type in ("character", "prop", "scene", "shot_reference", "unclassified"):
+        item = by_asset_type.get(asset_type) or {}
+        total = int(item.get("total") or 0)
+        if total <= 0:
+            continue
+        parts.append(
+            f"{asset_type}={item.get('passed', 0)}/{total} passed, "
+            f"{item.get('waste_or_rework', 0)} rework"
+        )
+    return "; ".join(parts) or "missing"
 
 
 def main() -> None:

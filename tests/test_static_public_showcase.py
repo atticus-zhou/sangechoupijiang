@@ -72,8 +72,16 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         handoff_inventory = json.loads(
             (self.output_dir / "downloads/comic-production/handoff-inventory.json").read_text(encoding="utf-8")
         )
+        trace_bundle = json.loads(
+            (self.output_dir / "downloads/comic-production/files/trace.json").read_text(encoding="utf-8")
+        )
         self.assertFalse(handoff_inventory["requires_api_key"])
         self.assertFalse(handoff_inventory["calls_real_models"])
+        trace_asset_types = trace_bundle["image_production_evidence"]["by_asset_type"]
+        self.assertEqual(trace_asset_types["character"]["total"], 2)
+        self.assertEqual(trace_asset_types["prop"]["total"], 2)
+        self.assertEqual(trace_asset_types["scene"]["total"], 3)
+        self.assertEqual(trace_asset_types["character"]["waste_or_rework"], 0)
         self.assertEqual(handoff_inventory["production_verified_count"], 0)
         demo_recoveries = [
             item["recommended_recovery"]
