@@ -71,6 +71,10 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(payload["showcase_manifest"]["handoff_inventory_usable_images"], 7)
         self.assertGreaterEqual(payload["showcase_manifest"]["handoff_inventory_waste_or_rework_images"], 0)
         self.assertGreaterEqual(payload["showcase_manifest"]["handoff_inventory_waste_or_rework_rate"], 0)
+        showcase_asset_types = payload["showcase_manifest"]["handoff_inventory_asset_type_quality"]
+        self.assertGreaterEqual(showcase_asset_types["character"]["total"], 2)
+        self.assertGreaterEqual(showcase_asset_types["prop"]["total"], 2)
+        self.assertGreaterEqual(showcase_asset_types["scene"]["total"], 3)
         self.assertEqual(payload["showcase_manifest"]["asset_usage_map_ready_assets"], payload["showcase_manifest"]["asset_usage_map_total_assets"])
         self.assertGreaterEqual(payload["showcase_manifest"]["asset_usage_map_image_roles"], payload["showcase_manifest"]["asset_usage_map_total_assets"])
         self.assertEqual(payload["showcase_manifest"]["asset_usage_map_referenced_assets"], payload["showcase_manifest"]["asset_usage_map_total_assets"])
@@ -101,6 +105,10 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["usable_images"], 7)
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["waste_or_rework_images"], 0)
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["waste_or_rework_rate"], 0)
+        inventory_asset_types = payload["comic_handoff_inventory"]["asset_type_quality"]
+        self.assertGreaterEqual(inventory_asset_types["character"]["total"], 2)
+        self.assertGreaterEqual(inventory_asset_types["prop"]["total"], 2)
+        self.assertGreaterEqual(inventory_asset_types["scene"]["total"], 3)
         self.assertEqual(payload["comic_real_production_claim"]["status_code"], 200)
         self.assertEqual(payload["comic_real_production_claim"]["claim_level"], "demo_structure_only")
         self.assertFalse(payload["comic_real_production_claim"]["can_claim_real_quality"])

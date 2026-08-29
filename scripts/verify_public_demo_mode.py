@@ -57,6 +57,41 @@ def _collect_launch_gate_links(client: TestClient, endpoint: str) -> list[str]:
     return links
 
 
+def _summarize_asset_type_quality(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    summary: dict[str, dict[str, Any]] = {}
+    for item in items:
+        by_type = item.get("asset_type_quality") or (item.get("image_quality_summary") or {}).get("by_asset_type") or {}
+        if not isinstance(by_type, dict):
+            continue
+        for asset_type, quality in by_type.items():
+            if not isinstance(quality, dict):
+                continue
+            bucket = summary.setdefault(str(asset_type), {
+                "asset_type": str(asset_type),
+                "total": 0,
+                "passed": 0,
+                "waste_or_rework": 0,
+            })
+            bucket["total"] += int(quality.get("total") or 0)
+            bucket["passed"] += int(quality.get("passed") or 0)
+            bucket["waste_or_rework"] += int(quality.get("waste_or_rework") or 0)
+    return summary
+
+
+def _format_asset_type_quality(by_asset_type: dict[str, Any]) -> str:
+    parts = []
+    for asset_type in ("character", "prop", "scene", "shot_reference", "unclassified"):
+        item = by_asset_type.get(asset_type) or {}
+        total = int(item.get("total") or 0)
+        if total <= 0:
+            continue
+        parts.append(
+            f"{asset_type}={int(item.get('passed') or 0)}/{total}, "
+            f"rework={int(item.get('waste_or_rework') or 0)}"
+        )
+    return "; ".join(parts) or "missing"
+
+
 def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str, Any]:
     response = client.get("/api/demo/public-showcase")
     if response.status_code != 200:
@@ -206,6 +241,11 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append("portfolio embed handoff inventory must summarize waste/rework images")
         if "waste_or_rework_rate" not in handoff_inventory:
             errors.append("portfolio embed handoff inventory must summarize waste/rework rate")
+        asset_type_quality = handoff_inventory.get("asset_type_quality") or {}
+        for asset_type in ("character", "prop", "scene"):
+            quality = asset_type_quality.get(asset_type) or {}
+            if int(quality.get("total") or 0) <= 0:
+                errors.append(f"portfolio embed handoff inventory must summarize {asset_type} asset quality")
     if real_production_claim.get("uri") != "/api/demo/comic-production/claim-report":
         errors.append("portfolio embed must expose the comic real production claim report endpoint")
     if real_production_claim.get("claim_level") != "demo_structure_only":
@@ -425,6 +465,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "handoff_inventory_usable_images": handoff_inventory.get("usable_images", 0),
         "handoff_inventory_waste_or_rework_images": handoff_inventory.get("waste_or_rework_images", 0),
         "handoff_inventory_waste_or_rework_rate": handoff_inventory.get("waste_or_rework_rate", 0),
+        "handoff_inventory_asset_type_quality": handoff_inventory.get("asset_type_quality", {}),
         "handoff_inventory_safe_public_claim": handoff_inventory.get("safe_public_claim", ""),
         "real_production_claim_uri": real_production_claim.get("uri", ""),
         "real_production_claim_level": real_production_claim.get("claim_level", ""),
@@ -490,6 +531,7 @@ def verify_public_demo_mode() -> dict[str, Any]:
         if inventory_total_images
         else 0
     )
+    inventory_asset_type_quality = _summarize_asset_type_quality(inventory_image_items)
     if inventory_payload.get("demo_only_count", 0) > 0 and not inventory_recovery_items:
         errors.append("comic handoff inventory demo-only items must expose recovery actions")
     if inventory_payload.get("demo_only_count", 0) > 0 and not inventory_image_items:
@@ -506,6 +548,11 @@ def verify_public_demo_mode() -> dict[str, Any]:
             errors.append(f"comic handoff inventory item image summary missing failed_image_ids: {item.get('title') or item.get('quality_claim')}")
         if "rework_action_summary" not in image_summary or not isinstance(image_summary.get("rework_action_summary"), list):
             errors.append(f"comic handoff inventory item image summary missing rework_action_summary: {item.get('title') or item.get('quality_claim')}")
+        asset_type_quality = item.get("asset_type_quality") or image_summary.get("by_asset_type") or {}
+        for asset_type in ("character", "prop", "scene"):
+            quality = asset_type_quality.get(asset_type) or {}
+            if int(quality.get("total") or 0) <= 0:
+                errors.append(f"comic handoff inventory item missing {asset_type} asset quality: {item.get('title') or item.get('quality_claim')}")
     for item in inventory_recovery_items:
         recovery = item.get("recommended_recovery") or {}
         if not recovery.get("expected_stage") or not recovery.get("preserves") or not recovery.get("clears"):
@@ -667,6 +714,7 @@ def verify_public_demo_mode() -> dict[str, Any]:
             "usable_images": inventory_usable_images,
             "waste_or_rework_images": inventory_waste_images,
             "waste_or_rework_rate": inventory_waste_rate,
+            "asset_type_quality": inventory_asset_type_quality,
         },
         "comic_real_production_claim": {
             "status_code": claim_response.status_code,
@@ -715,6 +763,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 复现与验收清单：{manifest.get('reproducibility_count')} 步，其中 {manifest.get('reproducibility_ready_count')} 步可执行",
         f"- 发布状态铭牌：{manifest.get('release_badge_status')}，信号 {manifest.get('release_badge_signal_count')} 条，真实画质声明 {manifest.get('release_badge_claim_real_quality')}",
         f"- 漫剧交付盘点：{inventory.get('manifest_count')} 份，真实质量通过 {inventory.get('production_verified_count')} 份，结构样例 {inventory.get('demo_only_count')} 份",
+        f"- 漫剧资产类型质量：{_format_asset_type_quality(inventory.get('asset_type_quality') or manifest.get('handoff_inventory_asset_type_quality') or {})}",
         f"- 漫剧交付恢复动作：{inventory.get('recovery_item_count')} 份可恢复，动作 {', '.join(inventory.get('recovery_actions') or []) or '无'}，阶段 {inventory.get('recovery_stage_count')}",
         f"- 漫剧公开质量声明：{inventory.get('safe_public_claim')}",
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",

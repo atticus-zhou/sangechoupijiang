@@ -111,6 +111,7 @@ def _audit_manifest_path(path: Path) -> dict[str, Any] | None:
         elif claim == "legacy_unverifiable":
             recovery = _legacy_recovery()
     image_summary = benchmark.get("image_quality_summary") or {}
+    asset_type_quality = dict(image_summary.get("by_asset_type") or {})
     return {
         "path": str(path),
         "title": ((payload.get("story") or {}).get("title") or path.stem),
@@ -121,6 +122,7 @@ def _audit_manifest_path(path: Path) -> dict[str, Any] | None:
         "production_quality_verified": bool(benchmark.get("production_quality_verified")),
         "visual_evidence_level": benchmark.get("visual_evidence_level") or "",
         "image_quality_summary": image_summary,
+        "asset_type_quality": asset_type_quality,
         "total_images": int(image_summary.get("total_images") or 0),
         "usable_images": int(image_summary.get("usable_images") or 0),
         "waste_or_rework_images": int(image_summary.get("waste_or_rework_images") or 0),
@@ -371,8 +373,8 @@ def format_markdown(result: dict[str, Any]) -> str:
             )
         lines.append("")
     lines.extend([
-        "| Recommended | Duplicate group | Claim | Score | Visual evidence | Images | Usable | Rework | Rework rate | Title | Word | Recovery | Stage | Impact | Manifest |",
-        "| --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- |",
+        "| Recommended | Duplicate group | Claim | Score | Visual evidence | Images | Usable | Rework | Rework rate | Asset types | Title | Word | Recovery | Stage | Impact | Manifest |",
+        "| --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- |",
     ])
     for item in result.get("manifests", []):
         recovery = item.get("recommended_recovery") or {}
@@ -386,6 +388,7 @@ def format_markdown(result: dict[str, Any]) -> str:
             f"{item.get('usable_images', 0)} | "
             f"{item.get('waste_or_rework_images', 0)} | "
             f"{_format_rate(item.get('waste_or_rework_rate', 0))} | "
+            f"{_format_asset_type_quality(item.get('asset_type_quality') or {})} | "
             f"{item.get('title')} | "
             f"{'yes' if item.get('word_canvas_exists') else 'missing'} | "
             f"{recovery.get('label') or recovery.get('action') or ''} | "
@@ -409,6 +412,19 @@ def _format_rate(value: Any) -> str:
     if percent.is_integer():
         return f"{int(percent)}%"
     return f"{percent:.1f}%"
+
+
+def _format_asset_type_quality(by_asset_type: dict[str, Any]) -> str:
+    parts = []
+    for asset_type in ("character", "prop", "scene", "shot_reference", "unclassified"):
+        item = by_asset_type.get(asset_type) or {}
+        total = int(item.get("total") or 0)
+        if total <= 0:
+            continue
+        passed = int(item.get("passed") or 0)
+        rework = int(item.get("waste_or_rework") or 0)
+        parts.append(f"{asset_type}={passed}/{total}, rework={rework}")
+    return "; ".join(parts) or "-"
 
 
 def main() -> int:

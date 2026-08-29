@@ -97,6 +97,53 @@ def _scan_text_integrity(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
+def _summarize_asset_type_quality(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    summary: dict[str, dict[str, Any]] = {}
+    for item in items:
+        by_type = item.get("asset_type_quality") or (item.get("image_quality_summary") or {}).get("by_asset_type") or {}
+        if not isinstance(by_type, dict):
+            continue
+        for asset_type, quality in by_type.items():
+            if not isinstance(quality, dict):
+                continue
+            key = str(asset_type)
+            bucket = summary.setdefault(
+                key,
+                {
+                    "asset_type": key,
+                    "total": 0,
+                    "passed": 0,
+                    "waste_or_rework": 0,
+                    "manifest_count": 0,
+                },
+            )
+            bucket["total"] += int(quality.get("total") or 0)
+            bucket["passed"] += int(quality.get("passed") or 0)
+            bucket["waste_or_rework"] += int(quality.get("waste_or_rework") or 0)
+            bucket["manifest_count"] += 1
+    for bucket in summary.values():
+        total = int(bucket.get("total") or 0)
+        bucket["waste_or_rework_rate"] = (
+            round(int(bucket.get("waste_or_rework") or 0) / total, 4)
+            if total
+            else 0
+        )
+    return summary
+
+
+def _format_asset_type_quality(by_asset_type: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for asset_type in ("character", "prop", "scene", "shot_reference", "unclassified"):
+        item = by_asset_type.get(asset_type) or {}
+        total = int(item.get("total") or 0)
+        if total <= 0:
+            continue
+        passed = int(item.get("passed") or 0)
+        rework = int(item.get("waste_or_rework") or 0)
+        parts.append(f"{asset_type}={passed}/{total}, rework={rework}")
+    return "; ".join(parts) or "-"
+
+
 def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dict[str, Any]:
     errors: list[str] = []
     build_root = REPO_ROOT / "dist"
@@ -295,18 +342,25 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         inventory_path = temp_dir / inventory_uri
         inventory_payload: dict[str, Any] = {}
         inventory_recovery_items: list[dict[str, Any]] = []
+        inventory_items: list[dict[str, Any]] = []
+        inventory_asset_type_quality: dict[str, dict[str, Any]] = {}
         if not inventory_path.is_file():
             errors.append("static showcase must export the comic handoff inventory JSON")
         else:
             inventory_payload = json.loads(inventory_path.read_text(encoding="utf-8"))
+            inventory_items = list(inventory_payload.get("items") or [])
+            inventory_asset_type_quality = _summarize_asset_type_quality(inventory_items)
             if inventory_payload.get("calls_real_models") is not False:
                 errors.append("static comic handoff inventory must not call real models")
             if inventory_payload.get("requires_api_key") is not False:
                 errors.append("static comic handoff inventory must not require an API Key")
             if inventory_payload.get("production_verified_count", 0) != 0:
                 errors.append("static comic handoff inventory must not claim real production verification")
+            for asset_type in ("character", "prop", "scene"):
+                if int((inventory_asset_type_quality.get(asset_type) or {}).get("total") or 0) <= 0:
+                    errors.append(f"static comic handoff inventory must expose {asset_type} image quality totals")
             inventory_recovery_items = [
-                item for item in (inventory_payload.get("items") or [])
+                item for item in inventory_items
                 if (item.get("recommended_recovery") or {}).get("action")
             ]
             if inventory_payload.get("demo_only_count", 0) > 0 and not inventory_recovery_items:
@@ -321,6 +375,13 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 for marker in ("total_images", "usable_images", "waste_or_rework_images", "waste_or_rework_rate"):
                     if marker not in image_summary or marker not in item:
                         errors.append(f"static comic handoff inventory image quality is missing {marker}: {item.get('title') or item.get('quality_claim')}")
+                by_asset_type = item.get("asset_type_quality") or image_summary.get("by_asset_type") or {}
+                if not isinstance(by_asset_type, dict):
+                    errors.append(f"static comic handoff inventory asset_type_quality must be an object: {item.get('title') or item.get('quality_claim')}")
+                else:
+                    for asset_type in ("character", "prop", "scene"):
+                        if int((by_asset_type.get(asset_type) or {}).get("total") or 0) <= 0:
+                            errors.append(f"static comic handoff inventory is missing {asset_type} image quality: {item.get('title') or item.get('quality_claim')}")
                 if not isinstance(item.get("failed_image_ids"), list):
                     errors.append(f"static comic handoff inventory failed_image_ids must be a list: {item.get('title') or item.get('quality_claim')}")
                 if not isinstance(item.get("rework_action_summary"), list):
@@ -867,6 +928,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 for item in inventory_recovery_items
                 if (item.get("recommended_recovery") or {}).get("action")
             }),
+            "handoff_inventory_asset_type_quality": inventory_asset_type_quality,
             "fast_review_count": len(fast_review_route),
             "fast_review_ready_count": ready_fast_review_items,
             "reading_guide_count": len(reading_guide),
@@ -966,6 +1028,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Reviewable catalog: {payload.get('download_catalog_count')} files",
         f"- Visitor acceptance guide: {payload.get('visitor_acceptance_step_count')} steps / downloads={payload.get('visitor_acceptance_download_count')} / live={payload.get('visitor_acceptance_live_status')}",
         f"- Handoff recovery inventory: {payload.get('handoff_inventory_recovery_item_count')} items / actions={','.join(payload.get('handoff_inventory_recovery_actions') or []) or 'none'}",
+        f"- Handoff asset type quality: {_format_asset_type_quality(payload.get('handoff_inventory_asset_type_quality') or {})}",
         f"- Fast review route: {payload.get('fast_review_ready_count')}/{payload.get('fast_review_count')}",
         f"- Reading guide: {payload.get('reading_guide_ready_count')}/{payload.get('reading_guide_count')}",
         f"- First-run paths: {payload.get('first_run_path_count')}",

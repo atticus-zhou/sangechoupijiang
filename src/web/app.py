@@ -778,6 +778,7 @@ async def get_comic_production_handoff_inventory_demo_api():
             "image_count": item.get("image_count", 0),
             "shot_count": item.get("shot_count", 0),
             "image_quality_summary": item.get("image_quality_summary", {}),
+            "asset_type_quality": item.get("asset_type_quality", {}),
             "total_images": item.get("total_images", 0),
             "usable_images": item.get("usable_images", 0),
             "waste_or_rework_images": item.get("waste_or_rework_images", 0),
@@ -2802,6 +2803,38 @@ def _public_showcase_release_badge(comic_inventory: dict, comic_claim: dict) -> 
     }
 
 
+def _summarize_inventory_asset_type_quality(items: list[dict]) -> dict:
+    summary: dict[str, dict] = {}
+    for item in items:
+        by_type = item.get("asset_type_quality") or {}
+        if not by_type:
+            by_type = (item.get("image_quality_summary") or {}).get("by_asset_type") or {}
+        if not isinstance(by_type, dict):
+            continue
+        for asset_type, quality in by_type.items():
+            if not isinstance(quality, dict):
+                continue
+            bucket = summary.setdefault(str(asset_type), {
+                "asset_type": str(asset_type),
+                "total": 0,
+                "passed": 0,
+                "waste_or_rework": 0,
+                "manifest_count": 0,
+            })
+            bucket["total"] += int(quality.get("total") or 0)
+            bucket["passed"] += int(quality.get("passed") or 0)
+            bucket["waste_or_rework"] += int(quality.get("waste_or_rework") or 0)
+            bucket["manifest_count"] += 1
+    for bucket in summary.values():
+        total = int(bucket.get("total") or 0)
+        bucket["waste_or_rework_rate"] = (
+            round(int(bucket.get("waste_or_rework") or 0) / total, 4)
+            if total
+            else 0
+        )
+    return summary
+
+
 def _public_showcase_office_launch_matrix(governance: dict) -> dict:
     matrix = []
     for item in governance.get("launch_matrix", []):
@@ -2886,6 +2919,7 @@ async def get_public_showcase_demo_api():
         int((item.get("image_quality_summary") or {}).get("waste_or_rework_images") or 0)
         for item in inventory_image_items
     )
+    inventory_asset_type_quality = _summarize_inventory_asset_type_quality(inventory_image_items)
     return {
         "mode": "public_no_key_showcase",
         "product_name": "三个臭皮匠",
@@ -3005,6 +3039,7 @@ async def get_public_showcase_demo_api():
                     if inventory_total_images
                     else 0
                 ),
+                "asset_type_quality": inventory_asset_type_quality,
                 "safe_public_claim": comic_inventory.get("safe_public_claim", ""),
                 "next_action": comic_inventory.get("next_action", ""),
             },

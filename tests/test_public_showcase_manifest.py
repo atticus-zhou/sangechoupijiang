@@ -188,6 +188,9 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertGreaterEqual(inventory["manifest_count"], 1)
         self.assertEqual(inventory["production_verified_count"], 0)
         self.assertIn("真实模型质量", inventory["safe_public_claim"])
+        self.assertGreaterEqual(inventory["asset_type_quality"]["character"]["total"], 2)
+        self.assertGreaterEqual(inventory["asset_type_quality"]["prop"]["total"], 2)
+        self.assertGreaterEqual(inventory["asset_type_quality"]["scene"]["total"], 3)
         claim = embed["real_production_claim"]
         self.assertEqual(claim["uri"], "/api/demo/comic-production/claim-report")
         self.assertEqual(claim["claim_level"], "demo_structure_only")

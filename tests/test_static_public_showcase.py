@@ -83,6 +83,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(trace_asset_types["scene"]["total"], 3)
         self.assertEqual(trace_asset_types["character"]["waste_or_rework"], 0)
         self.assertEqual(handoff_inventory["production_verified_count"], 0)
+        inventory_asset_types = handoff_inventory["items"][0]["asset_type_quality"]
+        self.assertEqual(inventory_asset_types["character"]["total"], 2)
+        self.assertEqual(inventory_asset_types["prop"]["total"], 2)
+        self.assertEqual(inventory_asset_types["scene"]["total"], 3)
         demo_recoveries = [
             item["recommended_recovery"]
             for item in handoff_inventory["items"]
@@ -535,6 +539,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Reviewable catalog: 9 files", completed.stdout)
         self.assertIn("Visitor acceptance guide: 7 steps / downloads=9 / live=external_required", completed.stdout)
         self.assertIn("Handoff recovery inventory: 8 items / actions=regenerate_images", completed.stdout)
+        self.assertIn("Handoff asset type quality: character=16/16, rework=0; prop=16/16, rework=0; scene=24/24, rework=0", completed.stdout)
         self.assertIn("Fast review route: 5/5", completed.stdout)
         self.assertIn("Reading guide: 9/9", completed.stdout)
         self.assertIn("First-run paths: 3", completed.stdout)
