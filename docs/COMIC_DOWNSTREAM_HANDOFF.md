@@ -88,7 +88,7 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 - 镜头视频提示词包含原文依据、镜头形式、首帧参考、参考资产、故事目的、动作链、动作表演、摄影、灯光、台词、声音和连续性要求；负面提示词单独成段，并用“禁止”表达。
 - production_lineage 覆盖故事、视觉、资产、提示词、图片、质检和交付阶段。
 
-第二条命令进一步检查内容质量：完整故事有没有被替换，资产和镜头能不能回指原文，不同资产是否复制同一提示词模板，每条图片提示词是否落实专属视觉锁定，镜头导演参数是否随剧情变化，以及真实图片是否保留七维视觉质检证据。它还会输出 `image_quality_summary`，把可用图、废片/返工图、返工率和失败图片 ID 单独列出来。
+第二条命令进一步检查内容质量：完整故事有没有被替换，资产和镜头能不能回指原文，不同资产是否复制同一提示词模板，每条图片提示词是否落实专属视觉锁定，镜头导演参数是否随剧情变化，提示词包、图片提示词和镜头提示词是否使用同一套当前策略，以及真实图片是否保留七维视觉质检证据。它还会输出 `image_quality_summary`，把可用图、废片/返工图、返工率和失败图片 ID 单独列出来。
 
 第三条命令会生成一张给操作者看的生产验收卡，把下游交接、质量基准和真实生产声明合并成一句结论：当前包是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`。无 Key 固定样例应该显示 `accepted_for_public_demo=True` 且 `accepted_for_real_downstream=False`，这样访客能看懂它可以证明流程和结构，但不能被说成已经具备真实画质。
 
@@ -96,7 +96,7 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 盘点表顶部的 `Recommended Manifest` 是本轮优先查看对象；如果下面出现 `Duplicate Groups`，说明这些路径是同一制片包在不同验证脚本或导出目录下的重复副本。操作者应先打开推荐路径，其他重复路径保留为历史证据，不需要逐个打开判断。
 
-无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、且其他维度全部通过时，才会得到 `production_quality_verified`。
+无 Key 固定样例通过时只会得到 `demo_structure_verified`，并明确显示 `production_quality_verified=False`。它证明工作流、引用链和交付结构可复现，不证明占位图的真实画质。只有非 fixture 图片具备完整七维视觉质检、提示词策略追溯显示 `ready`，且其他维度全部通过时，才会得到 `production_quality_verified`。
 
 历史追溯中的 `image_production_evidence` 是判断图片是否可交付的第一信号。如果它是 `fixture_only`、`missing_images`、`model_partial` 或 `mixed_or_unknown`，下游只能把当前包当作结构样例或待补证据包。接着看 `image_quality_summary.rework_instructions`：它会按图片说明要补跑视觉质检、保留提示词重新生图，还是退回提示词重写，并给出责任部门、阻塞阶段、优先级、用户提示、建议按钮和操作步骤。此时使用质量恢复动作 `regenerate_images`，保留已确认故事、资产拆解、提示词包和旧版 Word/manifest 归档，重新生成图片并补视觉质检；补齐之前不要把包交给 Libtv、小云雀或其他视频平台当作最终生产素材。
 
@@ -104,7 +104,7 @@ python scripts/audit_comic_v2_handoffs.py --format markdown
 
 旧版制片画布如果没有 handoff manifest v3，历史页会标记为“旧版不可审计”。它仍可下载留档，但不能证明故事、资产、图片、镜头和质检来自同一版本；继续生产时应使用当前 V2 流程重新生成，而不是为旧文件伪造质量通过结论。
 
-如果任一命令失败，不能把当前制片包说成“可交给下游视频平台继续生产”。真实模型产物没有得到 `production_quality_verified` 时，也不能宣称画风和人物一致性已经被完整验证。公开页面和历史页不能让用户自己猜结果：必须展示 `downstream_handoff_decision`。当它是 `structure_demo_only` 或 `blocked`，且 `handoff_allowed=false` 时，只能把包当作结构样例或待修复材料；只有 `status=ready_for_downstream` 且 `handoff_allowed=true`，才允许进入 Libtv、小云雀或其他视频平台。
+如果任一命令失败，不能把当前制片包说成“可交给下游视频平台继续生产”。真实模型产物没有得到 `production_quality_verified` 时，也不能宣称画风和人物一致性已经被完整验证。即使图片和视觉质检已经齐了，只要 `prompt_strategy_lineage` 不是 `ready`，也只能说它是待复核产物，因为下游无法判断这批资产和镜头是否来自同一代提示词规则。公开页面和历史页不能让用户自己猜结果：必须展示 `downstream_handoff_decision`。当它是 `structure_demo_only` 或 `blocked`，且 `handoff_allowed=false` 时，只能把包当作结构样例或待修复材料；只有 `status=ready_for_downstream` 且 `handoff_allowed=true`，才允许进入 Libtv、小云雀或其他视频平台。
 
 ## 机器可读镜头合同
 

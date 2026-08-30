@@ -137,6 +137,7 @@ http://127.0.0.1:8080/
 5. 再补完整制片配置：工部生图模型和刑部视觉理解模型都通过测试后，才开始完整制片。
 6. 生成后去历史页下载 Word、图片、清单、提示词包和追溯记录。
 7. 如果历史追溯显示图片证据仍是 fixture、缺图或未完整质检，不要把它当成真实画质样例；先看 `image_quality_summary` 里的废片/返工数量和 `rework_instructions`。每张问题图都会被归类为“补跑视觉质检”“保留提示词重新生图”或“退回提示词重写”，再按历史页推荐的恢复动作补跑真实图片和视觉质检。
+8. 如果声明报告里的 `prompt_strategy_lineage` 不是 `ready`，也不要宣称真实生产质量通过。它证明提示词包、图片提示词和镜头提示词来自同一套当前策略；缺失时应退回提示词规划，而不是继续拿旧提示词生图。
 
 真实项目跑完后，再做三步验收：
 
@@ -148,7 +149,7 @@ python scripts/verify_comic_v2_production_benchmark.py --manifest output/your_pr
 
 第一条盘点命令会在顶部给出 `Recommended Manifest` 和重复导出分组。输出目录里如果有很多同名验证副本，先打开推荐路径；`Duplicate Groups` 里的其他路径作为历史证据保留，不需要逐个打开判断。
 
-只有交付物清点可追溯、真实生产声明显示 `can_claim_real_quality=True`，并且制片质量基准显示 `production_quality_verified` 或等价通过状态时，才把这次产物对外描述为真实生产质量。否则只能说它完成了结构、流程或部分模型验证。
+只有交付物清点可追溯、真实生产声明显示 `can_claim_real_quality=True`，制片质量基准显示 `production_quality_verified`，并且 `prompt_strategy_lineage.ready_for_real_quality_claim=True` 时，才把这次产物对外描述为真实生产质量。否则只能说它完成了结构、流程或部分模型验证。
 
 常见首次运行问题可以直接看：
 
@@ -388,7 +389,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 
 不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
 
-声明报告里的 `real_quality_promotion_gate` 是最终升级门。它会逐项检查制片包结构、manifest 内置质量基准、真实模型图片、视觉质检、图片返工数、导演式提示词、blocker 和 `production_quality_verified`。只要有一项缺失，就只能显示 `evidence_missing`，不能把这次交付说成真实生产质量。
+声明报告里的 `real_quality_promotion_gate` 是最终升级门。它会逐项检查制片包结构、manifest 内置质量基准、真实模型图片、视觉质检、图片返工数、导演式提示词、提示词策略追溯、blocker 和 `production_quality_verified`。其中 `prompt_strategy_lineage` 负责确认提示词包、图片提示词和镜头提示词都绑定同一套当前策略版本；只要有一项缺失，就只能显示 `evidence_missing`，不能把这次交付说成真实生产质量。
 
 如果你要把无 Key 样例升级成真实模型质量验证，可以先看操作面板：
 

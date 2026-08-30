@@ -11,6 +11,7 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("handoff manifest", text)
         self.assertIn("data/comic_production_claim_report.json", text)
         self.assertIn("claim_upgrade_recovery", text)
+        self.assertIn("prompt_strategy_lineage", text)
         self.assertIn("public_recovery_drill", text)
         self.assertIn("downstream_handoff_decision", text)
         self.assertIn("regenerate_images", text)
@@ -76,6 +77,8 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("ready_for_downstream", text)
         self.assertIn("blocked", text)
         self.assertIn("handoff_allowed=false", text)
+        self.assertIn("prompt_strategy_lineage", text)
+        self.assertIn("同一代提示词规则", text)
         self.assertIn("不能把当前制片包说成", text)
         self.assertIn("Libtv、小云雀", text)
 

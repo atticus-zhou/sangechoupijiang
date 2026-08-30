@@ -18,15 +18,17 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 这个脚本不调用模型，不读取密钥，只审计已经生成的交付物。
 
-在机器可读结果里，`claim_level` 是对外声明等级，`production_quality_verified` 是能否宣称真实模型画质和生产质量已经通过验证的布尔证据。无 Key 固定样例必须保持 `production_quality_verified=False`；只有真实模型产物通过完整质量基准、视觉质检和下游交付审计后，才能变成 `production_quality_verified=True`。
+在机器可读结果里，`claim_level` 是对外声明等级，`production_quality_verified` 是能否宣称真实模型画质和生产质量已经通过验证的布尔证据。无 Key 固定样例必须保持 `production_quality_verified=False`；只有真实模型产物通过完整质量基准、视觉质检、提示词策略追溯和下游交付审计后，才能变成 `production_quality_verified=True`。
 
-报告还会输出 `claim_upgrade_checklist`。它不是宣传文案，而是补证据清单：固定样例会列出还缺真实模型图片、视觉质检和重新写入质量基准；真实质量已验证的 manifest 会提示保留证据包，并在故事、资产、模型或提示词有重大改动后重新验证。
+报告还会输出 `claim_upgrade_checklist`。它不是宣传文案，而是补证据清单：固定样例会列出还缺真实模型图片、视觉质检和重新写入质量基准；真实质量已验证的 manifest 会提示保留证据包，并在故事、资产、模型、提示词或提示词策略有重大改动后重新验证。
 
 报告和追溯包还会输出 `downstream_handoff_decision`。这张卡不是质量分数，而是操作者决策：`structure_demo_only` 表示只能公开展示结构，不能交给下游；`blocked` 表示当前真实项目仍有阻塞；`ready_for_downstream` 且 `handoff_allowed=true` 才表示可以把 Word 画布、资产图片和 handoff manifest 交给 Libtv、小云雀或其他视频平台继续生产。公开展示页、历史页和 README 都应该展示这张卡，避免把“看起来完整”的 demo 误说成可投产成品。
 
 ## Real Quality Promotion Gate
 
-`real_quality_promotion_gate` is the final machine-readable gate before any public `real_quality_verified` claim. It must show `ready=true` only when `package_quality_ready=true`, `stored_benchmark_matches=true`, `visual_evidence_level=model_reviewed`, `image_quality_summary.waste_or_rework_images=0`, `prompt_quality_summary.status=ready`, `blocker_count=0`, and `production_quality_verified=true`. If any check is missing, the gate must stay `evidence_missing` and expose the missing check IDs plus the next action.
+`real_quality_promotion_gate` is the final machine-readable gate before any public `real_quality_verified` claim. It must show `ready=true` only when `package_quality_ready=true`, `stored_benchmark_matches=true`, `visual_evidence_level=model_reviewed`, `image_quality_summary.waste_or_rework_images=0`, `prompt_quality_summary.status=ready`, `prompt_strategy_lineage.ready_for_real_quality_claim=true`, `blocker_count=0`, and `production_quality_verified=true`. If any check is missing, the gate must stay `evidence_missing` and expose the missing check IDs plus the next action.
+
+`prompt_strategy_lineage` 是提示词策略追溯。它要证明提示词包、图片提示词和镜头提示词来自同一套当前策略版本，并且带有同一套策略哈希。这个字段不是为了展示技术名词，而是为了防止旧模板、混合提示词或缺少策略记录的产物被误升成真实生产质量。只要它不是 `ready`，就应回到提示词规划或镜头提示词规划，重新生成同批次提示词，再继续生图和质检。
 
 ## 图片证据恢复路径
 
