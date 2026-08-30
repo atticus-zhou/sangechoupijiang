@@ -14,6 +14,7 @@ from PIL import Image, ImageDraw
 from .asset_manifest import AssetManifest, build_asset_manifest, replace_asset_manifest
 from .contracts import ContractBundle, build_contract_bundle
 from .production import ImageProductionResult, ImageRecord, PromptPackage
+from .prompt_director import PROMPT_STRATEGY_HASH, PROMPT_STRATEGY_VERSION
 from .prompt_director import build_asset_prompt_plan, build_shot_card
 from .visual_review import REVIEW_DIMENSIONS
 
@@ -99,6 +100,8 @@ def fixture_prompt_package(bundle: ContractBundle, manifest: AssetManifest) -> P
             "story_id": bundle.creative.story_id,
             "style_id": bundle.visual.style_id,
             "manifest_hash": manifest.manifest_hash,
+            "prompt_strategy_version": PROMPT_STRATEGY_VERSION,
+            "prompt_strategy_hash": PROMPT_STRATEGY_HASH,
             "prompts": [asdict(prompt) for prompt in prompts],
             "shots": [asdict(shot) for shot in shots],
         },
@@ -116,6 +119,8 @@ def fixture_prompt_package(bundle: ContractBundle, manifest: AssetManifest) -> P
         manifest_version=manifest.version,
         prompts=tuple(prompts),
         shots=tuple(shots),
+        prompt_strategy_version=PROMPT_STRATEGY_VERSION,
+        prompt_strategy_hash=PROMPT_STRATEGY_HASH,
     )
 
 

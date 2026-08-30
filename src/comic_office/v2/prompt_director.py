@@ -11,6 +11,10 @@ from .asset_manifest import AssetPlan
 from .contracts import VisualBible
 
 
+PROMPT_STRATEGY_VERSION = "comic_v2_prompt_director_v2"
+PROMPT_STRATEGY_HASH = "asset_clean_base_and_director_shot_contract_2026_08_30"
+
+
 @dataclass(frozen=True)
 class PromptPlan:
     object_id: str
@@ -23,6 +27,8 @@ class PromptPlan:
     clean_background_required: bool = False
     usage_contract: tuple[str, ...] = ()
     reference_policy: str = ""
+    prompt_strategy_version: str = PROMPT_STRATEGY_VERSION
+    prompt_strategy_hash: str = PROMPT_STRATEGY_HASH
 
     def render(self) -> str:
         negative = "；".join(self.negative_prompt)
@@ -60,6 +66,8 @@ class ShotCard:
     acceptance_criteria: tuple[str, ...] = ()
     platform_note: str = ""
     production_ready: bool = True
+    prompt_strategy_version: str = PROMPT_STRATEGY_VERSION
+    prompt_strategy_hash: str = PROMPT_STRATEGY_HASH
 
 
 def build_asset_prompt_plan(
@@ -292,6 +300,8 @@ def parse_prompt_director_response(text: str) -> PromptDirectorResult:
                 clean_background_required=_infer_clean_background_required(item),
                 usage_contract=_infer_usage_contract(item),
                 reference_policy=_infer_reference_policy(item),
+                prompt_strategy_version=str(item.get("prompt_strategy_version") or PROMPT_STRATEGY_VERSION).strip(),
+                prompt_strategy_hash=str(item.get("prompt_strategy_hash") or PROMPT_STRATEGY_HASH).strip(),
             ))
     except ValueError as exc:
         return PromptDirectorResult(

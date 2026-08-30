@@ -184,6 +184,8 @@ def _write_handoff_manifest(
             "manifest_version": record.manifest_version,
             "prompt_hash": record.prompt_hash,
             "prompt_purpose": prompt.purpose if prompt else "",
+            "prompt_strategy_version": prompt.prompt_strategy_version if prompt else "",
+            "prompt_strategy_hash": prompt.prompt_strategy_hash if prompt else "",
             "production_role": record.production_role or (prompt.production_role if prompt else ""),
             "clean_background_required": (
                 record.clean_background_required
@@ -209,6 +211,8 @@ def _write_handoff_manifest(
             "evidence_quote": shot.evidence_quote,
             "style_id": shot.style_id,
             "style_version": bundle.visual.style_version,
+            "prompt_strategy_version": shot.prompt_strategy_version,
+            "prompt_strategy_hash": shot.prompt_strategy_hash,
             "reference_asset_ids": list(shot.reference_asset_ids),
             "reference_images": reference_images,
             "first_frame_reference_image": first_frame_reference,
@@ -218,6 +222,8 @@ def _write_handoff_manifest(
                 "contract_version": 1,
                 "style_id": shot.style_id,
                 "style_version": bundle.visual.style_version,
+                "prompt_strategy_version": shot.prompt_strategy_version,
+                "prompt_strategy_hash": shot.prompt_strategy_hash,
                 "story_purpose": shot.story_purpose,
                 "first_frame_image_id": first_frame_reference.get("image_id", ""),
                 "reference_asset_ids": list(shot.reference_asset_ids),
@@ -288,6 +294,8 @@ def _write_handoff_manifest(
             "package_id": prompt_package.package_id,
             "prompt_count": len(prompt_package.prompts),
             "shot_count": len(prompt_package.shots),
+            "prompt_strategy_version": prompt_package.prompt_strategy_version,
+            "prompt_strategy_hash": prompt_package.prompt_strategy_hash,
         },
         "word_canvas": {
             "filename": word_path.name,
@@ -528,6 +536,8 @@ def _production_lineage(
             "handoff_to": "基础图片生产",
             "acceptance_criteria": "资产提示词和镜头卡引用已审核资产，并把负面提示词单独列出。",
             "output": f"{len(prompt_package.prompts)} 条资产提示词 · {len(prompt_package.shots)} 张镜头执行卡",
+            "prompt_strategy_version": prompt_package.prompt_strategy_version,
+            "prompt_strategy_hash": prompt_package.prompt_strategy_hash,
         },
         {
             "stage": "image_production",

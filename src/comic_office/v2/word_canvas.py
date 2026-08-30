@@ -370,6 +370,7 @@ def _add_asset_page(
         ("引用方式", prompt.reference_policy if prompt else ""),
         ("批准图片文件", image_path.name if image_path else "未绑定"),
         ("计划图片", "、".join(asset.planned_images)),
+        ("提示词策略", prompt.prompt_strategy_version if prompt else "未绑定"),
     ], compact=True)
     if prompt is not None:
         doc.add_heading("本图生成提示词", level=2)
@@ -420,6 +421,7 @@ def _add_shot_page(
         ("灯光", shot.lighting),
         ("台词", shot.dialogue),
         ("声音", shot.sound),
+        ("提示词策略", shot.prompt_strategy_version),
         ("平台执行备注", shot.platform_note),
     ], compact=True)
     _add_callout(

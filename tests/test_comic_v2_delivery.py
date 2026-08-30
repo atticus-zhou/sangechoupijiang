@@ -9,7 +9,12 @@ from docx import Document
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
 from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage
-from src.comic_office.v2.prompt_director import PromptPlan, ShotCard
+from src.comic_office.v2.prompt_director import (
+    PROMPT_STRATEGY_HASH,
+    PROMPT_STRATEGY_VERSION,
+    PromptPlan,
+    ShotCard,
+)
 
 
 PNG_1X1 = base64.b64decode(
@@ -201,6 +206,7 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("用途合同", text)
             self.assertIn("不负责讲述剧情", text)
             self.assertIn("引用方式", text)
+            self.assertIn(PROMPT_STRATEGY_VERSION, text)
             self.assertEqual(image_production_result_from_dict(result.to_dict()), result)
             restored = image_production_result_from_dict(result.to_dict())
             self.assertEqual(restored.records[0].production_role, "clean_character_identity_three_view")
@@ -228,6 +234,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(handoff["style"]["character_rules"], list(bundle.visual.character_rules))
             self.assertEqual(handoff["manifest"]["manifest_id"], manifest.manifest_id)
             self.assertEqual(handoff["word_canvas"]["filename"], delivery.path.name)
+            self.assertEqual(handoff["prompt_package"]["prompt_strategy_version"], PROMPT_STRATEGY_VERSION)
+            self.assertEqual(handoff["prompt_package"]["prompt_strategy_hash"], PROMPT_STRATEGY_HASH)
             self.assertEqual(len(handoff["assets"]), len(manifest.items))
             first_asset = handoff["assets"][0]
             self.assertEqual(first_asset["type_label"], "人物")
@@ -253,6 +261,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertIn("禁止文字水印", first_image["negative_prompt"])
             self.assertIn("禁止现代服装", first_image["negative_prompt"])
             self.assertEqual(first_image["production_role"], "clean_character_identity_three_view")
+            self.assertEqual(first_image["prompt_strategy_version"], PROMPT_STRATEGY_VERSION)
+            self.assertEqual(first_image["prompt_strategy_hash"], PROMPT_STRATEGY_HASH)
             self.assertTrue(first_image["clean_background_required"])
             usage_contract = "；".join(first_image["usage_contract"])
             self.assertIn("基础资产图只建立角色身份参考", usage_contract)
@@ -279,6 +289,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(director["contract_version"], 1)
             self.assertEqual(director["style_id"], package.shots[0].style_id)
             self.assertEqual(director["style_version"], bundle.visual.style_version)
+            self.assertEqual(director["prompt_strategy_version"], PROMPT_STRATEGY_VERSION)
+            self.assertEqual(director["prompt_strategy_hash"], PROMPT_STRATEGY_HASH)
             self.assertEqual(director["first_frame_image_id"], reference_image["image_id"])
             self.assertEqual(director["reference_asset_ids"], list(package.shots[0].reference_asset_ids))
             self.assertEqual(director["action_chain"], list(package.shots[0].action_chain))
@@ -293,6 +305,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(reference_asset["name"], manifest.items[0].name)
             self.assertEqual(reference_asset["first_frame_file"], reference_image["file"])
             self.assertEqual(handoff["shots"][0]["video_prompt_block"], package.shots[0].generator_prompt)
+            self.assertEqual(handoff["shots"][0]["prompt_strategy_version"], PROMPT_STRATEGY_VERSION)
+            self.assertEqual(handoff["shots"][0]["prompt_strategy_hash"], PROMPT_STRATEGY_HASH)
             self.assertEqual(
                 handoff["shots"][0]["negative_prompt_block"],
                 "；".join(package.shots[0].negative_prompt),
@@ -338,6 +352,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
                 self.assertNotIn("image records", stage["output"])
                 self.assertNotIn("failures", stage["output"])
             self.assertIn("条资产提示词", lineage[3]["output"])
+            self.assertEqual(lineage[3]["prompt_strategy_version"], PROMPT_STRATEGY_VERSION)
+            self.assertEqual(lineage[3]["prompt_strategy_hash"], PROMPT_STRATEGY_HASH)
             self.assertIn("张基础资产图", lineage[4]["output"])
             self.assertIn("个风险项", lineage[5]["output"])
             quick_start = handoff["downstream_quick_start"]

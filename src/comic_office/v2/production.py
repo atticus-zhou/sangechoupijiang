@@ -17,7 +17,14 @@ from src.llm.robust_json import parse_json_object
 from .asset_manifest import AssetManifest, AssetPlan
 from .contracts import ContractBundle, VisualBible
 from .output_schemas import AgentOutputSchemaError, validate_agent_output_schema
-from .prompt_director import PromptPlan, ShotCard, build_shot_card, parse_prompt_director_response
+from .prompt_director import (
+    PROMPT_STRATEGY_HASH,
+    PROMPT_STRATEGY_VERSION,
+    PromptPlan,
+    ShotCard,
+    build_shot_card,
+    parse_prompt_director_response,
+)
 from .visual_review import (
     VisualReviewRequest,
     VisualReviewResult,
@@ -43,6 +50,8 @@ class PromptPackage:
     prompts: tuple[PromptPlan, ...]
     status: str = "ready"
     shots: tuple[ShotCard, ...] = ()
+    prompt_strategy_version: str = PROMPT_STRATEGY_VERSION
+    prompt_strategy_hash: str = PROMPT_STRATEGY_HASH
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -101,6 +110,8 @@ def prompt_package_from_dict(payload: dict[str, Any]) -> PromptPackage:
             clean_background_required=bool(item.get("clean_background_required", False)),
             usage_contract=tuple(item.get("usage_contract") or ()),
             reference_policy=str(item.get("reference_policy") or ""),
+            prompt_strategy_version=str(item.get("prompt_strategy_version") or "legacy_or_unknown"),
+            prompt_strategy_hash=str(item.get("prompt_strategy_hash") or ""),
         )
         for item in (payload.get("prompts") or [])
     )
@@ -127,6 +138,8 @@ def prompt_package_from_dict(payload: dict[str, Any]) -> PromptPackage:
             acceptance_criteria=tuple(item.get("acceptance_criteria") or ()),
             platform_note=str(item.get("platform_note") or ""),
             production_ready=bool(item.get("production_ready", True)),
+            prompt_strategy_version=str(item.get("prompt_strategy_version") or "legacy_or_unknown"),
+            prompt_strategy_hash=str(item.get("prompt_strategy_hash") or ""),
         )
         for item in (payload.get("shots") or [])
     )
@@ -141,6 +154,8 @@ def prompt_package_from_dict(payload: dict[str, Any]) -> PromptPackage:
         prompts=prompts,
         status=str(payload.get("status") or "ready"),
         shots=shots,
+        prompt_strategy_version=str(payload.get("prompt_strategy_version") or "legacy_or_unknown"),
+        prompt_strategy_hash=str(payload.get("prompt_strategy_hash") or ""),
     )
 
 
@@ -228,6 +243,8 @@ async def direct_asset_prompts(
             "story_id": bundle.creative.story_id,
             "style_id": bundle.visual.style_id,
             "manifest_hash": manifest.manifest_hash,
+            "prompt_strategy_version": PROMPT_STRATEGY_VERSION,
+            "prompt_strategy_hash": PROMPT_STRATEGY_HASH,
             "prompts": [asdict(prompt) for prompt in prompts],
         },
         ensure_ascii=False,
@@ -244,6 +261,8 @@ async def direct_asset_prompts(
         manifest_id=manifest.manifest_id,
         manifest_version=manifest.version,
         prompts=tuple(prompts),
+        prompt_strategy_version=PROMPT_STRATEGY_VERSION,
+        prompt_strategy_hash=PROMPT_STRATEGY_HASH,
     )
 
 
