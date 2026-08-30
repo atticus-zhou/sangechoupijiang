@@ -68,6 +68,7 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertIn("visual_evidence_model_reviewed", gate["missing_check_ids"])
         self.assertIn("real_model_evidence_requirements", gate["missing_check_ids"])
         self.assertIn("production_quality_verified", gate["missing_check_ids"])
+        self.assertNotIn("prompt_strategy_lineage", gate["missing_check_ids"])
         self.assertGreaterEqual(gate["blocking_count"], 2)
         decision = report["downstream_handoff_decision"]
         self.assertEqual(decision["status"], "structure_demo_only")
@@ -86,6 +87,12 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertTrue(report["can_claim_real_quality"])
         self.assertEqual(report["downstream_status"], "ready_for_downstream")
         self.assertEqual(report["evidence"]["visual_evidence_level"], "model_reviewed")
+        self.assertEqual(report["evidence"]["prompt_strategy_status"], "ready")
+        self.assertTrue(report["evidence"]["prompt_strategy_version"])
+        strategy = report["benchmark"]["prompt_strategy_lineage"]
+        self.assertEqual(strategy["status"], "ready")
+        self.assertTrue(strategy["ready_for_real_quality_claim"])
+        self.assertFalse(strategy["missing_check_ids"])
         evidence = report["real_model_evidence_requirements"]
         self.assertEqual(evidence["status"], "ready")
         self.assertTrue(evidence["ready_for_real_quality_claim"])
@@ -143,6 +150,38 @@ class ComicRealProductionClaimTests(unittest.TestCase):
         self.assertIn("使用真实模型生成图片资产", completed.stdout)
         self.assertIn("Status: `structure_only`", completed.stdout)
         self.assertIn("不能宣称真实模型画质已验证", completed.stdout)
+        self.assertIn("Prompt strategy: `ready`", completed.stdout)
+
+    def test_missing_prompt_strategy_blocks_real_quality_claim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = _real_verified_manifest(root)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["prompt_package"].pop("prompt_strategy_version", None)
+            manifest["prompt_package"].pop("prompt_strategy_hash", None)
+            for image in manifest["images"]:
+                image.pop("prompt_strategy_version", None)
+                image.pop("prompt_strategy_hash", None)
+            for shot in manifest["shots"]:
+                shot.pop("prompt_strategy_version", None)
+                shot.pop("prompt_strategy_hash", None)
+                if isinstance(shot.get("director_execution"), dict):
+                    shot["director_execution"].pop("prompt_strategy_version", None)
+                    shot["director_execution"].pop("prompt_strategy_hash", None)
+            legacy_path = root / "legacy_strategy_handoff_manifest.json"
+            legacy_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+            report = build_claim_report(legacy_path)
+
+        self.assertNotEqual(report["claim_level"], "real_quality_verified")
+        self.assertFalse(report["can_claim_real_quality"])
+        strategy = report["benchmark"]["prompt_strategy_lineage"]
+        self.assertEqual(strategy["status"], "evidence_missing")
+        self.assertFalse(strategy["ready_for_real_quality_claim"])
+        self.assertIn("prompt_strategy_package_bound", strategy["missing_check_ids"])
+        gate = report["real_quality_promotion_gate"]
+        self.assertFalse(gate["ready"])
+        self.assertIn("prompt_strategy_lineage", gate["missing_check_ids"])
+        self.assertIn("production_quality_verified", gate["missing_check_ids"])
 
 
 if __name__ == "__main__":

@@ -48,6 +48,7 @@ def verify_production_benchmark(
             "real_model_evidence_requirements",
             "issue_count",
             "blocker_count",
+            "prompt_strategy_lineage",
             "recommended_recovery",
         )
     )
@@ -193,6 +194,26 @@ def format_markdown(result: dict[str, Any]) -> str:
                 f"- [{issue.get('severity')}] {issue.get('department') or '待分配'} · "
                 f"{issue.get('dimension')}/{issue.get('code')}: "
                 f"{issue.get('message')} ({issue.get('evidence')})"
+            )
+    prompt_strategy = result.get("prompt_strategy_lineage") or {}
+    if prompt_strategy:
+        lines.extend([
+            "",
+            "## Prompt Strategy Lineage",
+            "",
+            f"- Status: `{prompt_strategy.get('status')}`",
+            f"- Ready for real quality claim: `{prompt_strategy.get('ready_for_real_quality_claim')}`",
+            f"- Expected version: `{prompt_strategy.get('expected_prompt_strategy_version')}`",
+            f"- Package version: `{prompt_strategy.get('package_prompt_strategy_version')}`",
+            f"- Missing checks: `{', '.join(prompt_strategy.get('missing_check_ids') or []) or 'none'}`",
+            f"- Next action: {prompt_strategy.get('next_action')}",
+            "",
+            "| Check | Passed | Evidence | If Missing |",
+            "| --- | --- | --- | --- |",
+        ])
+        for item in prompt_strategy.get("checks") or []:
+            lines.append(
+                f"| {item.get('id')} | `{item.get('passed')}` | {item.get('evidence')} | {item.get('if_missing')} |"
             )
     if result.get("limitations"):
         lines.extend(["", "## Honest Limitations", ""])

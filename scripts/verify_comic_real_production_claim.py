@@ -18,13 +18,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.verify_comic_v2_production_benchmark import DEFAULT_OUTPUT, verify_production_benchmark
+from scripts.verify_comic_v2_production_benchmark import verify_production_benchmark
 from src.comic_office.v2.claim_report import (
     claim_upgrade_checklist,
     claim_upgrade_recovery,
     downstream_handoff_decision_card,
     real_quality_promotion_gate,
 )
+
+
+DEFAULT_OUTPUT = REPO_ROOT / "output" / "comic_real_production_claim"
 
 
 def build_claim_report(manifest_path: Path | None = None, output_dir: Path = DEFAULT_OUTPUT) -> dict[str, Any]:
@@ -108,6 +111,10 @@ def build_claim_report(manifest_path: Path | None = None, output_dir: Path = DEF
             "word_canvas": benchmark.get("word_canvas", ""),
             "package_quality_score": benchmark.get("package_quality_score"),
             "visual_evidence_level": benchmark.get("visual_evidence_level"),
+            "prompt_strategy_status": (benchmark.get("prompt_strategy_lineage") or {}).get("status", ""),
+            "prompt_strategy_version": (benchmark.get("prompt_strategy_lineage") or {}).get(
+                "package_prompt_strategy_version", ""
+            ),
             "stored_benchmark_matches": stored_matches,
             "production_quality_verified": production_verified,
         },
@@ -134,6 +141,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"- Word canvas: `{evidence.get('word_canvas')}`",
         f"- Score: `{evidence.get('package_quality_score')}`",
         f"- Visual evidence: `{evidence.get('visual_evidence_level')}`",
+        f"- Prompt strategy: `{evidence.get('prompt_strategy_status')}` / `{evidence.get('prompt_strategy_version')}`",
         f"- Stored benchmark matches: `{evidence.get('stored_benchmark_matches')}`",
         "",
         "## Allowed Public Claims",

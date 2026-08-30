@@ -18,6 +18,7 @@ def real_quality_promotion_gate(benchmark: dict[str, Any]) -> dict[str, Any]:
     """Return the evidence gate required before a handoff can claim real model quality."""
     image_summary = benchmark.get("image_quality_summary") or {}
     prompt_summary = benchmark.get("prompt_quality_summary") or {}
+    prompt_strategy = benchmark.get("prompt_strategy_lineage") or {}
     real_model_evidence = benchmark.get("real_model_evidence_requirements") or {}
     checks = [
         {
@@ -64,6 +65,19 @@ def real_quality_promotion_gate(benchmark: dict[str, Any]) -> dict[str, Any]:
             "passed": prompt_summary.get("status") == "ready" and int(prompt_summary.get("issue_count") or 0) == 0,
             "evidence": "prompt_quality_summary.status=ready 且 issue_count=0",
             "if_missing": "退回提示词规划，修复模板化、缺少镜头信息或负面提示词不规范的问题。",
+        },
+        {
+            "id": "prompt_strategy_lineage",
+            "label": "提示词策略来源可追溯且为当前版本",
+            "passed": prompt_strategy.get("ready_for_real_quality_claim") is True,
+            "evidence": (
+                "prompt_strategy_lineage.ready_for_real_quality_claim=true；"
+                f"version={prompt_strategy.get('package_prompt_strategy_version') or 'missing'}"
+            ),
+            "if_missing": str(
+                prompt_strategy.get("next_action")
+                or "重新生成提示词包、图片提示词和镜头提示词，写入当前策略版本和策略哈希。"
+            ),
         },
         {
             "id": "no_blockers",

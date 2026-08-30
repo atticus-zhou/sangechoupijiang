@@ -8,6 +8,7 @@ from difflib import SequenceMatcher
 from typing import Any, Callable
 
 from .prompt_quality import audit_prompt_package
+from .prompt_director import PROMPT_STRATEGY_VERSION
 from .visual_review import REVIEW_DIMENSIONS
 
 
@@ -53,6 +54,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         image_quality_summary,
     )
     prompt_quality_summary = _prompt_quality_summary(images, shots)
+    prompt_strategy_lineage = _prompt_strategy_lineage(manifest, images, shots)
 
     dimensions = [
         _story_grounding(story, assets, shots),
@@ -83,6 +85,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
     production_quality_verified = (
         package_quality_ready
         and visual_evidence == "model_reviewed"
+        and prompt_strategy_lineage["ready_for_real_quality_claim"]
         and not any(item["dimension"] == "visual_evidence" for item in issues)
     )
     if not package_quality_ready:
@@ -112,6 +115,7 @@ def audit_handoff_manifest(payload: dict[str, Any] | None) -> dict[str, Any]:
         "image_quality_summary": image_quality_summary,
         "real_model_evidence_requirements": real_model_evidence_requirements,
         "prompt_quality_summary": prompt_quality_summary,
+        "prompt_strategy_lineage": prompt_strategy_lineage,
         "summary": _summary(claim, score),
         "dimensions": dimensions,
         "issue_count": len(issues),
@@ -317,6 +321,99 @@ def _prompt_inherits_visual_bible(generator_prompt: str, style: dict[str, Any]) 
         return False
     palette = [str(item).strip() for item in (style.get("palette") or []) if str(item).strip()]
     return not palette or any(token in body for token in palette)
+
+
+def _prompt_strategy_lineage(
+    manifest: dict[str, Any],
+    images: list[dict[str, Any]],
+    shots: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Audit whether prompt strategy evidence is current and consistent."""
+    prompt_package = manifest.get("prompt_package") or {}
+    package_version = str(prompt_package.get("prompt_strategy_version") or "").strip()
+    package_hash = str(prompt_package.get("prompt_strategy_hash") or "").strip()
+    image_versions = {
+        str(item.get("prompt_strategy_version") or "").strip()
+        for item in images
+    }
+    image_hashes = {
+        str(item.get("prompt_strategy_hash") or "").strip()
+        for item in images
+    }
+    shot_versions = {
+        str(item.get("prompt_strategy_version") or "").strip()
+        for item in shots
+    }
+    shot_hashes = {
+        str(item.get("prompt_strategy_hash") or "").strip()
+        for item in shots
+    }
+    versions = {package_version, *image_versions, *shot_versions}
+    hashes = {package_hash, *image_hashes, *shot_hashes}
+
+    checks = [
+        {
+            "id": "prompt_strategy_package_bound",
+            "label": "提示词包记录了策略版本",
+            "passed": bool(package_version) and package_version != "legacy_or_unknown",
+            "evidence": f"prompt_package.version={package_version or 'missing'}",
+            "if_missing": "重新生成提示词包，让中书省和刑部写入当前提示词策略版本。",
+        },
+        {
+            "id": "prompt_strategy_image_bound",
+            "label": "每张图片提示词记录了策略版本",
+            "passed": bool(images)
+            and all(str(item.get("prompt_strategy_version") or "").strip() not in {"", "legacy_or_unknown"} for item in images),
+            "evidence": f"image_strategy_versions={len([v for v in image_versions if v])}/{len(images)} unique={len(image_versions)}",
+            "if_missing": "保留资产拆解，退回提示词规划并重新生成图片提示词。",
+        },
+        {
+            "id": "prompt_strategy_shot_bound",
+            "label": "每条镜头提示词记录了策略版本",
+            "passed": bool(shots)
+            and all(str(item.get("prompt_strategy_version") or "").strip() not in {"", "legacy_or_unknown"} for item in shots),
+            "evidence": f"shot_strategy_versions={len([v for v in shot_versions if v])}/{len(shots)} unique={len(shot_versions)}",
+            "if_missing": "退回镜头提示词规划，让兵部按当前导演式提示词策略重写镜头提示词。",
+        },
+        {
+            "id": "prompt_strategy_consistent",
+            "label": "图片、镜头和提示词包使用同一套策略",
+            "passed": len({v for v in versions if v}) == 1 and "" not in versions,
+            "evidence": f"versions={', '.join(sorted(v for v in versions if v)) or 'missing'}",
+            "if_missing": "不要混用旧版提示词和新版提示词；重新生成同一批次的提示词包、图片提示词和镜头提示词。",
+        },
+        {
+            "id": "prompt_strategy_hash_consistent",
+            "label": "提示词策略哈希一致",
+            "passed": len({item for item in hashes if item}) == 1 and "" not in hashes,
+            "evidence": f"hashes={len({item for item in hashes if item})}/{len(hashes)}",
+            "if_missing": "重新写入策略哈希，确保后续复盘能知道这份产物来自哪一版提示词规则。",
+        },
+        {
+            "id": "prompt_strategy_current",
+            "label": "使用当前提示词策略",
+            "passed": package_version == PROMPT_STRATEGY_VERSION,
+            "evidence": f"expected={PROMPT_STRATEGY_VERSION}; actual={package_version or 'missing'}",
+            "if_missing": "旧版产物只能作为历史样例；若要声明真实生产质量，需要用当前提示词策略重新生成。",
+        },
+    ]
+    missing = [item for item in checks if not item["passed"]]
+    return {
+        "status": "ready" if not missing else "evidence_missing",
+        "ready_for_real_quality_claim": not missing,
+        "expected_prompt_strategy_version": PROMPT_STRATEGY_VERSION,
+        "package_prompt_strategy_version": package_version,
+        "package_prompt_strategy_hash": package_hash,
+        "image_prompt_strategy_versions": sorted(v for v in image_versions if v),
+        "shot_prompt_strategy_versions": sorted(v for v in shot_versions if v),
+        "checks": checks,
+        "missing_check_ids": [item["id"] for item in missing],
+        "next_action": (
+            "提示词策略来源完整，可以作为真实质量声明的前置证据。"
+            if not missing
+            else missing[0]["if_missing"]
+        ),
+    }
 
 
 def _prompt_quality_summary(images: list[dict[str, Any]], shots: list[dict[str, Any]]) -> dict[str, Any]:
