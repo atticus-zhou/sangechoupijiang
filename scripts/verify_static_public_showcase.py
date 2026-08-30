@@ -258,6 +258,15 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("portfolio deploy manifest checklist must include online verification")
         if not any("doctor:deploy" in item for item in deploy_manifest.get("operator_checklist") or []):
             errors.append("portfolio deploy manifest checklist must include deployment doctor")
+        deploy_fallback = deploy_manifest.get("reviewer_fallback_packet") or {}
+        if deploy_fallback.get("status") != "available_when_live_route_stale":
+            errors.append("portfolio deploy manifest must expose the reviewer fallback packet")
+        if "pack:reviewer" not in "\n".join(deploy_fallback.get("commands") or []):
+            errors.append("portfolio deploy manifest reviewer fallback must include pack:reviewer")
+        deploy_fallback_text = json.dumps(deploy_fallback, ensure_ascii=False)
+        for marker in ("API Key", "Cookie", "config.yaml", "user_data/", "output/"):
+            if marker not in deploy_fallback_text:
+                errors.append(f"portfolio deploy manifest reviewer fallback must forbid {marker}")
         if showcase.get("mode") != "public_no_key_static_showcase":
             errors.append("static showcase has an unexpected mode")
         if (showcase.get("static_export") or {}).get("requires_backend") is not False:
@@ -290,18 +299,25 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("visitor acceptance guide must be safe for public portfolio")
         visitor_route = visitor_guide.get("visitor_route") or []
         download_acceptance = visitor_guide.get("download_acceptance") or []
-        if len(visitor_route) != 7:
-            errors.append("visitor acceptance guide must include exactly seven route steps")
+        if len(visitor_route) != 8:
+            errors.append("visitor acceptance guide must include exactly eight route steps")
         if len(download_acceptance) != 9:
             errors.append("visitor acceptance guide must include exactly nine reviewable files")
         visitor_route_titles = {str(item.get("title") or "") for item in visitor_route}
-        for required_title in ("逐个检查可下载交付物", "最后确认线上状态不能跳过"):
+        for required_title in ("逐个检查可下载交付物", "线上没刷新时打开离线评审包", "最后确认线上状态不能跳过"):
             if required_title not in visitor_route_titles:
                 errors.append(f"visitor acceptance guide must include reviewer step: {required_title}")
         if visitor_guide.get("live_verification", {}).get("check_command") != "npm run check:online":
             errors.append("visitor acceptance guide must expose the online check command")
         if "check:online" not in str(visitor_guide.get("live_verification", {}).get("do_not_claim_live_until") or ""):
             errors.append("visitor acceptance guide must forbid live claims until online check passes")
+        visitor_fallback = visitor_guide.get("reviewer_fallback_packet") or {}
+        if visitor_fallback.get("status") != "available_when_live_route_stale":
+            errors.append("visitor acceptance guide must expose the reviewer fallback packet")
+        if visitor_fallback.get("open_first") != "tmp/three-cobblers-reviewer-packet/OPEN_THIS_FIRST.txt":
+            errors.append("visitor acceptance guide reviewer fallback must expose OPEN_THIS_FIRST")
+        if "Vercel production route is live" not in json.dumps(visitor_fallback, ensure_ascii=False):
+            errors.append("visitor acceptance guide reviewer fallback must not prove Vercel live")
         visitor_ci_verification = visitor_guide.get("ci_verification") or {}
         if visitor_ci_verification.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
             errors.append("visitor acceptance guide must expose the personal website CI workflow path")
@@ -746,6 +762,20 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for marker in ("Vercel production route", "real model calls", "npm run check:online"):
             if marker not in portfolio_ci_boundary:
                 errors.append(f"static portfolio CI proof must preserve boundary marker: {marker}")
+        reviewer_fallback = portfolio.get("reviewer_fallback_packet") or portfolio_integration.get("reviewer_fallback_packet") or {}
+        deployment_fallback = (showcase.get("public_deployment") or {}).get("reviewer_fallback_packet") or {}
+        fallback_text = json.dumps(reviewer_fallback, ensure_ascii=False)
+        if reviewer_fallback.get("status") != "available_when_live_route_stale":
+            errors.append("static portfolio embed must expose the reviewer fallback packet")
+        if reviewer_fallback.get("archive_path") != "tmp/three-cobblers-reviewer-packet.zip":
+            errors.append("static reviewer fallback packet must expose the zip archive path")
+        if reviewer_fallback.get("open_first") != "tmp/three-cobblers-reviewer-packet/OPEN_THIS_FIRST.txt":
+            errors.append("static reviewer fallback packet must expose OPEN_THIS_FIRST")
+        for marker in ("API Key", "Cookie", "config.yaml", "user_data/", "output/"):
+            if marker not in fallback_text:
+                errors.append(f"static reviewer fallback packet must preserve safety marker: {marker}")
+        if deployment_fallback.get("status") != reviewer_fallback.get("status"):
+            errors.append("static public deployment must mirror the reviewer fallback packet")
         extension_checklist = office_extension_story.get("starter_checklist") or []
         future_candidates = office_extension_story.get("future_office_candidates") or []
         future_prioritization = office_extension_story.get("future_office_prioritization") or {}
@@ -994,6 +1024,9 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "portfolio_live_check_command": (deploy_manifest.get("live_verification") or {}).get("check_command", ""),
             "portfolio_ci_status": (deploy_manifest.get("ci_verification") or {}).get("status", ""),
             "portfolio_ci_workflow": (deploy_manifest.get("ci_verification") or {}).get("workflow_path", ""),
+            "reviewer_fallback_status": reviewer_fallback.get("status", ""),
+            "reviewer_fallback_command_count": len(reviewer_fallback.get("commands") or []),
+            "reviewer_fallback_archive": reviewer_fallback.get("archive_path", ""),
             "text_integrity_status": "passed" if not text_integrity_findings else "failed",
             "text_integrity_scanned_files": len(
                 [
@@ -1052,6 +1085,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Prompt quality: {payload.get('comic_prompt_quality_status')} / assets={payload.get('comic_prompt_asset_clean_count')}/{payload.get('comic_prompt_asset_count')} / directors={payload.get('comic_prompt_director_ready_count')}/{payload.get('comic_prompt_shot_count')} / issues={payload.get('comic_prompt_issue_count')}",
         f"- Portfolio integration: source={payload.get('portfolio_integration_source_dir')} / options={payload.get('portfolio_integration_option_count')}",
         f"- Portfolio deploy manifest: {payload.get('portfolio_deploy_manifest')} / target={payload.get('portfolio_deploy_target')}",
+        f"- Reviewer fallback packet: {payload.get('reviewer_fallback_status')} / commands={payload.get('reviewer_fallback_command_count')} / archive={payload.get('reviewer_fallback_archive')}",
         f"- Portfolio live verification: {payload.get('portfolio_live_verification_status')} / url={payload.get('portfolio_live_url')} / check={payload.get('portfolio_live_check_command')}",
         f"- Text integrity: {payload.get('text_integrity_status')} / scanned={payload.get('text_integrity_scanned_files')}",
         f"- Requires backend: {payload.get('requires_backend')}",

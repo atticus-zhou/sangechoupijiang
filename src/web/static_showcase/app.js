@@ -1026,6 +1026,26 @@
     addTextRow(exportCard, '源目录', integration.static_export.source_dir);
     addTextRow(exportCard, '入口文件', integration.static_export.entrypoint);
     target.appendChild(exportCard);
+    const fallback = integration.reviewer_fallback_packet || portfolio.reviewer_fallback_packet || {};
+    if (fallback.status) {
+      const fallbackCard = element('article', 'card reviewer-fallback-card');
+      fallbackCard.appendChild(element('h3', '', fallback.title || '离线评审包'));
+      fallbackCard.appendChild(element('p', '', fallback.summary || fallback.visitor_message || '线上没刷新时，使用离线评审包完成本地评审。'));
+      addTextRow(fallbackCard, '状态', fallback.status);
+      addTextRow(fallbackCard, '打开入口', fallback.open_first || '');
+      addTextRow(fallbackCard, '压缩包', fallback.archive_path || '');
+      const commands = Array.isArray(fallback.commands) ? fallback.commands : [];
+      if (commands.length) {
+        const commandList = element('ul', 'proof-list fallback-command-list');
+        commands.forEach(function (command) {
+          const item = element('li', '');
+          item.appendChild(element('code', '', command));
+          commandList.appendChild(item);
+        });
+        fallbackCard.appendChild(commandList);
+      }
+      target.appendChild(fallbackCard);
+    }
     const optionGrid = element('div', 'card-grid two integration-options');
     options.forEach(function (item) {
       const card = element('article', 'card');

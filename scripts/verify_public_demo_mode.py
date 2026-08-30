@@ -124,6 +124,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     portfolio_integration = portfolio_embed.get("portfolio_integration") or {}
     portfolio_ci_proof = portfolio_integration.get("portfolio_ci_proof") or {}
     deployment_ci_verification = public_deployment.get("ci_verification") or {}
+    reviewer_fallback = portfolio_embed.get("reviewer_fallback_packet") or {}
+    deployment_fallback = public_deployment.get("reviewer_fallback_packet") or {}
     office_extension_story = portfolio_embed.get("office_extension_story") or {}
     if payload.get("mode") != "public_no_key_showcase":
         errors.append("public showcase manifest has unexpected mode")
@@ -307,6 +309,23 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("export_public_showcase.py", "verify_static_public_showcase.py", "verify_release_readiness.py", "check_no_secrets.py"):
         if marker not in commands:
             errors.append(f"portfolio integration must include verifier command: {marker}")
+    for marker in ("check:reviewer-packet", "pack:reviewer", "check:reviewer-packet:generated"):
+        if marker not in commands:
+            errors.append(f"portfolio integration must include reviewer fallback command: {marker}")
+    fallback_text = json.dumps(reviewer_fallback, ensure_ascii=False)
+    if reviewer_fallback.get("status") != "available_when_live_route_stale":
+        errors.append("portfolio embed must expose the reviewer fallback packet")
+    if reviewer_fallback.get("archive_path") != "tmp/three-cobblers-reviewer-packet.zip":
+        errors.append("reviewer fallback packet must expose the zip archive path")
+    if reviewer_fallback.get("open_first") != "tmp/three-cobblers-reviewer-packet/OPEN_THIS_FIRST.txt":
+        errors.append("reviewer fallback packet must expose OPEN_THIS_FIRST")
+    for marker in ("API Key", "Cookie", "config.yaml", "user_data/", "output/"):
+        if marker not in fallback_text:
+            errors.append(f"reviewer fallback packet must preserve safety marker: {marker}")
+    if "Vercel production route is live" not in fallback_text:
+        errors.append("reviewer fallback packet must not prove the Vercel production route is live")
+    if deployment_fallback.get("status") != reviewer_fallback.get("status"):
+        errors.append("public deployment must mirror the reviewer fallback packet")
     if portfolio_ci_proof.get("status") != "repo_static_checks":
         errors.append("portfolio integration must expose repository static CI proof")
     if portfolio_ci_proof.get("workflow_path") != ".github/workflows/three-cobblers-showcase.yml":
@@ -480,6 +499,9 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
         "portfolio_ci_status": portfolio_ci_proof.get("status", ""),
         "portfolio_ci_workflow": portfolio_ci_proof.get("workflow_path", ""),
+        "reviewer_fallback_status": reviewer_fallback.get("status", ""),
+        "reviewer_fallback_command_count": len(reviewer_fallback.get("commands") or []),
+        "reviewer_fallback_archive": reviewer_fallback.get("archive_path", ""),
         "office_extension_checklist_count": len(starter_checklist),
         "office_extension_phase_count": len(starter_phases),
         "office_extension_doc": office_extension_story.get("starter_checklist_doc", ""),
@@ -769,6 +791,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
         f"- 真实质量升级操作面板：status={manifest.get('real_quality_upgrade_status')} / steps={manifest.get('real_quality_upgrade_step_count')} / models={manifest.get('real_quality_upgrade_department_count')} / recovery={manifest.get('real_quality_upgrade_recovery_action')}",
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
+        f"- 离线评审包：{manifest.get('reviewer_fallback_status')} / commands={manifest.get('reviewer_fallback_command_count')} / archive={manifest.get('reviewer_fallback_archive')}",
         f"- New office extension: checklist={manifest.get('office_extension_checklist_count')} / phases={manifest.get('office_extension_phase_count')} / doc={manifest.get('office_extension_doc')}",
         f"- Future office candidates: {manifest.get('office_extension_candidate_count')} / backlog={manifest.get('office_extension_backlog_count')}",
         f"- Office launch matrix: public_ready={manifest.get('office_launch_public_ready_count')}/{manifest.get('office_launch_office_count')} / primary={manifest.get('office_launch_primary_allowed_count')} / legacy={manifest.get('office_launch_legacy_count')}",

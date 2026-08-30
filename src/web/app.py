@@ -1835,7 +1835,52 @@ def _public_showcase_portfolio_ci_proof() -> dict:
     }
 
 
+def _public_showcase_reviewer_fallback_packet() -> dict:
+    return {
+        "title": "离线评审包",
+        "status": "available_when_live_route_stale",
+        "summary": "当 Vercel 线上路由还没刷新、404 或授权状态不稳定时，仍可用个人网站仓库生成一个不含 Key 的评审包给面试官本地查看。",
+        "owned_by": "personal_website_repository",
+        "repository": "https://github.com/atticus-zhou/me",
+        "source_route": "public/three-stooges/",
+        "packet_dir": "tmp/three-cobblers-reviewer-packet",
+        "archive_path": "tmp/three-cobblers-reviewer-packet.zip",
+        "open_first": "tmp/three-cobblers-reviewer-packet/OPEN_THIS_FIRST.txt",
+        "commands": [
+            "npm run check:reviewer-packet",
+            "npm run pack:reviewer",
+            "npm run check:reviewer-packet:generated",
+        ],
+        "proves": [
+            "个人网站仓库里存在可公开查看的三个臭皮匠静态展示包",
+            "离线包包含打开说明、静态页面、样例下载物和构建信息",
+            "面试官无需后端、无需 API Key，也能复核产品展示与交付物",
+        ],
+        "does_not_prove": [
+            "Vercel production route is live",
+            "真实模型调用成功",
+            "真实用户工作区里的产物可公开",
+        ],
+        "forbidden_materials": [
+            "API Key",
+            "Cookie",
+            "config.yaml",
+            ".env",
+            "user_data/",
+            "output/",
+            "runtime_logs/",
+        ],
+        "when_to_use": [
+            "npm run check:online 失败或线上 /three-stooges/ 仍是旧版本时",
+            "面试前需要一个稳定、可复制、可离线打开的作品集备份时",
+            "需要证明公开展示不依赖作者个人密钥时",
+        ],
+        "visitor_message": "线上地址没刷新时，请先打开离线评审包；它证明静态展示和下载物已经准备好，但不替代线上 live 验证。",
+    }
+
+
 def _public_showcase_portfolio_integration() -> dict:
+    reviewer_fallback = _public_showcase_reviewer_fallback_packet()
     return {
         "title": "个人网站接入方式",
         "summary": "公开展示应只接入 no-key 静态包或 /api/demo/public-showcase 数据，不接入真实生产接口、config.yaml、用户工作区或作者 API Key。",
@@ -1857,6 +1902,7 @@ def _public_showcase_portfolio_integration() -> dict:
             "ship_command": "npm run ship:vercel",
             "do_not_claim_live_until": "npm run check:online passes",
         },
+        "reviewer_fallback_packet": reviewer_fallback,
         "portfolio_ci_proof": _public_showcase_portfolio_ci_proof(),
         "integration_options": [
             {
@@ -1903,6 +1949,9 @@ def _public_showcase_portfolio_integration() -> dict:
             "python scripts/verify_static_public_showcase.py --format markdown",
             "python scripts/verify_release_readiness.py --format markdown",
             "python scripts/check_no_secrets.py",
+            "cd E:/trae/me/personal-website-v2 && npm run check:reviewer-packet",
+            "cd E:/trae/me/personal-website-v2 && npm run pack:reviewer",
+            "cd E:/trae/me/personal-website-v2 && npm run check:reviewer-packet:generated",
             "cd E:/trae/me/personal-website-v2 && npm run doctor:deploy",
             "cd E:/trae/me/personal-website-v2 && npm run check:online",
         ],
@@ -2885,6 +2934,7 @@ async def get_public_showcase_demo_api():
     research_claim = _research_claim_report_from_demo(research_demo)
     extension_blueprint = list_office_extension_blueprint()
     office_governance = audit_office_extension_governance()
+    reviewer_fallback = _public_showcase_reviewer_fallback_packet()
     asset_requirement_matrix = comic_demo.get("asset_requirement_matrix") or {}
     asset_usage_map = comic_demo.get("asset_usage_map") or {}
     featured_demos = [
@@ -3019,6 +3069,7 @@ async def get_public_showcase_demo_api():
             "reproducibility_checklist": _public_showcase_reproducibility_checklist(),
             "post_run_validation": _public_showcase_post_run_validation(),
             "portfolio_integration": _public_showcase_portfolio_integration(),
+            "reviewer_fallback_packet": reviewer_fallback,
             "office_extension_story": _public_showcase_office_extension_story(extension_blueprint),
             "office_launch_matrix": _public_showcase_office_launch_matrix(office_governance),
             "public_recovery_drill": _public_showcase_recovery_drill(comic_claim),
@@ -3133,6 +3184,7 @@ async def get_public_showcase_demo_api():
                 "do_not_claim_live_until": "npm run check:online passes",
             },
             "ci_verification": _public_showcase_portfolio_ci_proof(),
+            "reviewer_fallback_packet": reviewer_fallback,
             "forbidden_public_assets": [
                 "config.yaml",
                 ".env",

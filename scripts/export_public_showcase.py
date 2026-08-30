@@ -145,6 +145,7 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
     research_claim = portfolio.get("research_claim_boundary") or {}
     fast_review = portfolio.get("fast_review_route") or []
     download_catalog = static_showcase.get("download_catalog") or []
+    fallback = deployment.get("reviewer_fallback_packet") or portfolio.get("reviewer_fallback_packet") or {}
 
     return {
         "mode": "public_no_key_visitor_acceptance",
@@ -180,6 +181,13 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
             },
             {
                 "order": len(fast_review) + 2,
+                "title": "线上没刷新时打开离线评审包",
+                "viewer_action": "如果线上 /three-stooges/ 还是旧页面或 404，运行 pack:reviewer 生成离线包，把 OPEN_THIS_FIRST.txt 作为评审入口。",
+                "proof": "离线评审包不含 API Key，也不需要后端，可以证明静态展示、样例下载物和构建信息已经准备好。",
+                "next_anchor": "#integration-title",
+            },
+            {
+                "order": len(fast_review) + 3,
                 "title": "最后确认线上状态不能跳过",
                 "viewer_action": "部署到个人网站后运行 npm run check:online，只有通过后才把 /three-stooges/ 发给面试官。",
                 "proof": "本地静态包准备好不等于线上 Vercel 已更新，公开链接必须由线上检查证明。",
@@ -217,6 +225,16 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
             "doctor_command": live_verification.get("doctor_command", "npm run doctor:deploy"),
             "check_command": live_verification.get("check_command", "npm run check:online"),
             "do_not_claim_live_until": "npm run check:online passes",
+        },
+        "reviewer_fallback_packet": {
+            "status": fallback.get("status", "available_when_live_route_stale"),
+            "packet_dir": fallback.get("packet_dir", "tmp/three-cobblers-reviewer-packet"),
+            "archive_path": fallback.get("archive_path", "tmp/three-cobblers-reviewer-packet.zip"),
+            "open_first": fallback.get("open_first", "tmp/three-cobblers-reviewer-packet/OPEN_THIS_FIRST.txt"),
+            "commands": fallback.get("commands", []),
+            "proves": fallback.get("proves", []),
+            "does_not_prove": fallback.get("does_not_prove", []),
+            "forbidden_materials": fallback.get("forbidden_materials", []),
         },
         "ci_verification": {
             "status": ci_verification.get("status", "repo_static_checks"),
@@ -392,6 +410,10 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "ship_command": "npm run ship:vercel",
             "failure_meaning": "The static package is ready, but the production Vercel domain may still be serving an older deployment.",
         }
+        deployment.setdefault(
+            "reviewer_fallback_packet",
+            (static_showcase.get("portfolio_embed") or {}).get("reviewer_fallback_packet") or {},
+        )
         visitor_acceptance_guide = _build_visitor_acceptance_guide(static_showcase)
         visitor_acceptance_path = "data/visitor_acceptance_guide.json"
         static_showcase["visitor_acceptance_guide"] = {
@@ -446,6 +468,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "live_authority": ci_verification.get("live_authority", "npm run check:online"),
                 "do_not_claim_live_until": ci_verification.get("do_not_claim_live_until", "npm run check:online passes"),
             },
+            "reviewer_fallback_packet": (static_showcase.get("public_deployment") or {}).get("reviewer_fallback_packet") or {},
             "required_files": [
                 "index.html",
                 "data.js",
@@ -466,6 +489,9 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "python scripts/export_public_showcase.py",
                 "python scripts/verify_static_public_showcase.py --format markdown",
                 "python scripts/verify_release_readiness.py --format markdown",
+                "cd E:/trae/me/personal-website-v2 && npm run check:reviewer-packet",
+                "cd E:/trae/me/personal-website-v2 && npm run pack:reviewer",
+                "cd E:/trae/me/personal-website-v2 && npm run check:reviewer-packet:generated",
                 "cd E:/trae/me/personal-website-v2 && npm run doctor:deploy",
                 "cd E:/trae/me/personal-website-v2 && npm run check:online",
             ],
@@ -486,6 +512,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "确认公开页面没有真实生产入口、API Key、Cookie、用户数据或运行产物。",
                 "确认页面仍显示 demo-only、safe_public_demo 和 demo_structure_only。",
                 "在个人网站仓库运行 npm run doctor:deploy，先区分本地包、Vercel 授权和线上旧部署。",
+                "如果线上还没刷新，运行 npm run pack:reviewer 生成离线评审包，再运行 npm run check:reviewer-packet:generated 验证。",
                 "确认个人网站线上 /three-stooges/ 只有在 npm run check:online 通过后才对外宣称 live。",
             ],
         }

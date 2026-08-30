@@ -397,6 +397,18 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("API Key", " ".join(integration["must_not_include"]))
         self.assertIn("output/", " ".join(integration["must_not_include"]))
         self.assertIn("verify_release_readiness.py", "\n".join(integration["verification_commands"]))
+        self.assertIn("pack:reviewer", "\n".join(integration["verification_commands"]))
+        self.assertIn("check:reviewer-packet:generated", "\n".join(integration["verification_commands"]))
+        reviewer_fallback = embed["reviewer_fallback_packet"]
+        self.assertEqual(reviewer_fallback["status"], "available_when_live_route_stale")
+        self.assertEqual(reviewer_fallback["archive_path"], "tmp/three-cobblers-reviewer-packet.zip")
+        self.assertEqual(reviewer_fallback["open_first"], "tmp/three-cobblers-reviewer-packet/OPEN_THIS_FIRST.txt")
+        self.assertIn("npm run pack:reviewer", reviewer_fallback["commands"])
+        fallback_text = json.dumps(reviewer_fallback, ensure_ascii=False)
+        self.assertIn("Vercel production route is live", fallback_text)
+        for marker in ("API Key", "Cookie", "config.yaml", "user_data/", "output/"):
+            self.assertIn(marker, fallback_text)
+        self.assertEqual(payload["public_deployment"]["reviewer_fallback_packet"]["status"], reviewer_fallback["status"])
         self.assertIn("npm run doctor:deploy", "\n".join(integration["verification_commands"]))
         self.assertIn("npm run check:online", "\n".join(integration["verification_commands"]))
         self.assertIn("check_no_secrets.py", "\n".join(payload["verification_commands"]))
