@@ -29,6 +29,13 @@ README_FILE = REPO_ROOT / "README.md"
 PUBLIC_HANDOFF_FILE = REPO_ROOT / "docs" / "PUBLIC_RELEASE_HANDOFF.md"
 
 
+def _compact_error_detail(detail: str, *, max_chars: int = 700) -> str:
+    text = re.sub(r"\s+", " ", detail or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars].rstrip()}... [truncated]"
+
+
 def _fetch_json(url: str, *, timeout: float) -> dict[str, Any]:
     request = Request(
         url,
@@ -46,7 +53,7 @@ def _fetch_json(url: str, *, timeout: float) -> dict[str, Any]:
             detail = exc.read().decode("utf-8")
         except Exception:
             detail = str(exc)
-        raise RuntimeError(f"GitHub API returned HTTP {exc.code}: {detail}") from exc
+        raise RuntimeError(f"GitHub API returned HTTP {exc.code}: {_compact_error_detail(detail)}") from exc
     except URLError as exc:
         raise RuntimeError(f"GitHub API request failed: {exc.reason}") from exc
     except TimeoutError as exc:
@@ -69,7 +76,7 @@ def _fetch_text(url: str, *, timeout: float) -> str:
             detail = exc.read().decode("utf-8", errors="replace")
         except Exception:
             detail = str(exc)
-        raise RuntimeError(f"GitHub Actions page returned HTTP {exc.code}: {detail}") from exc
+        raise RuntimeError(f"GitHub Actions page returned HTTP {exc.code}: {_compact_error_detail(detail)}") from exc
     except URLError as exc:
         raise RuntimeError(f"GitHub Actions page request failed: {exc.reason}") from exc
     except TimeoutError as exc:

@@ -3,8 +3,10 @@ import subprocess
 import sys
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from scripts.verify_github_release_evidence import (
+    _fetch_text,
     format_markdown,
     verify_github_release_contract,
     verify_github_release_evidence,
@@ -272,6 +274,23 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertEqual(payload["verification_source"], "github_api_unavailable")
         self.assertTrue(any("GitHub API returned HTTP 403" in item for item in payload["errors"]))
         self.assertTrue(any("Actions page request failed" in item for item in payload["errors"]))
+
+    def test_http_error_detail_is_compacted_before_reporting(self):
+        class FakeErrorResponse:
+            def read(self):
+                return ("<html>" + ("very noisy github html " * 200) + "</html>").encode("utf-8")
+
+        with patch(
+            "scripts.verify_github_release_evidence.urlopen",
+            side_effect=HTTPError("https://github.com/example", 404, "Not Found", {}, FakeErrorResponse()),
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                _fetch_text("https://github.com/example", timeout=1)
+
+        message = str(raised.exception)
+        self.assertIn("GitHub Actions page returned HTTP 404", message)
+        self.assertIn("[truncated]", message)
+        self.assertLess(len(message), 900)
 
     def test_markdown_mentions_verification_source_and_public_actions_url(self):
         payload = {
