@@ -68,6 +68,24 @@ COMMIT_CHECKS_PAGE = """
 </html>
 """
 
+RUN_WITH_ARTIFACT_PAGE = """
+<html>
+  <body>
+    <h1>Document comic prompt strategy claim gate</h1>
+    <div>Status Success</div>
+    <div>Artifacts</div>
+    <table>
+      <tr><th>Name</th><th>Size</th><th>Digest</th></tr>
+      <tr>
+        <td>no-key-release-evidence</td>
+        <td>2.39 KB</td>
+        <td>sha256:87f3deee82fae126cdafb6ce0d3e43802531c04b9986b4c48aa1dd0e1698106f</td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+
 
 class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
     def test_verifier_passes_when_latest_run_succeeds_and_artifact_exists(self):
@@ -150,7 +168,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertIn("Add office recovery registry", payload["latest_run"]["display_title"])
         self.assertEqual(payload["latest_run"]["status"], "in_progress")
         self.assertIn("actions?query=branch%3Acodex%2Fcomic-quality-overhaul", payload["public_actions_url"])
-        self.assertTrue(any("could not be verified without the GitHub API" in item for item in payload["errors"]))
+        self.assertTrue(any("could not be verified from public GitHub pages" in item for item in payload["errors"]))
 
     def test_verifier_uses_commit_checks_page_when_api_is_rate_limited_and_head_sha_is_given(self):
         def fake_fetch_text(url, timeout):
@@ -175,7 +193,32 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertEqual(payload["latest_run"]["conclusion"], "success")
         self.assertIn("/commit/4b5eb5170112ea6dfea66fc3d7f4ed60dc901f1a/checks", payload["public_commit_checks_url"])
         self.assertEqual(payload["artifact"], {})
-        self.assertTrue(any("could not be verified without the GitHub API" in item for item in payload["errors"]))
+        self.assertTrue(any("could not be verified from public GitHub pages" in item for item in payload["errors"]))
+
+    def test_html_fallback_passes_when_public_pages_show_success_and_artifact(self):
+        def fake_fetch_text(url, timeout):
+            if "/commit/" in url:
+                return COMMIT_CHECKS_PAGE
+            if "/actions/runs/30698472636" in url:
+                return RUN_WITH_ARTIFACT_PAGE
+            return HTML_FALLBACK_PAGE
+
+        with (
+            patch(
+                "scripts.verify_github_release_evidence._fetch_json",
+                side_effect=RuntimeError("GitHub API returned HTTP 403: rate limit"),
+            ),
+            patch("scripts.verify_github_release_evidence._fetch_text", side_effect=fake_fetch_text),
+        ):
+            payload = verify_github_release_evidence(head_sha="4b5eb5170112ea6dfea66fc3d7f4ed60dc901f1a")
+
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["verification_source"], "github_commit_checks_html_fallback")
+        self.assertEqual(payload["latest_run"]["conclusion"], "success")
+        self.assertEqual(payload["artifact"]["name"], "no-key-release-evidence")
+        self.assertGreater(payload["artifact"]["size_in_bytes"], 0)
+        self.assertFalse(payload["errors"])
+        self.assertTrue(payload["warnings"])
 
     def test_verifier_reports_when_api_and_html_fallback_both_fail(self):
         with (

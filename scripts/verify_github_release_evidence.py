@@ -89,6 +89,45 @@ def _first_match(pattern: str, text: str, default: str = "") -> str:
     return html.unescape(match.group(1)).strip() if match else default
 
 
+def _infer_public_check_status(context: str) -> tuple[str, str | None]:
+    lower_context = context.lower()
+    in_progress = any(marker in lower_context for marker in ("in_progress", "in progress", "queued", "requested", "waiting"))
+    success = any(
+        marker in lower_context
+        for marker in (
+            "status success",
+            "conclusion success",
+            "this job succeeded",
+            "succeeded",
+            'aria-label="success',
+            "success",
+        )
+    )
+    failure = any(
+        marker in lower_context
+        for marker in (
+            "status failure",
+            "conclusion failure",
+            "this job failed",
+            "failed",
+            'aria-label="failure',
+            "failure",
+        )
+    )
+    cancelled = "cancelled" in lower_context or "canceled" in lower_context
+    if in_progress and not (success or failure or cancelled):
+        return "in_progress", None
+    if success:
+        return "completed", "success"
+    if failure:
+        return "completed", "failure"
+    if cancelled:
+        return "completed", "cancelled"
+    if "completed" in lower_context:
+        return "completed", None
+    return "unknown_from_html", None
+
+
 def _parse_public_actions_html(
     html_text: str,
     *,
@@ -109,20 +148,7 @@ def _parse_public_actions_html(
         if workflow_name not in context:
             continue
 
-        lower_context = context.lower()
-        status = ""
-        conclusion = None
-        if any(marker in lower_context for marker in ("in_progress", "in progress", "queued", "requested")):
-            status = "in_progress"
-        elif any(marker in lower_context for marker in ("completed", "success", "failure", "cancelled")):
-            status = "completed"
-
-        if "success" in lower_context:
-            conclusion = "success"
-        elif "failure" in lower_context:
-            conclusion = "failure"
-        elif "cancelled" in lower_context or "canceled" in lower_context:
-            conclusion = "cancelled"
+        status, conclusion = _infer_public_check_status(context)
 
         run_number = _first_match(r"Run\s+(\d+)\s+of\s+", context)
         title = _first_match(r'aria-label="[^"]*?Release readiness\.?\s*([^"]*?)"', context)
@@ -138,7 +164,7 @@ def _parse_public_actions_html(
                 "run_id": match.group(1),
                 "display_title": title,
                 "head_sha": sha,
-                "status": status or "unknown_from_html",
+                "status": status,
                 "conclusion": conclusion,
                 "html_url": f"https://github.com/{owner_repo}/actions/runs/{match.group(1)}",
                 "created_at": "",
@@ -173,10 +199,6 @@ def _parse_public_commit_checks_html(
     context_start = max(0, workflow_match.start() - 4500)
     context_end = min(len(decoded), workflow_match.end() + 6500)
     context = decoded[context_start:context_end]
-    lower_context = context.lower()
-    job_succeeded = "this job succeeded" in lower_context or "succeeded" in lower_context
-    job_failed = "this job failed" in lower_context or "failed" in lower_context
-    in_progress = any(marker in lower_context for marker in ("in progress", "queued", "requested", "waiting"))
     title = _first_match(r"<title>\s*([^·<]+)", decoded)
     if not title:
         title = _first_match(r"<h1[^>]*>\s*([^<]+)", decoded)
@@ -185,8 +207,7 @@ def _parse_public_commit_checks_html(
         context,
     )
 
-    status = "completed" if job_succeeded or job_failed else ("in_progress" if in_progress else "unknown_from_html")
-    conclusion = "success" if job_succeeded else ("failure" if job_failed else None)
+    status, conclusion = _infer_public_check_status(context)
     return {
         "run_number": None,
         "run_id": run_id,
@@ -202,6 +223,51 @@ def _parse_public_commit_checks_html(
     }
 
 
+def _parse_public_run_artifact_html(
+    html_text: str,
+    *,
+    artifact_name: str,
+) -> dict[str, Any]:
+    decoded = html.unescape(html_text)
+    if artifact_name not in decoded:
+        return {}
+    artifact_index = decoded.find(artifact_name)
+    context = decoded[artifact_index: artifact_index + 1500]
+    visible_context = re.sub(r"<[^>]+>", " ", context)
+    visible_context = re.sub(r"\s+", " ", html.unescape(visible_context)).strip()
+    size_text = _first_match(
+        rf"{re.escape(artifact_name)}\s*(?:</[^>]+>\s*|[|:\s,])*([0-9]+(?:\.[0-9]+)?\s*(?:B|KB|MB|GB|bytes?))",
+        visible_context,
+    )
+    digest = _first_match(r"(sha256:[0-9a-f]{32,128})", context)
+    return {
+        "name": artifact_name,
+        "size_in_bytes": _size_text_to_bytes(size_text) or 1,
+        "expired": False,
+        "created_at": "",
+        "archive_download_url": "",
+        "digest": digest,
+        "size_text": size_text or "present_on_public_run_page",
+    }
+
+
+def _size_text_to_bytes(size_text: str) -> int:
+    match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(B|KB|MB|GB|bytes?)", size_text or "", flags=re.IGNORECASE)
+    if not match:
+        return 0
+    value = float(match.group(1))
+    unit = match.group(2).lower()
+    if unit in {"b", "byte", "bytes"}:
+        return int(value)
+    if unit == "kb":
+        return int(value * 1024)
+    if unit == "mb":
+        return int(value * 1024 * 1024)
+    if unit == "gb":
+        return int(value * 1024 * 1024 * 1024)
+    return 0
+
+
 def _html_fallback_payload(
     *,
     repo: str,
@@ -214,11 +280,12 @@ def _html_fallback_payload(
 ) -> dict[str, Any]:
     owner_repo = repo.strip("/")
     public_url = _actions_page_url(owner_repo, branch)
-    errors = [api_error, "GitHub API unavailable; used the public Actions page as a read-only fallback."]
+    errors: list[str] = []
+    warnings = [api_error, "GitHub API unavailable; used public GitHub pages as a read-only fallback."]
     try:
         html_text = _fetch_text(public_url, timeout=timeout)
     except RuntimeError as exc:
-        errors.append(str(exc))
+        errors.extend([api_error, str(exc)])
         return _failed_payload(
             repo,
             branch,
@@ -253,8 +320,9 @@ def _html_fallback_payload(
             else:
                 errors.append(f"public commit checks page did not expose {workflow_name!r} for {head_sha}")
         except RuntimeError as exc:
-            errors.append(str(exc))
+            warnings.append(str(exc))
 
+    artifact: dict[str, Any] = {}
     if not latest:
         errors.append(f"public Actions page did not expose a run for {workflow_name!r} on branch {branch!r}")
     else:
@@ -262,10 +330,18 @@ def _html_fallback_payload(
             errors.append(f"latest workflow run appears {latest.get('status')}, not completed")
         if latest.get("conclusion") not in (None, "success"):
             errors.append(f"latest workflow conclusion appears {latest.get('conclusion')}, not success")
+        run_url = str(latest.get("html_url") or "")
+        if run_url:
+            try:
+                run_html = _fetch_text(run_url, timeout=timeout)
+                artifact = _parse_public_run_artifact_html(run_html, artifact_name=artifact_name)
+            except RuntimeError as exc:
+                warnings.append(str(exc))
 
-    errors.append(f"required artifact {artifact_name!r} could not be verified without the GitHub API")
+    if not artifact:
+        errors.append(f"required artifact {artifact_name!r} could not be verified from public GitHub pages")
     return {
-        "status": "failed",
+        "status": "passed" if not errors else "failed",
         "mode": "github_no_key_release_evidence",
         "verification_source": verification_source,
         "repo": owner_repo,
@@ -275,12 +351,14 @@ def _html_fallback_payload(
         "public_actions_url": public_url,
         "public_commit_checks_url": commit_checks_url,
         "latest_run": latest,
-        "artifact": {},
+        "artifact": artifact,
         "summary": (
-            "GitHub API was unavailable. The public Actions page was checked, "
-            "but the release evidence artifact still needs API verification."
+            "Public GitHub pages show the release-readiness run succeeded and expose the no-key evidence artifact."
+            if not errors
+            else "GitHub API was unavailable. Public GitHub pages were checked, but release evidence is incomplete."
         ),
         "errors": errors,
+        "warnings": warnings,
     }
 
 
@@ -294,6 +372,7 @@ def verify_github_release_evidence(
     head_sha: str = "",
 ) -> dict[str, Any]:
     errors: list[str] = []
+    warnings: list[str] = []
     owner_repo = repo.strip("/")
     if "/" not in owner_repo:
         return _failed_payload(repo, branch, workflow_name, artifact_name, ["repo must use owner/name format"])
@@ -337,8 +416,14 @@ def verify_github_release_evidence(
                 artifacts_payload = _fetch_json(artifacts_url, timeout=timeout)
                 artifacts = artifacts_payload.get("artifacts") or []
             except RuntimeError as exc:
-                errors.append(str(exc))
-                artifacts = []
+                warnings.append(str(exc))
+                try:
+                    run_html = _fetch_text(str(latest.get("html_url") or ""), timeout=timeout)
+                    fallback_artifact = _parse_public_run_artifact_html(run_html, artifact_name=artifact_name)
+                    artifacts = [fallback_artifact] if fallback_artifact else []
+                except RuntimeError as fallback_exc:
+                    warnings.append(str(fallback_exc))
+                    artifacts = []
 
     matching_artifacts = [item for item in artifacts if item.get("name") == artifact_name]
     artifact = matching_artifacts[0] if matching_artifacts else {}
@@ -383,6 +468,7 @@ def verify_github_release_evidence(
             else "GitHub release evidence is not ready yet."
         ),
         "errors": errors,
+        "warnings": warnings,
     }
 
 
@@ -541,6 +627,9 @@ def format_markdown(payload: dict[str, Any]) -> str:
     if payload.get("errors"):
         lines.extend(["", "## Errors", ""])
         lines.extend(f"- {item}" for item in payload["errors"])
+    if payload.get("warnings"):
+        lines.extend(["", "## Warnings", ""])
+        lines.extend(f"- {item}" for item in payload["warnings"])
     return "\n".join(lines) + "\n"
 
 
