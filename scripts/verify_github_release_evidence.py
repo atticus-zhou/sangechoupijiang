@@ -91,7 +91,19 @@ def _first_match(pattern: str, text: str, default: str = "") -> str:
 
 def _infer_public_check_status(context: str) -> tuple[str, str | None]:
     lower_context = context.lower()
-    in_progress = any(marker in lower_context for marker in ("in_progress", "in progress", "queued", "requested", "waiting"))
+    in_progress = any(
+        marker in lower_context
+        for marker in (
+            "in_progress",
+            "in progress",
+            "queued",
+            "requested",
+            "waiting",
+            "loading",
+            "re-running jobs",
+            "rerunning jobs",
+        )
+    )
     success = any(
         marker in lower_context
         for marker in (
@@ -115,7 +127,7 @@ def _infer_public_check_status(context: str) -> tuple[str, str | None]:
         )
     )
     cancelled = "cancelled" in lower_context or "canceled" in lower_context
-    if in_progress and not (success or failure or cancelled):
+    if in_progress:
         return "in_progress", None
     if success:
         return "completed", "success"

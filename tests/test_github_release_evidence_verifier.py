@@ -68,6 +68,21 @@ COMMIT_CHECKS_PAGE = """
 </html>
 """
 
+COMMIT_CHECKS_RERUNNING_PAGE = """
+<html>
+  <head><title>Document localhost proxy health check · atticus-zhou/sangechoupijiang@f74575e · GitHub</title></head>
+  <body>
+    <a href="/atticus-zhou/sangechoupijiang/actions/runs/33387193576">
+      <span>Release readiness</span>
+      <span>on: push</span>
+    </a>
+    <span>No-key public release gate</span>
+    <span>Loading</span>
+    <h4>Re-running jobs...</h4>
+  </body>
+</html>
+"""
+
 RUN_WITH_ARTIFACT_PAGE = """
 <html>
   <body>
@@ -194,6 +209,26 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertIn("/commit/4b5eb5170112ea6dfea66fc3d7f4ed60dc901f1a/checks", payload["public_commit_checks_url"])
         self.assertEqual(payload["artifact"], {})
         self.assertTrue(any("could not be verified from public GitHub pages" in item for item in payload["errors"]))
+
+    def test_commit_checks_loading_state_is_not_misread_as_success(self):
+        def fake_fetch_text(url, timeout):
+            if "/commit/" in url:
+                return COMMIT_CHECKS_RERUNNING_PAGE
+            return HTML_FALLBACK_PAGE
+
+        with (
+            patch(
+                "scripts.verify_github_release_evidence._fetch_json",
+                side_effect=RuntimeError("GitHub API returned HTTP 403: rate limit"),
+            ),
+            patch("scripts.verify_github_release_evidence._fetch_text", side_effect=fake_fetch_text),
+        ):
+            payload = verify_github_release_evidence(head_sha="f74575e728ef7469f8169d1c68776936e436eebd")
+
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["latest_run"]["status"], "in_progress")
+        self.assertIsNone(payload["latest_run"]["conclusion"])
+        self.assertTrue(any("not completed" in item for item in payload["errors"]))
 
     def test_html_fallback_passes_when_public_pages_show_success_and_artifact(self):
         def fake_fetch_text(url, timeout):
