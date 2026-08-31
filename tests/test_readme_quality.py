@@ -11,6 +11,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertNotIn("閿", text)
         self.assertNotIn("娑撳", text)
         self.assertIn("# 三个臭皮匠", text)
+        self.assertIn("START_HERE.md", text)
+        self.assertIn("第一次从 GitHub 下载项目", text)
         self.assertIn("actions/workflows/release-readiness.yml/badge.svg", text)
         self.assertIn("no-key-release-evidence", text)
         self.assertIn("本地优先的多 Agent 协作工作台", text)

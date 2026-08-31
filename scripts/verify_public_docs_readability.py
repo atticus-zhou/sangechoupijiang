@@ -12,10 +12,29 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 PUBLIC_DOCS: list[dict[str, Any]] = [
     {
+        "path": "START_HERE.md",
+        "role": "short GitHub first-run entry",
+        "required_markers": [
+            "先看这里",
+            "不需要 API Key",
+            "需要你自己的模型 Key",
+            "只部署无 Key 静态展示包",
+            "AI 漫剧制片办公室最小配置",
+            "研究办公室最小配置",
+            "工部",
+            "刑部",
+            "office_id",
+            "绝对不要提交",
+            "python scripts/check_no_secrets.py",
+            "python scripts/verify_release_readiness.py --format markdown",
+        ],
+    },
+    {
         "path": "README.md",
         "role": "GitHub front door",
         "required_markers": [
             "# 三个臭皮匠",
+            "START_HERE.md",
             "本地优先的多 Agent 协作工作台",
             "公开无 Key 演示",
             "本地真实使用",

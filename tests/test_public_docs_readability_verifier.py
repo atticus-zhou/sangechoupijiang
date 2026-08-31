@@ -29,6 +29,7 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(payload["doc_count"], 7)
         self.assertEqual(payload["passed_count"], payload["doc_count"])
         checked_paths = {item["path"] for item in payload["docs"]}
+        self.assertIn("START_HERE.md", checked_paths)
         self.assertIn("README.md", checked_paths)
         self.assertIn("docs/DEPLOYMENT_MODES.md", checked_paths)
         self.assertIn("docs/PUBLIC_RELEASE_HANDOFF.md", checked_paths)
@@ -64,6 +65,8 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         )
 
         self.assertIn("Public Docs Readability Audit", completed.stdout)
+        self.assertIn("START_HERE.md", completed.stdout)
+        self.assertIn("short GitHub first-run entry", completed.stdout)
         self.assertIn("README.md", completed.stdout)
         self.assertIn("GitHub front door", completed.stdout)
         self.assertIn("deployment boundary", completed.stdout)

@@ -100,6 +100,7 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
 
 def _github_download_checklist(root: Path) -> dict[str, Any]:
     expected_public_files = [
+        "START_HERE.md",
         "README.md",
         "requirements.txt",
         "config.example.yaml",
@@ -271,6 +272,7 @@ def _declared_requirement_names(text: str) -> set[str]:
 
 def _first_run_file_reason(path: str) -> str:
     reasons = {
+        "START_HERE.md": "Short first page for GitHub downloaders: separates demo viewing, local real use, public deployment, and office development.",
         "README.md": "GitHub front door: explains what the product is and which path a visitor should take.",
         "requirements.txt": "Lets a new user install the Python dependencies deterministically.",
         "config.example.yaml": "Shows model configuration shape without exposing any real API Key.",

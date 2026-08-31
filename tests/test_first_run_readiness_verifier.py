@@ -33,6 +33,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         )
         checklist_text = json.dumps(checklist, ensure_ascii=False)
         for marker in [
+            "START_HERE.md",
             "README.md",
             "requirements.txt",
             "config.example.yaml",
@@ -196,6 +197,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
 
         self.assertIn("# First Run Readiness", result.stdout)
         self.assertIn("GitHub Download Checklist", result.stdout)
+        self.assertIn("START_HERE.md", result.stdout)
         self.assertIn("docs/FIRST_RUN_DECISION_CARD.md", result.stdout)
         self.assertIn("Expected public files", result.stdout)
         self.assertIn("Never Commit", result.stdout)
