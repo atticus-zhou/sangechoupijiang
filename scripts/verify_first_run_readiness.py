@@ -324,6 +324,14 @@ def _common_first_run_failures() -> list[dict[str, Any]]:
             "requires_api_key": False,
         },
         {
+            "id": "localhost_proxy_502",
+            "symptom": "服务已经显示 Uvicorn running，但 PowerShell 请求 /health 返回 502 Bad Gateway。",
+            "likely_cause": "Windows 或网络工具的代理设置拦截了 localhost 请求；这通常不是后端真正返回 502。",
+            "check_command": "curl.exe -i --noproxy \"*\" http://127.0.0.1:8080/health",
+            "recovery_action": "先用浏览器打开 `http://127.0.0.1:8080/`，或用 `curl.exe --noproxy \"*\"` 复核；只要返回 200，说明产品后端正常。",
+            "requires_api_key": False,
+        },
+        {
             "id": "codex_windows_sandbox_setup_failed",
             "symptom": "Codex 桌面端反复弹出 codex-windows-sandbox-setup.exe，提示“找不到指定的模块”。",
             "likely_cause": "这是 Codex Windows 应用自带沙箱初始化组件启动失败，通常是应用更新不完整、安装包损坏或系统运行库缺失；它不是三个臭皮匠项目代码报错。",

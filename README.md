@@ -122,6 +122,14 @@ python run.py --port 8080
 http://127.0.0.1:8080/
 ```
 
+如果后端已经显示 `Uvicorn running`，但 PowerShell 的本机请求返回 `502 Bad Gateway`，先不要判断为项目死掉。请用浏览器打开上面的地址，或用下面这条命令绕过系统代理复核健康接口：
+
+```powershell
+curl.exe -i --noproxy "*" http://127.0.0.1:8080/health
+```
+
+只要这里返回 `200 OK`，说明后端是活的；502 多半来自 Windows/网络代理对 localhost 的误拦截。
+
 如果第一次运行卡住，先看 `verify_first_run_readiness.py` 输出里的 **Common First-run Failures**。常见问题包括依赖未安装、`config.yaml` 缺失、模型预检失败、8080 端口占用、误把公开演示当成本地真实模式等。
 
 `doctor.py` 还会展示 **Office launch gates（办公室上线门禁）**，说明无 Key 演示、模型预检、端到端测试、样例交付、失败恢复、历史追溯、schema gate、README 文档和 secret scan 是否已经达标。

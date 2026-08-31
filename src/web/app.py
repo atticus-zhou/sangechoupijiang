@@ -228,7 +228,7 @@ def _build_first_run_guide_payload() -> dict:
             {
                 "id": "runtime_health",
                 "label": "服务是否活着",
-                "command": "Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8080/health",
+                "command": "curl.exe -i --noproxy \"*\" http://127.0.0.1:8080/health",
             },
             {
                 "id": "local_doctor",
@@ -255,7 +255,7 @@ def _build_first_run_guide_payload() -> dict:
             {
                 "symptom": "页面打开但按钮没有反应",
                 "check": "/health",
-                "next_action": "先确认后端返回 200，再看浏览器控制台或 runtime 日志。",
+                "next_action": "先用浏览器或 `curl.exe --noproxy \"*\" http://127.0.0.1:8080/health` 确认后端返回 200；如果只有 PowerShell 请求返回 502，多半是系统代理误报。",
             },
             {
                 "symptom": "真实生产卡在模型调用前",
