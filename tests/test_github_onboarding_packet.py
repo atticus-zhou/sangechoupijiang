@@ -42,6 +42,7 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
 
         copied_targets = {item["target"] for item in payload["files"]}
         for target in [
+            "START_HERE.md",
             "README.md",
             "config.example.yaml",
             "docs/FIRST_RUN_DECISION_CARD.md",
@@ -57,10 +58,14 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
         self.assertTrue(all(item["status"] == "passed" for item in verification.values()))
         self.assertIn("github_download=ready", verification["first_run"]["summary"])
         self.assertIn("tracked secrets", verification["secret_scan"]["summary"])
+        open_first = output_dir.joinpath("OPEN_THIS_FIRST.md").read_text(encoding="utf-8")
+        self.assertIn("1. `START_HERE.md`", open_first)
+        self.assertIn("2. `README.md`", open_first)
 
         with zipfile.ZipFile(zip_path) as archive:
             names = set(archive.namelist())
         self.assertIn("OPEN_THIS_FIRST.md", names)
+        self.assertIn("START_HERE.md", names)
         self.assertIn("verification/first_run.json", names)
         self.assertIn("verification/secret_scan.txt", names)
         forbidden = ("config.yaml", ".env", "user_data", "output", "runtime_logs", ".vercel")
