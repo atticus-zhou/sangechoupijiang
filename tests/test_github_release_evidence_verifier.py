@@ -6,6 +6,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 from scripts.verify_github_release_evidence import (
+    _expand_local_head_sha,
     _fetch_text,
     format_markdown,
     verify_github_release_contract,
@@ -291,6 +292,15 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertIn("GitHub Actions page returned HTTP 404", message)
         self.assertIn("[truncated]", message)
         self.assertLess(len(message), 900)
+
+    def test_short_head_sha_is_expanded_from_local_git(self):
+        class Completed:
+            stdout = "ba6352c3dbb918994c12416b7d38d1e484e74915\n"
+
+        with patch("scripts.verify_github_release_evidence.subprocess.run", return_value=Completed()):
+            expanded = _expand_local_head_sha("ba6352c")
+
+        self.assertEqual(expanded, "ba6352c3dbb918994c12416b7d38d1e484e74915")
 
     def test_markdown_mentions_verification_source_and_public_actions_url(self):
         payload = {

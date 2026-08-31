@@ -11,6 +11,7 @@ import argparse
 import html
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -89,6 +90,27 @@ def _actions_page_url(owner_repo: str, branch: str) -> str:
 
 def _commit_checks_url(owner_repo: str, head_sha: str) -> str:
     return f"https://github.com/{owner_repo}/commit/{quote(head_sha, safe='')}/checks"
+
+
+def _expand_local_head_sha(head_sha: str) -> str:
+    value = (head_sha or "").strip()
+    if not value or len(value) >= 40:
+        return value
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", value],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return value
+    expanded = completed.stdout.strip()
+    if re.fullmatch(r"[0-9a-f]{40}", expanded, flags=re.IGNORECASE):
+        return expanded
+    return value
 
 
 def _first_match(pattern: str, text: str, default: str = "") -> str:
@@ -694,6 +716,7 @@ def main() -> int:
     parser.add_argument("--contract-only", action="store_true", help="Verify local workflow/docs contract without network access.")
     parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
     args = parser.parse_args()
+    head_sha = _expand_local_head_sha(args.head_sha)
 
     if args.contract_only:
         payload = verify_github_release_contract()
@@ -704,7 +727,7 @@ def main() -> int:
             workflow_name=args.workflow,
             artifact_name=args.artifact,
             timeout=args.timeout,
-            head_sha=args.head_sha,
+            head_sha=head_sha,
         )
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
