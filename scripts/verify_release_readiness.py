@@ -130,6 +130,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_future_office_backlog.py", "--format", "json"],
     },
     {
+        "id": "office_expansion_decision_brief",
+        "title": "Office expansion decision brief",
+        "command": ["scripts/verify_office_expansion_decision_brief.py", "--format", "json"],
+    },
+    {
         "id": "office_schema_registry",
         "title": "Office schema gate registry",
         "command": ["scripts/verify_office_schema_registry.py", "--format", "json"],
@@ -383,6 +388,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"backlog={parsed.get('backlog_count')}; "
                 f"ids={','.join(parsed.get('candidate_ids') or [])}; "
                 f"platform={','.join(parsed.get('backlog_ids') or [])}"
+            )
+        if check_id == "office_expansion_decision_brief":
+            return (
+                f"doc={parsed.get('document')}; "
+                f"research={parsed.get('research_claim_level')}; "
+                f"full_auto={parsed.get('research_full_automation')}; "
+                f"future={parsed.get('future_prioritization_status')}; "
+                f"order={','.join(parsed.get('future_priority_order') or [])}; "
+                f"blocked={parsed.get('future_blocked_candidates')}"
             )
         if check_id == "office_isolation":
             checks = parsed.get("checks") or []

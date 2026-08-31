@@ -51,6 +51,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "research_readiness",
                 "office_governance",
                 "future_office_backlog",
+                "office_expansion_decision_brief",
                 "office_schema_registry",
                 "office_recovery_registry",
                 "office_isolation",
@@ -177,6 +178,13 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("technical_project", future_backlog["summary"])
         self.assertIn("future_schema_validators", future_backlog["summary"])
         self.assertIn("future_recovery_events", future_backlog["summary"])
+        expansion_brief = next(item for item in payload["checks"] if item["id"] == "office_expansion_decision_brief")
+        self.assertIn("doc=docs/OFFICE_EXPANSION_DECISION_BRIEF.md", expansion_brief["summary"])
+        self.assertIn("research=staged_research_demo", expansion_brief["summary"])
+        self.assertIn("full_auto=False", expansion_brief["summary"])
+        self.assertIn("future=decision_ready_but_not_started", expansion_brief["summary"])
+        self.assertIn("order=ecommerce_selection,short_video_ads,story_ip,technical_project", expansion_brief["summary"])
+        self.assertIn("blocked=4/4", expansion_brief["summary"])
         office_schema_registry = next(item for item in payload["checks"] if item["id"] == "office_schema_registry")
         self.assertIn("providers=comic_production,research", office_schema_registry["summary"])
         self.assertIn("bindings=11/11", office_schema_registry["summary"])

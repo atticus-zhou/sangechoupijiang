@@ -85,8 +85,11 @@ npm run check:online
 ```powershell
 python scripts/verify_office_isolation.py --format markdown
 python scripts/verify_office_extension_governance.py --format markdown
+python scripts/verify_office_expansion_decision_brief.py --format markdown
 python scripts/export_office_creation_template.py --format markdown
 ```
+
+扩展顺序和暂缓原因先看 `docs/OFFICE_EXPANSION_DECISION_BRIEF.md`。当前建议是先稳定 AI 漫剧制片办公室和研究办公室，再把 `ecommerce_selection` 作为第一间候选新办公室。
 
 新办公室必须有自己的 `office_id`、模型配置、工作区、历史记录、产物清单、schema gate、recovery actions 和公开演示边界。
 
@@ -103,4 +106,3 @@ python scripts/export_office_creation_template.py --format markdown
 python scripts/check_no_secrets.py
 python scripts/verify_release_readiness.py --format markdown
 ```
-

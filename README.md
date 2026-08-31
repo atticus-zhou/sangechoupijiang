@@ -258,7 +258,7 @@ python scripts/export_office_creation_template.py --format json --output docs/ne
 
 这条命令不会调用模型、不会读取 API Key、不会写用户工作区；它只导出 `office_profile_skeleton`、`public_demo_contract_skeleton`、上线门禁、最小实现包、候选办公室阻塞原因和必跑验证命令。
 
-同一个接口还会返回 `extension_blueprint`，把新办公室从注册到上线拆成可执行步骤：注册 `OfficeProfile`、隔离运行时状态、建立无 Key demo、接入 schema/recovery、补文档和验证命令。新增办公室时先按这份蓝图走，不要直接复制研究办公室或漫剧办公室的临时代码。完整执行协议见 `docs/OFFICE_EXTENSION_PROTOCOL.md`，启动检查清单见 `docs/NEW_OFFICE_STARTER_CHECKLIST.md`；扩展治理脚本会检查这些文档没有丢失关键边界。
+同一个接口还会返回 `extension_blueprint`，把新办公室从注册到上线拆成可执行步骤：注册 `OfficeProfile`、隔离运行时状态、建立无 Key demo、接入 schema/recovery、补文档和验证命令。新增办公室时先按这份蓝图走，不要直接复制研究办公室或漫剧办公室的临时代码。完整执行协议见 `docs/OFFICE_EXTENSION_PROTOCOL.md`，启动检查清单见 `docs/NEW_OFFICE_STARTER_CHECKLIST.md`，扩展顺序和暂缓原因见 `docs/OFFICE_EXPANSION_DECISION_BRIEF.md`；扩展治理脚本会检查这些文档没有丢失关键边界。
 
 `extension_blueprint` 还会列出未来办公室候选和暂不开放原因。当前候选包括：
 
@@ -269,7 +269,7 @@ python scripts/export_office_creation_template.py --format json --output docs/ne
 
 这些候选办公室不能先做 UI 再补底层。进入公开展示前，必须先补 `future_schema_validators` 和 `future_recovery_events` 两类平台证据：每个办公室自己的 schema 校验器、运行状态、任务时间线、历史追溯、恢复接口，以及说明哪些产物会保留、哪些产物会清理的测试。
 
-`python scripts/verify_future_office_backlog.py --format markdown` 会把候选办公室逐个列成阻塞清单，确认它们仍然不能被当作 public ready 或 primary office；只有补齐办公室专属 schema、恢复事件、样例交付、声明边界和发布门禁后，才允许从 backlog 迁入正式办公室矩阵。
+`python scripts/verify_future_office_backlog.py --format markdown` 会把候选办公室逐个列成阻塞清单，确认它们仍然不能被当作 public ready 或 primary office；`python scripts/verify_office_expansion_decision_brief.py --format markdown` 会把研究办公室当前边界、未来办公室优先级和准入门槛绑定到可执行证据。只有补齐办公室专属 schema、恢复事件、样例交付、声明边界和发布门禁后，才允许从 backlog 迁入正式办公室矩阵。
 
 查看单个办公室的上线门禁：
 

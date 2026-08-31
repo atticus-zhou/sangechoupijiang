@@ -204,6 +204,26 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "check_no_secrets",
         ],
     },
+    {
+        "path": "docs/OFFICE_EXPANSION_DECISION_BRIEF.md",
+        "role": "office expansion decision brief",
+        "required_markers": [
+            "办公室扩展决策简报",
+            "AI 漫剧制片办公室",
+            "研究办公室",
+            "staged research demo",
+            "不能宣称已经做到全自动飞瓜会员级采集",
+            "decision_ready_but_not_started",
+            "ecommerce_selection",
+            "short_video_ads",
+            "story_ip",
+            "technical_project",
+            "办公室专属 schema gate",
+            "办公室专属 recovery actions",
+            "public claim report",
+            "python scripts/verify_office_expansion_decision_brief.py --format markdown",
+        ],
+    },
 ]
 
 SUSPICIOUS_TEXT_MARKERS = [
