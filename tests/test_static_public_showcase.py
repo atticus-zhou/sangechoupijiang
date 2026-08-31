@@ -233,6 +233,17 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(real_upgrade["upgrade_status"], "blocked_until_real_model_evidence")
         self.assertEqual(real_upgrade["recovery_action"], "regenerate_images")
         self.assertEqual(len(real_upgrade["operator_steps"]), 5)
+        self.assertIn("结构样例升级到真实制片质量", real_upgrade["human_upgrade_card"]["title"])
+        self.assertIn("不要重写故事", real_upgrade["human_upgrade_card"]["summary"])
+        self.assertGreaterEqual(len(real_upgrade["human_upgrade_card"]["user_only_needs_to"]), 3)
+        self.assertIn("同一份结构样例升级", real_upgrade["artifact_transition_policy"]["human_summary"])
+        self.assertGreaterEqual(len(real_upgrade["artifact_transition_policy"]["preserve"]), 4)
+        self.assertGreaterEqual(len(real_upgrade["artifact_transition_policy"]["invalidate"]), 3)
+        self.assertGreaterEqual(len(real_upgrade["artifact_transition_policy"]["rebuild"]), 4)
+        self.assertEqual(
+            [item["level"] for item in real_upgrade["acceptance_ladder"]],
+            ["demo_structure_only", "model_reviewed", "real_quality_verified"],
+        )
         self.assertEqual(
             {item["department_id"] for item in real_upgrade["model_preflight_departments"]},
             {"gongbu", "xingbu", "bingbu"},
@@ -477,6 +488,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("renderRealQualityUpgradePlan", static_script)
         self.assertIn("real-quality-upgrade-plan-card", static_script)
         self.assertIn("real-quality-model-grid", style_text)
+        self.assertIn("human-upgrade-actions", static_script)
+        self.assertIn("artifact-transition-policy", static_script)
+        self.assertIn("acceptance-ladder", static_script)
+        self.assertIn("human-upgrade-summary", style_text)
+        self.assertIn("artifact-transition-policy", style_text)
+        self.assertIn("acceptance-ladder-item", style_text)
         self.assertIn("renderQualityUpgradePath", static_script)
         self.assertIn("claim-upgrade-card", static_script)
         self.assertIn("claim-recovery-card", static_script)

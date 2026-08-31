@@ -519,6 +519,33 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
                 errors.append(f"static showcase upgrade evidence missing marker: {marker}")
         if real_quality_upgrade_plan.get("recovery_action") != "regenerate_images":
             errors.append("static showcase real-quality upgrade plan must use regenerate_images")
+        human_card = real_quality_upgrade_plan.get("human_upgrade_card") or {}
+        if "结构样例升级到真实制片质量" not in str(human_card.get("title") or ""):
+            errors.append("static showcase upgrade plan must include a human-readable upgrade card title")
+        if "不要重写故事" not in str(human_card.get("summary") or ""):
+            errors.append("static showcase upgrade card must explain that the confirmed story is preserved")
+        if len(human_card.get("user_only_needs_to") or []) < 3:
+            errors.append("static showcase upgrade card must list concrete user actions")
+        transition = real_quality_upgrade_plan.get("artifact_transition_policy") or {}
+        if "同一份结构样例升级" not in str(transition.get("human_summary") or ""):
+            errors.append("static showcase upgrade plan must include artifact transition policy")
+        if len(transition.get("preserve") or []) < 4:
+            errors.append("static showcase upgrade policy must list preserved artifacts")
+        if len(transition.get("invalidate") or []) < 3:
+            errors.append("static showcase upgrade policy must list invalidated demo evidence")
+        if len(transition.get("rebuild") or []) < 4:
+            errors.append("static showcase upgrade policy must list rebuilt artifacts")
+        transition_text = json.dumps(transition, ensure_ascii=False)
+        for marker in ("已确认故事", "fixture 图片证据", "真实基础资产图", "真实生产声明报告"):
+            if marker not in transition_text:
+                errors.append(f"static showcase upgrade policy missing marker: {marker}")
+        ladder = real_quality_upgrade_plan.get("acceptance_ladder") or []
+        if [item.get("level") for item in ladder] != ["demo_structure_only", "model_reviewed", "real_quality_verified"]:
+            errors.append("static showcase upgrade acceptance ladder must preserve all levels in order")
+        ladder_text = json.dumps(ladder, ensure_ascii=False)
+        for marker in ("不能说真实画质", "provider/model/image_id", "handoff_allowed=true"):
+            if marker not in ladder_text:
+                errors.append(f"static showcase upgrade acceptance ladder missing marker: {marker}")
         research_claim_uri = str(research_claim_boundary.get("uri") or "")
         research_claim_path = temp_dir / research_claim_uri
         research_claim_payload = {}
@@ -986,6 +1013,9 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "real_quality_upgrade_step_count": len(real_quality_upgrade_plan.get("operator_steps") or []),
             "real_quality_upgrade_department_count": len(real_quality_upgrade_plan.get("model_preflight_departments") or []),
             "real_quality_upgrade_recovery_action": real_quality_upgrade_plan.get("recovery_action", ""),
+            "real_quality_upgrade_human_card_title": human_card.get("title", ""),
+            "real_quality_upgrade_acceptance_ladder_count": len(ladder),
+            "real_quality_upgrade_transition_rebuild_count": len(transition.get("rebuild") or []),
             "research_claim_report_ready": bool(
                 research_claim_payload.get("claim_level") == "staged_research_demo"
                 and research_claim_payload.get("can_claim_full_automation") is False
@@ -1076,6 +1106,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Claim upgrade checklist: {payload.get('claim_upgrade_checklist_count')} items",
         f"- Claim upgrade recovery: action={payload.get('claim_upgrade_recovery_action')} / steps={payload.get('claim_upgrade_recovery_step_count')}",
         f"- Real quality upgrade plan: status={payload.get('real_quality_upgrade_status')} / steps={payload.get('real_quality_upgrade_step_count')} / models={payload.get('real_quality_upgrade_department_count')} / recovery={payload.get('real_quality_upgrade_recovery_action')}",
+        f"- Real quality human card: {payload.get('real_quality_upgrade_human_card_title') or '-'} / ladder={payload.get('real_quality_upgrade_acceptance_ladder_count')} / rebuild={payload.get('real_quality_upgrade_transition_rebuild_count')}",
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')} / capture_steps={payload.get('research_capture_playbook_step_count')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",

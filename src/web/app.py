@@ -912,6 +912,49 @@ def _public_real_quality_upgrade_plan(claim: dict) -> dict:
             ],
         },
     ]
+    artifact_transition_policy = {
+        "human_summary": "这不是重新开一个项目，而是把同一份结构样例升级成真实模型证据包。",
+        "preserve": [
+            {"artifact": "已确认故事", "reason": "故事是生产前提，不因重跑图片而改写。"},
+            {"artifact": "资产拆解包", "reason": "人物、道具、场景清单继续作为图片和镜头引用基础。"},
+            {"artifact": "提示词包", "reason": "除非提示词质检失败，否则优先保留导演式提示词，减少随机漂移。"},
+            {"artifact": "旧 Word 和旧 manifest", "reason": "保留为历史证据，不能覆盖旧交付。"},
+        ],
+        "invalidate": [
+            {"artifact": "fixture 图片证据", "reason": "固定样例图只能证明结构，不能证明真实模型画质。"},
+            {"artifact": "fixture 视觉质检结论", "reason": "样例质检不能继承到真实模型图片。"},
+            {"artifact": "旧 claim report 的真实质量判断", "reason": "真实质量声明必须来自当前真实图片和当前质量基准。"},
+        ],
+        "rebuild": [
+            {"artifact": "真实基础资产图", "owner": "工部", "done_when": "每张图都有 provider、model、image_id、非 fixture 标记。"},
+            {"artifact": "七维视觉质检", "owner": "刑部", "done_when": "每张图 review.status=pass 且 handoff_ready=true。"},
+            {"artifact": "Word 画布和 handoff manifest", "owner": "礼部 / 刑部", "done_when": "引用真实图片，质量基准和 manifest 匹配。"},
+            {"artifact": "真实生产声明报告", "owner": "刑部", "done_when": "claim_level=real_quality_verified，或明确说明仍不可宣称。"},
+        ],
+    }
+    acceptance_ladder = [
+        {
+            "level": "demo_structure_only",
+            "human_label": "结构样例",
+            "allowed_claim": "可以公开展示流程、引用链、Word 画布和无 Key 安全边界。",
+            "blocked_claim": "不能说真实画质、人物一致性或下游生产质量已验证。",
+            "must_have": ["Word 画布", "handoff manifest", "trace", "claim report"],
+        },
+        {
+            "level": "model_reviewed",
+            "human_label": "真实图片已审",
+            "allowed_claim": "可以说这批图片来自真实模型，并经过视觉理解模型质检。",
+            "blocked_claim": "如果仍有废片、缺图或 manifest 未重建，还不能交给下游。",
+            "must_have": ["非 fixture 图片", "provider/model/image_id", "七维评分", "waste_or_rework_images=0"],
+        },
+        {
+            "level": "real_quality_verified",
+            "human_label": "真实质量可声明",
+            "allowed_claim": "可以把当前制片包作为真实质量已验证的交付样例。",
+            "blocked_claim": "故事、资产、模型或提示词再次变化后，旧声明不能自动继承。",
+            "must_have": ["production_quality_verified=true", "stored_benchmark_matches=true", "handoff_allowed=true"],
+        },
+    ]
     return {
         "mode": "no_key_real_quality_upgrade_plan",
         "office_id": "comic_production",
@@ -926,8 +969,20 @@ def _public_real_quality_upgrade_plan(claim: dict) -> dict:
         "upgrade_status": "ready" if gate.get("ready") else "blocked_until_real_model_evidence",
         "blocking_checks": gate.get("missing_check_ids", []),
         "next_action": gate.get("next_action") or recovery.get("next_action") or claim.get("next_action", ""),
+        "human_upgrade_card": {
+            "title": "如何从结构样例升级到真实制片质量",
+            "summary": "先不要重写故事；保留已确认故事、资产和提示词，用真实生图模型补齐图片证据，再由视觉模型质检，最后重建 Word、manifest 和声明报告。",
+            "why_now_blocked": "当前公开样例的图片证据仍是 fixture 或未绑定真实 provider/model，不能证明真实画质和人物一致性。",
+            "user_only_needs_to": [
+                "在模型页确认工部、刑部、兵部测试通过。",
+                "点击恢复动作重新生成图片。",
+                "等待系统完成视觉质检和交付重建后，再看质量声明是否升级。",
+            ],
+        },
         "model_preflight_departments": model_preflight_departments,
         "operator_steps": operator_steps,
+        "artifact_transition_policy": artifact_transition_policy,
+        "acceptance_ladder": acceptance_ladder,
         "evidence_contract": {
             "total_images": real_model_evidence.get("total_images", 0),
             "non_fixture_images": real_model_evidence.get("non_fixture_images", 0),

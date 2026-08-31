@@ -352,7 +352,23 @@
   function renderRealQualityUpgradePlan(grid, plan) {
     if (!grid || !plan || !plan.target_claim_level) return;
     const card = element('article', 'card claim-card real-quality-upgrade-plan-card');
-    card.appendChild(element('h3', '', '\u771f\u5b9e\u8d28\u91cf\u5347\u7ea7\u64cd\u4f5c\u9762\u677f'));
+    const humanCard = plan.human_upgrade_card || {};
+    const transition = plan.artifact_transition_policy || {};
+    const ladder = Array.isArray(plan.acceptance_ladder) ? plan.acceptance_ladder : [];
+    card.appendChild(element('h3', '', text(humanCard.title || '\u771f\u5b9e\u8d28\u91cf\u5347\u7ea7\u64cd\u4f5c\u9762\u677f')));
+    if (humanCard.summary) {
+      card.appendChild(element('p', 'human-upgrade-summary', text(humanCard.summary)));
+    }
+    if (humanCard.why_now_blocked) {
+      card.appendChild(element('p', 'claim-recovery-next', text(humanCard.why_now_blocked)));
+    }
+    if (Array.isArray(humanCard.user_only_needs_to) && humanCard.user_only_needs_to.length) {
+      const userList = element('ol', 'real-quality-step-list human-upgrade-actions');
+      humanCard.user_only_needs_to.forEach(function (action) {
+        userList.appendChild(element('li', '', text(action)));
+      });
+      card.appendChild(userList);
+    }
     addTextRow(card, '\u5f53\u524d\u58f0\u660e', plan.current_claim_level);
     addTextRow(card, '\u76ee\u6807\u58f0\u660e', plan.target_claim_level);
     addTextRow(card, '\u5347\u7ea7\u72b6\u6001', plan.upgrade_status);
@@ -385,6 +401,47 @@
         list.appendChild(li);
       });
       card.appendChild(list);
+    }
+    if (transition.human_summary) {
+      const policy = element('div', 'artifact-transition-policy');
+      policy.appendChild(element('h4', '', '\u4ea4\u4ed8\u7269\u600e\u4e48\u5904\u7406'));
+      policy.appendChild(element('p', '', text(transition.human_summary)));
+      [
+        ['\u4fdd\u7559', transition.preserve],
+        ['\u4f5c\u5e9f', transition.invalidate],
+        ['\u91cd\u5efa', transition.rebuild],
+      ].forEach(function ([label, items]) {
+        const values = Array.isArray(items) ? items : [];
+        if (!values.length) return;
+        const section = element('div', 'artifact-transition-column');
+        section.appendChild(element('strong', '', label));
+        const list = element('ul', 'proof-list');
+        values.forEach(function (item) {
+          const title = item.artifact || item.owner || '';
+          const detail = item.reason || item.done_when || '';
+          list.appendChild(element('li', '', text(title + (detail ? '\uff1a' + detail : ''))));
+        });
+        section.appendChild(list);
+        policy.appendChild(section);
+      });
+      card.appendChild(policy);
+    }
+    if (ladder.length) {
+      const ladderPanel = element('div', 'acceptance-ladder');
+      ladderPanel.appendChild(element('h4', '', '\u9a8c\u6536\u53f0\u9636'));
+      ladder.forEach(function (item) {
+        const step = element('div', 'acceptance-ladder-item');
+        step.appendChild(element('strong', '', text(item.human_label || item.level)));
+        step.appendChild(element('p', '', text(item.allowed_claim || '')));
+        if (item.blocked_claim) {
+          step.appendChild(element('small', '', text(item.blocked_claim)));
+        }
+        if (Array.isArray(item.must_have) && item.must_have.length) {
+          step.appendChild(element('code', 'hash-code', item.must_have.map(text).join(' / ')));
+        }
+        ladderPanel.appendChild(step);
+      });
+      card.appendChild(ladderPanel);
     }
     const evidence = plan.evidence_contract || {};
     if (Array.isArray(evidence.missing_check_ids) && evidence.missing_check_ids.length) {

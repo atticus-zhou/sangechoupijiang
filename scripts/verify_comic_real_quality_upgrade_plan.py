@@ -69,6 +69,36 @@ def verify_upgrade_plan() -> dict[str, Any]:
         if not item.get("owner") or not item.get("action") or not item.get("done_when"):
             errors.append(f"operator step is incomplete: {item.get('phase') or item.get('order')}")
 
+    human_card = payload.get("human_upgrade_card") or {}
+    if "结构样例升级到真实制片质量" not in str(human_card.get("title") or ""):
+        errors.append("upgrade plan must include a human-readable upgrade card title")
+    if "不要重写故事" not in str(human_card.get("summary") or ""):
+        errors.append("human upgrade card must explain that the confirmed story is preserved")
+    if len(human_card.get("user_only_needs_to") or []) < 3:
+        errors.append("human upgrade card must list the user's concrete actions")
+
+    transition = payload.get("artifact_transition_policy") or {}
+    if "同一份结构样例升级" not in str(transition.get("human_summary") or ""):
+        errors.append("artifact transition policy must explain that this is an upgrade, not a new project")
+    if len(transition.get("preserve") or []) < 4:
+        errors.append("artifact transition policy must list preserved artifacts")
+    if len(transition.get("invalidate") or []) < 3:
+        errors.append("artifact transition policy must list invalidated demo evidence")
+    if len(transition.get("rebuild") or []) < 4:
+        errors.append("artifact transition policy must list rebuilt artifacts")
+    transition_text = json.dumps(transition, ensure_ascii=False)
+    for marker in ("已确认故事", "fixture 图片证据", "真实基础资产图", "真实生产声明报告"):
+        if marker not in transition_text:
+            errors.append(f"artifact transition policy missing marker: {marker}")
+
+    ladder = payload.get("acceptance_ladder") or []
+    if [item.get("level") for item in ladder] != ["demo_structure_only", "model_reviewed", "real_quality_verified"]:
+        errors.append("acceptance ladder must show demo/model-reviewed/real-quality levels in order")
+    ladder_text = json.dumps(ladder, ensure_ascii=False)
+    for marker in ("不能说真实画质", "provider/model/image_id", "handoff_allowed=true"):
+        if marker not in ladder_text:
+            errors.append(f"acceptance ladder missing marker: {marker}")
+
     evidence = payload.get("evidence_contract") or {}
     if evidence.get("ready_for_real_quality_claim") is not False:
         errors.append("fixed demo evidence contract must not be ready for real quality claim")
@@ -126,6 +156,13 @@ def verify_upgrade_plan() -> dict[str, Any]:
         "model_preflight_departments": ordered_departments,
         "operator_step_count": len(steps),
         "operator_phases": phases,
+        "human_upgrade_card_title": human_card.get("title", ""),
+        "human_upgrade_card_summary": human_card.get("summary", ""),
+        "artifact_transition_preserve_count": len(transition.get("preserve") or []),
+        "artifact_transition_invalidate_count": len(transition.get("invalidate") or []),
+        "artifact_transition_rebuild_count": len(transition.get("rebuild") or []),
+        "acceptance_ladder_count": len(ladder),
+        "acceptance_ladder_levels": [item.get("level") for item in ladder],
         "evidence_missing_checks": evidence.get("missing_check_ids") or [],
         "seven_dimension_scored_reviews": int(evidence.get("seven_dimension_scored_reviews") or 0),
         "checklist_ids": sorted(checklist_ids),
@@ -150,6 +187,9 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Can claim real quality now: `{payload.get('can_claim_real_quality_now')}`",
         f"- Model preflight departments: `{', '.join(payload.get('model_preflight_departments') or [])}`",
         f"- Operator steps: `{payload.get('operator_step_count')}` ({', '.join(payload.get('operator_phases') or [])})",
+        f"- Human card: {payload.get('human_upgrade_card_title') or '-'}",
+        f"- Artifact policy: preserve `{payload.get('artifact_transition_preserve_count')}`, invalidate `{payload.get('artifact_transition_invalidate_count')}`, rebuild `{payload.get('artifact_transition_rebuild_count')}`",
+        f"- Acceptance ladder: `{payload.get('acceptance_ladder_count')}` ({', '.join(payload.get('acceptance_ladder_levels') or [])})",
         f"- Evidence missing checks: `{', '.join(payload.get('evidence_missing_checks') or [])}`",
         f"- Seven-dimension reviews: `{payload.get('seven_dimension_scored_reviews')}`",
         f"- Recovery action: `{payload.get('recovery_action')}`",
@@ -158,6 +198,26 @@ def format_markdown(payload: dict[str, Any]) -> str:
     if payload.get("errors"):
         lines.extend(["", "## Errors", ""])
         lines.extend(f"- {error}" for error in payload["errors"])
+    else:
+        lines.extend(
+            [
+                "",
+                "## Human Upgrade Card",
+                "",
+                str(payload.get("human_upgrade_card_summary") or ""),
+                "",
+                "## Artifact Transition Policy",
+                "",
+                f"- Preserve: `{payload.get('artifact_transition_preserve_count')}`",
+                f"- Invalidate: `{payload.get('artifact_transition_invalidate_count')}`",
+                f"- Rebuild: `{payload.get('artifact_transition_rebuild_count')}`",
+                "",
+                "## Acceptance Ladder",
+                "",
+            ]
+        )
+        for level in payload.get("acceptance_ladder_levels") or []:
+            lines.append(f"- `{level}`")
     return "\n".join(lines) + "\n"
 
 

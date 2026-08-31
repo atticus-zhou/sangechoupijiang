@@ -829,6 +829,19 @@ h3 {
   background: linear-gradient(180deg, rgba(18, 33, 58, 0.9), rgba(16, 23, 34, 0.96));
 }
 
+.human-upgrade-summary {
+  max-width: 960px;
+  color: #d7e6fb;
+  line-height: 1.7;
+}
+
+.human-upgrade-actions {
+  padding: 16px 18px 16px 38px;
+  border: 1px solid rgba(132, 185, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 18, 32, 0.34);
+}
+
 .real-quality-model-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -868,6 +881,56 @@ h3 {
   gap: 12px;
   margin: 16px 0 0;
   padding-left: 22px;
+}
+
+.artifact-transition-policy,
+.acceptance-ladder {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.artifact-transition-policy h4,
+.acceptance-ladder h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: #f8fbff;
+}
+
+.artifact-transition-policy p,
+.acceptance-ladder p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.artifact-transition-column {
+  margin-top: 14px;
+}
+
+.artifact-transition-column strong,
+.acceptance-ladder-item strong {
+  display: block;
+  color: #eaf3ff;
+}
+
+.acceptance-ladder {
+  display: grid;
+  gap: 12px;
+}
+
+.acceptance-ladder-item {
+  padding: 14px;
+  border: 1px solid rgba(99, 167, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(99, 167, 255, 0.06);
+}
+
+.acceptance-ladder-item small {
+  display: block;
+  margin-top: 6px;
+  color: #adc0da;
 }
 
 .public-recovery-drill-card {

@@ -46,6 +46,24 @@ class ComicRealQualityUpgradePlanTests(unittest.TestCase):
         self.assertIn("verify_comic_v2_downstream_handoff.py", commands)
         self.assertIn("check_no_secrets.py", commands)
         self.assertIn("不读取 API Key", payload["public_boundary"])
+        card = payload["human_upgrade_card"]
+        self.assertIn("结构样例升级到真实制片质量", card["title"])
+        self.assertIn("不要重写故事", card["summary"])
+        self.assertIn("工部", " ".join(card["user_only_needs_to"]))
+        transition = payload["artifact_transition_policy"]
+        self.assertIn("同一份结构样例升级", transition["human_summary"])
+        self.assertGreaterEqual(len(transition["preserve"]), 4)
+        self.assertGreaterEqual(len(transition["invalidate"]), 3)
+        self.assertGreaterEqual(len(transition["rebuild"]), 4)
+        self.assertTrue(any(item["artifact"] == "已确认故事" for item in transition["preserve"]))
+        self.assertTrue(any(item["artifact"] == "fixture 图片证据" for item in transition["invalidate"]))
+        self.assertTrue(any(item["owner"] == "工部" for item in transition["rebuild"]))
+        ladder = payload["acceptance_ladder"]
+        self.assertEqual([item["level"] for item in ladder], ["demo_structure_only", "model_reviewed", "real_quality_verified"])
+        ladder_text = json.dumps(ladder, ensure_ascii=False)
+        self.assertIn("不能说真实画质", ladder_text)
+        self.assertIn("provider/model/image_id", ladder_text)
+        self.assertIn("handoff_allowed=true", ladder_text)
         self.assertNotIn("E:\\", json.dumps(payload, ensure_ascii=False))
 
     def test_verifier_json_and_markdown(self):
@@ -68,6 +86,8 @@ class ComicRealQualityUpgradePlanTests(unittest.TestCase):
         self.assertEqual(payload["upgrade_status"], "blocked_until_real_model_evidence")
         self.assertEqual(payload["operator_step_count"], 5)
         self.assertEqual(payload["recovery_action"], "regenerate_images")
+        self.assertEqual(payload["acceptance_ladder_count"], 3)
+        self.assertEqual(payload["artifact_transition_preserve_count"], 4)
 
         markdown = subprocess.run(
             [
@@ -84,6 +104,9 @@ class ComicRealQualityUpgradePlanTests(unittest.TestCase):
         self.assertIn("AI Comic Real Quality Upgrade Plan", markdown.stdout)
         self.assertIn("Target claim: `real_quality_verified`", markdown.stdout)
         self.assertIn("Recovery action: `regenerate_images`", markdown.stdout)
+        self.assertIn("Human Upgrade Card", markdown.stdout)
+        self.assertIn("Artifact Transition Policy", markdown.stdout)
+        self.assertIn("Acceptance Ladder", markdown.stdout)
 
 
 if __name__ == "__main__":
