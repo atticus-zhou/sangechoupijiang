@@ -23,6 +23,24 @@ from src.web.app import app
 DEFAULT_OUTPUT = REPO_ROOT / "dist" / "public-showcase"
 TEMPLATE_ROOT = REPO_ROOT / "src" / "web" / "static_showcase"
 PRODUCT_SCREENSHOT = REPO_ROOT / "docs" / "assets" / "public-showcase-desktop.png"
+EXTRA_REVIEWABLE_DOCS = [
+    {
+        "source_path": REPO_ROOT / "docs" / "OFFICE_EXPANSION_DECISION_BRIEF.md",
+        "local_uri": "downloads/platform/office-expansion-decision-brief.md",
+        "title": "办公室扩展决策简报",
+        "office_id": "platform",
+        "office_name": "平台扩展治理",
+        "type": "decision_brief",
+        "reader_guidance": "先看当前主力办公室、研究办公室边界和未来办公室排序，确认产品不是靠堆 UI 入口扩展。",
+        "look_for": "研究办公室 staged demo 边界、ecommerce_selection 优先级、schema gate、recovery actions 和 public claim report 准入门槛。",
+        "proves": "证明新办公室扩展顺序和暂缓原因已经写成可读文档，并接入发布门禁。",
+        "acceptance_signals": [
+            "明确 AI 漫剧制片办公室仍是主力办公室",
+            "明确研究办公室不能宣称全自动飞瓜会员级采集",
+            "明确未来办公室必须先补办公室专属 schema gate 和 recovery actions",
+        ],
+    }
+]
 
 
 def _safe_output_path(output_dir: Path | str) -> Path:
@@ -103,6 +121,10 @@ def _download_catalog_metadata(static_showcase: dict[str, Any]) -> dict[str, dic
                 value = item.get(key)
                 if value not in (None, "", []):
                     entry[key] = value
+    for doc in EXTRA_REVIEWABLE_DOCS:
+        entry = metadata.setdefault(str(doc["local_uri"]), {})
+        entry.update({key: value for key, value in doc.items() if key != "source_path"})
+        entry.setdefault("order", 90)
     return metadata
 
 
@@ -133,6 +155,30 @@ def _build_download_catalog(static_showcase: dict[str, Any], file_records: list[
             }
         )
     return sorted(catalog, key=lambda item: (int(item.get("order") or 99), str(item.get("local_uri") or "")))
+
+
+def _append_extra_reviewable_docs_to_reading_guide(static_showcase: dict[str, Any]) -> None:
+    portfolio = static_showcase.setdefault("portfolio_embed", {})
+    reading_guide = portfolio.setdefault("deliverable_reading_guide", [])
+    existing_uris = {str(item.get("uri") or "") for item in reading_guide}
+    for doc in EXTRA_REVIEWABLE_DOCS:
+        local_uri = str(doc["local_uri"])
+        if local_uri in existing_uris:
+            continue
+        reading_guide.append(
+            {
+                "order": doc.get("order", 90),
+                "title": doc["title"],
+                "uri": local_uri,
+                "office_id": doc["office_id"],
+                "office_name": doc["office_name"],
+                "type": doc["type"],
+                "reader_guidance": doc["reader_guidance"],
+                "look_for": doc["look_for"],
+                "proves": doc["proves"],
+                "acceptance_signals": doc["acceptance_signals"],
+            }
+        )
 
 
 def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str, Any]:
@@ -367,8 +413,26 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "sha256": _sha256(claim_path),
             }
         ]
+        for doc in EXTRA_REVIEWABLE_DOCS:
+            source_path = Path(doc["source_path"])
+            if not source_path.is_file():
+                raise FileNotFoundError(f"Reviewable public doc is missing: {source_path}")
+            local_uri = str(doc["local_uri"])
+            destination = staging / local_uri
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, destination)
+            reviewable_records.append(
+                {
+                    "source_uri": source_path.relative_to(REPO_ROOT).as_posix(),
+                    "local_uri": local_uri,
+                    "bytes": destination.stat().st_size,
+                    "content_type": "text/markdown; charset=utf-8",
+                    "sha256": _sha256(destination),
+                }
+            )
         source_mode = static_showcase.get("mode")
         static_showcase["mode"] = "public_no_key_static_showcase"
+        _append_extra_reviewable_docs_to_reading_guide(static_showcase)
         static_showcase["download_catalog"] = _build_download_catalog(static_showcase, reviewable_records)
         static_showcase["static_export"] = {
             "source_mode": source_mode,
@@ -382,7 +446,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "generated_by": "python scripts/export_public_showcase.py",
         }
         static_showcase["safety_boundaries"] = [
-            "静态展示只包含固定样例、实际产品截图和八份公开样例下载物；连同真实生产声明报告，共九个可复核文件。",
+            "静态展示只包含固定样例、实际产品截图、八份公开样例下载物、真实生产声明报告和办公室扩展决策简报，共十个可复核文件。",
             "页面运行时不连接 FastAPI，不读取 config.yaml、环境变量、Cookie、登录态或本地用户工作区。",
             "不要把个人 API Key、真实用户数据或运行产物复制进静态目录。",
             "真实生产继续走本地模式，由使用者填写自己的模型 Key。",
@@ -394,7 +458,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             )
         if len(interview_script) >= 3:
             interview_script[2]["product_response"] = (
-                "八份公开下载物已经随静态站点一起导出，连同声明报告构成九个可复核文件，每个链接都附带阅读重点和验收信号。"
+                "八份公开下载物已经随静态站点一起导出，连同声明报告和办公室扩展决策简报构成十个可复核文件，每个链接都附带阅读重点和验收信号。"
             )
         deployment = static_showcase.setdefault("public_deployment", {})
         deployment["mode"] = "static_demo_only"

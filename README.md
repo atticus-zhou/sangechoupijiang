@@ -96,7 +96,7 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
 ```
 
 这条命令会从线上地址读取首页、`showcase.json`、导出清单、访客验收指南、声明报告、样例 Word 和 handoff manifest。它通过时，才能说明这个 URL 本身可打开、可下载，并且仍保持无 Key demo 边界。
-静态展示包会同时带上最快验收路线、八份下载物、九个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对生产验收卡 -> 核对资产图片规格矩阵和资产使用地图 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级、恢复建议和 `downstream_handoff_decision` 串成一份可复核链路；`downloads/comic-production/production-acceptance.json` 会用一张验收卡说明当前样例能不能公开展示、能不能交给真实下游、失败项是什么；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist`、`claim_upgrade_recovery` 和同一张下游接手决策卡：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据，决策卡则明确当前状态是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`，以及现在能不能交给下游。公开页面还会读取 `portfolio_embed.asset_usage_map`，把“每个资产怎么被下游复用”展示成访客可读卡片；同时读取 `portfolio_embed.public_recovery_drill`，把“访客质疑真实画质时如何处理”做成一张恢复演练卡：它必须说明当前证据是 `fixture_only`、恢复动作是 `regenerate_images`、保留故事/资产/提示词/旧 Word、清理图片证据和视觉质检、再由工部和刑部补跑真实模型证据。
+静态展示包会同时带上最快验收路线、八份下载物、十个可复核文件、交付物阅读顺序、3 分钟面试演示脚本和复现与验收清单。访客第一次打开时，先按“确认安全公开页 -> 下载 Word 制片画布 -> 核对 handoff manifest -> 核对追溯记录 -> 核对生产验收卡 -> 核对资产图片规格矩阵和资产使用地图 -> 查看声明边界和复现命令”的顺序判断产品价值。其中 `downloads/comic-production/files/trace.json` 会把故事、风格、资产、图片、镜头、证据等级、恢复建议和 `downstream_handoff_decision` 串成一份可复核链路；`downloads/comic-production/production-acceptance.json` 会用一张验收卡说明当前样例能不能公开展示、能不能交给真实下游、失败项是什么；`data/comic_production_claim_report.json` 会暴露 `claim_upgrade_checklist`、`claim_upgrade_recovery` 和同一张下游接手决策卡：前者说明真实质量还缺什么证据，后者说明如何用 `regenerate_images` 从 demo 结构样例恢复到真实图片和视觉质检证据，决策卡则明确当前状态是 `structure_demo_only`、`ready_for_downstream` 还是 `blocked`，以及现在能不能交给下游。公开页面还会读取 `portfolio_embed.asset_usage_map`，把“每个资产怎么被下游复用”展示成访客可读卡片；同时读取 `portfolio_embed.public_recovery_drill`，把“访客质疑真实画质时如何处理”做成一张恢复演练卡：它必须说明当前证据是 `fixture_only`、恢复动作是 `regenerate_images`、保留故事/资产/提示词/旧 Word、清理图片证据和视觉质检、再由工部和刑部补跑真实模型证据；新增的办公室扩展决策简报会说明为什么未来办公室暂不进入主入口，以及为什么 `ecommerce_selection` 是第一候选。
 
 `python scripts/verify_public_comic_trace_bundle.py --format markdown` 会单独检查公开追溯包：确认它不需要 API Key、不调用真实模型、不写工作区，且资产、图片、镜头、质量声明、图片证据等级、升级清单和下游接手决策都完整。它已经接入发布总门禁，后续如果 `trace.json` 缺失、泄漏本地路径、把 fixture 图片说成真实画质，或没有明确写出 demo 当前不能交给下游，`python scripts/verify_release_readiness.py --format markdown` 会失败。
 
@@ -422,7 +422,7 @@ python scripts/verify_comic_real_quality_upgrade_plan.py --format markdown
 可以公开展示：
 
 - 办公室大厅和产品定位。
-- 公开静态页的最快验收路线、八份下载物和九个可复核文件。
+- 公开静态页的最快验收路线、八份下载物和十个可复核文件。
 - AI 漫剧制片办公室固定样例流程。
 - 研究办公室固定样例流程。
 - 样例 Word 制片画布、handoff manifest、研究样例报告和截图目标说明。

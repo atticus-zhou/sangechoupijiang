@@ -55,7 +55,7 @@ python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/thr
   - `developer_extension`：开发者先跑办公室协议、隔离和扩展治理检查，再新增办公室，避免模型配置、工作区、历史和产物串线。
 - AI 漫剧制片办公室与研究办公室的固定样例说明。
 - 样例 Word 制片画布、handoff manifest、阶段调研报告、证据清单和研究补证操作手册。
-- 八份下载物和九个可复核文件目录，包含 AI 漫剧追溯记录、AI 漫剧生产验收卡、研究办公室阶段性交付声明、`evidence_capture_playbook` 和 AI 漫剧真实生产声明报告。
+- 八份下载物和十个可复核文件目录，包含 AI 漫剧追溯记录、AI 漫剧生产验收卡、研究办公室阶段性交付声明、`evidence_capture_playbook`、AI 漫剧真实生产声明报告和办公室扩展决策简报。
 - AI 漫剧真实生产声明报告里的 `claim_upgrade_recovery` 卡片，明确公开样例只证明结构；如果要升级为真实质量证据，需要本地配置模型、重新生成图片、执行视觉质检，并重新写入质量基准。
 - AI 漫剧下游生产 quick-start，说明 Word 画布之后如何确认资产、逐镜头生成、复核和归档。
 - 实际产品界面截图、交付物阅读顺序和 3 分钟面试演示脚本。
