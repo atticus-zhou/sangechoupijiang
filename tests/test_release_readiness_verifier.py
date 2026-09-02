@@ -46,6 +46,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "comic_real_production_claim",
                 "comic_production_acceptance",
                 "comic_real_quality_upgrade_plan",
+                "comic_real_run_evidence_intake",
                 "public_comic_trace_bundle",
                 "comic_handoff_inventory",
                 "research_readiness",
@@ -100,7 +101,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("post_run=3/3", static_showcase["summary"])
         self.assertIn("visitor_route=8", static_showcase["summary"])
         self.assertIn("download_acceptance=10", static_showcase["summary"])
-        self.assertIn("handoff_recovery=9:regenerate_images", static_showcase["summary"])
+        self.assertIn("handoff_recovery=12:regenerate_images", static_showcase["summary"])
         self.assertIn("backend=False", static_showcase["summary"])
         self.assertIn("prompt_quality=ready", static_showcase["summary"])
         self.assertIn("prompt_issues=0", static_showcase["summary"])
@@ -146,6 +147,14 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("steps=5", comic_upgrade["summary"])
         self.assertIn("models=gongbu,xingbu,bingbu", comic_upgrade["summary"])
         self.assertIn("recovery=regenerate_images", comic_upgrade["summary"])
+        comic_intake = next(item for item in payload["checks"] if item["id"] == "comic_real_run_evidence_intake")
+        self.assertIn("doc=docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", comic_intake["summary"])
+        self.assertIn("flow=6", comic_intake["summary"])
+        self.assertIn("recovery=4", comic_intake["summary"])
+        self.assertIn("sections=6/6", comic_intake["summary"])
+        self.assertIn("claim=demo_structure_only", comic_intake["summary"])
+        self.assertIn("real_quality=False", comic_intake["summary"])
+        self.assertIn("downstream=structure_demo_only", comic_intake["summary"])
         public_trace = next(item for item in payload["checks"] if item["id"] == "public_comic_trace_bundle")
         self.assertIn("assets=3", public_trace["summary"])
         self.assertIn("images=7", public_trace["summary"])
@@ -233,6 +242,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("AI comic real production claim boundary", completed.stdout)
         self.assertIn("AI comic production acceptance card", completed.stdout)
         self.assertIn("AI comic real quality upgrade plan", completed.stdout)
+        self.assertIn("AI comic real-run evidence intake", completed.stdout)
         self.assertIn("Public AI comic trace bundle", completed.stdout)
         self.assertIn("Office schema gate registry", completed.stdout)
         self.assertIn("bindings=11/11", completed.stdout)
@@ -248,7 +258,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("fast_review=5/5", completed.stdout)
         self.assertIn("quick_start=5/5", completed.stdout)
         self.assertIn("badge=safe_public_demo", completed.stdout)
-        self.assertIn("downloads=8; catalog=10; fast_review=5/5; reading_guide=10/10; quick_start=5/5; post_run=3/3; visitor_route=8; download_acceptance=10; handoff_recovery=9:regenerate_images; backend=False", completed.stdout)
+        self.assertIn("downloads=8; catalog=10; fast_review=5/5; reading_guide=10/10; quick_start=5/5; post_run=3/3; visitor_route=8; download_acceptance=10; handoff_recovery=12:regenerate_images; backend=False", completed.stdout)
         self.assertIn("compared=", completed.stdout)
         self.assertIn("mismatched=0", completed.stdout)
         self.assertIn("live_external=True", completed.stdout)

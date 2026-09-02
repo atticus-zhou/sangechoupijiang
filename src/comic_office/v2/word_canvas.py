@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import time
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -191,7 +192,17 @@ def _normalize_docx_package(path: Path) -> None:
             normalized.external_attr = info.external_attr
             target.writestr(normalized, source.read(name))
     if temp_path.read_bytes() != original:
-        temp_path.replace(path)
+        last_error: PermissionError | None = None
+        for _ in range(10):
+            try:
+                temp_path.replace(path)
+                last_error = None
+                break
+            except PermissionError as exc:
+                last_error = exc
+                time.sleep(0.2)
+        if last_error is not None:
+            raise last_error
     else:
         temp_path.unlink(missing_ok=True)
 

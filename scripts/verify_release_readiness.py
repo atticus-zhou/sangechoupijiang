@@ -105,6 +105,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_comic_real_quality_upgrade_plan.py", "--format", "json"],
     },
     {
+        "id": "comic_real_run_evidence_intake",
+        "title": "AI comic real-run evidence intake",
+        "command": ["scripts/verify_comic_real_run_evidence_intake.py", "--format", "json"],
+    },
+    {
         "id": "public_comic_trace_bundle",
         "title": "Public AI comic trace bundle",
         "command": ["scripts/verify_public_comic_trace_bundle.py", "--format", "json"],
@@ -322,6 +327,18 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"steps={parsed.get('operator_step_count')}; "
                 f"models={','.join(parsed.get('model_preflight_departments') or [])}; "
                 f"recovery={parsed.get('recovery_action')}"
+            )
+        if check_id == "comic_real_run_evidence_intake":
+            sections = parsed.get("section_status") or {}
+            ready_sections = sum(1 for value in sections.values() if value)
+            return (
+                f"doc={parsed.get('document')}; "
+                f"flow={parsed.get('human_flow_step_count')}; "
+                f"recovery={parsed.get('recovery_action_count')}; "
+                f"sections={ready_sections}/{len(sections)}; "
+                f"claim={parsed.get('claim_level')}; "
+                f"real_quality={parsed.get('benchmark_real_quality_verified')}; "
+                f"downstream={parsed.get('downstream_status')}"
             )
         if check_id == "public_comic_trace_bundle":
             return (

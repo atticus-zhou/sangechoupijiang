@@ -309,6 +309,7 @@ GET /api/offices/comic_production/real-production-readiness
 - [docs/PUBLIC_RELEASE_HANDOFF.md](docs/PUBLIC_RELEASE_HANDOFF.md)
 - [docs/PRODUCTIZATION_STATUS.md](docs/PRODUCTIZATION_STATUS.md)
 - [docs/REAL_PRODUCTION_CLAIMS.md](docs/REAL_PRODUCTION_CLAIMS.md)
+- [docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md](docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md)
 
 ## 验证命令
 
