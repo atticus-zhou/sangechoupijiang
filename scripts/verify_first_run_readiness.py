@@ -357,6 +357,14 @@ def _common_first_run_failures() -> list[dict[str, Any]]:
             "recovery_action": f"先运行 `{HANDOFF_AUDIT_COMMAND}` 清点本地输出；公开样例缺文件时重新运行 `{STATIC_EXPORT_COMMAND}` 和 `{STATIC_SHOWCASE_COMMAND}`；真实项目缺文件时回到历史页下载完整制片包，或按声明报告里的 recovery action 重新生成缺失阶段。",
             "requires_api_key": False,
         },
+        {
+            "id": "github_showcase_workflow_email_failed",
+            "symptom": "邮箱收到 GitHub 提示 Three Cobblers showcase workflow run failed。",
+            "likely_cause": "这通常是个人网站或公开展示仓库里的静态展示检查失败，不等于三个臭皮匠产品本体崩溃；常见原因是展示包未同步、GitHub 云端还在跑旧提交、缺少本地复现脚本，或 Vercel 线上仍是旧版本。",
+            "check_command": "personal-site: npm run check:showcase-ci; product: python scripts/verify_release_readiness.py --format markdown",
+            "recovery_action": "先看失败邮件属于哪个仓库：如果是 `atticus-zhou/me`，优先修个人网站的 showcase 同步和 Vercel 发布；如果是 `sangechoupijiang`，再回到本产品仓库修 release readiness 或 secret scan。任何情况下，`npm run check:online` 通过前都不要宣称个人网站线上入口已可访问。",
+            "requires_api_key": False,
+        },
     ]
 
 

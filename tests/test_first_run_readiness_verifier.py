@@ -171,6 +171,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "codex_windows_sandbox_setup_failed",
             "public_deploy_real_mode",
             "incomplete_handoff_download",
+            "github_showcase_workflow_email_failed",
         ]:
             self.assertIn(failure_id, failures)
             self.assertTrue(failures[failure_id]["symptom"])
@@ -185,6 +186,10 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("audit_comic_v2_handoffs.py", failures["incomplete_handoff_download"]["check_command"])
         self.assertIn("manifest v3", failures["incomplete_handoff_download"]["likely_cause"])
         self.assertIn("重新生成缺失阶段", failures["incomplete_handoff_download"]["recovery_action"])
+        self.assertFalse(failures["github_showcase_workflow_email_failed"]["requires_api_key"])
+        self.assertIn("atticus-zhou/me", failures["github_showcase_workflow_email_failed"]["recovery_action"])
+        self.assertIn("npm run check:showcase-ci", failures["github_showcase_workflow_email_failed"]["check_command"])
+        self.assertIn("sangechoupijiang", failures["github_showcase_workflow_email_failed"]["recovery_action"])
 
     def test_markdown_is_readable_as_a_github_first_run_checklist(self):
         result = subprocess.run(
@@ -249,6 +254,9 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("public_deploy_real_mode", result.stdout)
         self.assertIn("incomplete_handoff_download", result.stdout)
         self.assertIn("python scripts/audit_comic_v2_handoffs.py --format markdown", result.stdout)
+        self.assertIn("github_showcase_workflow_email_failed", result.stdout)
+        self.assertIn("Three Cobblers showcase workflow run failed", result.stdout)
+        self.assertIn("npm run check:showcase-ci", result.stdout)
 
 
 if __name__ == "__main__":

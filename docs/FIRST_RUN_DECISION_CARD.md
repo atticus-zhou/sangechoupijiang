@@ -25,6 +25,8 @@ python scripts/check_no_secrets.py
 
 看 AI 漫剧样例时，不要只下载 Word。还要核对 handoff manifest、资产规格矩阵和资产使用地图：前者说明故事、资产、图片和镜头是否能追溯，后两者说明下游继续生产前需要哪些基础图，以及每张资产图应该怎样复用。
 
+如果 GitHub 邮件提示 `Three Cobblers showcase workflow run failed`，先不要误判成本体产品崩溃。邮件属于个人网站仓库时，优先在个人网站运行 `npm run check:showcase-ci`，再处理展示包同步或 Vercel 发布；邮件属于产品本体仓库时，再回到这里运行 release readiness 和 secret scan。
+
 ## 如果要本地真实使用
 
 本地真实使用让用户填写自己的 Key，并把生成记录留在自己的机器上。
