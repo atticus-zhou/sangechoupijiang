@@ -168,7 +168,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("public_demo_contract_skeleton", text)
         self.assertIn("最快验收路线", text)
         self.assertIn("八份下载物", text)
-        self.assertIn("十个可复核文件", text)
+        self.assertIn("十一个可复核文件", text)
         self.assertIn("核对 handoff manifest", text)
         self.assertIn("核对资产图片规格矩阵", text)
         self.assertIn("资产使用地图", text)

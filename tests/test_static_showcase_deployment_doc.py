@@ -33,7 +33,7 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("不需要 Python 后端", text)
         self.assertIn("八份样例下载物", text)
         self.assertIn("最快验收路线", text)
-        self.assertIn("十个可复核文件目录", text)
+        self.assertIn("十一个可复核文件目录", text)
         self.assertIn("研究办公室阶段性交付声明", text)
         self.assertIn("下游生产 quick-start", text)
         self.assertIn("不要把下面内容复制进静态展示目录", text)

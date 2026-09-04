@@ -301,8 +301,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         download_acceptance = visitor_guide.get("download_acceptance") or []
         if len(visitor_route) != 8:
             errors.append("visitor acceptance guide must include exactly eight route steps")
-        if len(download_acceptance) < 10:
-            errors.append("visitor acceptance guide must include at least ten reviewable files")
+        if len(download_acceptance) < 11:
+            errors.append("visitor acceptance guide must include at least eleven reviewable files")
         visitor_route_titles = {str(item.get("title") or "") for item in visitor_route}
         for required_title in ("逐个检查可下载交付物", "线上没刷新时打开离线评审包", "最后确认线上状态不能跳过"):
             if required_title not in visitor_route_titles:
@@ -354,6 +354,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("download_catalog must include the real production claim report")
         if "downloads/platform/office-expansion-decision-brief.md" not in catalog_uris:
             errors.append("download_catalog must include the office expansion decision brief")
+        if "downloads/comic-production/comic-real-run-evidence-intake.md" not in catalog_uris:
+            errors.append("download_catalog must include the comic real-run evidence intake")
         inventory_uri = "downloads/comic-production/handoff-inventory.json"
         if inventory_uri not in catalog_uris:
             errors.append("download_catalog must include the comic handoff inventory")

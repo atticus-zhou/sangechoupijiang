@@ -39,6 +39,22 @@ EXTRA_REVIEWABLE_DOCS = [
             "明确研究办公室不能宣称全自动飞瓜会员级采集",
             "明确未来办公室必须先补办公室专属 schema gate 和 recovery actions",
         ],
+    },
+    {
+        "source_path": REPO_ROOT / "docs" / "COMIC_REAL_RUN_EVIDENCE_INTAKE.md",
+        "local_uri": "downloads/comic-production/comic-real-run-evidence-intake.md",
+        "title": "AI 漫剧真实运行证据收口单",
+        "office_id": "comic_production",
+        "office_name": "AI 漫剧制片办公室",
+        "type": "real_run_evidence_intake",
+        "reader_guidance": "先看真实模型跑完后需要收哪些证据，再判断样例包能不能升级成真实生产质量。",
+        "look_for": "model_evidence、image_production_evidence、image_quality_summary、asset_identity_cards、reference_asset_chain、prompt_strategy_lineage 和 downstream_handoff_decision。",
+        "proves": "证明 demo 到真实生产质量之间有可审核的证据收口标准，而不是凭页面观感或口头判断。",
+        "acceptance_signals": [
+            "明确无 Key 样例不能宣称真实画质",
+            "明确人物和道具资产应是干净白底或极简背景",
+            "明确真实质量声明必须通过 production_quality_verified=true",
+        ],
     }
 ]
 
@@ -446,7 +462,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "generated_by": "python scripts/export_public_showcase.py",
         }
         static_showcase["safety_boundaries"] = [
-            "静态展示只包含固定样例、实际产品截图、八份公开样例下载物、真实生产声明报告和办公室扩展决策简报，共十个可复核文件。",
+            "静态展示只包含固定样例、实际产品截图、八份公开样例下载物、真实生产声明报告、真实运行证据收口单和办公室扩展决策简报，共十一个可复核文件。",
             "页面运行时不连接 FastAPI，不读取 config.yaml、环境变量、Cookie、登录态或本地用户工作区。",
             "不要把个人 API Key、真实用户数据或运行产物复制进静态目录。",
             "真实生产继续走本地模式，由使用者填写自己的模型 Key。",
@@ -458,7 +474,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             )
         if len(interview_script) >= 3:
             interview_script[2]["product_response"] = (
-                "八份公开下载物已经随静态站点一起导出，连同声明报告和办公室扩展决策简报构成十个可复核文件，每个链接都附带阅读重点和验收信号。"
+                "八份公开下载物已经随静态站点一起导出，连同声明报告、真实运行证据收口单和办公室扩展决策简报构成十一个可复核文件，每个链接都附带阅读重点和验收信号。"
             )
         deployment = static_showcase.setdefault("public_deployment", {})
         deployment["mode"] = "static_demo_only"
