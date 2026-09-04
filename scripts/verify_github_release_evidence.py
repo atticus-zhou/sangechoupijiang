@@ -8,6 +8,7 @@ workspace data.
 from __future__ import annotations
 
 import argparse
+import http.client
 import html
 import json
 import re
@@ -59,6 +60,8 @@ def _fetch_json(url: str, *, timeout: float) -> dict[str, Any]:
         raise RuntimeError(f"GitHub API request failed: {exc.reason}") from exc
     except TimeoutError as exc:
         raise RuntimeError(f"GitHub API request timed out: {exc}") from exc
+    except (http.client.RemoteDisconnected, ConnectionResetError, OSError) as exc:
+        raise RuntimeError(f"GitHub API request failed: {exc}") from exc
 
 
 def _fetch_text(url: str, *, timeout: float) -> str:
@@ -82,6 +85,8 @@ def _fetch_text(url: str, *, timeout: float) -> str:
         raise RuntimeError(f"GitHub Actions page request failed: {exc.reason}") from exc
     except TimeoutError as exc:
         raise RuntimeError(f"GitHub Actions page request timed out: {exc}") from exc
+    except (http.client.RemoteDisconnected, ConnectionResetError, OSError) as exc:
+        raise RuntimeError(f"GitHub Actions page request failed: {exc}") from exc
 
 
 def _actions_page_url(owner_repo: str, branch: str) -> str:
