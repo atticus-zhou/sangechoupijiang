@@ -118,6 +118,35 @@ def _expand_local_head_sha(head_sha: str) -> str:
     return value
 
 
+def _matching_head_sha(run: dict[str, Any], head_sha: str) -> bool:
+    if not head_sha:
+        return True
+    run_sha = str(run.get("head_sha") or "").strip()
+    return bool(run_sha) and run_sha.lower() == head_sha.lower()
+
+
+def _refresh_run_detail_if_needed(
+    run: dict[str, Any],
+    *,
+    timeout: float,
+    warnings: list[str],
+) -> dict[str, Any]:
+    """Refresh a possibly stale Actions list entry through its run detail URL."""
+    if not run:
+        return run
+    if run.get("status") == "completed" and run.get("conclusion") is not None:
+        return run
+    run_url = str(run.get("url") or "")
+    if not run_url:
+        return run
+    try:
+        refreshed = _fetch_json(run_url, timeout=timeout)
+    except RuntimeError as exc:
+        warnings.append(f"GitHub run detail refresh failed: {exc}")
+        return run
+    return refreshed if refreshed else run
+
+
 def _first_match(pattern: str, text: str, default: str = "") -> str:
     match = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
     return html.unescape(match.group(1)).strip() if match else default
@@ -444,9 +473,16 @@ def verify_github_release_evidence(
         run for run in (runs_payload.get("workflow_runs") or [])
         if str(run.get("name") or "") == workflow_name
     ]
-    latest = runs[0] if runs else {}
+    if head_sha:
+        latest = next((run for run in runs if _matching_head_sha(run, head_sha)), {})
+    else:
+        latest = runs[0] if runs else {}
+    latest = _refresh_run_detail_if_needed(latest, timeout=timeout, warnings=warnings)
     if not latest:
-        errors.append(f"no workflow run found for {workflow_name!r} on branch {branch!r}")
+        if head_sha:
+            errors.append(f"no workflow run found for {workflow_name!r} on branch {branch!r} and head_sha {head_sha!r}")
+        else:
+            errors.append(f"no workflow run found for {workflow_name!r} on branch {branch!r}")
         artifacts = []
     else:
         if latest.get("status") != "completed":

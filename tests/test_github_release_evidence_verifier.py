@@ -137,6 +137,34 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertTrue(any("not completed" in item for item in payload["errors"]))
         self.assertTrue(any("not success" in item for item in payload["errors"]))
 
+    def test_verifier_refreshes_stale_in_progress_list_entry(self):
+        full_sha = "131fb3f8eb4f009247ad74da0c93a00a98afe712"
+
+        def fake_fetch(url, timeout):
+            if "actions/runs?" in url:
+                run = dict(SUCCESS_RUN["workflow_runs"][0])
+                run["head_sha"] = full_sha
+                run["status"] = "in_progress"
+                run["conclusion"] = None
+                run["url"] = "https://api.github.com/repos/example/actions/runs/106"
+                return {"workflow_runs": [run]}
+            if url.endswith("/actions/runs/106"):
+                run = dict(SUCCESS_RUN["workflow_runs"][0])
+                run["head_sha"] = full_sha
+                run["status"] = "completed"
+                run["conclusion"] = "success"
+                return run
+            return SUCCESS_ARTIFACTS
+
+        with patch("scripts.verify_github_release_evidence._fetch_json", side_effect=fake_fetch):
+            payload = verify_github_release_evidence(head_sha=full_sha)
+
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["latest_run"]["head_sha"], full_sha)
+        self.assertEqual(payload["latest_run"]["status"], "completed")
+        self.assertEqual(payload["latest_run"]["conclusion"], "success")
+        self.assertEqual(payload["artifact"]["name"], "no-key-release-evidence")
+
     def test_verifier_fails_when_artifact_is_missing(self):
         def fake_fetch(url, timeout):
             if "actions/runs?" in url:
