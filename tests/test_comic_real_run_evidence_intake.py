@@ -1,9 +1,35 @@
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.verify_comic_v2_delivery import verify_delivery
+from src.comic_office.v2.production_benchmark import audit_handoff_manifest
+from src.comic_office.v2.visual_review import REVIEW_DIMENSIONS
+
+
+FIXTURE = Path("tests/fixtures/comic_v2_sample.json")
+
+
+def _real_verified_manifest(root: Path) -> Path:
+    result = verify_delivery(FIXTURE, root)
+    path = Path(result["handoff_manifest_path"])
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    for image in manifest["images"]:
+        image["provider"] = "doubao"
+        image["model"] = "seedream"
+        image["review"] = {
+            "status": "pass",
+            "handoff_ready": True,
+            "fixture": False,
+            "scores": {dimension: 94 for dimension in REVIEW_DIMENSIONS},
+        }
+    manifest["quality_benchmark"] = audit_handoff_manifest(manifest)
+    real_path = root / "real_verified_handoff_manifest.json"
+    real_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return real_path
 
 class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
     def test_real_run_intake_is_bound_to_current_claim_gates(self):
@@ -63,6 +89,40 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("Benchmark: `demo_structure_verified` / real_quality=False", completed.stdout)
         self.assertIn("Public claim: `demo_structure_only` / can_claim_real_quality=False", completed.stdout)
         self.assertIn("Downstream: `structure_demo_only` / handoff_allowed=False", completed.stdout)
+        self.assertIn("Audit subject: `fixed_public_sample`", completed.stdout)
+        self.assertIn("Image Evidence", completed.stdout)
+        self.assertIn("Real Model Evidence", completed.stdout)
+
+    def test_existing_real_manifest_can_pass_the_intake_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = _real_verified_manifest(Path(tmp))
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/verify_comic_real_run_evidence_intake.py",
+                    "--manifest",
+                    str(manifest_path),
+                    "--format",
+                    "json",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["audit_subject"], "existing_manifest")
+        self.assertEqual(payload["audited_manifest"], str(manifest_path))
+        self.assertEqual(payload["claim_level"], "real_quality_verified")
+        self.assertTrue(payload["can_claim_real_quality"])
+        self.assertEqual(payload["downstream_status"], "ready_for_downstream")
+        self.assertTrue(payload["handoff_allowed"])
+        self.assertTrue(payload["real_quality_promotion_ready"])
+        self.assertEqual(payload["visual_evidence_level"], "model_reviewed")
+        self.assertEqual(payload["real_model_evidence_requirements"]["status"], "ready")
+        self.assertEqual(payload["image_quality_summary"]["waste_or_rework_images"], 0)
 
 
 if __name__ == "__main__":

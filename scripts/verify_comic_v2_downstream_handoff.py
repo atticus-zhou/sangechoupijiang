@@ -80,9 +80,15 @@ DIRECTOR_EXECUTION_REQUIRED_FIELDS = {
 def verify_downstream_handoff(
     fixture: Path = DEFAULT_FIXTURE,
     output_dir: Path = DEFAULT_OUTPUT,
+    *,
+    manifest_path: Path | None = None,
 ) -> dict[str, Any]:
-    delivery = verify_delivery(fixture, output_dir)
-    manifest_path = Path(str(delivery["handoff_manifest_path"]))
+    delivery: dict[str, Any] | None = None
+    if manifest_path is None:
+        delivery = verify_delivery(fixture, output_dir)
+        manifest_path = Path(str(delivery["handoff_manifest_path"]))
+    else:
+        manifest_path = Path(manifest_path)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     errors: list[str] = []
@@ -98,6 +104,11 @@ def verify_downstream_handoff(
     _require_fields(errors, "style", style, ["style_id", "style_version", "medium", "era", "aspect_ratio"])
     _require_fields(errors, "manifest", manifest_meta, ["manifest_id", "manifest_version", "manifest_hash"])
     _require_fields(errors, "word_canvas", word_canvas, ["filename", "relative_path"])
+    resolved_word_path = _resolve_word_path(manifest_path, word_canvas)
+    word_canvas_exists = bool(resolved_word_path and resolved_word_path.exists())
+    word_canvas_bytes = resolved_word_path.stat().st_size if word_canvas_exists and resolved_word_path else 0
+    if not word_canvas_exists:
+        errors.append("word_canvas file missing or not resolvable from handoff manifest")
 
     image_ids = {item.get("image_id") for item in images if item.get("image_id")}
     asset_ids = {item.get("asset_id") for item in assets if item.get("asset_id")}
@@ -125,12 +136,12 @@ def verify_downstream_handoff(
 
     result = {
         "status": "passed" if not errors else "failed",
-        "delivery_status": "passed" if delivery.get("handoff_ready") else "failed",
-        "word_canvas": delivery.get("path"),
+        "delivery_status": "passed" if (delivery or {}).get("handoff_ready", word_canvas_exists) else "failed",
+        "word_canvas": (delivery or {}).get("path") or str(resolved_word_path or ""),
         "handoff_manifest": str(manifest_path),
-        "output_dir": delivery.get("output_dir") or str(output_dir),
-        "word_canvas_exists": delivery.get("word_canvas_exists"),
-        "word_canvas_bytes": delivery.get("word_canvas_bytes", 0),
+        "output_dir": (delivery or {}).get("output_dir") or str(manifest_path.parent),
+        "word_canvas_exists": word_canvas_exists,
+        "word_canvas_bytes": word_canvas_bytes,
         "handoff_manifest_exists": manifest_path.is_file(),
         "handoff_manifest_bytes": manifest_path.stat().st_size if manifest_path.is_file() else 0,
         "story_id": story.get("story_id"),
@@ -164,11 +175,24 @@ def verify_downstream_handoff(
         "lineage_stage_count": len(manifest.get("production_lineage") or []),
         "quick_start_step_count": len(manifest.get("downstream_quick_start") or []),
         "errors": errors,
-        "downstream_handoff_ready": not errors and bool(delivery.get("handoff_ready")),
+        "downstream_handoff_ready": not errors and bool((delivery or {}).get("handoff_ready", word_canvas_exists)),
     }
     if not result["downstream_handoff_ready"]:
         result["status"] = "failed"
     return result
+
+
+def _resolve_word_path(manifest_path: Path, word_canvas: dict[str, Any]) -> Path | None:
+    filename = word_canvas.get("relative_path") or word_canvas.get("filename")
+    if not filename:
+        return None
+    candidate = Path(str(filename))
+    if candidate.is_absolute():
+        return candidate
+    same_dir = manifest_path.parent / candidate.name
+    if same_dir.exists():
+        return same_dir
+    return manifest_path.parent / candidate
 
 
 def _asset_usage_summary(
@@ -704,13 +728,16 @@ def _file_status(exists: object, size: object) -> str:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", type=Path, default=DEFAULT_FIXTURE)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--manifest", type=Path, help="Existing comic V2 handoff manifest to audit.")
     parser.add_argument("--format", choices=["json", "markdown", "text"], default="text")
     args = parser.parse_args()
 
-    result = verify_downstream_handoff(args.fixture, args.output_dir)
+    result = verify_downstream_handoff(args.fixture, args.output_dir, manifest_path=args.manifest)
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif args.format == "markdown":

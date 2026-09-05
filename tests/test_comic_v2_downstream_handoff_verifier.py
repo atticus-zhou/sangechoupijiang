@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.verify_comic_v2_delivery import verify_delivery
+
 
 SCRIPT = Path("scripts/verify_comic_v2_downstream_handoff.py")
 FIXTURE = Path("tests/fixtures/comic_v2_sample.json")
@@ -100,6 +102,33 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(payload["asset_usage_map_image_roles"], payload["image_count"])
         self.assertTrue(payload["asset_image_requirement_matrix"])
         self.assertEqual(payload["errors"], [])
+
+    def test_existing_manifest_can_be_audited_without_regenerating_fixture(self):
+        module = self._module()
+        with tempfile.TemporaryDirectory() as tmp:
+            delivery = verify_delivery(FIXTURE, Path(tmp))
+            manifest_path = Path(delivery["handoff_manifest_path"])
+            result = module.verify_downstream_handoff(manifest_path=manifest_path)
+
+        self.assertEqual(result["status"], "passed", result["errors"])
+        self.assertTrue(result["downstream_handoff_ready"])
+        self.assertEqual(Path(result["handoff_manifest"]), manifest_path)
+        self.assertTrue(result["word_canvas_exists"])
+        self.assertGreater(result["word_canvas_bytes"], 10_000)
+        self.assertEqual(result["asset_image_requirement_ready"], result["asset_image_requirement_total"])
+
+    def test_existing_manifest_reports_missing_word_canvas(self):
+        module = self._module()
+        with tempfile.TemporaryDirectory() as tmp:
+            delivery = verify_delivery(FIXTURE, Path(tmp))
+            manifest_path = Path(delivery["handoff_manifest_path"])
+            word_path = manifest_path.parent / Path(delivery["path"]).name
+            word_path.unlink()
+            result = module.verify_downstream_handoff(manifest_path=manifest_path)
+
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(result["downstream_handoff_ready"])
+        self.assertIn("word_canvas file missing", "\n".join(result["errors"]))
 
     def test_cli_markdown_is_readable_for_reviewers(self):
         with tempfile.TemporaryDirectory() as tmp:

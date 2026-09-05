@@ -395,10 +395,12 @@ python scripts/check_no_secrets.py
 真实 AI 漫剧跑完后，不要直接把生成包描述为生产级质量。先检查 handoff manifest：
 
 ```powershell
+python scripts/verify_comic_v2_downstream_handoff.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
 python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
+python scripts/verify_comic_real_run_evidence_intake.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
 ```
 
-不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
+第一条看下游视频/剪辑流程能不能接手，第二条看对外能怎么说，第三条把真实模型、图片、质检、提示词谱系和 Word/manifest/trace 证据做总收口。不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
 
 声明报告里的 `real_quality_promotion_gate` 是最终升级门。它会逐项检查制片包结构、manifest 内置质量基准、真实模型图片、视觉质检、图片返工数、导演式提示词、提示词策略追溯、blocker 和 `production_quality_verified`。其中 `prompt_strategy_lineage` 负责确认提示词包、图片提示词和镜头提示词都绑定同一套当前策略版本；只要有一项缺失，就只能显示 `evidence_missing`，不能把这次交付说成真实生产质量。
 

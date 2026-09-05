@@ -14,6 +14,14 @@
 6. 礼部组装 Word 制片画布、handoff manifest、trace bundle 和 production acceptance card。
 7. 用户或开发者运行本收口单对应的检查，再决定是否允许对外宣称真实生产质量。
 
+真实产物检查命令：
+
+```bash
+python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+```
+
+这条命令不调用模型，只读取已经生成的 `handoff_manifest.json`、它引用的 Word 画布和清单里的图片/质检记录。它会同时跑生产质量基准、公开声明边界和下游交接验收，并输出：当前是 `real_quality_verified`、`demo_structure_only` 还是 `needs_review`；缺的是模型证据、图片证据、七维视觉质检、提示词谱系，还是 Word/manifest/trace 对不上。
+
 ## 必须提交的证据
 
 真实运行后，`handoff_manifest.json`、`trace.json`、`production-acceptance.json` 和 `word_canvas.docx` 必须能互相对上。最低证据包括：
@@ -74,6 +82,16 @@
 - 如果提示词失败：退回兵部，保留已通过的基础资产图和刑部质检结果，重写导演式镜头提示词。
 - 如果 Word 画布缺失：退回礼部，只重建 Word、manifest 和 trace，不重新生成图片。
 
+如果真实运行结束后不确定卡在哪里，先运行：
+
+```bash
+python scripts/verify_comic_v2_downstream_handoff.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+python scripts/verify_comic_real_production_claim.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+```
+
+第一条看下游能不能接手，第二条看对外能怎么说，第三条把真实运行证据做总收口。三条都不读取 API Key、不调用真实模型，只审计已经落盘的交付物。
+
 ## 对外声明规则
 
 只有同时满足以下条件，才允许把这次产物标成 `production_quality_verified=true`：
@@ -85,3 +103,5 @@
 - Word 画布、handoff manifest、trace bundle 和 production acceptance card 字段互相一致。
 - `downstream_handoff_decision.status=ready_for_downstream` 且 `handoff_allowed=true`。
 - `python scripts/verify_comic_real_run_evidence_intake.py --format markdown`、`python scripts/verify_comic_real_production_claim.py --format markdown`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_release_readiness.py --format markdown` 全部通过。
+
+对于真实项目，必须把 `--manifest output/你的项目/xxx_handoff_manifest.json` 加到前三条制片包检查命令上；不带 `--manifest` 时检查的是公开无 Key 固定样例，只能证明结构演示没有坏。

@@ -76,11 +76,11 @@ def _read_doc() -> tuple[str, str | None]:
         return "", f"utf8_decode_error:{exc}"
 
 
-def verify_real_run_evidence_intake() -> dict[str, Any]:
+def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[str, Any]:
     text, read_error = _read_doc()
-    benchmark = verify_production_benchmark(output_dir=INTAKE_OUTPUT_ROOT / "benchmark")
-    claim = build_claim_report(output_dir=INTAKE_OUTPUT_ROOT / "claim")
-    handoff = verify_downstream_handoff(output_dir=INTAKE_OUTPUT_ROOT / "handoff")
+    benchmark = verify_production_benchmark(output_dir=INTAKE_OUTPUT_ROOT / "benchmark", manifest_path=manifest_path)
+    claim = build_claim_report(manifest_path=manifest_path, output_dir=INTAKE_OUTPUT_ROOT / "claim")
+    handoff = verify_downstream_handoff(output_dir=INTAKE_OUTPUT_ROOT / "handoff", manifest_path=manifest_path)
 
     errors: list[str] = []
     missing_markers = [marker for marker in REQUIRED_MARKERS if marker not in text]
@@ -103,19 +103,20 @@ def verify_real_run_evidence_intake() -> dict[str, Any]:
     if handoff.get("status") != "passed":
         errors.append("comic downstream handoff verifier must pass")
 
-    if benchmark.get("production_quality_verified") is not False:
+    auditing_fixed_sample = manifest_path is None
+    if auditing_fixed_sample and benchmark.get("production_quality_verified") is not False:
         errors.append("fixed public sample must stay non-production until real model evidence is present")
-    if claim.get("claim_level") != "demo_structure_only":
+    if auditing_fixed_sample and claim.get("claim_level") != "demo_structure_only":
         errors.append("fixed public sample claim level must stay demo_structure_only")
-    if claim.get("can_claim_real_quality") is not False:
+    if auditing_fixed_sample and claim.get("can_claim_real_quality") is not False:
         errors.append("fixed public sample must not claim real quality")
     claim_decision = claim.get("downstream_handoff_decision") or {}
-    if claim_decision.get("status") != "structure_demo_only":
+    if auditing_fixed_sample and claim_decision.get("status") != "structure_demo_only":
         errors.append("fixed public sample downstream claim decision must stay structure_demo_only")
-    if claim_decision.get("handoff_allowed") is not False:
+    if auditing_fixed_sample and claim_decision.get("handoff_allowed") is not False:
         errors.append("fixed public sample must not allow real downstream handoff")
     if handoff.get("downstream_handoff_ready") is not True:
-        errors.append("fixed public sample must keep its structural downstream handoff reproducible")
+        errors.append("comic handoff must stay structurally reproducible")
 
     text_sections = {
         "evidence": all(marker in text for marker in ("model_evidence", "image_production_evidence", "prompt_strategy_lineage")),
@@ -129,6 +130,8 @@ def verify_real_run_evidence_intake() -> dict[str, Any]:
     return {
         "status": "passed" if not errors else "failed",
         "mode": "comic_real_run_evidence_intake",
+        "audited_manifest": str(manifest_path) if manifest_path else "",
+        "audit_subject": "existing_manifest" if manifest_path else "fixed_public_sample",
         "summary": (
             "AI comic real-run evidence intake is documented and bound to production claim, benchmark, and downstream gates."
             if not errors
@@ -146,6 +149,11 @@ def verify_real_run_evidence_intake() -> dict[str, Any]:
         "can_claim_real_quality": claim.get("can_claim_real_quality"),
         "downstream_status": claim_decision.get("status"),
         "handoff_allowed": claim_decision.get("handoff_allowed"),
+        "real_quality_promotion_ready": (claim.get("real_quality_promotion_gate") or {}).get("ready"),
+        "visual_evidence_level": benchmark.get("visual_evidence_level"),
+        "image_quality_summary": benchmark.get("image_quality_summary") or {},
+        "prompt_strategy_lineage": benchmark.get("prompt_strategy_lineage") or {},
+        "real_model_evidence_requirements": benchmark.get("real_model_evidence_requirements") or {},
         "structural_downstream_handoff_ready": handoff.get("downstream_handoff_ready"),
         "errors": errors,
     }
@@ -158,9 +166,11 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
         f"Status: `{payload.get('status')}`",
         f"Mode: `{payload.get('mode')}`",
+        f"Audit subject: `{payload.get('audit_subject')}`",
         f"Summary: {payload.get('summary')}",
         "",
         f"- Document: `{payload.get('document')}`",
+        f"- Audited manifest: `{payload.get('audited_manifest') or 'generated fixture'}`",
         f"- Lines: `{payload.get('line_count')}`",
         f"- Missing markers: `{payload.get('missing_marker_count')}`",
         f"- Human flow steps: `{payload.get('human_flow_step_count')}`",
@@ -168,12 +178,47 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Benchmark: `{payload.get('benchmark_claim')}` / real_quality={payload.get('benchmark_real_quality_verified')}",
         f"- Public claim: `{payload.get('claim_level')}` / can_claim_real_quality={payload.get('can_claim_real_quality')}",
         f"- Downstream: `{payload.get('downstream_status')}` / handoff_allowed={payload.get('handoff_allowed')}",
+        f"- Real quality promotion ready: `{payload.get('real_quality_promotion_ready')}`",
+        f"- Visual evidence: `{payload.get('visual_evidence_level')}`",
         f"- Structural handoff reproducible: `{payload.get('structural_downstream_handoff_ready')}`",
         "",
         "## Sections",
         "",
     ]
     lines.extend(f"- {name}: `{status}`" for name, status in sections.items())
+    image_summary = payload.get("image_quality_summary") or {}
+    if image_summary:
+        lines.extend([
+            "",
+            "## Image Evidence",
+            "",
+            f"- Total images: `{image_summary.get('total_images', 0)}`",
+            f"- Usable images: `{image_summary.get('usable_images', 0)}`",
+            f"- Waste/rework images: `{image_summary.get('waste_or_rework_images', 0)}`",
+            f"- Failed image ids: `{', '.join(image_summary.get('failed_image_ids') or []) or 'none'}`",
+        ])
+    evidence = payload.get("real_model_evidence_requirements") or {}
+    if evidence:
+        lines.extend([
+            "",
+            "## Real Model Evidence",
+            "",
+            f"- Status: `{evidence.get('status')}`",
+            f"- Ready for real quality claim: `{evidence.get('ready_for_real_quality_claim')}`",
+            f"- Missing checks: `{', '.join(evidence.get('missing_check_ids') or []) or 'none'}`",
+            f"- Next action: {evidence.get('next_action')}",
+        ])
+    strategy = payload.get("prompt_strategy_lineage") or {}
+    if strategy:
+        lines.extend([
+            "",
+            "## Prompt Strategy Lineage",
+            "",
+            f"- Status: `{strategy.get('status')}`",
+            f"- Expected version: `{strategy.get('expected_prompt_strategy_version')}`",
+            f"- Package version: `{strategy.get('package_prompt_strategy_version')}`",
+            f"- Missing checks: `{', '.join(strategy.get('missing_check_ids') or []) or 'none'}`",
+        ])
     if payload.get("errors"):
         lines.extend(["", "## Errors", ""])
         lines.extend(f"- {error}" for error in payload["errors"])
@@ -184,9 +229,10 @@ def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=Path, help="Existing comic V2 handoff manifest to audit.")
     parser.add_argument("--format", choices={"json", "markdown"}, default="markdown")
     args = parser.parse_args()
-    payload = verify_real_run_evidence_intake()
+    payload = verify_real_run_evidence_intake(manifest_path=args.manifest)
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
