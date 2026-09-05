@@ -42,6 +42,18 @@ python run.py --port 8080
 
 打开 `http://127.0.0.1:8080/` 后，先去模型页测试。不要一上来就跑完整制片，先让文本部门通过，再补生图和视觉理解。
 
+真实 AI 漫剧跑完以后，不要只看页面显示“完成”，也不要只下载 Word。去历史页下载完整制片包以后，用同一个 `handoff_manifest.json` 做收口验收：
+
+```powershell
+python scripts/audit_comic_v2_handoffs.py --format markdown
+python scripts/verify_comic_v2_downstream_handoff.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+python scripts/verify_comic_real_production_claim.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+python scripts/verify_comic_v2_production_benchmark.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+```
+
+最后一条是总收口：它会把 Word 画布、manifest、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放在一起判断。只有它和前面的检查都通过，才适合说这次真实产物已经达到可交给下游继续生产的状态。
+
 如果服务窗口已经出现 `Uvicorn running`，但 PowerShell 检查 `/health` 时显示 `502 Bad Gateway`，先用浏览器打开 `http://127.0.0.1:8080/`，或运行：
 
 ```powershell

@@ -48,6 +48,14 @@ http://127.0.0.1:8080/
 只有文本模型时，可以聊故事、确认剧本、拆人物/道具/场景、生成提示词草案。  
 工部和刑部也通过后，才适合生成基础资产图、视觉质检和完整 Word 制片画布。
 
+真实生成完成后，不要只看“已完成”状态。去历史页下载 Word、handoff manifest、图片记录、提示词包和 trace JSON，再用同一个 manifest 做最终验收：
+
+```powershell
+python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
+```
+
+这条检查会把 Word、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放到一起看；通过前只能说“流程跑通”或“结构样例通过”，不能说真实生产质量已经验证。
+
 ### 研究办公室最小配置
 
 - 大部分部门使用文本模型。

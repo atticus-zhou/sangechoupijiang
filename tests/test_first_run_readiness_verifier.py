@@ -130,6 +130,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("audit_comic_v2_handoffs.py", "\n".join(paths["local_real_use"]["steps"]))
         self.assertIn("verify_comic_real_production_claim.py", "\n".join(paths["local_real_use"]["steps"]))
         self.assertIn("verify_comic_v2_production_benchmark.py", "\n".join(paths["local_real_use"]["steps"]))
+        self.assertIn("verify_comic_real_run_evidence_intake.py", "\n".join(paths["local_real_use"]["steps"]))
         model_ladder = paths["local_real_use"]["model_setup_ladder"]
         self.assertEqual([item["level"] for item in model_ladder], ["no_key_demo", "minimum_text", "full_comic_production"])
         ladder_text = json.dumps(model_ladder, ensure_ascii=False)
@@ -150,11 +151,17 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("production benchmark", real_output["next_action"])
         self.assertIn("真实画质已验证", real_output["public_claim_rule"])
         validations = paths["local_real_use"]["post_run_validation"]
-        self.assertEqual([item["name"] for item in validations], ["交付物清点", "真实生产声明", "制片质量基准"])
+        self.assertEqual(
+            [item["name"] for item in validations],
+            ["交付物清点", "真实生产声明", "制片质量基准", "真实运行证据收口"],
+        )
         validation_text = json.dumps(validations, ensure_ascii=False)
         self.assertIn("Word canvas", validation_text)
         self.assertIn("can_claim_real_quality=True", validation_text)
         self.assertIn("production_quality_verified", validation_text)
+        self.assertIn("verify_comic_real_run_evidence_intake.py", validation_text)
+        self.assertIn("视觉质检", validation_text)
+        self.assertIn("提示词谱系", validation_text)
         self.assertIn("verify_office_isolation.py", "\n".join(paths["developer_extension"]["steps"]))
 
         safety = "\n".join(payload["safety_boundaries"])
@@ -245,6 +252,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("python scripts/audit_comic_v2_handoffs.py --format markdown", result.stdout)
         self.assertIn("can_claim_real_quality=True", result.stdout)
         self.assertIn("production_quality_verified", result.stdout)
+        self.assertIn("真实运行证据收口", result.stdout)
+        self.assertIn("python scripts/verify_comic_real_run_evidence_intake.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown", result.stdout)
         self.assertIn("Common First-run Failures", result.stdout)
         self.assertIn("missing_dependencies", result.stdout)
         self.assertIn("python -m pip install -r requirements.txt", result.stdout)

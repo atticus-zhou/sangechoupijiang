@@ -47,6 +47,10 @@ PRODUCTION_BENCHMARK_COMMAND = (
     "python scripts/verify_comic_v2_production_benchmark.py "
     "--manifest output/your_project/xxx_handoff_manifest.json --format markdown"
 )
+REAL_RUN_INTAKE_COMMAND = (
+    "python scripts/verify_comic_real_run_evidence_intake.py "
+    "--manifest output/your_project/xxx_handoff_manifest.json --format markdown"
+)
 MODEL_CAPABILITY_MATRIX = REPO_ROOT / "docs" / "MODEL_CAPABILITY_MATRIX.json"
 
 
@@ -83,6 +87,7 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
             "comic_handoff_audit": HANDOFF_AUDIT_COMMAND,
             "comic_real_claim": REAL_CLAIM_COMMAND,
             "comic_production_benchmark": PRODUCTION_BENCHMARK_COMMAND,
+            "comic_real_run_evidence_intake": REAL_RUN_INTAKE_COMMAND,
             "product_readiness": PRODUCT_READINESS_COMMAND,
             "office_isolation": OFFICE_ISOLATION_COMMAND,
             "server": SERVER_COMMAND,
@@ -479,6 +484,7 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
             "After a real run finishes, download the Word canvas, handoff manifest, prompt package, image records, and trace JSON from History.",
             f"Run `{HANDOFF_AUDIT_COMMAND}` to verify the output package is visible and traceable.",
             f"Run `{REAL_CLAIM_COMMAND}` and `{PRODUCTION_BENCHMARK_COMMAND}` before claiming production quality.",
+            f"Run `{REAL_RUN_INTAKE_COMMAND}` as the final real-output intake gate; it ties Word, manifest, image evidence, visual review, prompt lineage, and downstream handoff into one verdict.",
         ],
         "model_setup_ladder": [
             {
@@ -528,6 +534,11 @@ def _local_real_use_path(doctor: dict[str, Any], local_ready: bool) -> dict[str,
                 "name": "制片质量基准",
                 "command": PRODUCTION_BENCHMARK_COMMAND,
                 "pass_when": "`production_quality_verified` 或等价通过状态，且故事、资产、图片、镜头、提示词和 Word 引用链路互相对得上。",
+            },
+            {
+                "name": "真实运行证据收口",
+                "command": REAL_RUN_INTAKE_COMMAND,
+                "pass_when": "同一份 handoff manifest 同时通过下游交接、真实声明、制片质量基准、图片证据、视觉质检、提示词谱系和 Word 引用链路检查。",
             },
         ],
         "blocking_reasons": blocking,
