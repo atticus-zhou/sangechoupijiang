@@ -126,6 +126,8 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_production_benchmark.py --format markdown", text)
+        self.assertIn("python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown", text)
+        self.assertIn("图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论", text)
         self.assertIn("python -m unittest discover -s tests -q", text)
         self.assertIn("git diff --check", text)
         self.assertIn("scripts/check_no_secrets.py", text)

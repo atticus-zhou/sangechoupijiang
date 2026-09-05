@@ -413,6 +413,7 @@
 - [x] 下载链接必须可用。
   说明：无 Key 演示下载链接已纳入 `/api/offices/{office_id}/launch-gates` 的 `evidence_links`，并在办公室大厅展示；AI 漫剧制片办公室样例 Word 指向 `/api/demo/comic-production/files/word_canvas.docx`，研究办公室阶段报告指向 `/api/demo/research/files/report.md`。
   说明：AI 漫剧 Word 和 handoff manifest 由 `python scripts/verify_comic_v2_delivery.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_comic_v2_production_benchmark.py --format markdown` 覆盖；这些检查会审计 DOCX 结构、嵌入图片数量、图片记录、引用链路、资产使用地图、quick-start 和下游交接字段。
+  说明：真实模型跑完后的最终收口必须追加 `python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown`。它负责把 Word、manifest、trace、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放到同一份 verdict 里，防止页面显示完成但实际交付物不能生产。
 
 发布前：
 
