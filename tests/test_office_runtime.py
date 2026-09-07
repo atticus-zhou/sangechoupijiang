@@ -138,6 +138,8 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertFalse(acceptance["can_handoff_to_downstream"])
         self.assertIn("暂不能宣称真实画质已验证", acceptance["summary"])
         self.assertIn("刑部：缺少真实模型视觉复核证据", " ".join(acceptance["missing_evidence"]))
+        self.assertEqual(acceptance["recovery_action"]["action"], "regenerate_images")
+        self.assertIn("真实模型", acceptance["recovery_action"]["description"])
         self.assertEqual(acceptance["downloads"]["word_canvas_uri"], f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx")
         self.assertEqual(acceptance["downloads"]["handoff_manifest_uri"], f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json")
         self.assertEqual(
@@ -204,6 +206,7 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertTrue(acceptance["can_claim_real_quality"])
         self.assertEqual(acceptance["missing_evidence"], [])
         self.assertEqual(acceptance["quality_score"], 95)
+        self.assertEqual(acceptance["recovery_action"], {})
 
     def test_runtime_status_counts_v2_artifacts_and_prioritizes_delivery_downloads(self):
         with tempfile.TemporaryDirectory() as tmp:

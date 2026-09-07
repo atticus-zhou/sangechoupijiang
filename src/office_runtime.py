@@ -211,6 +211,7 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
     benchmark = metadata.get("quality_benchmark") or {}
     prompt_summary = benchmark.get("prompt_quality_summary") or {}
     image_summary = benchmark.get("image_quality_summary") or {}
+    recovery_action = _delivery_recovery_action(benchmark)
 
     if not word and not handoff:
         return {
@@ -227,6 +228,7 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
                 "礼部 / 刑部：缺少引用清单和结构审计结果。",
             ],
             "next_action": "继续完成制片流程，生成 Word 制片画布和引用清单。",
+            "recovery_action": {},
             "downloads": {},
         }
 
@@ -296,6 +298,7 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
         ),
         "missing_evidence": missing,
         "next_action": next_action,
+        "recovery_action": recovery_action,
         "downloads": {
             "word_canvas_uri": str((word or {}).get("uri") or ((word or {}).get("metadata") or {}).get("download_uri") or ""),
             "handoff_manifest_uri": str((handoff or {}).get("uri") or ((handoff or {}).get("metadata") or {}).get("download_uri") or ""),
@@ -311,6 +314,43 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
             "usable_images": usable_images,
             "waste_or_rework_images": rework_images,
         },
+    }
+
+
+def _delivery_recovery_action(benchmark: dict) -> dict:
+    if not benchmark:
+        return {}
+    raw = benchmark.get("recommended_recovery") or {}
+    if not raw and benchmark.get("package_quality_ready") is True and benchmark.get("production_quality_verified") is not True:
+        raw = {
+            "department": "工部 / 刑部",
+            "action": "regenerate_images",
+            "label": "用真实模型重跑并质检图片",
+            "reason_code": "real_quality.evidence_missing",
+            "description": "当前结构已通过，但缺少真实模型图片和视觉复核证据。",
+            "expected_stage": "image_generation",
+            "preserves": ["confirmed_story", "story_contract", "asset_manifest", "prompt_package"],
+            "clears": ["image_production", "visual_review", "word_canvas", "handoff_manifest"],
+            "operator_steps": [
+                "确认工部图片模型和刑部视觉模型已配置。",
+                "重新生成基础资产图片，并让刑部完成视觉复核。",
+                "复核通过后重新生成 Word 制片画布和引用清单。",
+            ],
+        }
+    if not isinstance(raw, dict):
+        return {}
+    if not str(raw.get("action") or "").strip():
+        return {}
+    return {
+        "department": str(raw.get("department") or ""),
+        "action": str(raw.get("action") or ""),
+        "label": str(raw.get("label") or "按质量问题退回处理"),
+        "reason_code": str(raw.get("reason_code") or ""),
+        "description": str(raw.get("description") or ""),
+        "expected_stage": str(raw.get("expected_stage") or ""),
+        "preserves": [str(item) for item in (raw.get("preserves") or []) if str(item).strip()],
+        "clears": [str(item) for item in (raw.get("clears") or []) if str(item).strip()],
+        "operator_steps": [str(item) for item in (raw.get("operator_steps") or []) if str(item).strip()],
     }
 
 

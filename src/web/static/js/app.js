@@ -1246,6 +1246,8 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
     const items = Array.isArray(acceptance.acceptance_items) ? acceptance.acceptance_items : [];
     const missing = Array.isArray(acceptance.missing_evidence) ? acceptance.missing_evidence : [];
     const downloads = acceptance.downloads || {};
+    const recovery = acceptance.recovery_action || {};
+    const recoveryAction = String(recovery.action || '');
     const statusLabel = acceptance.can_handoff_to_downstream
         ? '可交给下游'
         : (acceptance.status === 'structure_ready_needs_real_quality' ? '结构可交接' : '需继续补齐');
@@ -1276,10 +1278,12 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
             <div class="runtime-acceptance-foot">
                 <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；真实质量声明：${acceptance.can_claim_real_quality ? '可以' : '不可以'}</span>
                 <div>
+                    ${recoveryAction ? `<button class="ghost btn-sm" onclick='recoverComicV2Quality(${JSON.stringify(recoveryAction)}, this)'>${escapeHtml(recovery.label || '按质量问题退回处理')}</button>` : ''}
                     ${downloads.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.word_canvas_uri)}" target="_blank">下载 Word</a>` : ''}
                     ${downloads.handoff_manifest_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.handoff_manifest_uri)}" target="_blank">下载引用清单</a>` : ''}
                 </div>
             </div>
+            ${recoveryAction ? renderRecoveryPlaybook(recovery) : ''}
             ${acceptance.next_action ? `<p class="runtime-acceptance-next">${escapeHtml(acceptance.next_action)}</p>` : ''}
         </section>
     `;
