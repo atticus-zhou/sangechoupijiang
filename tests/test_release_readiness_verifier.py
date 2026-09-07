@@ -41,6 +41,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "static_showcase",
                 "portfolio_showcase_sync",
                 "comic_delivery",
+                "comic_user_flow",
                 "comic_downstream_handoff",
                 "comic_production_benchmark",
                 "comic_real_production_claim",
@@ -117,6 +118,12 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("failures=0", public_docs["summary"])
         comic_delivery = next(item for item in payload["checks"] if item["id"] == "comic_delivery")
         self.assertIn("quick_start=5", comic_delivery["summary"])
+        comic_user_flow = next(item for item in payload["checks"] if item["id"] == "comic_user_flow")
+        self.assertIn("final_stage=ready_for_handoff", comic_user_flow["summary"])
+        self.assertIn("task_status=completed", comic_user_flow["summary"])
+        self.assertIn("images=7", comic_user_flow["summary"])
+        self.assertIn("handoff_manifest=True", comic_user_flow["summary"])
+        self.assertIn("lineage=True", comic_user_flow["summary"])
         comic_handoff = next(item for item in payload["checks"] if item["id"] == "comic_downstream_handoff")
         self.assertIn("structured_director_shots=2", comic_handoff["summary"])
         self.assertIn("quick_start=5", comic_handoff["summary"])
@@ -237,6 +244,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Backend-free static showcase export", completed.stdout)
         self.assertIn("Portfolio showcase copy sync", completed.stdout)
         self.assertIn("AI comic Word canvas delivery", completed.stdout)
+        self.assertIn("AI comic user flow CLI", completed.stdout)
+        self.assertIn("final_stage=ready_for_handoff", completed.stdout)
         self.assertIn("AI comic downstream handoff", completed.stdout)
         self.assertIn("AI comic production quality benchmark", completed.stdout)
         self.assertIn("AI comic real production claim boundary", completed.stdout)

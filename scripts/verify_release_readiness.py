@@ -7,10 +7,15 @@ import json
 import os
 import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+LOCK_PATH = REPO_ROOT / "dist" / ".release-readiness.lock"
+LOCK_STALE_SECONDS = 30 * 60
+LOCK_WAIT_SECONDS = 15 * 60
 
 
 RELEASE_CHECKS = [
@@ -78,6 +83,11 @@ RELEASE_CHECKS = [
         "id": "comic_delivery",
         "title": "AI comic Word canvas delivery",
         "command": ["scripts/verify_comic_v2_delivery.py", "--format", "json"],
+    },
+    {
+        "id": "comic_user_flow",
+        "title": "AI comic user flow CLI",
+        "command": ["scripts/verify_comic_v2_user_flow.py", "--format", "json"],
     },
     {
         "id": "comic_downstream_handoff",
@@ -165,6 +175,41 @@ RELEASE_CHECKS = [
         "command": ["scripts/check_no_secrets.py"],
     },
 ]
+
+
+@contextmanager
+def _release_readiness_lock():
+    """Serialize release checks because several gates rewrite dist/public-showcase."""
+    LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    started = time.monotonic()
+    fd: int | None = None
+    while True:
+        try:
+            fd = os.open(str(LOCK_PATH), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, f"pid={os.getpid()}\nstarted={time.time()}\n".encode("utf-8"))
+            break
+        except FileExistsError:
+            try:
+                age = time.time() - LOCK_PATH.stat().st_mtime
+                if age > LOCK_STALE_SECONDS:
+                    LOCK_PATH.unlink(missing_ok=True)
+                    continue
+            except OSError:
+                pass
+            if time.monotonic() - started > LOCK_WAIT_SECONDS:
+                raise TimeoutError(
+                    f"Timed out waiting for release readiness lock: {LOCK_PATH}"
+                )
+            time.sleep(2)
+    try:
+        yield
+    finally:
+        if fd is not None:
+            os.close(fd)
+        try:
+            LOCK_PATH.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _run_check(check: dict[str, Any]) -> dict[str, Any]:
@@ -279,6 +324,17 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"shots={parsed.get('shot_count')}; "
                 f"embedded_images={parsed.get('embedded_images')}; "
                 f"quick_start={parsed.get('handoff_manifest_downstream_quick_start_steps')}"
+            )
+        if check_id == "comic_user_flow":
+            return (
+                f"final_stage={parsed.get('final_stage')}; "
+                f"task_status={parsed.get('task_status')}; "
+                f"visual_revisions={parsed.get('visual_revisions')}; "
+                f"asset_revisions={parsed.get('asset_revisions')}; "
+                f"images={parsed.get('generated_images')}; "
+                f"download_bytes={parsed.get('download_bytes')}; "
+                f"handoff_manifest={parsed.get('handoff_manifest_artifact')}; "
+                f"lineage={parsed.get('production_lineage_handoff_fields')}"
             )
         if check_id == "comic_downstream_handoff":
             return (
@@ -474,7 +530,8 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
 
 
 def verify_release_readiness() -> dict[str, Any]:
-    checks = [_run_check(check) for check in RELEASE_CHECKS]
+    with _release_readiness_lock():
+        checks = [_run_check(check) for check in RELEASE_CHECKS]
     failures = [item for item in checks if item["status"] != "passed"]
     return {
         "status": "passed" if not failures else "failed",
