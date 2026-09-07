@@ -66,6 +66,8 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertIn("阶段可用", acceptance["quality_claim_value"])
         self.assertEqual(acceptance["missing_evidence"], [])
         self.assertEqual(acceptance["downloads"]["word_canvas_uri"], f"/api/workspaces/{workspace_id}/files/standard_report.md")
+        self.assertEqual(acceptance["downloads"]["word_canvas_label"], "下载阶段报告")
+        self.assertEqual(acceptance["downloads"]["handoff_manifest_label"], "")
         self.assertEqual(
             [item["id"] for item in acceptance["acceptance_items"]],
             [
@@ -211,6 +213,8 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertIn("真实模型", acceptance["recovery_action"]["description"])
         self.assertEqual(acceptance["downloads"]["word_canvas_uri"], f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx")
         self.assertEqual(acceptance["downloads"]["handoff_manifest_uri"], f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json")
+        self.assertEqual(acceptance["downloads"]["word_canvas_label"], "下载 Word")
+        self.assertEqual(acceptance["downloads"]["handoff_manifest_label"], "下载引用清单")
         self.assertEqual(
             [item["id"] for item in acceptance["acceptance_items"]],
             [

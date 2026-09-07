@@ -1253,6 +1253,8 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
         : (acceptance.status === 'structure_ready_needs_real_quality' ? '结构可交接' : '需继续补齐');
     const claimLabel = acceptance.quality_claim_label || '真实质量声明';
     const claimValue = acceptance.quality_claim_value || (acceptance.can_claim_real_quality ? '可以' : '不可以');
+    const wordDownloadLabel = downloads.word_canvas_label || '下载 Word';
+    const handoffDownloadLabel = downloads.handoff_manifest_label || '下载引用清单';
     return `
         <section class="runtime-acceptance runtime-acceptance-${escapeHtml(acceptance.status)}">
             <div class="runtime-acceptance-head">
@@ -1281,8 +1283,8 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
                 <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；${escapeHtml(claimLabel)}：${escapeHtml(claimValue)}</span>
                 <div>
                     ${recoveryAction ? `<button class="ghost btn-sm" onclick='recoverComicV2Quality(${JSON.stringify(recoveryAction)}, this)'>${escapeHtml(recovery.label || '按质量问题退回处理')}</button>` : ''}
-                    ${downloads.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.word_canvas_uri)}" target="_blank">下载 Word</a>` : ''}
-                    ${downloads.handoff_manifest_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.handoff_manifest_uri)}" target="_blank">下载引用清单</a>` : ''}
+                    ${downloads.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.word_canvas_uri)}" target="_blank">${escapeHtml(wordDownloadLabel)}</a>` : ''}
+                    ${downloads.handoff_manifest_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.handoff_manifest_uri)}" target="_blank">${escapeHtml(handoffDownloadLabel)}</a>` : ''}
                 </div>
             </div>
             ${recoveryAction ? renderRecoveryPlaybook(recovery) : ''}

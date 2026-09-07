@@ -305,6 +305,8 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
         "downloads": {
             "word_canvas_uri": str((word or {}).get("uri") or ((word or {}).get("metadata") or {}).get("download_uri") or ""),
             "handoff_manifest_uri": str((handoff or {}).get("uri") or ((handoff or {}).get("metadata") or {}).get("download_uri") or ""),
+            "word_canvas_label": "下载 Word",
+            "handoff_manifest_label": "下载引用清单",
         },
         "prompt_quality_summary": {
             "status": str(prompt_summary.get("status") or ""),
@@ -415,6 +417,8 @@ def _research_delivery_acceptance(artifacts: list[dict]) -> dict:
         "downloads": {
             "word_canvas_uri": str(downloadable_report.get("uri") or ""),
             "handoff_manifest_uri": "",
+            "word_canvas_label": "下载阶段报告",
+            "handoff_manifest_label": "",
         },
     }
 
