@@ -53,28 +53,6 @@
                 <h1>三个臭皮匠</h1>
             </div>
 
-            <section id="product-showcase" class="product-showcase">
-                <div>
-                    <span class="showcase-kicker">多 Agent 协作工作台</span>
-                    <h2>把一个想法拆成可审核、可追溯、可交付的制片包</h2>
-                    <p>当前主力办公室是 AI 漫剧制片办公室：从灵感或完整剧本出发，生成故事合同、资产身份证、镜头生产包、提示词和 Word 制片画布。</p>
-                    <div class="showcase-badges">
-                        <span>本地真实模式：使用你自己的 API Key</span>
-                        <span>演示模式：不消耗 API Key，不调用真实模型</span>
-                    </div>
-                </div>
-                <div class="showcase-actions">
-                    <button id="btn-open-comic-demo" onclick="navigate('demo_comic')">体验无 Key 演示</button>
-                    <button id="btn-open-research-demo" class="ghost" onclick="navigate('demo_research')">体验研究办公室演示</button>
-                    <button id="btn-open-public-showcase" class="ghost" onclick="navigate('public_showcase')">公开展示页</button>
-                    <button class="ghost" onclick="navigate('comic_production')">进入真实办公室</button>
-                </div>
-            </section>
-
-            <div id="system-preflight-panel" class="preflight-panel"></div>
-            <div id="first-run-guide-panel" class="first-run-guide-panel"></div>
-            <div id="office-launch-gates-panel" class="launch-gates-panel"></div>
-
             <div class="office-card-grid">
                 <button id="office-card-research" class="office-card available" onclick="navigate('research')">
                     <strong>研究办公室</strong>
@@ -124,6 +102,40 @@
                     <small>暂未开放：还没有配置 Agent 分工和产物模板。</small>
                     <em onclick="event.stopPropagation(); showSampleUnavailable('预留办公室')">样品展示</em>
                 </button>
+            </div>
+
+            <div class="hall-support">
+                <details>
+                    <summary>我第一次打开，应该先看什么？</summary>
+                    <section id="product-showcase" class="product-showcase">
+                        <div>
+                            <span class="showcase-kicker">多 Agent 协作工作台</span>
+                            <h2>把一个想法拆成可审核、可追溯、可交付的制片包</h2>
+                            <p>当前主力办公室是 AI 漫剧制片办公室：从灵感或完整剧本出发，生成故事合同、资产身份证、镜头生产包、提示词和 Word 制片画布。</p>
+                            <div class="showcase-badges">
+                                <span>本地真实模式：使用你自己的 API Key</span>
+                                <span>演示模式：不消耗 API Key，不调用真实模型</span>
+                            </div>
+                        </div>
+                        <div class="showcase-actions">
+                            <button id="btn-open-comic-demo" onclick="navigate('demo_comic')">体验无 Key 演示</button>
+                            <button id="btn-open-research-demo" class="ghost" onclick="navigate('demo_research')">体验研究办公室演示</button>
+                            <button id="btn-open-public-showcase" class="ghost" onclick="navigate('public_showcase')">公开展示页</button>
+                            <button class="ghost" onclick="navigate('comic_production')">进入真实办公室</button>
+                        </div>
+                    </section>
+                </details>
+
+                <details>
+                    <summary>本机状态和新手路径</summary>
+                    <div id="system-preflight-panel" class="preflight-panel"></div>
+                    <div id="first-run-guide-panel" class="first-run-guide-panel"></div>
+                </details>
+
+                <details>
+                    <summary>办公室上线门禁</summary>
+                    <div id="office-launch-gates-panel" class="launch-gates-panel"></div>
+                </details>
             </div>
         </div>
     </section>

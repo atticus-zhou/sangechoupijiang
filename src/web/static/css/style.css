@@ -1116,6 +1116,52 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     width: auto;
     justify-content: center;
 }
+.hall-support {
+    width: min(1040px, 100%);
+    margin: 38px auto 0;
+    display: grid;
+    gap: 12px;
+}
+.hall-support details {
+    border: 1px solid rgba(139, 148, 158, 0.18);
+    border-radius: 14px;
+    background: rgba(22, 27, 34, 0.62);
+    overflow: hidden;
+}
+.hall-support summary {
+    cursor: pointer;
+    padding: 15px 18px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    list-style: none;
+}
+.hall-support summary::-webkit-details-marker {
+    display: none;
+}
+.hall-support summary::after {
+    content: "+";
+    float: right;
+    color: var(--text3);
+    font-weight: 500;
+}
+.hall-support details[open] summary::after {
+    content: "-";
+}
+.hall-support .product-showcase,
+.hall-support .preflight-panel,
+.hall-support .first-run-guide-panel,
+.hall-support .launch-gates-panel {
+    width: 100%;
+    margin: 0;
+}
+.hall-support .product-showcase {
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0;
+    box-shadow: none;
+}
 .office-card {
     display: flex;
     flex-direction: column;
@@ -3477,7 +3523,7 @@ tr:hover td { background: var(--bg); }
 .badge-info { background: var(--bg); color: var(--text2); border: 1px solid var(--line); }
 
 /* Toast */
-.toast { position: fixed; bottom: 32px; right: 32px; padding: 12px 24px; border-radius: var(--r-sm); font-size: 14px; font-weight: 500; color: #fff; z-index: 99; opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+.toast { position: fixed; bottom: 32px; right: 32px; padding: 12px 24px; border-radius: var(--r-sm); font-size: 14px; font-weight: 500; color: #fff; z-index: 99; opacity: 0; transform: translateY(20px); transition: opacity 0.22s ease-out, transform 0.22s ease-out; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.success { background: var(--green); }
 .toast.error { background: var(--red); }
