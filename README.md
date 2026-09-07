@@ -361,7 +361,7 @@ AI 漫剧交付验证：
 
 ```powershell
 python scripts/verify_comic_v2_delivery.py --format markdown
-python scripts/verify_comic_v2_user_flow.py
+python scripts/verify_comic_v2_user_flow.py --format markdown
 python scripts/verify_comic_v2_downstream_handoff.py --format markdown
 python scripts/verify_comic_v2_production_benchmark.py --format markdown
 python scripts/verify_comic_real_production_claim.py --format markdown

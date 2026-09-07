@@ -1,4 +1,6 @@
 import importlib.util
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -36,6 +38,29 @@ class ComicV2UserFlowVerifierTests(unittest.TestCase):
         self.assertIn("asset_review", result["visited_stages"])
         self.assertIn("document_generation", result["visited_stages"])
         self.assertIn("ready_for_handoff", result["visited_stages"])
+
+    def test_user_flow_verifier_supports_markdown_output_for_operators(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_PATH),
+                "--format",
+                "markdown",
+                "--output-dir",
+                "output/comic_v2_user_flow_verification_cli",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertIn("# AI Comic V2 User Flow Verification", result.stdout)
+        self.assertIn("Status: `passed`", result.stdout)
+        self.assertIn("Final stage: `ready_for_handoff`", result.stdout)
+        self.assertIn("Generated images", result.stdout)
+        self.assertIn("Handoff manifest URI", result.stdout)
+        self.assertIn("fixture-backed model and image doubles", result.stdout)
 
 
 if __name__ == "__main__":

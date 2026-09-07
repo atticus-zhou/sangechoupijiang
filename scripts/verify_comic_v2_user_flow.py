@@ -355,14 +355,67 @@ def _cleanup_workspace(workspace_id: str, output_dir: Path) -> None:
     shutil.rmtree(output_dir, ignore_errors=True)
 
 
+def format_markdown(result: dict) -> str:
+    lines = [
+        "# AI Comic V2 User Flow Verification",
+        "",
+        f"Status: `{'passed' if result.get('final_stage') == 'ready_for_handoff' else 'failed'}`",
+        f"Workspace: `{result.get('workspace_id', '')}`",
+        f"Final stage: `{result.get('final_stage', '')}`",
+        f"Task status: `{result.get('task_status', '')}`",
+        "",
+        "## User Journey",
+        "",
+        f"- Visited stages: `{', '.join(result.get('visited_stages') or [])}`",
+        f"- Visual revisions: `{result.get('visual_revisions', 0)}`",
+        f"- Asset revisions: `{result.get('asset_revisions', 0)}`",
+        f"- Generated images: `{result.get('generated_images', 0)}`",
+        f"- Download bytes: `{result.get('download_bytes', 0)}`",
+        "",
+        "## Handoff Evidence",
+        "",
+        f"- Word download URI: `{result.get('download_uri', '')}`",
+        f"- Handoff manifest URI: `{result.get('handoff_manifest_uri', '')}`",
+        f"- Handoff manifest artifact: `{result.get('handoff_manifest_artifact')}`",
+        f"- Production lineage: `{result.get('handoff_manifest_production_lineage')}`",
+        f"- Asset baseline chain: `{result.get('handoff_manifest_asset_baseline_chain')}`",
+        f"- Shot production package: `{result.get('handoff_manifest_shot_production_package')}`",
+        f"- Lineage handoff fields: `{result.get('production_lineage_handoff_fields')}`",
+        "",
+        "## Delivery Audit",
+        "",
+    ]
+    audit = result.get("delivery_audit") or {}
+    if audit:
+        for key, value in audit.items():
+            lines.append(f"- {key}: `{value}`")
+    else:
+        lines.append("- No delivery audit was returned.")
+    lines.extend([
+        "",
+        "## Reproducibility",
+        "",
+        f"- Artifacts recorded: `{result.get('artifact_count', 0)}`",
+        f"- Events recorded: `{result.get('event_count', 0)}`",
+        "- This verifier uses fixture-backed model and image doubles; it proves the user-facing flow, revision loop, downloads, and handoff structure without consuming API keys.",
+    ])
+    return "\n".join(lines) + "\n"
+
+
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", type=Path, default=Path("tests/fixtures/comic_v2_sample.json"))
     parser.add_argument("--output-dir", type=Path, default=Path("output/comic_v2_user_flow_verification"))
     parser.add_argument("--keep-workspace", action="store_true", help="Leave the generated workspace in local storage for browser inspection.")
+    parser.add_argument("--format", choices=("json", "markdown"), default="json")
     args = parser.parse_args()
     result = verify_user_flow(args.fixture, args.output_dir, cleanup=not args.keep_workspace)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if args.format == "markdown":
+        print(format_markdown(result))
+    else:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

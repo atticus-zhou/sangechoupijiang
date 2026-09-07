@@ -56,6 +56,8 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", comic_quality["markers"])
         self.assertIn("scripts/verify_static_public_showcase.py", comic_quality["files"])
         self.assertIn("tests/test_comic_v2_production_benchmark_verifier.py", comic_quality["files"])
+        comic_handoff = next(item for item in module.REQUIREMENTS if item["id"] == "P4")
+        self.assertIn("python scripts/verify_comic_v2_user_flow.py --format markdown", comic_handoff["markers"])
         comic_recovery = next(item for item in module.REQUIREMENTS if item["id"] == "P5")
         self.assertIn("部门级恢复路由", comic_recovery["markers"])
         self.assertIn("旧版不可审计标记", comic_recovery["markers"])

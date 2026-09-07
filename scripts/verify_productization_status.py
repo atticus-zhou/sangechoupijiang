@@ -98,7 +98,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
         "markers": [
             "AI 漫剧制片办公室",
             "python scripts/verify_comic_v2_delivery.py --format markdown",
-            "python scripts/verify_comic_v2_user_flow.py",
+            "python scripts/verify_comic_v2_user_flow.py --format markdown",
             "*_handoff_manifest.json",
         ],
         "files": [
