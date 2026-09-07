@@ -4438,8 +4438,32 @@ function historyArtifactSummary(h) {
     const count = h.artifact_count || 0;
     const word = h.word_canvas_uri ? '，含 Word 画布' : '';
     const handoff = h.handoff_manifest_uri ? '，含引用清单' : '';
-    const office = h.office_id ? `${h.office_id}办公室` : '工作区';
+    const office = officeLabelForHistory(h.office_id);
     return `${office} · ${count} 个产物${word}${handoff}`;
+}
+
+function officeLabelForHistory(officeId) {
+    if (!officeId) return '工作区';
+    return OFFICE_LABELS[officeId] || `${officeId} 工作区`;
+}
+
+function historyVisualReviewLabel(status) {
+    return {
+        passed: '已通过',
+        needs_review: '需复核',
+        waiting: '待质检',
+        unknown: '未确认',
+    }[status] || status || '未确认';
+}
+
+function historyPackageQualityLabel(claim) {
+    return {
+        production_quality_verified: '真实质量已验证',
+        demo_structure_verified: '结构演示已验证',
+        needs_review: '需复核',
+        legacy_unverifiable: '旧版不可审计',
+        waiting: '待生成',
+    }[claim] || claim || '待生成';
 }
 
 async function viewHistoryDetail(taskId) {
@@ -4463,7 +4487,7 @@ async function viewHistoryDetail(taskId) {
             : '';
         box.innerHTML = `
             <div class="artifact-detail-head">
-                <span class="artifact-type">${escapeHtml(item.office_id || '')}</span>
+                <span class="artifact-type">${escapeHtml(officeLabelForHistory(item.office_id))}</span>
                 <strong>${escapeHtml(item.workspace_title || item.user_request || taskId)}</strong>
                 ${traceDownloadLink}
                 ${item.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(item.word_canvas_uri)}" target="_blank">下载Word画布</a>` : ''}
@@ -4521,12 +4545,8 @@ function renderHistoryDeliverySummary(summary, compact = false) {
         needs_review: '需复核',
         waiting: '待生成',
     }[summary.prompt_quality_status] || summary.prompt_quality_status || '未知';
-    const packageQualityLabel = {
-        production_quality_verified: '真实质量已验证',
-        demo_structure_verified: '结构演示已验证',
-        needs_review: '需复核',
-        legacy_unverifiable: '旧版不可审计',
-    }[summary.package_quality_claim] || summary.package_quality_claim || '待生成';
+    const packageQualityLabel = historyPackageQualityLabel(summary.package_quality_claim);
+    const visualReviewLabel = historyVisualReviewLabel(summary.visual_review_status);
     return `
         <div class="history-delivery-summary ${compact ? 'compact' : ''} ${escapeHtml(summary.status)}">
             <div class="history-delivery-head">
@@ -4538,7 +4558,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 <span>镜头 ${escapeHtml(summary.shot_count || 0)}</span>
                 <span>提示词 ${escapeHtml(summary.prompt_count || 0)}</span>
                 <span>提示词门禁 ${escapeHtml(promptQualityLabel)}</span>
-                <span>质检 ${escapeHtml(summary.visual_review_status || 'unknown')}</span>
+                <span>质检 ${escapeHtml(visualReviewLabel)}</span>
                 <span>制片包 ${summary.legacy_package ? '旧版不可审计' : `${escapeHtml(summary.package_quality_score || 0)}/100`}</span>
             </div>
             ${compact ? '' : `
