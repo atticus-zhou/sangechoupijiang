@@ -1190,6 +1190,7 @@ function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间
     const action = recovery.retry_action || {};
     const missing = Array.isArray(progress.missing) ? progress.missing.slice(0, 6) : [];
     const downloads = Array.isArray(status.downloadable_artifacts) ? status.downloadable_artifacts.slice(0, 5) : [];
+    const acceptance = status.delivery_acceptance || {};
     const ratio = Number(progress.completion_ratio || 0);
     const ratioText = `${Math.round(ratio * 100)}%`;
     panel.innerHTML = `
@@ -1229,6 +1230,7 @@ function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间
                 </div>
             </div>
         ` : ''}
+        ${renderRuntimeDeliveryAcceptance(acceptance)}
         ${status.next_action ? `<p class="runtime-next">${escapeHtml(status.next_action)}</p>` : ''}
         ${recovery.recoverable ? `
             <div class="runtime-recovery">
@@ -1236,6 +1238,50 @@ function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间
                 ${action.path ? `<button class="ghost btn-sm" onclick="retryTaskRecoveryAction('${escapeJsAttr(action)}')">${escapeHtml(action.label || '继续处理')}</button>` : ''}
             </div>
         ` : ''}
+    `;
+}
+
+function renderRuntimeDeliveryAcceptance(acceptance) {
+    if (!acceptance || !acceptance.status) return '';
+    const items = Array.isArray(acceptance.acceptance_items) ? acceptance.acceptance_items : [];
+    const missing = Array.isArray(acceptance.missing_evidence) ? acceptance.missing_evidence : [];
+    const downloads = acceptance.downloads || {};
+    const statusLabel = acceptance.can_handoff_to_downstream
+        ? '可交给下游'
+        : (acceptance.status === 'structure_ready_needs_real_quality' ? '结构可交接' : '需继续补齐');
+    return `
+        <section class="runtime-acceptance runtime-acceptance-${escapeHtml(acceptance.status)}">
+            <div class="runtime-acceptance-head">
+                <div>
+                    <b>${escapeHtml(acceptance.title || '交付验收')}</b>
+                    <span>${escapeHtml(acceptance.summary || '')}</span>
+                </div>
+                <em>${escapeHtml(statusLabel)}</em>
+            </div>
+            <div class="runtime-acceptance-grid">
+                ${items.map(item => `
+                    <div class="${item.passed ? 'passed' : 'missing'}">
+                        <strong>${escapeHtml(item.label || item.id || '')}</strong>
+                        <span>${escapeHtml(item.owner || '')}</span>
+                        <small>${escapeHtml(item.message || '')}</small>
+                    </div>
+                `).join('')}
+            </div>
+            ${missing.length ? `
+                <div class="runtime-acceptance-missing">
+                    <b>还缺什么</b>
+                    ${missing.slice(0, 5).map(item => `<p>${escapeHtml(item)}</p>`).join('')}
+                </div>
+            ` : ''}
+            <div class="runtime-acceptance-foot">
+                <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；真实质量声明：${acceptance.can_claim_real_quality ? '可以' : '不可以'}</span>
+                <div>
+                    ${downloads.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.word_canvas_uri)}" target="_blank">下载 Word</a>` : ''}
+                    ${downloads.handoff_manifest_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.handoff_manifest_uri)}" target="_blank">下载引用清单</a>` : ''}
+                </div>
+            </div>
+            ${acceptance.next_action ? `<p class="runtime-acceptance-next">${escapeHtml(acceptance.next_action)}</p>` : ''}
+        </section>
     `;
 }
 

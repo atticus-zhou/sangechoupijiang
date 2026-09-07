@@ -83,6 +83,128 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertIn("prompt_package", quality_action["preserves"])
         self.assertIn("word_canvas", quality_action["clears"])
 
+    def test_runtime_status_explains_comic_delivery_acceptance_without_overclaiming(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+            workspace_id = "ws-acceptance"
+            manager.create_workspace(
+                workspace_id=workspace_id,
+                office_id="comic_production",
+                title="Acceptance comic",
+            )
+            benchmark = {
+                "package_quality_ready": True,
+                "production_quality_verified": False,
+                "package_quality_score": 86,
+                "visual_evidence_level": "fixture_only",
+                "prompt_quality_summary": {
+                    "status": "ready",
+                    "issue_count": 0,
+                    "asset_prompt_count": 7,
+                    "shot_prompt_count": 3,
+                },
+                "image_quality_summary": {
+                    "total_images": 7,
+                    "usable_images": 7,
+                    "waste_or_rework_images": 0,
+                },
+            }
+            manager.create_artifact(
+                artifact_id="art-acceptance-word",
+                workspace_id=workspace_id,
+                task_id="task-acceptance",
+                artifact_type="comic_v2_word_canvas",
+                title="Word 制片画布",
+                uri=f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx",
+                metadata={"office_id": "comic_production", "quality_benchmark": benchmark},
+                created_by="libu",
+            )
+            manager.create_artifact(
+                artifact_id="art-acceptance-manifest",
+                workspace_id=workspace_id,
+                task_id="task-acceptance",
+                artifact_type="comic_v2_handoff_manifest",
+                title="V2 制片引用清单",
+                uri=f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json",
+                metadata={"office_id": "comic_production", "quality_benchmark": benchmark},
+                created_by="libu",
+            )
+
+            status = build_office_runtime_status(manager, workspace_id)
+
+        acceptance = status["delivery_acceptance"]
+        self.assertEqual(acceptance["status"], "structure_ready_needs_real_quality")
+        self.assertFalse(acceptance["can_claim_real_quality"])
+        self.assertFalse(acceptance["can_handoff_to_downstream"])
+        self.assertIn("暂不能宣称真实画质已验证", acceptance["summary"])
+        self.assertIn("刑部：缺少真实模型视觉复核证据", " ".join(acceptance["missing_evidence"]))
+        self.assertEqual(acceptance["downloads"]["word_canvas_uri"], f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx")
+        self.assertEqual(acceptance["downloads"]["handoff_manifest_uri"], f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json")
+        self.assertEqual(
+            [item["id"] for item in acceptance["acceptance_items"]],
+            [
+                "word_canvas",
+                "handoff_manifest",
+                "prompt_quality",
+                "image_quality",
+                "package_quality",
+                "real_quality_claim",
+            ],
+        )
+        real_claim = next(item for item in acceptance["acceptance_items"] if item["id"] == "real_quality_claim")
+        self.assertFalse(real_claim["passed"])
+
+    def test_runtime_status_marks_comic_delivery_ready_only_with_real_quality_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+            workspace_id = "ws-real-acceptance"
+            manager.create_workspace(
+                workspace_id=workspace_id,
+                office_id="comic_production",
+                title="Real acceptance comic",
+            )
+            benchmark = {
+                "package_quality_ready": True,
+                "production_quality_verified": True,
+                "package_quality_score": 95,
+                "visual_evidence_level": "model_reviewed",
+                "prompt_quality_summary": {"status": "ready", "issue_count": 0},
+                "image_quality_summary": {
+                    "total_images": 8,
+                    "usable_images": 8,
+                    "waste_or_rework_images": 0,
+                },
+            }
+            manager.create_artifact(
+                artifact_id="art-real-acceptance-word",
+                workspace_id=workspace_id,
+                task_id="task-real-acceptance",
+                artifact_type="comic_v2_word_canvas",
+                title="Word 制片画布",
+                uri=f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx",
+                metadata={"office_id": "comic_production", "quality_benchmark": benchmark},
+                created_by="libu",
+            )
+            manager.create_artifact(
+                artifact_id="art-real-acceptance-manifest",
+                workspace_id=workspace_id,
+                task_id="task-real-acceptance",
+                artifact_type="comic_v2_handoff_manifest",
+                title="V2 制片引用清单",
+                uri=f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json",
+                metadata={"office_id": "comic_production", "quality_benchmark": benchmark},
+                created_by="libu",
+            )
+
+            status = build_office_runtime_status(manager, workspace_id)
+
+        acceptance = status["delivery_acceptance"]
+        self.assertEqual(acceptance["status"], "ready_for_downstream")
+        self.assertTrue(acceptance["can_handoff_to_downstream"])
+        self.assertTrue(acceptance["can_claim_real_quality"])
+        self.assertEqual(acceptance["missing_evidence"], [])
+        self.assertEqual(acceptance["quality_score"], 95)
+
     def test_runtime_status_api_exposes_same_workspace_view(self):
         workspace_id = "ws_runtime_api"
         with sqlite3.connect(str(config_manager.db_path)) as conn:

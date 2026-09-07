@@ -611,6 +611,10 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("function renderOfficeRuntimeStatus", js)
         self.assertIn("artifact_progress", js)
         self.assertIn("downloadable_artifacts", js)
+        self.assertIn("delivery_acceptance", js)
+        self.assertIn("function renderRuntimeDeliveryAcceptance", js)
+        self.assertIn("交付验收", js)
+        self.assertIn("真实质量声明", js)
         self.assertIn("missing_count", js)
         self.assertIn("可下载交付物", js)
         self.assertIn("retry_action", js)
@@ -618,6 +622,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("renderOfficeRuntimeStatus(null", js)
         self.assertIn(".runtime-status-panel", css)
         self.assertIn(".runtime-downloads", css)
+        self.assertIn(".runtime-acceptance", css)
 
     def test_v2_stage_board_renders_review_gate_map_from_lineage(self):
         js = APP_JS.read_text(encoding="utf-8")

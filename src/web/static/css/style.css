@@ -2488,6 +2488,101 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     padding-top: 8px;
     border-top: 1px solid var(--line);
 }
+.runtime-acceptance {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid rgba(88, 166, 255, 0.22);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.46);
+}
+.runtime-acceptance-ready_for_downstream {
+    border-color: rgba(63, 185, 80, 0.36);
+    background: linear-gradient(180deg, rgba(63, 185, 80, 0.12), rgba(15, 23, 42, 0.42));
+}
+.runtime-acceptance-structure_ready_needs_real_quality {
+    border-color: rgba(210, 153, 34, 0.36);
+    background: linear-gradient(180deg, rgba(210, 153, 34, 0.1), rgba(15, 23, 42, 0.42));
+}
+.runtime-acceptance-head,
+.runtime-acceptance-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+}
+.runtime-acceptance-head > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+.runtime-acceptance-head b {
+    color: var(--text);
+}
+.runtime-acceptance-head span,
+.runtime-acceptance-foot span,
+.runtime-acceptance-next,
+.runtime-acceptance-grid small,
+.runtime-acceptance-grid span {
+    color: var(--text2);
+    line-height: 1.5;
+}
+.runtime-acceptance-head em {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(88, 166, 255, 0.1);
+    color: var(--side-active);
+    font-size: 12px;
+    font-style: normal;
+}
+.runtime-acceptance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.runtime-acceptance-grid div {
+    display: grid;
+    gap: 4px;
+    min-height: 86px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(17, 24, 39, 0.62);
+}
+.runtime-acceptance-grid div.passed {
+    border-color: rgba(63, 185, 80, 0.3);
+}
+.runtime-acceptance-grid div.missing {
+    border-color: rgba(248, 81, 73, 0.26);
+}
+.runtime-acceptance-grid strong {
+    color: var(--text);
+    font-size: 13px;
+}
+.runtime-acceptance-missing {
+    display: grid;
+    gap: 7px;
+    padding: 10px 12px;
+    border: 1px dashed rgba(248, 81, 73, 0.28);
+    border-radius: 12px;
+    background: rgba(248, 81, 73, 0.07);
+}
+.runtime-acceptance-missing b {
+    color: #ffb4ad;
+    font-size: 13px;
+}
+.runtime-acceptance-missing p {
+    margin: 0;
+    color: var(--text2);
+    line-height: 1.55;
+}
+.runtime-acceptance-foot > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
 .v2-action-error {
     border-color: rgba(248, 81, 73, 0.34);
     background: linear-gradient(180deg, rgba(248, 81, 73, 0.12), rgba(15, 23, 42, 0.52));

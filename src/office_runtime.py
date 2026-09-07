@@ -38,6 +38,7 @@ def build_office_runtime_status(config_manager, workspace_id: str) -> dict:
         "active_task": _task_summary(active_task),
         "artifact_progress": _artifact_progress(office.artifact_types, artifacts),
         "downloadable_artifacts": _downloadable_artifacts(artifacts),
+        "delivery_acceptance": _delivery_acceptance(office.id, artifacts),
         "human_checkpoints": office.human_checkpoints,
         "recovery_actions": enriched_recovery_actions(office.id),
         "stage_lanes": _stage_lanes(office),
@@ -147,6 +148,184 @@ def _downloadable_artifacts(artifacts: list[dict]) -> list[dict]:
             }
         )
     return downloadable
+
+
+def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
+    if office_id != "comic_production":
+        return {}
+
+    word = _latest_artifact(artifacts, {"comic_v2_word_canvas", "word_canvas"})
+    handoff = _latest_artifact(artifacts, {"comic_v2_handoff_manifest"})
+    source = handoff or word or {}
+    metadata = source.get("metadata") or {}
+    benchmark = metadata.get("quality_benchmark") or {}
+    prompt_summary = benchmark.get("prompt_quality_summary") or {}
+    image_summary = benchmark.get("image_quality_summary") or {}
+
+    if not word and not handoff:
+        return {
+            "status": "waiting_for_delivery",
+            "title": "交付验收",
+            "summary": "还没有生成 Word 制片画布和引用清单。",
+            "can_handoff_to_downstream": False,
+            "can_claim_real_quality": False,
+            "quality_score": 0,
+            "visual_evidence_level": "",
+            "acceptance_items": _acceptance_items(False, False, False, False),
+            "missing_evidence": [
+                "礼部：缺少 Word 制片画布。",
+                "礼部 / 刑部：缺少引用清单和结构审计结果。",
+            ],
+            "next_action": "继续完成制片流程，生成 Word 制片画布和引用清单。",
+            "downloads": {},
+        }
+
+    has_word = bool(word)
+    has_handoff = bool(handoff)
+    has_benchmark = bool(benchmark)
+    package_ready = bool(benchmark.get("package_quality_ready"))
+    real_quality = bool(benchmark.get("production_quality_verified"))
+    prompt_ready = (
+        prompt_summary.get("status") == "ready"
+        and int(prompt_summary.get("issue_count") or 0) == 0
+    )
+    total_images = int(image_summary.get("total_images") or 0)
+    usable_images = int(image_summary.get("usable_images") or 0)
+    rework_images = int(image_summary.get("waste_or_rework_images") or 0)
+    images_ready = total_images > 0 and usable_images >= total_images and rework_images == 0
+
+    if has_word and has_handoff and package_ready and real_quality:
+        status = "ready_for_downstream"
+        summary = "这份制片包已经具备下游生产交接条件，并且有真实质量验证证据。"
+        next_action = "下载 Word 制片画布和引用清单，交给下游视频生成平台继续生产。"
+    elif has_word and has_handoff and package_ready:
+        status = "structure_ready_needs_real_quality"
+        summary = "结构已经能交接，但只能说明制片包结构完整，暂不能宣称真实画质已验证。"
+        next_action = "用真实模型重跑图片、执行视觉复核，再刷新 Word 画布和引用清单。"
+    elif has_word or has_handoff:
+        status = "needs_rework"
+        summary = "已经有交付文件，但质量证据或引用链路还不完整。"
+        next_action = "按缺失证据退回对应部门，重新生成后再交付。"
+    else:
+        status = "waiting_for_delivery"
+        summary = "还没有可验收的最终交付。"
+        next_action = "继续生成 Word 制片画布和引用清单。"
+
+    missing = []
+    if not has_word:
+        missing.append("礼部：缺少 Word 制片画布。")
+    if not has_handoff:
+        missing.append("礼部 / 刑部：缺少引用清单，无法核对图片、镜头和提示词引用关系。")
+    if not has_benchmark:
+        missing.append("刑部：缺少制片包质量基准。")
+    if has_benchmark and not prompt_ready:
+        missing.append("兵部 / 刑部：提示词还存在泛化、串戏或导演信息不足的问题。")
+    if has_benchmark and not images_ready:
+        if total_images <= 0:
+            missing.append("工部：缺少基础资产图片质量记录。")
+        else:
+            missing.append(f"工部 / 刑部：{rework_images} 张图片需要返工或复核。")
+    if has_benchmark and not real_quality:
+        missing.append("刑部：缺少真实模型视觉复核证据，不能公开宣称真实画质已验证。")
+
+    return {
+        "status": status,
+        "title": "交付验收",
+        "summary": summary,
+        "can_handoff_to_downstream": status == "ready_for_downstream",
+        "can_claim_real_quality": real_quality,
+        "quality_score": int(benchmark.get("package_quality_score") or 0),
+        "visual_evidence_level": str(benchmark.get("visual_evidence_level") or ""),
+        "acceptance_items": _acceptance_items(
+            has_word,
+            has_handoff,
+            prompt_ready,
+            images_ready,
+            package_ready=package_ready,
+            real_quality=real_quality,
+        ),
+        "missing_evidence": missing,
+        "next_action": next_action,
+        "downloads": {
+            "word_canvas_uri": str((word or {}).get("uri") or ((word or {}).get("metadata") or {}).get("download_uri") or ""),
+            "handoff_manifest_uri": str((handoff or {}).get("uri") or ((handoff or {}).get("metadata") or {}).get("download_uri") or ""),
+        },
+        "prompt_quality_summary": {
+            "status": str(prompt_summary.get("status") or ""),
+            "issue_count": int(prompt_summary.get("issue_count") or 0),
+            "asset_prompt_count": int(prompt_summary.get("asset_prompt_count") or 0),
+            "shot_prompt_count": int(prompt_summary.get("shot_prompt_count") or 0),
+        },
+        "image_quality_summary": {
+            "total_images": total_images,
+            "usable_images": usable_images,
+            "waste_or_rework_images": rework_images,
+        },
+    }
+
+
+def _latest_artifact(artifacts: list[dict], artifact_types: set[str]) -> dict:
+    matches = [
+        artifact
+        for artifact in artifacts
+        if str(artifact.get("artifact_type") or "") in artifact_types
+    ]
+    return matches[-1] if matches else {}
+
+
+def _acceptance_items(
+    has_word: bool,
+    has_handoff: bool,
+    prompt_ready: bool,
+    images_ready: bool,
+    *,
+    package_ready: bool = False,
+    real_quality: bool = False,
+) -> list[dict]:
+    return [
+        {
+            "id": "word_canvas",
+            "label": "Word 制片画布",
+            "passed": has_word,
+            "owner": "礼部",
+            "message": "最终画布可下载" if has_word else "还没有最终 Word 文件",
+        },
+        {
+            "id": "handoff_manifest",
+            "label": "引用清单",
+            "passed": has_handoff,
+            "owner": "礼部 / 刑部",
+            "message": "资产、图片、镜头和提示词可追溯" if has_handoff else "还不能核对引用关系",
+        },
+        {
+            "id": "prompt_quality",
+            "label": "导演提示词",
+            "passed": prompt_ready,
+            "owner": "兵部 / 刑部",
+            "message": "提示词可交给下游执行" if prompt_ready else "提示词还需要审校",
+        },
+        {
+            "id": "image_quality",
+            "label": "基础资产图片",
+            "passed": images_ready,
+            "owner": "工部 / 刑部",
+            "message": "图片质量记录通过" if images_ready else "图片仍有缺口或返工项",
+        },
+        {
+            "id": "package_quality",
+            "label": "制片包质量基准",
+            "passed": package_ready,
+            "owner": "刑部",
+            "message": "结构质量已通过" if package_ready else "制片包质量基准未通过",
+        },
+        {
+            "id": "real_quality_claim",
+            "label": "真实质量声明",
+            "passed": real_quality,
+            "owner": "刑部",
+            "message": "可声明真实质量已验证" if real_quality else "不能宣称真实画质已验证",
+        },
+    ]
 
 
 def _stage_lanes(office) -> list[dict]:
