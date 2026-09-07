@@ -215,6 +215,15 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
                 title="V2 aliases comic",
             )
             manager.create_artifact(
+                artifact_id="art-v2-contract",
+                workspace_id=workspace_id,
+                task_id="task-v2-aliases",
+                artifact_type="comic_v2_contract",
+                title="故事合同与视觉母版",
+                metadata={"office_id": "comic_production"},
+                created_by="zhongshu",
+            )
+            manager.create_artifact(
                 artifact_id="art-v2-image",
                 workspace_id=workspace_id,
                 task_id="task-v2-aliases",
@@ -238,8 +247,12 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
             status = build_office_runtime_status(manager, workspace_id)
 
         progress = status["artifact_progress"]
+        self.assertIn("production_brief", progress["present"])
+        self.assertIn("production_review", progress["present"])
+        self.assertIn("script", progress["present"])
         self.assertIn("generated_image", progress["present"])
         self.assertIn("image_quality_report", progress["present"])
+        self.assertIn("production_chain_state", progress["present"])
         self.assertIn("word_canvas", progress["present"])
         self.assertGreater(progress["present_count"], 0)
         self.assertEqual(status["downloadable_artifacts"][0]["artifact_type"], "comic_v2_word_canvas")

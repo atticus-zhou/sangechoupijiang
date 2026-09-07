@@ -157,7 +157,15 @@ def _artifact_type_aliases(office_id: str, artifact_type: str) -> list[str]:
     if office_id != "comic_production":
         return aliases
     comic_v2_aliases = {
-        "comic_v2_contract": ["story_contract", "style_bible", "continuity_bible"],
+        "confirmed_script": ["script", "story_contract"],
+        "comic_v2_contract": [
+            "story_contract",
+            "production_brief",
+            "production_review",
+            "script",
+            "style_bible",
+            "continuity_bible",
+        ],
         "comic_v2_asset_manifest": [
             "asset_review_package",
             "asset_registry",
@@ -167,8 +175,8 @@ def _artifact_type_aliases(office_id: str, artifact_type: str) -> list[str]:
         ],
         "comic_v2_prompt_package": ["prompt_package", "shot_prompt_table", "dispatch_plan"],
         "comic_v2_generated_image": ["generated_image", "image_quality_report"],
-        "comic_v2_word_canvas": ["word_canvas", "platform_delivery_spec"],
-        "comic_v2_handoff_manifest": ["quality_report", "platform_delivery_spec"],
+        "comic_v2_word_canvas": ["word_canvas", "platform_delivery_spec", "production_chain_state"],
+        "comic_v2_handoff_manifest": ["quality_report", "platform_delivery_spec", "production_chain_state"],
     }
     for alias in comic_v2_aliases.get(artifact_type, []):
         if alias not in aliases:
