@@ -205,6 +205,45 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertEqual(acceptance["missing_evidence"], [])
         self.assertEqual(acceptance["quality_score"], 95)
 
+    def test_runtime_status_counts_v2_artifacts_and_prioritizes_delivery_downloads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+            workspace_id = "ws-v2-aliases"
+            manager.create_workspace(
+                workspace_id=workspace_id,
+                office_id="comic_production",
+                title="V2 aliases comic",
+            )
+            manager.create_artifact(
+                artifact_id="art-v2-image",
+                workspace_id=workspace_id,
+                task_id="task-v2-aliases",
+                artifact_type="comic_v2_generated_image",
+                title="角色三视图",
+                uri=f"/api/workspaces/{workspace_id}/files/generated/char.png",
+                metadata={"office_id": "comic_production"},
+                created_by="gongbu",
+            )
+            manager.create_artifact(
+                artifact_id="art-v2-word",
+                workspace_id=workspace_id,
+                task_id="task-v2-aliases",
+                artifact_type="comic_v2_word_canvas",
+                title="Word 制片画布",
+                uri=f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx",
+                metadata={"office_id": "comic_production"},
+                created_by="libu",
+            )
+
+            status = build_office_runtime_status(manager, workspace_id)
+
+        progress = status["artifact_progress"]
+        self.assertIn("generated_image", progress["present"])
+        self.assertIn("image_quality_report", progress["present"])
+        self.assertIn("word_canvas", progress["present"])
+        self.assertGreater(progress["present_count"], 0)
+        self.assertEqual(status["downloadable_artifacts"][0]["artifact_type"], "comic_v2_word_canvas")
+
     def test_runtime_status_api_exposes_same_workspace_view(self):
         workspace_id = "ws_runtime_api"
         with sqlite3.connect(str(config_manager.db_path)) as conn:

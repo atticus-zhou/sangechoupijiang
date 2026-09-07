@@ -36,7 +36,7 @@ def build_office_runtime_status(config_manager, workspace_id: str) -> dict:
         "office_name": office.name,
         "current_stage": _current_stage(active_task, artifacts),
         "active_task": _task_summary(active_task),
-        "artifact_progress": _artifact_progress(office.artifact_types, artifacts),
+        "artifact_progress": _artifact_progress(office.id, office.artifact_types, artifacts),
         "downloadable_artifacts": _downloadable_artifacts(artifacts),
         "delivery_acceptance": _delivery_acceptance(office.id, artifacts),
         "human_checkpoints": office.human_checkpoints,
@@ -100,10 +100,12 @@ def _task_summary(task: dict) -> dict:
     }
 
 
-def _artifact_progress(expected_types: list[str], artifacts: list[dict]) -> dict:
+def _artifact_progress(office_id: str, expected_types: list[str], artifacts: list[dict]) -> dict:
     by_type: dict[str, list[dict]] = {}
     for artifact in artifacts:
-        by_type.setdefault(str(artifact.get("artifact_type") or ""), []).append(artifact)
+        raw_type = str(artifact.get("artifact_type") or "")
+        for artifact_type in _artifact_type_aliases(office_id, raw_type):
+            by_type.setdefault(artifact_type, []).append(artifact)
 
     present = [artifact_type for artifact_type in expected_types if artifact_type in by_type]
     missing = [artifact_type for artifact_type in expected_types if artifact_type not in by_type]
@@ -147,7 +149,47 @@ def _downloadable_artifacts(artifacts: list[dict]) -> list[dict]:
                 "created_at": artifact.get("created_at", ""),
             }
         )
-    return downloadable
+    return sorted(downloadable, key=_download_priority)
+
+
+def _artifact_type_aliases(office_id: str, artifact_type: str) -> list[str]:
+    aliases = [artifact_type] if artifact_type else []
+    if office_id != "comic_production":
+        return aliases
+    comic_v2_aliases = {
+        "comic_v2_contract": ["story_contract", "style_bible", "continuity_bible"],
+        "comic_v2_asset_manifest": [
+            "asset_review_package",
+            "asset_registry",
+            "character_sheet",
+            "prop_sheet",
+            "scene_sheet",
+        ],
+        "comic_v2_prompt_package": ["prompt_package", "shot_prompt_table", "dispatch_plan"],
+        "comic_v2_generated_image": ["generated_image", "image_quality_report"],
+        "comic_v2_word_canvas": ["word_canvas", "platform_delivery_spec"],
+        "comic_v2_handoff_manifest": ["quality_report", "platform_delivery_spec"],
+    }
+    for alias in comic_v2_aliases.get(artifact_type, []):
+        if alias not in aliases:
+            aliases.append(alias)
+    return aliases
+
+
+def _download_priority(artifact: dict) -> tuple[int, str]:
+    artifact_type = str(artifact.get("artifact_type") or "")
+    priority = {
+        "comic_v2_word_canvas": 0,
+        "word_canvas": 0,
+        "comic_v2_handoff_manifest": 1,
+        "prompt_package": 2,
+        "comic_v2_prompt_package": 2,
+        "quality_report": 3,
+        "image_quality_report": 3,
+        "comic_v2_generated_image": 8,
+        "generated_image": 8,
+    }.get(artifact_type, 5)
+    return (priority, str(artifact.get("created_at") or ""))
 
 
 def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
