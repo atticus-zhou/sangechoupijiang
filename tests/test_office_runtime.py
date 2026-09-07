@@ -10,6 +10,75 @@ from src.web.app import app
 
 
 class OfficeRuntimeStatusTests(unittest.TestCase):
+    def test_runtime_status_explains_research_delivery_acceptance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+            workspace_id = "ws-research-acceptance"
+            manager.create_workspace(
+                workspace_id=workspace_id,
+                office_id="research",
+                title="Research acceptance",
+            )
+            artifact_types = [
+                "report",
+                "standard_report",
+                "briefing",
+                "source_list",
+                "data_table",
+                "competitor_table",
+                "review_pain_points",
+                "opportunity_map",
+                "chart_plan",
+                "screenshot_plan",
+                "evidence_gap_cards",
+            ]
+            standard_report = "\n".join([
+                "# 民用无人机调研",
+                "## 行业概览\n行业说明、渠道说明、场景说明和平台表现已经形成阶段判断。",
+                "## 竞品对比\n来源清单和截图清单。",
+                "## 价格带与数据要点\n补证卡。",
+                "## 用户痛点\n痛点。",
+                "## 差异化机会\n机会。",
+                "## 风险与建议\n建议。",
+                "## 证据与待核验\n来源清单、截图清单、补证卡。",
+            ])
+            for index, artifact_type in enumerate(artifact_types, start=1):
+                manager.create_artifact(
+                    artifact_id=f"art-research-{artifact_type}",
+                    workspace_id=workspace_id,
+                    task_id="task-research-acceptance",
+                    artifact_type=artifact_type,
+                    title=f"{artifact_type} 产物",
+                    uri=f"/api/workspaces/{workspace_id}/files/{artifact_type}.md" if artifact_type == "standard_report" else "",
+                    content=("完整报告" * 500) if artifact_type == "report" else (standard_report if artifact_type == "standard_report" else "| 字段 | 内容 |\n| --- | --- |\n| 示例 | 已补齐 |"),
+                    metadata={"office_id": "research"},
+                    created_by="gongbu" if index % 2 else "hubu",
+                )
+
+            status = build_office_runtime_status(manager, workspace_id)
+
+        acceptance = status["delivery_acceptance"]
+        self.assertEqual(acceptance["title"], "研究交付验收")
+        self.assertEqual(acceptance["status"], "staged_report_ready")
+        self.assertTrue(acceptance["can_handoff_to_downstream"])
+        self.assertFalse(acceptance["can_claim_real_quality"])
+        self.assertEqual(acceptance["quality_claim_label"], "最终结论声明")
+        self.assertIn("阶段可用", acceptance["quality_claim_value"])
+        self.assertEqual(acceptance["missing_evidence"], [])
+        self.assertEqual(acceptance["downloads"]["word_canvas_uri"], f"/api/workspaces/{workspace_id}/files/standard_report.md")
+        self.assertEqual(
+            [item["id"] for item in acceptance["acceptance_items"]],
+            [
+                "report",
+                "source_list",
+                "data_table",
+                "competitor_table",
+                "pain_opportunity",
+                "screenshot_handoff",
+            ],
+        )
+        self.assertIn("继续补齐第三方平台截图", acceptance["next_action"])
+
     def test_runtime_status_summarizes_workspace_artifacts_and_recovery(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ConfigManager(base_dir=tmp)

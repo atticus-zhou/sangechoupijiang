@@ -25,6 +25,7 @@ class ResearchQualityTests(unittest.TestCase):
             {"artifact_type": "opportunity_map", "content": "| 机会点 |"},
             {"artifact_type": "chart_plan", "content": "| 图表 | 用途 |"},
             {"artifact_type": "screenshot_plan", "content": "| 截图对象 | URL |"},
+            {"artifact_type": "evidence_gap_cards", "content": "| 待补证据 | 原因 |"},
         ]
 
         quality = assess_research_package(artifacts)
@@ -56,6 +57,7 @@ class ResearchQualityTests(unittest.TestCase):
             {"artifact_type": "opportunity_map", "content": "| 机会点 |"},
             {"artifact_type": "chart_plan", "content": "| 图表 | 用途 |"},
             {"artifact_type": "screenshot_plan", "content": "| 截图对象 | URL |"},
+            {"artifact_type": "evidence_gap_cards", "content": "| 待补证据 | 原因 |"},
         ]
 
         quality = assess_research_package(artifacts)

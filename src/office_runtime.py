@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from src.offices import get_office
 from src.office_recovery_registry import enriched_recovery_actions
+from src.research_quality import assess_research_package
 
 
 TERMINAL_STATUSES = {"completed", "failed", "interrupted", "cancelled"}
@@ -201,6 +202,8 @@ def _download_priority(artifact: dict) -> tuple[int, str]:
 
 
 def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
+    if office_id == "research":
+        return _research_delivery_acceptance(artifacts)
     if office_id != "comic_production":
         return {}
 
@@ -313,6 +316,105 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
             "total_images": total_images,
             "usable_images": usable_images,
             "waste_or_rework_images": rework_images,
+        },
+        "quality_claim_label": "真实质量声明",
+        "quality_claim_value": "可以" if real_quality else "不可以",
+    }
+
+
+def _research_delivery_acceptance(artifacts: list[dict]) -> dict:
+    quality = assess_research_package(artifacts)
+    artifact_types = {str(artifact.get("artifact_type") or "") for artifact in artifacts}
+    downloadable_report = _latest_artifact(artifacts, {"standard_report", "report"})
+    has_report = bool({"report", "standard_report"} & artifact_types)
+    has_source_list = "source_list" in artifact_types
+    has_data_table = "data_table" in artifact_types
+    has_competitor_table = "competitor_table" in artifact_types
+    has_pain_points = "review_pain_points" in artifact_types
+    has_opportunity_map = "opportunity_map" in artifact_types
+    has_screenshot_plan = "screenshot_plan" in artifact_types
+    has_gap_cards = "evidence_gap_cards" in artifact_types
+    score = int(quality.get("score") or 0)
+    ready = quality.get("status") == "ready"
+
+    missing = []
+    for item in quality.get("missing_artifacts") or []:
+        missing.append(f"缺少产物：{item}")
+    for warning in quality.get("warnings") or []:
+        missing.append(f"需复核：{warning}")
+    if ready:
+        status = "staged_report_ready"
+        summary = "阶段调研材料包已具备可读报告、来源、数据表、竞品表和补证路径。"
+        next_action = "可以先交付阶段报告；如需最终结论，继续补齐第三方平台截图和数据证据。"
+    elif artifacts:
+        status = "needs_rework"
+        summary = "已有研究产物，但报告、来源、数据表或截图补证路径还不完整。"
+        next_action = "按缺失项重新整理研究材料包，优先补来源、数据表、竞品表和截图计划。"
+    else:
+        status = "waiting_for_delivery"
+        summary = "还没有研究材料包。"
+        next_action = "先提交调研对象，生成阶段报告、来源清单、数据表、竞品表和截图计划。"
+
+    return {
+        "status": status,
+        "title": "研究交付验收",
+        "summary": summary,
+        "can_handoff_to_downstream": ready,
+        "can_claim_real_quality": False,
+        "quality_claim_label": "最终结论声明",
+        "quality_claim_value": "阶段可用，最终结论需补证" if ready else "不可以",
+        "quality_score": score,
+        "visual_evidence_level": "human_evidence_required",
+        "acceptance_items": [
+            {
+                "id": "report",
+                "label": "报告正文",
+                "passed": has_report,
+                "owner": "工部 / 礼部",
+                "message": "已有可读报告" if has_report else "还没有报告正文",
+            },
+            {
+                "id": "source_list",
+                "label": "来源清单",
+                "passed": has_source_list,
+                "owner": "兵部",
+                "message": "来源可追溯" if has_source_list else "缺少来源链接或来源说明",
+            },
+            {
+                "id": "data_table",
+                "label": "数据表",
+                "passed": has_data_table,
+                "owner": "户部",
+                "message": "关键数据已结构化" if has_data_table else "缺少价格、销量、年份或平台字段",
+            },
+            {
+                "id": "competitor_table",
+                "label": "竞品表",
+                "passed": has_competitor_table,
+                "owner": "户部",
+                "message": "竞品可以横向比较" if has_competitor_table else "缺少头部竞品对比",
+            },
+            {
+                "id": "pain_opportunity",
+                "label": "痛点与机会",
+                "passed": has_pain_points and has_opportunity_map,
+                "owner": "刑部 / 中书省",
+                "message": "差评痛点和机会已拆开" if has_pain_points and has_opportunity_map else "缺少痛点或差异化机会",
+            },
+            {
+                "id": "screenshot_handoff",
+                "label": "截图补证路径",
+                "passed": has_screenshot_plan and has_gap_cards,
+                "owner": "礼部 / 刑部",
+                "message": "知道后续要补哪些截图" if has_screenshot_plan and has_gap_cards else "缺少截图计划或补证卡",
+            },
+        ],
+        "missing_evidence": missing,
+        "next_action": next_action,
+        "recovery_action": {},
+        "downloads": {
+            "word_canvas_uri": str(downloadable_report.get("uri") or ""),
+            "handoff_manifest_uri": "",
         },
     }
 

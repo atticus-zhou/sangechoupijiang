@@ -1251,6 +1251,8 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
     const statusLabel = acceptance.can_handoff_to_downstream
         ? '可交给下游'
         : (acceptance.status === 'structure_ready_needs_real_quality' ? '结构可交接' : '需继续补齐');
+    const claimLabel = acceptance.quality_claim_label || '真实质量声明';
+    const claimValue = acceptance.quality_claim_value || (acceptance.can_claim_real_quality ? '可以' : '不可以');
     return `
         <section class="runtime-acceptance runtime-acceptance-${escapeHtml(acceptance.status)}">
             <div class="runtime-acceptance-head">
@@ -1276,7 +1278,7 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
                 </div>
             ` : ''}
             <div class="runtime-acceptance-foot">
-                <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；真实质量声明：${acceptance.can_claim_real_quality ? '可以' : '不可以'}</span>
+                <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；${escapeHtml(claimLabel)}：${escapeHtml(claimValue)}</span>
                 <div>
                     ${recoveryAction ? `<button class="ghost btn-sm" onclick='recoverComicV2Quality(${JSON.stringify(recoveryAction)}, this)'>${escapeHtml(recovery.label || '按质量问题退回处理')}</button>` : ''}
                     ${downloads.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.word_canvas_uri)}" target="_blank">下载 Word</a>` : ''}
