@@ -720,7 +720,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_index_uses_fresh_comic_v2_script_cache_key(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=public-showcase-handoff-20260712", html)
+        self.assertIn("/static/js/app.js?v=comic-runtime-acceptance-20260908", html)
         self.assertNotIn("comic-confirm-feedback-20260610", html)
 
     def test_empty_artifact_board_still_renders_v2_stage_actions(self):
