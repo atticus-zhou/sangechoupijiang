@@ -375,6 +375,7 @@ async function loadResearchWorkspaces() {
         const list = document.getElementById('research-workspaces');
         if (!workspaces.length) {
             list.innerHTML = '<div class="empty-state">还没有研究项目。提交一个调研需求后会自动创建。</div>';
+            renderOfficeRuntimeStatus(null, '选择一个研究项目后查看阶段报告、证据缺口和下一步建议。', 'research-runtime-status-panel');
             return;
         }
         list.innerHTML = workspaces.map(w => `
@@ -396,10 +397,31 @@ async function selectResearchWorkspace(workspaceId) {
     currentResearchWorkspace = workspaceId;
     const select = document.getElementById('research-workspace-select');
     if (select) select.value = workspaceId;
-    await Promise.all([loadResearchArtifacts(workspaceId), loadResearchTimeline(workspaceId)]);
+    await Promise.all([loadResearchArtifacts(workspaceId), loadResearchTimeline(workspaceId), loadResearchRuntimeStatus(workspaceId)]);
     document.querySelectorAll('.workspace-item').forEach(el => {
         el.classList.toggle('active', el.textContent.includes(workspaceId));
     });
+}
+
+async function loadResearchRuntimeStatus(workspaceId) {
+    if (!workspaceId) {
+        renderOfficeRuntimeStatus(null, '选择一个研究项目后查看阶段报告、证据缺口和下一步建议。', 'research-runtime-status-panel');
+        return null;
+    }
+    try {
+        const result = await API.get(`/api/workspaces/${workspaceId}/runtime-status`);
+        if (currentResearchWorkspace !== workspaceId) return null;
+        renderOfficeRuntimeStatus(result, '选择一个研究项目后查看阶段报告、证据缺口和下一步建议。', 'research-runtime-status-panel');
+        return result;
+    } catch (e) {
+        if (currentResearchWorkspace !== workspaceId) return null;
+        renderOfficeRuntimeStatus({
+            current_stage: { id: 'runtime_status_error', status: 'failed', summary: e.message || String(e) },
+            artifact_progress: { present_count: 0, missing_count: 0, missing: [] },
+            next_action: '刷新研究办公室；如果仍失败，请查看后端日志。',
+        }, '选择一个研究项目后查看阶段报告、证据缺口和下一步建议。', 'research-runtime-status-panel');
+        return null;
+    }
 }
 
 async function loadResearchTimeline(workspaceId) {
@@ -418,12 +440,14 @@ async function loadResearchTimeline(workspaceId) {
         if (!tasks.length) {
             list.innerHTML = '<div class="empty-state">这个工作空间还没有任务记录。</div>';
             stopResearchTimelinePolling();
+            await loadResearchRuntimeStatus(workspaceId);
             return;
         }
         list.innerHTML = tasks.map(renderResearchTaskTimeline).join('');
         const hasRunning = tasks.some(t => ['queued', 'running'].includes(t.status));
         if (hasRunning) startResearchTimelinePolling(workspaceId);
         else stopResearchTimelinePolling();
+        await loadResearchRuntimeStatus(workspaceId);
     } catch (e) {
         list.innerHTML = '<div class="empty-state">任务时间线加载失败。</div>';
     }
@@ -582,6 +606,7 @@ async function recoverResearchTask(taskId) {
         await Promise.all([
             loadResearchTimeline(currentResearchWorkspace),
             loadResearchArtifacts(currentResearchWorkspace),
+            loadResearchRuntimeStatus(currentResearchWorkspace),
         ]);
     } catch (e) {
         toast('暂时没有可整理的已有产出', 'error');
@@ -594,6 +619,7 @@ function startResearchTimelinePolling(workspaceId) {
         if (currentResearchWorkspace === workspaceId) {
             loadResearchTimeline(workspaceId);
             loadResearchArtifacts(workspaceId);
+            loadResearchRuntimeStatus(workspaceId);
         }
     }, 5000);
 }
@@ -1176,8 +1202,8 @@ async function loadComicRuntimeStatus(workspaceId) {
     return currentComicRuntimeStatus;
 }
 
-function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间后查看运行状态。') {
-    const panel = document.getElementById('comic-runtime-status-panel');
+function renderOfficeRuntimeStatus(status, emptyText = '选择一个工作空间后查看运行状态。', panelId = 'comic-runtime-status-panel') {
+    const panel = document.getElementById(panelId);
     if (!panel) return;
     if (!status) {
         panel.innerHTML = `<div class="empty-state">${escapeHtml(emptyText)}</div>`;

@@ -648,6 +648,25 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".runtime-acceptance", css)
         self.assertIn(".runtime-acceptance-guidance", css)
 
+    def test_research_workbench_reuses_runtime_acceptance_panel(self):
+        html = INDEX_HTML.read_text(encoding="utf-8")
+        js = APP_JS.read_text(encoding="utf-8")
+        select_fn = js[js.index("async function selectResearchWorkspace"):js.index("async function loadResearchTimeline")]
+        timeline_fn = js[js.index("async function loadResearchTimeline"):js.index("function renderResearchTaskTimeline")]
+        recovery_fn = js[js.index("async function recoverResearchTask"):js.index("function startResearchTimelinePolling")]
+        polling_fn = js[js.index("function startResearchTimelinePolling"):js.index("function stopResearchTimelinePolling")]
+
+        self.assertIn('id="research-runtime-status-panel"', html)
+        self.assertIn("交付验收", html)
+        self.assertIn("async function loadResearchRuntimeStatus", js)
+        self.assertIn("/api/workspaces/${workspaceId}/runtime-status", js)
+        self.assertIn("'research-runtime-status-panel'", js)
+        self.assertIn("阶段报告、证据缺口和下一步建议", js)
+        self.assertIn("loadResearchRuntimeStatus(workspaceId)", select_fn)
+        self.assertIn("loadResearchRuntimeStatus(workspaceId)", timeline_fn)
+        self.assertIn("loadResearchRuntimeStatus(currentResearchWorkspace)", recovery_fn)
+        self.assertIn("loadResearchRuntimeStatus(workspaceId)", polling_fn)
+
     def test_v2_stage_board_renders_review_gate_map_from_lineage(self):
         js = APP_JS.read_text(encoding="utf-8")
         css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
