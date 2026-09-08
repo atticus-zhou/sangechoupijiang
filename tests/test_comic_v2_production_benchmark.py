@@ -248,10 +248,45 @@ class ComicV2ProductionBenchmarkTests(unittest.TestCase):
         self.assertEqual(first["department"], "刑部")
         self.assertEqual(first["blocked_stage"], "视觉质检")
         self.assertEqual(first["next_button_label"], "重跑视觉质检")
+        self.assertEqual(audit["image_quality_summary"]["rerun_visual_review_count"], 1)
         self.assertIn("七维评分", "；".join(first["operator_steps"]))
         summary = audit["image_quality_summary"]["rework_action_summary"][0]
         self.assertEqual(summary["action"], "rerun_visual_review")
         self.assertEqual(summary["count"], 1)
+
+    def test_review_issues_block_quality_even_when_scores_are_high(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = fixture_manifest(Path(tmp))
+        image = manifest["images"][0]
+        image["provider"] = "doubao"
+        image["model"] = "seedream"
+        image["review"] = {
+            "status": "pass",
+            "handoff_ready": True,
+            "scores": {
+                "identity_consistency": 92,
+                "style_consistency": 90,
+                "era_media": 95,
+                "spatial_structure": 88,
+                "asset_purity": 93,
+                "anatomy": 86,
+                "purpose_fit": 91,
+            },
+            "issues": ["道具出现现代包装，画风不符"],
+            "recovery_action": "regenerate_images",
+            "rework_label": "按风格和时代重生图片",
+        }
+
+        audit = audit_handoff_manifest(manifest)
+
+        summary = audit["image_quality_summary"]
+        self.assertEqual(summary["failed_images"], 1)
+        self.assertEqual(summary["usable_images"], 6)
+        self.assertEqual(summary["waste_or_rework_images"], 1)
+        self.assertIn(image["image_id"], summary["failed_image_ids"])
+        self.assertEqual(summary["rework_instructions"][0]["action"], "regenerate_images")
+        self.assertIn("现代包装", summary["rework_instructions"][0]["reason"])
+        self.assertFalse(audit["production_quality_verified"])
 
     def test_recommended_recovery_includes_operator_playbook(self):
         with tempfile.TemporaryDirectory() as tmp:

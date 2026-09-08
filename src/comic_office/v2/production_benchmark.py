@@ -636,6 +636,7 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
         review = image.get("review") or {}
         if not isinstance(review, dict) or not review:
             missing_review += 1
+            rerun_review += 1
             failed_image_ids.append(image_id)
             _mark_asset_type_rework(type_bucket, image_id)
             rework_instructions.append({
@@ -661,11 +662,12 @@ def _image_quality_summary(images: list[dict[str, Any]]) -> dict[str, Any]:
         review_status = str(review.get("status") or "").strip().lower()
         handoff_ready = bool(review.get("handoff_ready"))
         score_ready = _review_scores_ready(review) if "scores" in review else handoff_ready
-        if review_status == "pass" and handoff_ready and score_ready:
+        blocking_issues = _blocking_review_issues(review)
+        if review_status == "pass" and handoff_ready and score_ready and not blocking_issues:
             passed += 1
             type_bucket["passed"] += 1
         else:
-            if review_status in {"fail", "failed", "不合格"}:
+            if review_status in {"fail", "failed", "不合格"} or blocking_issues:
                 failed += 1
             else:
                 needs_review += 1
@@ -875,6 +877,17 @@ def _review_scores_ready(review: dict[str, Any]) -> bool:
         return False
 
 
+def _blocking_review_issues(review: dict[str, Any]) -> tuple[str, ...]:
+    raw = review.get("issues") or ()
+    if isinstance(raw, str):
+        values = (raw,)
+    elif isinstance(raw, (list, tuple)):
+        values = tuple(str(item).strip() for item in raw if str(item).strip())
+    else:
+        values = ()
+    return tuple(item for item in values if item != "缺少批准参考图")
+
+
 def _image_rework_playbook(
     action: str,
     *,
@@ -965,6 +978,10 @@ def _image_rework_reason(
     explicit = str(review.get("recovery_reason") or "").strip()
     if explicit:
         return explicit
+    blocking_issues = _blocking_review_issues(review)
+    if blocking_issues:
+        issue_text = "；".join(blocking_issues[:3])
+        return f"视觉质检指出：{issue_text}。需要返工后才能进入 Word 画布。"
     if missing_dimensions:
         return "\u89c6\u89c9\u8d28\u68c0\u7f3a\u5c11\u5fc5\u8981\u7ef4\u5ea6\uff0c\u9700\u8981\u8865\u5b8c\u540e\u624d\u80fd\u5224\u65ad\u662f\u5426\u53ef\u4ee5\u4ea4\u7ed9\u4e0b\u6e38\u3002"
     if failed_dimensions:
