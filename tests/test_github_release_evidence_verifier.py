@@ -213,7 +213,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertEqual(payload["latest_run"]["run_id"], "22")
         self.assertIn("Add office recovery registry", payload["latest_run"]["display_title"])
         self.assertEqual(payload["latest_run"]["status"], "in_progress")
-        self.assertIn("actions?query=branch%3Acodex%2Fcomic-quality-overhaul", payload["public_actions_url"])
+        self.assertIn("actions?query=branch%3Amain", payload["public_actions_url"])
         self.assertTrue(any("could not be verified from public GitHub pages" in item for item in payload["errors"]))
 
     def test_verifier_uses_commit_checks_page_when_api_is_rate_limited_and_head_sha_is_given(self):
@@ -336,10 +336,10 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
             "mode": "github_no_key_release_evidence",
             "verification_source": "github_actions_html_fallback",
             "repo": "atticus-zhou/sangechoupijiang",
-            "branch": "codex/comic-quality-overhaul",
+            "branch": "main",
             "workflow_name": "Release readiness",
             "artifact_name": "no-key-release-evidence",
-            "public_actions_url": "https://github.com/atticus-zhou/sangechoupijiang/actions?query=branch%3Acodex%2Fcomic-quality-overhaul",
+            "public_actions_url": "https://github.com/atticus-zhou/sangechoupijiang/actions?query=branch%3Amain",
             "public_commit_checks_url": "https://github.com/atticus-zhou/sangechoupijiang/commit/4b5eb51/checks",
             "latest_run": {"run_number": 22, "status": "in_progress", "conclusion": None},
             "artifact": {},

@@ -22,7 +22,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_REPO = "atticus-zhou/sangechoupijiang"
-DEFAULT_BRANCH = "codex/comic-quality-overhaul"
+DEFAULT_BRANCH = "main"
 DEFAULT_WORKFLOW = "Release readiness"
 DEFAULT_ARTIFACT = "no-key-release-evidence"
 REPO_ROOT = Path(__file__).resolve().parents[1]
