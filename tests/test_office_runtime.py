@@ -214,6 +214,8 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertIn("刑部：缺少真实模型视觉复核证据", " ".join(acceptance["missing_evidence"]))
         self.assertEqual(acceptance["recovery_action"]["action"], "regenerate_images")
         self.assertIn("真实模型", acceptance["recovery_action"]["description"])
+        self.assertEqual(acceptance["recovery_action"]["target_image_ids"], [])
+        self.assertEqual(acceptance["recovery_action"]["target_image_count"], 0)
         self.assertEqual(acceptance["downloads"]["word_canvas_uri"], f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx")
         self.assertEqual(acceptance["downloads"]["handoff_manifest_uri"], f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json")
         self.assertEqual(acceptance["downloads"]["word_canvas_label"], "下载 Word")
@@ -311,6 +313,12 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertEqual(image_quality["rework_action_summary"][0]["count"], 2)
         self.assertEqual(image_quality["rework_instructions"][0]["image_id"], "img_char_01_three_view")
         self.assertIn("人物身份证", image_quality["rework_instructions"][0]["user_message"])
+        self.assertEqual(acceptance["recovery_action"]["target_image_count"], 2)
+        self.assertEqual(
+            acceptance["recovery_action"]["target_image_ids"],
+            ["img_char_01_three_view", "img_prop_01_turnaround"],
+        )
+        self.assertEqual(acceptance["recovery_action"]["rework_preview"][0]["asset_id"], "char_01")
 
     def test_runtime_status_marks_comic_delivery_ready_only_with_real_quality_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:

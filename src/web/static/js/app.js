@@ -1321,7 +1321,10 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
             <div class="runtime-acceptance-foot">
                 <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；${escapeHtml(claimLabel)}：${escapeHtml(claimValue)}</span>
                 <div>
-                    ${recoveryAction ? `<button class="ghost btn-sm" onclick='recoverComicV2Quality(${JSON.stringify(recoveryAction)}, this)'>${escapeHtml(recovery.label || '按质量问题退回处理')}</button>` : ''}
+                    ${recoveryAction ? `<button class="ghost btn-sm" onclick='recoverComicV2Quality(${JSON.stringify({
+                        action: recoveryAction,
+                        image_ids: Array.isArray(imageQuality.failed_image_ids) ? imageQuality.failed_image_ids : [],
+                    })}, this)'>${escapeHtml(recovery.label || '按质量问题退回处理')}</button>` : ''}
                     ${downloads.word_canvas_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.word_canvas_uri)}" target="_blank">${escapeHtml(wordDownloadLabel)}</a>` : ''}
                     ${downloads.handoff_manifest_uri ? `<a class="ghost btn-sm" href="${escapeHtml(downloads.handoff_manifest_uri)}" target="_blank">${escapeHtml(handoffDownloadLabel)}</a>` : ''}
                 </div>
@@ -2893,20 +2896,27 @@ async function buildComicV2Delivery(button) {
 }
 
 async function recoverComicV2Quality(action, button) {
-    if (action === 'restart_story_review') {
+    const payload = typeof action === 'object' && action
+        ? {
+            action: String(action.action || ''),
+            image_ids: Array.isArray(action.image_ids) ? action.image_ids : [],
+            reason: String(action.reason || ''),
+        }
+        : { action: String(action || '') };
+    if (payload.action === 'restart_story_review') {
         unconfirmComicScript();
         document.getElementById('comic-idea')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         toast('旧交付已保留。请重新确认故事后创建新生产版本。', 'success');
         return null;
     }
     const recovered = await runComicV2Action(button, '按质量基准退回', () =>
-        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/quality/recover`, { action })
+        API.post(`/api/workspaces/${currentComicWorkspace}/comic/v2/quality/recover`, payload)
     );
     if (!recovered) return null;
-    if (action === 'regenerate_prompts') return planComicV2Prompts(null);
-    if (action === 'regenerate_images') return generateComicV2Images(null);
-    if (action === 'rebuild_delivery') return buildComicV2Delivery(null);
-    if (action === 'revise_assets') {
+    if (payload.action === 'regenerate_prompts') return planComicV2Prompts(null);
+    if (payload.action === 'regenerate_images') return generateComicV2Images(null);
+    if (payload.action === 'rebuild_delivery') return buildComicV2Delivery(null);
+    if (payload.action === 'revise_assets') {
         focusComicAssetReview();
         toast('已退回资产审核。写清修改意见后点击“按意见重新拆解”。', 'success');
     }

@@ -469,6 +469,30 @@ def _delivery_recovery_action(benchmark: dict) -> dict:
     if not benchmark:
         return {}
     raw = benchmark.get("recommended_recovery") or {}
+    image_summary = benchmark.get("image_quality_summary") or {}
+    rework_images = int(image_summary.get("waste_or_rework_images") or 0)
+    failed_image_ids = [
+        str(item)
+        for item in (image_summary.get("failed_image_ids") or [])
+        if str(item).strip()
+    ]
+    if not raw and rework_images > 0:
+        raw = {
+            "department": "工部 / 刑部",
+            "action": "regenerate_images",
+            "label": "重生问题图片并复审",
+            "reason_code": "image_quality.rework_required",
+            "description": f"当前有 {rework_images} 张图片未通过制片包质量验收，需要重新生成并复核。",
+            "expected_stage": "image_generation",
+            "preserves": ["confirmed_story", "story_contract", "asset_manifest", "prompt_package"],
+            "clears": ["image_production", "visual_review", "word_canvas", "handoff_manifest"],
+            "operator_steps": [
+                "先查看图片质量卡中的失败图片 ID 和原因。",
+                "重新生成问题图片，保持资产身份证、风格母版和提示词策略不变。",
+                "让刑部重新做视觉质检，确认人物、道具、场景和时代风格一致。",
+                "复核通过后重新生成 Word 制片画布和引用清单。",
+            ],
+        }
     if not raw and benchmark.get("package_quality_ready") is True and benchmark.get("production_quality_verified") is not True:
         raw = {
             "department": "工部 / 刑部",
@@ -489,6 +513,11 @@ def _delivery_recovery_action(benchmark: dict) -> dict:
         return {}
     if not str(raw.get("action") or "").strip():
         return {}
+    rework_instructions = [
+        item
+        for item in (image_summary.get("rework_instructions") or [])
+        if isinstance(item, dict)
+    ]
     return {
         "department": str(raw.get("department") or ""),
         "action": str(raw.get("action") or ""),
@@ -499,6 +528,17 @@ def _delivery_recovery_action(benchmark: dict) -> dict:
         "preserves": [str(item) for item in (raw.get("preserves") or []) if str(item).strip()],
         "clears": [str(item) for item in (raw.get("clears") or []) if str(item).strip()],
         "operator_steps": [str(item) for item in (raw.get("operator_steps") or []) if str(item).strip()],
+        "target_image_ids": failed_image_ids[:12],
+        "target_image_count": len(failed_image_ids),
+        "rework_preview": [
+            {
+                "image_id": str(item.get("image_id") or ""),
+                "asset_id": str(item.get("asset_id") or ""),
+                "shot_id": str(item.get("shot_id") or ""),
+                "reason": str(item.get("reason") or item.get("user_message") or ""),
+            }
+            for item in rework_instructions[:3]
+        ],
     }
 
 

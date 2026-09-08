@@ -436,6 +436,8 @@ class ComicV2VisualOverrideRequest(BaseModel):
 
 class ComicV2QualityRecoveryRequest(BaseModel):
     action: str = ""
+    image_ids: list[str] = Field(default_factory=list)
+    reason: str = ""
 
 
 class BrowserStartRequest(BaseModel):
@@ -4887,6 +4889,19 @@ async def recover_comic_v2_quality_api(workspace_id: str, req: ComicV2QualityRec
     recommended = benchmark.get("recommended_recovery") or {}
     requested_action = str(req.action or "").strip()
     recommended_action = str(recommended.get("action") or "").strip()
+    image_summary = benchmark.get("image_quality_summary") or {}
+    failed_image_ids = [
+        str(item)
+        for item in (image_summary.get("failed_image_ids") or [])
+        if str(item).strip()
+    ]
+    requested_image_ids = [
+        str(item)
+        for item in (req.image_ids or [])
+        if str(item).strip()
+    ]
+    recovery_image_ids = requested_image_ids or failed_image_ids
+    rework_instruction_count = len(image_summary.get("rework_instructions") or [])
     real_quality_upgrade = (
         requested_action == "regenerate_images"
         and benchmark.get("production_quality_verified") is not True
@@ -4946,11 +4961,24 @@ async def recover_comic_v2_quality_api(workspace_id: str, req: ComicV2QualityRec
             "department": recommended.get("department") or recovered.current_agent,
             "stage": recovered.stage,
             "action": action,
+            "requested_image_ids": requested_image_ids,
+            "target_image_ids": recovery_image_ids,
+            "target_image_count": len(recovery_image_ids),
+            "rework_instruction_count": rework_instruction_count,
+            "operator_reason": str(req.reason or ""),
             "reason_code": recommended.get("reason_code", ""),
             "next_action": recovered.next_action,
         },
     )
-    return _comic_v2_state_response(recovered)
+    response = _comic_v2_state_response(recovered)
+    response["recovery_scope"] = {
+        "action": action,
+        "target_image_ids": recovery_image_ids,
+        "target_image_count": len(recovery_image_ids),
+        "rework_instruction_count": rework_instruction_count,
+        "operator_reason": str(req.reason or ""),
+    }
+    return response
 
 
 @app.post("/api/comic/brief")

@@ -336,6 +336,12 @@ class WebComicApiTests(unittest.TestCase):
                     "status": "demo_structure_verified",
                     "package_quality_ready": True,
                     "production_quality_verified": False,
+                    "image_quality_summary": {
+                        "failed_image_ids": ["img_char_01_three_view", "img_prop_01_turnaround"],
+                        "rework_instructions": [
+                            {"image_id": "img_char_01_three_view", "action": "regenerate_images"}
+                        ],
+                    },
                 },
             },
         })
@@ -343,16 +349,28 @@ class WebComicApiTests(unittest.TestCase):
 
         response = self.client.post(
             f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
-            json={"action": "regenerate_images"},
+            json={
+                "action": "regenerate_images",
+                "image_ids": ["img_char_01_three_view"],
+                "reason": "角色脸型漂移，需要只跟踪这张图的返工。",
+            },
         )
 
         self.assertEqual(response.status_code, 200, response.text)
         payload = response.json()
         self.assertEqual(payload["stage"], "image_generation")
+        self.assertEqual(payload["recovery_scope"]["target_image_ids"], ["img_char_01_three_view"])
+        self.assertEqual(payload["recovery_scope"]["target_image_count"], 1)
+        self.assertEqual(payload["recovery_scope"]["rework_instruction_count"], 1)
         self.assertTrue(payload["prompt_package"])
         self.assertFalse(payload["image_production"])
         self.assertFalse(payload["delivery"])
         self.assertTrue(payload["can_generate_images"])
+        task = config_manager.get_task_run(f"comic_v2_{workspace_id}")
+        event = task["events"][-1]
+        self.assertEqual(event["payload"]["target_image_ids"], ["img_char_01_three_view"])
+        self.assertEqual(event["payload"]["requested_image_ids"], ["img_char_01_three_view"])
+        self.assertIn("角色脸型漂移", event["payload"]["operator_reason"])
 
     def test_history_marks_legacy_word_canvas_as_downloadable_but_unverifiable(self):
         task_id = f"hist_legacy_{uuid.uuid4().hex[:8]}"
