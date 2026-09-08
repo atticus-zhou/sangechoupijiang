@@ -261,6 +261,9 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"quick_start={showcase.get('downstream_quick_start_ready_count')}/{showcase.get('downstream_quick_start_count')}; "
                 f"interview_script={showcase.get('interview_script_ready_count')}/{showcase.get('interview_script_count')}; "
                 f"reproducibility={showcase.get('reproducibility_ready_count')}/{showcase.get('reproducibility_count')}; "
+                f"runtime={showcase.get('runtime_acceptance_count')}/"
+                f"no_key={not showcase.get('runtime_acceptance_requires_api_key')}/"
+                f"real_models={showcase.get('runtime_acceptance_calls_real_models')}; "
                 f"badge={showcase.get('release_badge_status')}; "
                 f"mode={parsed.get('mode')}"
             )
