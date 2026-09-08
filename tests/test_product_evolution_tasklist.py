@@ -52,6 +52,8 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         text = Path("docs/PRODUCT_EVOLUTION_TASKLIST.md").read_text(encoding="utf-8")
 
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_office_runtime_acceptance.py --format markdown", text)
+        self.assertIn("交付验收卡", text)
         self.assertIn("first-run、公开演示、AI 漫剧交付物、研究办公室", text)
         self.assertIn("敏感信息扫描", text)
 
@@ -122,6 +124,7 @@ class ProductEvolutionTasklistTests(unittest.TestCase):
         self.assertIn("python scripts/verify_development_checklist.py --format markdown", text)
         self.assertIn("python scripts/verify_development_checklist.py --format markdown --run-tests --require-clean", text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
+        self.assertIn("python scripts/verify_office_runtime_acceptance.py --format markdown", text)
         self.assertIn("python scripts/verify_office_isolation.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_delivery.py --format markdown", text)
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", text)

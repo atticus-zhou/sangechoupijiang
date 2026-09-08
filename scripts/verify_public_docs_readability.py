@@ -53,6 +53,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "下游生产 quick-start",
             "docs/NEW_OFFICE_STARTER_CHECKLIST.md",
             "python scripts/verify_release_readiness.py --format markdown",
+            "python scripts/verify_office_runtime_acceptance.py --format markdown",
             "python scripts/verify_development_checklist.py --format markdown",
             "python scripts/verify_public_docs_readability.py --format markdown",
             "python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase",
@@ -141,6 +142,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "python scripts/export_office_creation_template.py --format markdown",
             "image_quality_summary",
             "future_schema_validators",
+            "verify_office_runtime_acceptance.py",
         ],
     },
     {

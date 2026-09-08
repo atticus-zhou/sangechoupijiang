@@ -65,9 +65,10 @@ python scripts/verify_productization_status.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 python scripts/verify_first_run_readiness.py --format markdown
 python scripts/verify_github_release_evidence.py --format markdown
+python scripts/verify_office_runtime_acceptance.py --format markdown
 ```
 
-这些命令会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力。
+这些命令会检查 Python、配置文件、数据库、输出目录，显示研究办公室和 AI 漫剧制片办公室的可用状态，并列出 AI 漫剧制片办公室的文本、生图、视觉质检等能力。`verify_office_runtime_acceptance.py` 会额外确认两个主办公室都能给出人能看懂的交付验收卡：当前能下载什么、缺什么证据、能不能交给下游、下一步该怎么做。
 
 ## 公开展示与部署边界
 
@@ -283,7 +284,15 @@ GET /api/offices/{office_id}/launch-gates
 GET /api/workspaces/{workspace_id}/runtime-status
 ```
 
-它会展示当前阶段、最近任务、产物完成度、缺失产物、人工审核节点和恢复动作。
+它会展示当前阶段、最近任务、产物完成度、缺失产物、人工审核节点、交付验收、用户下一步和恢复动作。研究办公室和 AI 漫剧制片办公室都必须使用这套运行时验收，而不是各自做一套只在前端好看的状态说明。
+
+离线验证这套运行时验收：
+
+```powershell
+python scripts/verify_office_runtime_acceptance.py --format markdown
+```
+
+它会确认研究办公室的阶段报告能说明“阶段可用但最终结论需补证”，也会确认 AI 漫剧制片办公室在只有固定样例图片时只能声明“结构可交接，真实画质未验证”。
 
 开始真实 AI 漫剧生产前，可以先检查主力办公室是否具备完整生产条件：
 
