@@ -18,6 +18,7 @@ from scripts.verify_comic_v2_production_benchmark import verify_production_bench
 
 DOC_PATH = REPO_ROOT / "docs" / "COMIC_REAL_RUN_EVIDENCE_INTAKE.md"
 INTAKE_OUTPUT_ROOT = REPO_ROOT / "output" / "comic_real_run_evidence_intake"
+DEFAULT_USER_OUTPUT_ROOT = REPO_ROOT / "output" / "workspaces"
 
 REQUIRED_MARKERS = [
     "AI 漫剧真实运行证据收口单",
@@ -65,6 +66,21 @@ EXPECTED_RECOVERY_ACTIONS = [
     "退回兵部",
     "退回礼部",
 ]
+
+
+def find_latest_user_handoff_manifest(output_root: Path = DEFAULT_USER_OUTPUT_ROOT) -> Path | None:
+    """Find the newest real workspace handoff manifest without reading verifier output."""
+    root = Path(output_root)
+    if not root.exists():
+        return None
+    candidates = [
+        path
+        for path in root.rglob("*handoff_manifest.json")
+        if path.is_file()
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: (path.stat().st_mtime, str(path)))
 
 
 def _read_doc() -> tuple[str, str | None]:
@@ -229,10 +245,43 @@ def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, help="Existing comic V2 handoff manifest to audit.")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--manifest", type=Path, help="Existing comic V2 handoff manifest to audit.")
+    source.add_argument(
+        "--latest",
+        action="store_true",
+        help="Audit the newest *_handoff_manifest.json under output/workspaces.",
+    )
+    parser.add_argument(
+        "--latest-output-root",
+        type=Path,
+        default=DEFAULT_USER_OUTPUT_ROOT,
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--format", choices={"json", "markdown"}, default="markdown")
     args = parser.parse_args()
-    payload = verify_real_run_evidence_intake(manifest_path=args.manifest)
+    manifest_path = args.manifest
+    if args.latest:
+        manifest_path = find_latest_user_handoff_manifest(args.latest_output_root)
+        if manifest_path is None:
+            payload = {
+                "status": "failed",
+                "mode": "comic_real_run_evidence_intake",
+                "audit_subject": "latest_user_manifest",
+                "audited_manifest": "",
+                "summary": "No user handoff manifest was found under output/workspaces.",
+                "errors": [
+                    "没有找到真实工作区制片包。请先在 AI 漫剧制片办公室生成 Word 画布，或使用 --manifest 指向具体的 *_handoff_manifest.json。"
+                ],
+            }
+            if args.format == "json":
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
+            else:
+                print(format_markdown(payload))
+            return 1
+    payload = verify_real_run_evidence_intake(manifest_path=manifest_path)
+    if args.latest:
+        payload["audit_subject"] = "latest_user_manifest"
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:

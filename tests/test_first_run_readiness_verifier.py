@@ -253,7 +253,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("can_claim_real_quality=True", result.stdout)
         self.assertIn("production_quality_verified", result.stdout)
         self.assertIn("真实运行证据收口", result.stdout)
-        self.assertIn("python scripts/verify_comic_real_run_evidence_intake.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown", result.stdout)
+        self.assertIn("python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown", result.stdout)
         self.assertIn("Common First-run Failures", result.stdout)
         self.assertIn("missing_dependencies", result.stdout)
         self.assertIn("python -m pip install -r requirements.txt", result.stdout)

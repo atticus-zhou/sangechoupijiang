@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from scripts.verify_comic_v2_delivery import verify_delivery
+from scripts.verify_comic_real_run_evidence_intake import find_latest_user_handoff_manifest
 from src.comic_office.v2.production_benchmark import audit_handoff_manifest
 from src.comic_office.v2.visual_review import REVIEW_DIMENSIONS
 
@@ -123,6 +124,56 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertEqual(payload["visual_evidence_level"], "model_reviewed")
         self.assertEqual(payload["real_model_evidence_requirements"]["status"], "ready")
         self.assertEqual(payload["image_quality_summary"]["waste_or_rework_images"], 0)
+
+    def test_latest_manifest_finder_prefers_newest_workspace_delivery(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old_path = root / "ws_old" / "delivery" / "old_handoff_manifest.json"
+            new_path = root / "ws_new" / "delivery" / "new_handoff_manifest.json"
+            old_path.parent.mkdir(parents=True)
+            new_path.parent.mkdir(parents=True)
+            old_path.write_text("{}", encoding="utf-8")
+            new_path.write_text("{}", encoding="utf-8")
+
+            old_time = 1_700_000_000
+            new_time = 1_800_000_000
+            old_path.touch()
+            new_path.touch()
+            import os
+
+            os.utime(old_path, (old_time, old_time))
+            os.utime(new_path, (new_time, new_time))
+
+            self.assertEqual(find_latest_user_handoff_manifest(root), new_path)
+
+    def test_latest_cli_audits_newest_user_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workspace_delivery = root / "ws_latest" / "delivery"
+            workspace_delivery.mkdir(parents=True)
+            manifest_path = _real_verified_manifest(workspace_delivery)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/verify_comic_real_run_evidence_intake.py",
+                    "--latest",
+                    "--latest-output-root",
+                    str(root),
+                    "--format",
+                    "json",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["audit_subject"], "latest_user_manifest")
+        self.assertEqual(payload["audited_manifest"], str(manifest_path))
+        self.assertEqual(payload["claim_level"], "real_quality_verified")
+        self.assertTrue(payload["handoff_allowed"])
 
 
 if __name__ == "__main__":

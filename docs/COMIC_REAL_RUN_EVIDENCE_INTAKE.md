@@ -17,8 +17,11 @@
 真实产物检查命令：
 
 ```bash
+python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
+
+优先使用 `--latest`。它会自动从 `output/workspaces/` 中寻找最新的 `*_handoff_manifest.json`，避开验证脚本自己生成的临时审计目录。只有你要审计某个旧项目、备份目录或外部交付包时，才需要手动使用 `--manifest` 指向具体文件。
 
 这条命令不调用模型，只读取已经生成的 `handoff_manifest.json`、它引用的 Word 画布和清单里的图片/质检记录。它会同时跑生产质量基准、公开声明边界和下游交接验收，并输出：当前是 `real_quality_verified`、`demo_structure_only` 还是 `needs_review`；缺的是模型证据、图片证据、七维视觉质检、提示词谱系，还是 Word/manifest/trace 对不上。
 
@@ -85,12 +88,12 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 如果真实运行结束后不确定卡在哪里，先运行：
 
 ```bash
+python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown
 python scripts/verify_comic_v2_downstream_handoff.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 python scripts/verify_comic_real_production_claim.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
-python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
 
-第一条看下游能不能接手，第二条看对外能怎么说，第三条把真实运行证据做总收口。三条都不读取 API Key、不调用真实模型，只审计已经落盘的交付物。
+第一条自动找到最新真实工作区制片包并做总收口。如果你需要进一步分项排查，再把它输出里的 `Audited manifest` 路径复制给后两条：第二条看下游能不能接手，第三条看对外能怎么说。三条都不读取 API Key、不调用真实模型，只审计已经落盘的交付物。
 
 ## 对外声明规则
 
@@ -104,4 +107,4 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - `downstream_handoff_decision.status=ready_for_downstream` 且 `handoff_allowed=true`。
 - `python scripts/verify_comic_real_run_evidence_intake.py --format markdown`、`python scripts/verify_comic_real_production_claim.py --format markdown`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_release_readiness.py --format markdown` 全部通过。
 
-对于真实项目，必须把 `--manifest output/你的项目/xxx_handoff_manifest.json` 加到前三条制片包检查命令上；不带 `--manifest` 时检查的是公开无 Key 固定样例，只能证明结构演示没有坏。
+对于真实项目，优先使用 `--latest`；如果要复核指定旧项目，再把 `--manifest output/你的项目/xxx_handoff_manifest.json` 加到制片包检查命令上。不带 `--latest`、也不带 `--manifest` 时，检查的是公开无 Key 固定样例，只能证明结构演示没有坏。

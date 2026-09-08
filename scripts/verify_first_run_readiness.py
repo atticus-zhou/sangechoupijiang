@@ -49,7 +49,7 @@ PRODUCTION_BENCHMARK_COMMAND = (
 )
 REAL_RUN_INTAKE_COMMAND = (
     "python scripts/verify_comic_real_run_evidence_intake.py "
-    "--manifest output/your_project/xxx_handoff_manifest.json --format markdown"
+    "--latest --format markdown"
 )
 MODEL_CAPABILITY_MATRIX = REPO_ROOT / "docs" / "MODEL_CAPABILITY_MATRIX.json"
 
