@@ -4690,6 +4690,7 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                         ${actions.map(action => `
                             <div class="history-delivery-action-card">
                                 ${renderRecoveryPlaybook(action)}
+                                ${renderHistoryRecoveryScope(action)}
                                 <button class="ghost btn-sm" onclick="runHistoryRecoveryAction('${escapeJsAttr(action)}')">
                                     ${escapeHtml(action.label || '继续处理')}
                                 </button>
@@ -4703,6 +4704,20 @@ function renderHistoryDeliverySummary(summary, compact = false) {
                 <small>可下载：${escapeHtml(files.length ? files.join('、') : '暂无')}</small>
                 <small>缺失项：${escapeHtml(missing.length ? missing.join('、') : '无')}</small>
             `}
+        </div>
+    `;
+}
+
+function renderHistoryRecoveryScope(action) {
+    if (!action || typeof action !== 'object') return '';
+    const imageIds = Array.isArray(action.target_image_ids) ? action.target_image_ids : [];
+    const count = Number(action.target_image_count || imageIds.length || 0);
+    if (!count) return '';
+    return `
+        <div class="history-recovery-scope">
+            <b>本次恢复范围</b>
+            <span>${escapeHtml(String(count))} 张问题图片</span>
+            <div>${imageIds.slice(0, 6).map(id => `<code>${escapeHtml(id)}</code>`).join('')}</div>
         </div>
     `;
 }

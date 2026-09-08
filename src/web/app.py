@@ -8409,13 +8409,14 @@ def _history_delivery_summary(enriched: dict) -> dict:
     recovery_actions = []
     benchmark_recovery = quality_benchmark.get("recommended_recovery") or {}
     benchmark_action = str(benchmark_recovery.get("action") or "")
+    failed_image_ids = list(image_evidence.get("failed_image_ids") or [])
     image_evidence_recovery = _comic_v2_image_evidence_recovery_action(image_evidence, prompt_count)
     if workspace_id and not legacy_package and not benchmark_action and image_evidence_recovery:
         recovery_actions.append({
             "label": image_evidence_recovery["label"],
             "method": "POST",
             "path": f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
-            "body": {"action": image_evidence_recovery["action"]},
+            "body": _comic_v2_recovery_body(image_evidence_recovery["action"], failed_image_ids),
             "workspace_id": workspace_id,
             "office_id": enriched.get("office_id") or "comic_production",
             "focus": image_evidence_recovery["focus"],
@@ -8424,6 +8425,8 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "clears": image_evidence_recovery["clears"],
             "operator_steps": image_evidence_recovery["operator_steps"],
             "description": image_evidence_recovery["description"],
+            "target_image_ids": failed_image_ids,
+            "target_image_count": len(failed_image_ids),
         })
     if workspace_id and not legacy_package and not benchmark_ready and benchmark_action in {
         "revise_assets",
@@ -8435,7 +8438,7 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "label": benchmark_recovery.get("label") or "按质量问题退回处理",
             "method": "POST",
             "path": f"/api/workspaces/{workspace_id}/comic/v2/quality/recover",
-            "body": {"action": benchmark_action},
+            "body": _comic_v2_recovery_body(benchmark_action, failed_image_ids),
             "workspace_id": workspace_id,
             "office_id": enriched.get("office_id") or "",
             "focus": benchmark_recovery.get("focus") or "workspace",
@@ -8444,6 +8447,8 @@ def _history_delivery_summary(enriched: dict) -> dict:
             "clears": benchmark_recovery.get("clears") or [],
             "operator_steps": benchmark_recovery.get("operator_steps") or [],
             "description": benchmark_recovery.get("description") or "",
+            "target_image_ids": failed_image_ids,
+            "target_image_count": len(failed_image_ids),
         })
     elif workspace_id and not legacy_package and "制片包质量基准" in missing_items and not quality_benchmark:
         recovery_actions.append(_comic_v2_history_recovery_action(
@@ -8520,6 +8525,14 @@ def _history_delivery_summary(enriched: dict) -> dict:
         "next_action": next_action,
         "recovery_actions": recovery_actions,
     }
+
+
+def _comic_v2_recovery_body(action: str, image_ids: list[str] | None = None) -> dict:
+    body = {"action": action}
+    cleaned = [str(item) for item in (image_ids or []) if str(item).strip()]
+    if cleaned:
+        body["image_ids"] = cleaned
+    return body
 
 
 def _enrich_history_item(item: dict) -> dict:

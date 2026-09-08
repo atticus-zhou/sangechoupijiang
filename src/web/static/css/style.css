@@ -2655,6 +2655,32 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
 .runtime-image-quality-list p {
     margin: 0;
 }
+.history-recovery-scope {
+    display: grid;
+    gap: 7px;
+    padding: 10px;
+    border: 1px solid rgba(210, 153, 34, 0.22);
+    border-radius: 10px;
+    background: rgba(210, 153, 34, 0.06);
+}
+.history-recovery-scope b {
+    color: var(--text);
+    font-size: 13px;
+}
+.history-recovery-scope span {
+    color: var(--text2);
+}
+.history-recovery-scope div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.history-recovery-scope code {
+    padding: 3px 7px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--text2);
+}
 .runtime-acceptance-foot > div {
     display: flex;
     flex-wrap: wrap;

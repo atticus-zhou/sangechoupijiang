@@ -1508,6 +1508,106 @@ class WebComicApiTests(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_history_quality_recovery_preserves_failed_image_scope(self):
+        task_id = f"hist_v2_img_scope_{str(uuid.uuid4())[:8]}"
+        workspace_id = f"ws_hist_v2_img_scope_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        failed_ids = ["img_char_01_three_view", "img_prop_01_turnaround"]
+        quality_benchmark = {
+            "status": "needs_review",
+            "package_quality_ready": False,
+            "production_quality_verified": False,
+            "package_quality_score": 71,
+            "summary": "图片质量没有通过。",
+            "image_quality_summary": {
+                "total_images": 5,
+                "usable_images": 3,
+                "waste_or_rework_images": 2,
+                "waste_or_rework_rate": 0.4,
+                "failed_image_ids": failed_ids,
+                "rework_instructions": [
+                    {
+                        "image_id": failed_ids[0],
+                        "asset_id": "char_01",
+                        "reason": "人物脸型漂移。",
+                        "action": "regenerate_images",
+                    }
+                ],
+            },
+            "recommended_recovery": {
+                "department": "工部 / 刑部",
+                "action": "regenerate_images",
+                "focus": "quality_images",
+                "label": "重生问题图片并复审",
+                "description": "只处理质量基准指出的问题图片。",
+                "expected_stage": "image_generation",
+                "preserves": ["confirmed_story", "asset_manifest", "prompt_package"],
+                "clears": ["image_production", "visual_review", "word_canvas"],
+                "operator_steps": ["重生失败图片", "重跑视觉质检", "刷新 Word 画布"],
+            },
+        }
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="V2 Image Scope Recovery",
+            brief="history scoped recovery",
+        )
+        config_manager.save_task_record(
+            task_id,
+            "build scoped V2 delivery",
+            "",
+            "completed",
+            {"final_report": "V2 delivery needs image repair"},
+        )
+        config_manager.create_task_run(task_id, "build scoped V2 delivery", "comic_production")
+        config_manager.update_task_run(
+            task_id,
+            "completed",
+            current_phase="ready_for_handoff",
+            result={"final_report": "V2 delivery needs image repair"},
+            completed=True,
+        )
+        config_manager.create_artifact(
+            artifact_id=f"art_{task_id}_word_scope",
+            workspace_id=workspace_id,
+            task_id=task_id,
+            artifact_type="comic_v2_word_canvas",
+            title="V2 Word Canvas With Failed Images",
+            uri=f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx",
+            content="needs image recovery",
+            metadata={
+                "office_id": "comic_production",
+                "story_id": "story_scope",
+                "story_version": 1,
+                "style_id": "style_scope",
+                "style_version": 1,
+                "manifest_version": 1,
+                "quality_benchmark": quality_benchmark,
+            },
+            created_by="libu",
+        )
+
+        try:
+            response = self.client.get("/api/tasks/history?limit=20")
+            self.assertEqual(response.status_code, 200)
+            row = next(item for item in response.json()["history"] if item["task_id"] == task_id)
+            summary = row["delivery_summary"]
+            actions = summary["recovery_actions"]
+            scoped = next(action for action in actions if action["focus"] == "quality_images")
+
+            self.assertEqual(scoped["path"], f"/api/workspaces/{workspace_id}/comic/v2/quality/recover")
+            self.assertEqual(scoped["body"], {"action": "regenerate_images", "image_ids": failed_ids})
+            self.assertEqual(scoped["target_image_ids"], failed_ids)
+            self.assertEqual(scoped["target_image_count"], 2)
+            self.assertIn("问题图片", scoped["label"])
+        finally:
+            conn = sqlite3.connect("user_data/config.db")
+            conn.execute("DELETE FROM task_history WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_runs WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM task_events WHERE task_id=?", (task_id,))
+            conn.commit()
+            conn.close()
+
     def test_delivery_download_errors_are_actionable(self):
         workspace_id = f"ws_delivery_err_{str(uuid.uuid4())[:8]}"
         self.created_workspaces.append(workspace_id)

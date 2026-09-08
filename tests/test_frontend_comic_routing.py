@@ -806,6 +806,19 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".runtime-image-quality", css)
         self.assertIn(".runtime-image-quality-list", css)
 
+    def test_history_recovery_renders_failed_image_scope(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        summary_fn = js[js.index("function renderHistoryDeliverySummary"):js.index("async function runHistoryRecoveryAction")]
+
+        self.assertIn("renderHistoryRecoveryScope(action)", summary_fn)
+        self.assertIn("function renderHistoryRecoveryScope", js)
+        self.assertIn("target_image_ids", js)
+        self.assertIn("target_image_count", js)
+        self.assertIn("本次恢复范围", js)
+        self.assertIn("张问题图片", js)
+        self.assertIn(".history-recovery-scope", css)
+
     def test_v2_stage_board_renders_prompt_quality_gate(self):
         js = APP_JS.read_text(encoding="utf-8")
         css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
