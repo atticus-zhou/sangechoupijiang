@@ -791,6 +791,21 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("status.delivery?.quality_benchmark", js)
         self.assertIn("制片包 ${Number(benchmark.package_quality_score || 0)}/100", js)
 
+    def test_runtime_acceptance_renders_image_quality_rework_cards(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
+        acceptance_fn = js[js.index("function renderRuntimeDeliveryAcceptance"):js.index("function runtimeAcceptanceUserGuidance")]
+
+        self.assertIn("renderRuntimeImageQuality(imageQuality)", acceptance_fn)
+        self.assertIn("function renderRuntimeImageQuality", js)
+        self.assertIn("failed_image_ids", js)
+        self.assertIn("rework_instructions", js)
+        self.assertIn("rework_action_summary", js)
+        self.assertIn("图片质量", js)
+        self.assertIn("废片率", js)
+        self.assertIn(".runtime-image-quality", css)
+        self.assertIn(".runtime-image-quality-list", css)
+
     def test_v2_stage_board_renders_prompt_quality_gate(self):
         js = APP_JS.read_text(encoding="utf-8")
         css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")

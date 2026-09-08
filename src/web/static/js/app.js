@@ -1274,6 +1274,7 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
     const downloads = acceptance.downloads || {};
     const recovery = acceptance.recovery_action || {};
     const recoveryAction = String(recovery.action || '');
+    const imageQuality = acceptance.image_quality_summary || {};
     const statusLabel = acceptance.can_handoff_to_downstream
         ? '可交给下游'
         : (acceptance.status === 'structure_ready_needs_real_quality' ? '结构可交接' : '需继续补齐');
@@ -1316,6 +1317,7 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
                     <p>${escapeHtml(userGuidance.system)}</p>
                 </div>
             </div>
+            ${renderRuntimeImageQuality(imageQuality)}
             <div class="runtime-acceptance-foot">
                 <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；${escapeHtml(claimLabel)}：${escapeHtml(claimValue)}</span>
                 <div>
@@ -1327,6 +1329,44 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
             ${recoveryAction ? renderRecoveryPlaybook(recovery) : ''}
             ${acceptance.next_action ? `<p class="runtime-acceptance-next">${escapeHtml(acceptance.next_action)}</p>` : ''}
         </section>
+    `;
+}
+
+function renderRuntimeImageQuality(imageQuality) {
+    if (!imageQuality || !Number(imageQuality.total_images || 0)) return '';
+    const total = Number(imageQuality.total_images || 0);
+    const usable = Number(imageQuality.usable_images || 0);
+    const rework = Number(imageQuality.waste_or_rework_images || 0);
+    const ids = Array.isArray(imageQuality.failed_image_ids) ? imageQuality.failed_image_ids.slice(0, 8) : [];
+    const instructions = Array.isArray(imageQuality.rework_instructions) ? imageQuality.rework_instructions.slice(0, 3) : [];
+    const actionSummary = Array.isArray(imageQuality.rework_action_summary) ? imageQuality.rework_action_summary : [];
+    const rate = Number(imageQuality.waste_or_rework_rate || 0);
+    return `
+        <div class="runtime-image-quality">
+            <div class="runtime-image-quality-head">
+                <b>图片质量</b>
+                <span>${escapeHtml(String(usable))}/${escapeHtml(String(total))} 可用 · ${escapeHtml(String(rework))} 张需返工 · 废片率 ${escapeHtml(String(Math.round(rate * 100)))}%</span>
+            </div>
+            ${ids.length ? `<div class="runtime-image-quality-ids">${ids.map(id => `<code>${escapeHtml(id)}</code>`).join('')}</div>` : ''}
+            ${actionSummary.length ? `
+                <div class="runtime-image-quality-actions">
+                    ${actionSummary.map(item => `
+                        <span>${escapeHtml(item.label || item.action || '返工动作')}：${escapeHtml(String(item.count || 0))}</span>
+                    `).join('')}
+                </div>
+            ` : ''}
+            ${instructions.length ? `
+                <div class="runtime-image-quality-list">
+                    ${instructions.map(item => `
+                        <article>
+                            <strong>${escapeHtml(item.label || item.next_button_label || '处理这张图')}</strong>
+                            <span>${escapeHtml(item.image_id || item.asset_id || item.shot_id || '')} · ${escapeHtml(item.department || '')}</span>
+                            <p>${escapeHtml(item.user_message || item.reason || '这张图还不能进入最终画布。')}</p>
+                        </article>
+                    `).join('')}
+                </div>
+            ` : ''}
+        </div>
     `;
 }
 

@@ -2599,6 +2599,62 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     color: var(--text2);
     line-height: 1.55;
 }
+.runtime-image-quality {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid rgba(210, 153, 34, 0.24);
+    border-radius: 12px;
+    background: rgba(210, 153, 34, 0.06);
+}
+.runtime-image-quality-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+.runtime-image-quality-head b {
+    color: var(--text);
+    font-size: 13px;
+}
+.runtime-image-quality-head span,
+.runtime-image-quality-list span,
+.runtime-image-quality-list p,
+.runtime-image-quality-actions span {
+    color: var(--text2);
+    line-height: 1.5;
+}
+.runtime-image-quality-ids,
+.runtime-image-quality-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+.runtime-image-quality-ids code,
+.runtime-image-quality-actions span {
+    padding: 4px 8px;
+    border: 1px solid rgba(210, 153, 34, 0.22);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.4);
+}
+.runtime-image-quality-list {
+    display: grid;
+    gap: 8px;
+}
+.runtime-image-quality-list article {
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid rgba(248, 81, 73, 0.22);
+    border-radius: 10px;
+    background: rgba(248, 81, 73, 0.06);
+}
+.runtime-image-quality-list strong {
+    color: var(--text);
+    font-size: 13px;
+}
+.runtime-image-quality-list p {
+    margin: 0;
+}
 .runtime-acceptance-foot > div {
     display: flex;
     flex-wrap: wrap;

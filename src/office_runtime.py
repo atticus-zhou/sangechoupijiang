@@ -247,6 +247,21 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
     total_images = int(image_summary.get("total_images") or 0)
     usable_images = int(image_summary.get("usable_images") or 0)
     rework_images = int(image_summary.get("waste_or_rework_images") or 0)
+    failed_image_ids = [
+        str(item)
+        for item in (image_summary.get("failed_image_ids") or [])
+        if str(item).strip()
+    ]
+    rework_instructions = [
+        item
+        for item in (image_summary.get("rework_instructions") or [])
+        if isinstance(item, dict)
+    ]
+    rework_action_summary = [
+        item
+        for item in (image_summary.get("rework_action_summary") or [])
+        if isinstance(item, dict)
+    ]
     images_ready = total_images > 0 and usable_images >= total_images and rework_images == 0
 
     if has_word and has_handoff and package_ready and real_quality:
@@ -318,6 +333,33 @@ def _delivery_acceptance(office_id: str, artifacts: list[dict]) -> dict:
             "total_images": total_images,
             "usable_images": usable_images,
             "waste_or_rework_images": rework_images,
+            "waste_or_rework_rate": float(image_summary.get("waste_or_rework_rate") or 0),
+            "failed_image_ids": failed_image_ids,
+            "rework_instructions": [
+                {
+                    "image_id": str(item.get("image_id") or ""),
+                    "asset_id": str(item.get("asset_id") or ""),
+                    "shot_id": str(item.get("shot_id") or ""),
+                    "department": str(item.get("department") or ""),
+                    "blocked_stage": str(item.get("blocked_stage") or ""),
+                    "priority": str(item.get("priority") or ""),
+                    "action": str(item.get("action") or ""),
+                    "label": str(item.get("label") or item.get("next_button_label") or ""),
+                    "reason": str(item.get("reason") or ""),
+                    "user_message": str(item.get("user_message") or ""),
+                    "next_button_label": str(item.get("next_button_label") or ""),
+                }
+                for item in rework_instructions[:6]
+            ],
+            "rework_action_summary": [
+                {
+                    "action": str(item.get("action") or ""),
+                    "label": str(item.get("label") or ""),
+                    "count": int(item.get("count") or 0),
+                    "department": str(item.get("department") or ""),
+                }
+                for item in rework_action_summary[:6]
+            ],
         },
         "quality_claim_label": "真实质量声明",
         "quality_claim_value": "可以" if real_quality else "不可以",

@@ -178,6 +178,9 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
                     "total_images": 7,
                     "usable_images": 7,
                     "waste_or_rework_images": 0,
+                    "waste_or_rework_rate": 0,
+                    "failed_image_ids": [],
+                    "rework_instructions": [],
                 },
             }
             manager.create_artifact(
@@ -215,6 +218,8 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         self.assertEqual(acceptance["downloads"]["handoff_manifest_uri"], f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json")
         self.assertEqual(acceptance["downloads"]["word_canvas_label"], "下载 Word")
         self.assertEqual(acceptance["downloads"]["handoff_manifest_label"], "下载引用清单")
+        self.assertEqual(acceptance["image_quality_summary"]["failed_image_ids"], [])
+        self.assertEqual(acceptance["image_quality_summary"]["rework_instructions"], [])
         self.assertEqual(
             [item["id"] for item in acceptance["acceptance_items"]],
             [
@@ -228,6 +233,84 @@ class OfficeRuntimeStatusTests(unittest.TestCase):
         )
         real_claim = next(item for item in acceptance["acceptance_items"] if item["id"] == "real_quality_claim")
         self.assertFalse(real_claim["passed"])
+
+    def test_runtime_status_exposes_failed_image_rework_cards_for_humans(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ConfigManager(base_dir=tmp)
+            workspace_id = "ws-image-rework-cards"
+            manager.create_workspace(
+                workspace_id=workspace_id,
+                office_id="comic_production",
+                title="Image rework comic",
+            )
+            benchmark = {
+                "package_quality_ready": False,
+                "production_quality_verified": False,
+                "package_quality_score": 72,
+                "visual_evidence_level": "model_reviewed",
+                "prompt_quality_summary": {"status": "ready", "issue_count": 0},
+                "image_quality_summary": {
+                    "total_images": 5,
+                    "usable_images": 3,
+                    "waste_or_rework_images": 2,
+                    "waste_or_rework_rate": 0.4,
+                    "failed_image_ids": ["img_char_01_three_view", "img_prop_01_turnaround"],
+                    "rework_action_summary": [
+                        {
+                            "action": "regenerate_images",
+                            "label": "重新生成图片",
+                            "count": 2,
+                            "department": "工部 / 刑部",
+                        }
+                    ],
+                    "rework_instructions": [
+                        {
+                            "image_id": "img_char_01_three_view",
+                            "asset_id": "char_01",
+                            "department": "工部 / 刑部",
+                            "blocked_stage": "视觉质检",
+                            "priority": "P0",
+                            "action": "regenerate_images",
+                            "label": "重生角色三视图",
+                            "reason": "人物脸型漂移，服装不一致。",
+                            "user_message": "这张人物身份证不能作为后续一致性参考。",
+                            "next_button_label": "重新生成图片",
+                        }
+                    ],
+                },
+            }
+            manager.create_artifact(
+                artifact_id="art-image-rework-word",
+                workspace_id=workspace_id,
+                task_id="task-image-rework",
+                artifact_type="comic_v2_word_canvas",
+                title="Word 制片画布",
+                uri=f"/api/workspaces/{workspace_id}/files/delivery/canvas.docx",
+                metadata={"office_id": "comic_production", "quality_benchmark": benchmark},
+                created_by="libu",
+            )
+            manager.create_artifact(
+                artifact_id="art-image-rework-manifest",
+                workspace_id=workspace_id,
+                task_id="task-image-rework",
+                artifact_type="comic_v2_handoff_manifest",
+                title="V2 制片引用清单",
+                uri=f"/api/workspaces/{workspace_id}/files/delivery/handoff_manifest.json",
+                metadata={"office_id": "comic_production", "quality_benchmark": benchmark},
+                created_by="libu",
+            )
+
+            status = build_office_runtime_status(manager, workspace_id)
+
+        acceptance = status["delivery_acceptance"]
+        self.assertEqual(acceptance["status"], "needs_rework")
+        self.assertIn("2 张图片需要返工", " ".join(acceptance["missing_evidence"]))
+        image_quality = acceptance["image_quality_summary"]
+        self.assertEqual(image_quality["failed_image_ids"], ["img_char_01_three_view", "img_prop_01_turnaround"])
+        self.assertEqual(image_quality["rework_action_summary"][0]["label"], "重新生成图片")
+        self.assertEqual(image_quality["rework_action_summary"][0]["count"], 2)
+        self.assertEqual(image_quality["rework_instructions"][0]["image_id"], "img_char_01_three_view")
+        self.assertIn("人物身份证", image_quality["rework_instructions"][0]["user_message"])
 
     def test_runtime_status_marks_comic_delivery_ready_only_with_real_quality_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:
