@@ -126,6 +126,11 @@ def normalize_visual_review(
             scores[dimension] = score
     failed = [dimension for dimension, score in scores.items() if score < minimum_score]
     issues = _string_tuple(payload.get("issues") if isinstance(payload, dict) else ())
+    blocking_issues = _blocking_visual_issues(issues)
+    issue_failed = _issue_failed_dimensions(issues, request)
+    for dimension in issue_failed:
+        if dimension not in failed:
+            failed.append(dimension)
     evidence = _string_tuple(payload.get("evidence") if isinstance(payload, dict) else ())
     revision_prompt = str(payload.get("revision_prompt") or "").strip() if isinstance(payload, dict) else ""
     reference_count = len(request.reference_images) + (1 if request.previous_accepted_image else 0)
@@ -144,7 +149,7 @@ def normalize_visual_review(
     )
 
     declared_status = str(payload.get("status") or "needs_review").strip().lower() if isinstance(payload, dict) else "needs_review"
-    if failed or declared_status in {"fail", "failed", "不合格"}:
+    if failed or blocking_issues or declared_status in {"fail", "failed", "不合格"}:
         status = "fail"
     elif missing or not request.reference_images or declared_status not in {"pass", "passed", "ok", "通过"}:
         status = "needs_review"
@@ -260,6 +265,33 @@ def _review_recovery(
     }
 
 
+def _issue_failed_dimensions(issues: tuple[str, ...], request: VisualReviewRequest) -> tuple[str, ...]:
+    human_reported_issues = _blocking_visual_issues(issues)
+    text = "；".join(human_reported_issues)
+    if not text:
+        return ()
+    failed: list[str] = []
+    rules = (
+        ("identity_consistency", ("身份", "脸型", "发型", "服装", "年龄", "角色不一致", "人物不一致")),
+        ("style_consistency", ("画风", "风格", "质感", "媒介", "不符", "跑偏")),
+        ("era_media", ("现代", "时代", "古风", "科幻", "塑料", "包装", "车辆", "手机", "电线")),
+        ("spatial_structure", ("空间", "结构", "布局", "入口", "出口", "俯视", "广角", "机位")),
+        ("asset_purity", ("白底", "背景", "剧情场景", "人物手持", "多余人物", "入镜", "文字", "标签", "水印")),
+        ("anatomy", ("肢体", "手指", "手臂", "畸形", "变形", "脸崩")),
+        ("purpose_fit", ("用途", "不符合", "不是", "缺少", "多出", "无关")),
+    )
+    for dimension, keywords in rules:
+        if any(keyword in text for keyword in keywords):
+            failed.append(dimension)
+    if request.clean_background_required and any(keyword in text for keyword in ("背景", "场景", "人物手持", "入镜")):
+        failed.append("asset_purity")
+    return _unique_tuple(failed)
+
+
+def _blocking_visual_issues(issues: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(issue for issue in issues if issue != "缺少批准参考图")
+
+
 def _score(value: Any) -> int | None:
     try:
         score = int(float(value))
@@ -280,3 +312,7 @@ def _string_tuple(value: Any) -> tuple[str, ...]:
 
 def _append_unique(values: tuple[str, ...], value: str) -> tuple[str, ...]:
     return values if value in values else values + (value,)
+
+
+def _unique_tuple(values: list[str] | tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(value for value in values if value))

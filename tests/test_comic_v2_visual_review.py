@@ -195,6 +195,46 @@ class ComicV2VisualReviewTests(unittest.TestCase):
         self.assertEqual(result.rework_label, "重跑视觉质检")
         self.assertIn("完整七维评分", "；".join(result.operator_steps))
 
+    def test_reported_issue_blocks_handoff_even_when_scores_are_high(self):
+        request = build_visual_review_request(
+            "prop.png",
+            ["prop-reference.png"],
+            visual_bible_summary="架空古代，古风道具，禁止现代包装",
+            acceptance_criteria=["道具必须是古风材质", "纯白干净背景"],
+            production_role="clean_prop_turnaround_reference",
+            clean_background_required=True,
+        )
+        payload = review_payload()
+        payload["issues"] = ["道具出现现代塑料包装，且背景像剧情现场"]
+
+        result = normalize_visual_review(payload, request)
+
+        self.assertEqual(result.status, "fail")
+        self.assertFalse(result.handoff_ready)
+        self.assertIn("era_media", result.failed_dimensions)
+        self.assertIn("asset_purity", result.failed_dimensions)
+        self.assertEqual(result.recovery_action, "regenerate_images")
+        self.assertEqual(result.rework_label, "按风格和时代重生图片")
+
+    def test_style_issue_blocks_handoff_even_without_low_score(self):
+        request = build_visual_review_request(
+            "character.png",
+            ["character-reference.png"],
+            visual_bible_summary="电影级国风厚涂动画",
+            acceptance_criteria=["画风必须统一"],
+            production_role="clean_character_expression_library",
+            clean_background_required=True,
+        )
+        payload = review_payload()
+        payload["issues"] = ["画风变成现代写实照片，和风格母版不符"]
+
+        result = normalize_visual_review(payload, request)
+
+        self.assertEqual(result.status, "fail")
+        self.assertIn("style_consistency", result.failed_dimensions)
+        self.assertIn("era_media", result.failed_dimensions)
+        self.assertFalse(result.handoff_ready)
+
 
 if __name__ == "__main__":
     unittest.main()
