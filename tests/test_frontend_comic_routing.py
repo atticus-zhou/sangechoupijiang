@@ -620,7 +620,12 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("downloadable_artifacts", js)
         self.assertIn("delivery_acceptance", js)
         self.assertIn("function renderRuntimeDeliveryAcceptance", js)
+        self.assertIn("function runtimeAcceptanceUserGuidance", js)
         self.assertIn("交付验收", js)
+        self.assertIn("现在你可以做什么", js)
+        self.assertIn("系统会怎么处理", js)
+        self.assertIn("可以先看结构和 Word 画布", js)
+        self.assertIn("需要继续补截图和平台证据", js)
         self.assertIn("真实质量声明", js)
         self.assertIn("acceptance.quality_claim_label", js)
         self.assertIn("acceptance.quality_claim_value", js)
@@ -641,6 +646,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".runtime-status-panel", css)
         self.assertIn(".runtime-downloads", css)
         self.assertIn(".runtime-acceptance", css)
+        self.assertIn(".runtime-acceptance-guidance", css)
 
     def test_v2_stage_board_renders_review_gate_map_from_lineage(self):
         js = APP_JS.read_text(encoding="utf-8")
@@ -735,7 +741,8 @@ class FrontendComicRoutingTests(unittest.TestCase):
     def test_index_uses_fresh_comic_v2_script_cache_key(self):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=comic-runtime-acceptance-20260908", html)
+        self.assertIn("/static/js/app.js?v=runtime-guidance-20260908", html)
+        self.assertIn("/static/css/style.css?v=runtime-guidance-20260908", html)
         self.assertNotIn("comic-confirm-feedback-20260610", html)
 
     def test_empty_artifact_board_still_renders_v2_stage_actions(self):

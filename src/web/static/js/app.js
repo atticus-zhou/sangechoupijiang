@@ -1255,6 +1255,7 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
     const claimValue = acceptance.quality_claim_value || (acceptance.can_claim_real_quality ? '可以' : '不可以');
     const wordDownloadLabel = downloads.word_canvas_label || '下载 Word';
     const handoffDownloadLabel = downloads.handoff_manifest_label || '下载引用清单';
+    const userGuidance = runtimeAcceptanceUserGuidance(acceptance);
     return `
         <section class="runtime-acceptance runtime-acceptance-${escapeHtml(acceptance.status)}">
             <div class="runtime-acceptance-head">
@@ -1279,6 +1280,16 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
                     ${missing.slice(0, 5).map(item => `<p>${escapeHtml(item)}</p>`).join('')}
                 </div>
             ` : ''}
+            <div class="runtime-acceptance-guidance">
+                <div>
+                    <b>现在你可以做什么</b>
+                    <p>${escapeHtml(userGuidance.primary)}</p>
+                </div>
+                <div>
+                    <b>系统会怎么处理</b>
+                    <p>${escapeHtml(userGuidance.system)}</p>
+                </div>
+            </div>
             <div class="runtime-acceptance-foot">
                 <span>质量分 ${escapeHtml(String(acceptance.quality_score || 0))}；${escapeHtml(claimLabel)}：${escapeHtml(claimValue)}</span>
                 <div>
@@ -1291,6 +1302,38 @@ function renderRuntimeDeliveryAcceptance(acceptance) {
             ${acceptance.next_action ? `<p class="runtime-acceptance-next">${escapeHtml(acceptance.next_action)}</p>` : ''}
         </section>
     `;
+}
+
+function runtimeAcceptanceUserGuidance(acceptance) {
+    const status = acceptance.status || '';
+    if (status === 'ready_for_downstream') {
+        return {
+            primary: '可以下载交付文件，交给下游工具或团队继续生产。',
+            system: '系统已经把最终文件、引用链路和质量证据整理到同一个验收卡里。',
+        };
+    }
+    if (status === 'structure_ready_needs_real_quality') {
+        return {
+            primary: '可以先看结构和 Word 画布，但不要把它当成真实画质已经验证的成品。',
+            system: '系统会保留故事、资产拆解和提示词，优先重跑图片并让质检重新判断。',
+        };
+    }
+    if (status === 'staged_report_ready') {
+        return {
+            primary: '可以下载阶段报告先沟通方向；如果要做最终结论，需要继续补截图和平台证据。',
+            system: '系统已经整理报告、数据表、竞品表和补证清单，后续会围绕缺口继续追证。',
+        };
+    }
+    if (status === 'needs_rework') {
+        return {
+            primary: '先看“还缺什么”，按缺口退回对应部门，不建议直接交付。',
+            system: '系统会尽量保留已确认内容，只重做缺失或失败的那一段。',
+        };
+    }
+    return {
+        primary: '先完成当前办公室的开工、审核或生成步骤。',
+        system: '系统会在有产物后更新验收项、下载入口和下一步建议。',
+    };
 }
 
 async function loadComicV2Status(workspaceId) {
