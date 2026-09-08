@@ -88,7 +88,9 @@ python scripts/verify_portfolio_showcase_sync.py --format markdown
 - `local_real_use`：使用者填写自己的本地 API Key，配置 `config.yaml`，先在模型页测试每个办公室部门，再在本机运行真实调研或 AI 漫剧制片。
 - `developer_extension`：首次审计不需要 API Key；新增办公室前，先看办公室协议、隔离检查和 `python scripts/verify_office_extension_governance.py --format markdown`，确认不会和现有办公室串线。
 
-输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。线上 URL 只有在 `npm run check:online` 通过后，才能说已经部署成功。
+输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。线上 URL 只有在 `npm run check:online` 通过后，才能说已经部署成功；如果部署的是独立静态站点或 GitHub Pages，也要用 `python scripts/verify_public_showcase_live.py --url <公开展示地址> --format markdown` 验证公开地址。
+
+如果 Vercel 授权暂时卡住，仓库还提供 `.github/workflows/pages-showcase.yml` 作为备用公开展示通道。它只发布无 Key 静态包：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描，再交给 GitHub Pages artifact，不需要 Vercel 授权，也不需要任何 API Key。第一次使用前，在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions。
 如果你把静态包复制到个人网站 `public/three-stooges/`，再运行 `python scripts/verify_portfolio_showcase_sync.py --format markdown`。它会逐个比对 `dist/public-showcase` 和个人网站拷贝的文件哈希：通过只能说明个人网站仓库里的静态拷贝和产品本体一致，不能说明线上 Vercel 已经刷新；线上仍必须由个人网站仓库的 `npm run check:online` 证明。其他开发者没有我的个人网站目录时，这条检查会显示 `skipped`；复制到自己的作品集目录后，可以用 `--target-dir` 指向自己的 `public/three-stooges`。
 如果已经部署到任意公开静态域名，再用产品仓库里的线上检查器复核真实 URL：
 

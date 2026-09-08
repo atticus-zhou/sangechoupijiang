@@ -1,0 +1,67 @@
+name: Public showcase pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/pages-showcase.yml"
+      - "README.md"
+      - "docs/**"
+      - "requirements.txt"
+      - "scripts/export_public_showcase.py"
+      - "scripts/verify_static_public_showcase.py"
+      - "src/**"
+      - "tests/fixtures/**"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: public-showcase-pages
+  cancel-in-progress: true
+
+jobs:
+  publish-no-key-showcase:
+    name: Publish no-key static showcase
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install public runtime dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Export backend-free showcase
+        run: python scripts/export_public_showcase.py --output dist/public-showcase --format json
+
+      - name: Verify backend-free showcase
+        run: python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase
+
+      - name: Run tracked secret scan
+        run: python scripts/check_no_secrets.py
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/public-showcase
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

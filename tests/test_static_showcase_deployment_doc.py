@@ -37,6 +37,11 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("研究办公室阶段性交付声明", text)
         self.assertIn("下游生产 quick-start", text)
         self.assertIn("不要把下面内容复制进静态展示目录", text)
+        self.assertIn(".github/workflows/pages-showcase.yml", text)
+        self.assertIn("Source 设为 GitHub Actions", text)
+        self.assertIn("不需要 Vercel 授权", text)
+        self.assertIn("不需要任何 API Key", text)
+        self.assertIn("dist/public-showcase", text)
 
         self.assertIn("Asset Requirement Matrix In The Static Package", text)
         self.assertIn("asset_requirement_matrix", text)
