@@ -245,6 +245,15 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
             errors.append("portfolio embed handoff inventory must summarize waste/rework images")
         if "waste_or_rework_rate" not in handoff_inventory:
             errors.append("portfolio embed handoff inventory must summarize waste/rework rate")
+        if "failed_image_ids" not in handoff_inventory or not isinstance(handoff_inventory.get("failed_image_ids"), list):
+            errors.append("portfolio embed handoff inventory must expose failed image ids")
+        if "failed_image_count" not in handoff_inventory:
+            errors.append("portfolio embed handoff inventory must expose failed image count")
+        targeted_policy = handoff_inventory.get("targeted_recovery_policy") or {}
+        if targeted_policy.get("scope_source") != "image_quality_summary.failed_image_ids":
+            errors.append("portfolio embed handoff inventory must explain failed-image scoped recovery")
+        if "只返工问题图片" not in str(targeted_policy.get("human_label") or ""):
+            errors.append("portfolio embed handoff inventory must label targeted recovery for humans")
         asset_type_quality = handoff_inventory.get("asset_type_quality") or {}
         for asset_type in ("character", "prop", "scene"):
             quality = asset_type_quality.get(asset_type) or {}
@@ -306,8 +315,15 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("runtime acceptance summary must be public safe")
     if set(runtime_by_office) != {"comic_production", "research"}:
         errors.append("runtime acceptance summary must cover comic production and research offices")
-    if (runtime_by_office.get("comic_production") or {}).get("acceptance_status") != "structure_ready_needs_real_quality":
-        errors.append("runtime acceptance summary must mark comic production as structure-ready but real-quality blocked")
+        if (runtime_by_office.get("comic_production") or {}).get("acceptance_status") != "structure_ready_needs_real_quality":
+            errors.append("runtime acceptance summary must mark comic production as structure-ready but real-quality blocked")
+        comic_runtime = runtime_by_office.get("comic_production") or {}
+        runtime_image_quality = comic_runtime.get("image_quality_summary") or {}
+        if "failed_image_ids" not in runtime_image_quality:
+            errors.append("runtime acceptance summary must expose comic failed image ids")
+        runtime_recovery_scope = comic_runtime.get("recovery_scope") or {}
+        if runtime_recovery_scope.get("policy") and "问题图片" not in runtime_recovery_scope.get("policy"):
+            errors.append("runtime acceptance recovery scope must be human-readable")
     if (runtime_by_office.get("research") or {}).get("acceptance_status") != "staged_report_ready":
         errors.append("runtime acceptance summary must mark research as staged-report-ready")
     runtime_text = json.dumps(runtime_acceptance, ensure_ascii=False)
@@ -518,6 +534,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "handoff_inventory_usable_images": handoff_inventory.get("usable_images", 0),
         "handoff_inventory_waste_or_rework_images": handoff_inventory.get("waste_or_rework_images", 0),
         "handoff_inventory_waste_or_rework_rate": handoff_inventory.get("waste_or_rework_rate", 0),
+        "handoff_inventory_failed_image_count": handoff_inventory.get("failed_image_count", 0),
+        "handoff_inventory_targeted_recovery_label": (handoff_inventory.get("targeted_recovery_policy") or {}).get("human_label", ""),
         "handoff_inventory_asset_type_quality": handoff_inventory.get("asset_type_quality", {}),
         "handoff_inventory_safe_public_claim": handoff_inventory.get("safe_public_claim", ""),
         "real_production_claim_uri": real_production_claim.get("uri", ""),

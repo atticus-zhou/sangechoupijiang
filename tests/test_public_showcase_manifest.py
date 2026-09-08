@@ -307,6 +307,20 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         )
         self.assertFalse(real_upgrade["evidence_contract"]["ready_for_real_quality_claim"])
         self.assertIn("non_fixture_images", real_upgrade["evidence_contract"]["missing_check_ids"])
+        handoff_inventory = embed["handoff_inventory"]
+        self.assertIsInstance(handoff_inventory["failed_image_ids"], list)
+        self.assertEqual(handoff_inventory["failed_image_count"], 0)
+        self.assertEqual(handoff_inventory["targeted_recovery_policy"]["human_label"], "只返工问题图片")
+        self.assertEqual(
+            handoff_inventory["targeted_recovery_policy"]["scope_source"],
+            "image_quality_summary.failed_image_ids",
+        )
+        runtime_comic = next(
+            item for item in embed["runtime_acceptance_summary"]["checks"]
+            if item["office_id"] == "comic_production"
+        )
+        self.assertIn("failed_image_ids", runtime_comic["image_quality_summary"])
+        self.assertIn("问题图片", runtime_comic["recovery_scope"]["policy"])
         handoff_guide = next(
             item for item in embed["deliverable_reading_guide"] if "handoff manifest" in item["title"]
         )

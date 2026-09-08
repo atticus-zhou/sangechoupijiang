@@ -1236,6 +1236,9 @@ def _public_production_acceptance(manifest_path: Path | None, claim: dict) -> di
             "usable_images": image_summary.get("usable_images", 0),
             "waste_or_rework_images": image_summary.get("waste_or_rework_images", 0),
             "waste_or_rework_rate": image_summary.get("waste_or_rework_rate", 0),
+            "failed_image_ids": list(image_summary.get("failed_image_ids") or []),
+            "rework_action_summary": list(image_summary.get("rework_action_summary") or []),
+            "rework_instructions": list(image_summary.get("rework_instructions") or []),
         },
         "prompt_quality_summary": {
             "status": prompt_summary.get("status", ""),
@@ -2992,6 +2995,8 @@ def _public_showcase_office_launch_matrix(governance: dict) -> dict:
 
 def _public_showcase_runtime_acceptance_summary(comic_acceptance: dict, research_claim: dict) -> dict:
     """Summarize runtime acceptance in a public-safe, no-key form."""
+    comic_image_quality = comic_acceptance.get("image_quality_summary") or {}
+    comic_recovery = comic_acceptance.get("recovery_action") or {}
     return {
         "mode": "public_no_key_runtime_acceptance",
         "title": "办公室运行验收摘要",
@@ -3013,6 +3018,19 @@ def _public_showcase_runtime_acceptance_summary(comic_acceptance: dict, research
                 "source_status": comic_acceptance.get("downstream_status", ""),
                 "accepted_for_public_demo": comic_acceptance.get("accepted_for_public_demo", False),
                 "accepted_for_real_downstream": comic_acceptance.get("accepted_for_real_downstream", False),
+                "image_quality_summary": {
+                    "total_images": int(comic_image_quality.get("total_images") or 0),
+                    "usable_images": int(comic_image_quality.get("usable_images") or 0),
+                    "waste_or_rework_images": int(comic_image_quality.get("waste_or_rework_images") or 0),
+                    "failed_image_ids": list(comic_image_quality.get("failed_image_ids") or []),
+                    "rework_action_summary": list(comic_image_quality.get("rework_action_summary") or []),
+                },
+                "recovery_scope": {
+                    "action": comic_recovery.get("action", ""),
+                    "target_image_ids": list(comic_recovery.get("target_image_ids") or []),
+                    "target_image_count": int(comic_recovery.get("target_image_count") or 0),
+                    "policy": "只处理质量账本列出的问题图片；没有失败图时才按阶段恢复整包证据。",
+                },
             },
             {
                 "office_id": "research",
@@ -3078,6 +3096,18 @@ async def get_public_showcase_demo_api():
         for item in inventory_image_items
     )
     inventory_asset_type_quality = _summarize_inventory_asset_type_quality(inventory_image_items)
+    inventory_failed_image_ids: list[str] = []
+    inventory_rework_action_summary: list[dict] = []
+    for item in inventory_image_items:
+        image_summary = item.get("image_quality_summary") or {}
+        inventory_failed_image_ids.extend(
+            str(value)
+            for value in (image_summary.get("failed_image_ids") or item.get("failed_image_ids") or [])
+            if str(value).strip()
+        )
+        for action_item in image_summary.get("rework_action_summary") or item.get("rework_action_summary") or []:
+            if isinstance(action_item, dict):
+                inventory_rework_action_summary.append(action_item)
     return {
         "mode": "public_no_key_showcase",
         "product_name": "三个臭皮匠",
@@ -3200,6 +3230,16 @@ async def get_public_showcase_demo_api():
                     if inventory_total_images
                     else 0
                 ),
+                "failed_image_ids": inventory_failed_image_ids[:20],
+                "failed_image_count": len(inventory_failed_image_ids),
+                "rework_action_summary": inventory_rework_action_summary[:20],
+                "targeted_recovery_policy": {
+                    "human_label": "只返工问题图片",
+                    "action": "regenerate_images",
+                    "scope_source": "image_quality_summary.failed_image_ids",
+                    "empty_scope_behavior": "如果没有失败图片 ID，则只作为真实模型证据升级计划展示，不自动整包返工。",
+                    "why": "避免用户为了几张废片重跑整份制片包，也避免把已经确认的故事、资产和提示词推翻重来。",
+                },
                 "asset_type_quality": inventory_asset_type_quality,
                 "safe_public_claim": comic_inventory.get("safe_public_claim", ""),
                 "next_action": comic_inventory.get("next_action", ""),

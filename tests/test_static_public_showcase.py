@@ -252,6 +252,14 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         )
         self.assertFalse(real_upgrade["evidence_contract"]["ready_for_real_quality_claim"])
         self.assertIn("provider_model_bound", real_upgrade["evidence_contract"]["missing_check_ids"])
+        handoff_embed = showcase["portfolio_embed"]["handoff_inventory"]
+        self.assertIsInstance(handoff_embed["failed_image_ids"], list)
+        self.assertEqual(handoff_embed["failed_image_count"], 0)
+        self.assertEqual(handoff_embed["targeted_recovery_policy"]["human_label"], "只返工问题图片")
+        self.assertEqual(
+            handoff_embed["targeted_recovery_policy"]["scope_source"],
+            "image_quality_summary.failed_image_ids",
+        )
         recovery_drill = showcase["portfolio_embed"]["public_recovery_drill"]
         self.assertEqual(recovery_drill["current_evidence_level"], "fixture_only")
         self.assertEqual(recovery_drill["recommended_action"], "regenerate_images")

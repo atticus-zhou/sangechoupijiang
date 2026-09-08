@@ -71,6 +71,8 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(payload["showcase_manifest"]["handoff_inventory_usable_images"], 7)
         self.assertGreaterEqual(payload["showcase_manifest"]["handoff_inventory_waste_or_rework_images"], 0)
         self.assertGreaterEqual(payload["showcase_manifest"]["handoff_inventory_waste_or_rework_rate"], 0)
+        self.assertGreaterEqual(payload["showcase_manifest"]["handoff_inventory_failed_image_count"], 0)
+        self.assertEqual(payload["showcase_manifest"]["handoff_inventory_targeted_recovery_label"], "只返工问题图片")
         showcase_asset_types = payload["showcase_manifest"]["handoff_inventory_asset_type_quality"]
         self.assertGreaterEqual(showcase_asset_types["character"]["total"], 2)
         self.assertGreaterEqual(showcase_asset_types["prop"]["total"], 2)
@@ -109,6 +111,10 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["usable_images"], 7)
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["waste_or_rework_images"], 0)
         self.assertGreaterEqual(payload["comic_handoff_inventory"]["waste_or_rework_rate"], 0)
+        self.assertEqual(
+            payload["showcase_manifest"]["handoff_inventory_failed_image_count"],
+            payload["comic_handoff_inventory"]["waste_or_rework_images"],
+        )
         inventory_asset_types = payload["comic_handoff_inventory"]["asset_type_quality"]
         self.assertGreaterEqual(inventory_asset_types["character"]["total"], 2)
         self.assertGreaterEqual(inventory_asset_types["prop"]["total"], 2)

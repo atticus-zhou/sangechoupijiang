@@ -623,6 +623,13 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static runtime acceptance must cover the comic production and research offices")
         if (runtime_by_office.get("comic_production") or {}).get("acceptance_status") != "structure_ready_needs_real_quality":
             errors.append("static runtime acceptance must mark comic production as structure-ready but quality-blocked")
+        comic_runtime = runtime_by_office.get("comic_production") or {}
+        runtime_image_quality = comic_runtime.get("image_quality_summary") or {}
+        if "failed_image_ids" not in runtime_image_quality or not isinstance(runtime_image_quality.get("failed_image_ids"), list):
+            errors.append("static runtime acceptance must expose comic failed image ids")
+        runtime_recovery_scope = comic_runtime.get("recovery_scope") or {}
+        if "问题图片" not in str(runtime_recovery_scope.get("policy") or ""):
+            errors.append("static runtime acceptance must explain failed-image scoped recovery")
         if (runtime_by_office.get("research") or {}).get("acceptance_status") != "staged_report_ready":
             errors.append("static runtime acceptance must mark research as staged-report-ready")
         if (runtime_by_office.get("comic_production") or {}).get("accepted_for_real_downstream") is not False:
@@ -961,6 +968,16 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         if "portfolio.public_recovery_drill" not in app_text or "public-recovery-drill-card" not in style_text:
             errors.append("static showcase page must render the public recovery drill")
         recovery_drill = (showcase.get("portfolio_embed") or {}).get("public_recovery_drill") or {}
+        handoff_inventory_embed = (showcase.get("portfolio_embed") or {}).get("handoff_inventory") or {}
+        targeted_recovery_policy = handoff_inventory_embed.get("targeted_recovery_policy") or {}
+        if "failed_image_ids" not in handoff_inventory_embed or not isinstance(handoff_inventory_embed.get("failed_image_ids"), list):
+            errors.append("static portfolio handoff inventory must expose failed image ids")
+        if "failed_image_count" not in handoff_inventory_embed:
+            errors.append("static portfolio handoff inventory must expose failed image count")
+        if targeted_recovery_policy.get("scope_source") != "image_quality_summary.failed_image_ids":
+            errors.append("static portfolio handoff inventory must explain failed-image scoped recovery")
+        if "只返工问题图片" not in str(targeted_recovery_policy.get("human_label") or ""):
+            errors.append("static portfolio handoff inventory must label targeted recovery for humans")
         if recovery_drill.get("recommended_action") != "regenerate_images":
             errors.append("static showcase public recovery drill must recommend regenerate_images for fixture-only demo evidence")
         if len(recovery_drill.get("operator_steps") or []) < 4:
@@ -1082,6 +1099,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "runtime_acceptance_count": len(runtime_checks),
             "runtime_acceptance_requires_api_key": bool(runtime_acceptance.get("requires_api_key")),
             "runtime_acceptance_calls_real_models": bool(runtime_acceptance.get("calls_real_models")),
+            "handoff_inventory_failed_image_count": handoff_inventory_embed.get("failed_image_count", 0),
+            "handoff_inventory_targeted_recovery_label": targeted_recovery_policy.get("human_label", ""),
             "model_setup_office_count": len((portfolio.get("model_setup_guide") or {}).get("offices") or []),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
