@@ -60,6 +60,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_first_run_guide_contract.py", "--format", "json"],
     },
     {
+        "id": "office_runtime_acceptance",
+        "title": "Office runtime acceptance contract",
+        "command": ["scripts/verify_office_runtime_acceptance.py", "--format", "json"],
+    },
+    {
         "id": "public_demo",
         "title": "Public no-key demo",
         "command": ["scripts/verify_public_demo_mode.py", "--format", "json"],
@@ -306,6 +311,19 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"public_safe={parsed.get('public_safe')}; "
                 f"credentials={parsed.get('requires_model_credentials')}; "
                 f"real_models={parsed.get('calls_real_models')}"
+            )
+        if check_id == "office_runtime_acceptance":
+            statuses = parsed.get("acceptance_statuses") or {}
+            audits = parsed.get("audit") or {}
+            research = audits.get("research") or {}
+            comic = audits.get("comic_production") or {}
+            return (
+                f"offices={','.join(parsed.get('offices') or [])}; "
+                f"research={statuses.get('research')}; "
+                f"comic={statuses.get('comic_production')}; "
+                f"research_items={research.get('acceptance_item_count')}; "
+                f"comic_items={comic.get('acceptance_item_count')}; "
+                f"errors={len(parsed.get('errors') or [])}"
             )
         if check_id == "portfolio_showcase_sync":
             return (

@@ -36,6 +36,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "public_docs_readability",
                 "runtime_health",
                 "first_run_guide",
+                "office_runtime_acceptance",
                 "public_demo",
                 "static_showcase_export",
                 "static_showcase",
@@ -87,6 +88,10 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("paths=3", first_run_guide["summary"])
         self.assertIn("quick_checks=5", first_run_guide["summary"])
         self.assertIn("credentials=False", first_run_guide["summary"])
+        office_runtime = next(item for item in payload["checks"] if item["id"] == "office_runtime_acceptance")
+        self.assertIn("research=staged_report_ready", office_runtime["summary"])
+        self.assertIn("comic=structure_ready_needs_real_quality", office_runtime["summary"])
+        self.assertIn("errors=0", office_runtime["summary"])
         public_demo = next(item for item in payload["checks"] if item["id"] == "public_demo")
         self.assertIn("fast_review=5/5", public_demo["summary"])
         self.assertIn("reading_guide=", public_demo["summary"])
