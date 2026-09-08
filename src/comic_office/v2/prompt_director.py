@@ -286,9 +286,14 @@ def parse_prompt_director_response(text: str) -> PromptDirectorResult:
             generator_prompt, inline_negative = _split_generator_prompt(
                 str(item.get("generator_prompt") or "")
             )
+            generator_prompt, embedded_negative = _extract_embedded_negative_clauses(generator_prompt)
             if not generator_prompt:
                 raise ValueError("generator prompt is empty")
-            negative = _string_tuple(item.get("negative_prompt") or (), "negative_prompt") + inline_negative
+            negative = (
+                _string_tuple(item.get("negative_prompt") or (), "negative_prompt")
+                + inline_negative
+                + embedded_negative
+            )
             prompts.append(PromptPlan(
                 object_id=str(item.get("object_id") or "").strip(),
                 image_kind=str(item.get("image_kind") or "model_generated").strip(),
@@ -478,6 +483,30 @@ def _inline_negative_terms(value: str) -> tuple[str, ...]:
 def _normalize_generator_language(value: str) -> str:
     text = str(value or "").strip()
     return text.replace("不要", "禁止").replace("不得", "禁止")
+
+
+def _extract_embedded_negative_clauses(value: str) -> tuple[str, tuple[str, ...]]:
+    """Move negative instructions out of the positive prompt body."""
+    text = str(value or "").strip()
+    if not text:
+        return "", ()
+
+    parts = re.split(r"([，,。；;\n])", text)
+    kept: list[str] = []
+    negative: list[str] = []
+    index = 0
+    while index < len(parts):
+        segment = parts[index]
+        separator = parts[index + 1] if index + 1 < len(parts) else ""
+        clause = segment.strip()
+        if re.match(r"^(不要|不得|避免|禁止)\s*", clause):
+            negative.append(clause)
+        elif clause:
+            kept.append(clause + separator)
+        index += 2
+
+    cleaned = "".join(kept).strip(" ，,。；;\n")
+    return cleaned, tuple(negative)
 
 
 def _string_tuple(value: Any, label: str) -> tuple[str, ...]:

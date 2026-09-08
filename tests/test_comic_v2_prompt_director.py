@@ -310,10 +310,28 @@ class ComicV2PromptDirectorTests(unittest.TestCase):
         prompt = result.prompts[0]
         self.assertNotIn("负面提示词", prompt.generator_prompt)
         self.assertNotIn("不要", prompt.generator_prompt)
-        self.assertIn("禁止夸张表情", prompt.generator_prompt)
         self.assertEqual(
             prompt.negative_prompt,
-            ("禁止脸型变化", "禁止现代车辆", "禁止文字水印"),
+            ("禁止脸型变化", "禁止现代车辆", "禁止文字水印", "禁止夸张表情"),
+        )
+
+    def test_model_embedded_negative_clauses_are_moved_to_negative_block(self):
+        result = parse_prompt_director_response(json.dumps({
+            "prompts": [{
+                "object_id": "prop_1",
+                "image_kind": "turnaround",
+                "purpose": "identity_reference",
+                "generator_prompt": "古风药瓶转面，纯白背景，禁止人物手持；不得现代包装。避免可读文字。",
+                "negative_prompt": ["不要塑料质感"],
+            }]
+        }, ensure_ascii=False))
+
+        self.assertEqual(result.status, "ready_for_prompt_review")
+        prompt = result.prompts[0]
+        self.assertEqual(prompt.generator_prompt, "古风药瓶转面，纯白背景")
+        self.assertEqual(
+            prompt.negative_prompt,
+            ("禁止塑料质感", "禁止人物手持", "禁止现代包装", "禁止可读文字"),
         )
 
 
