@@ -87,7 +87,11 @@ from src.image_generation import (
 from src.model_connectivity import AGENT_IDS, probe_model_connectivity
 from src.office_runtime import build_office_runtime_status
 from src.office_preflight import build_office_preflight
-from src.model_capabilities import get_office_capability_contract, load_model_capability_matrix
+from src.model_capabilities import (
+    build_model_setup_guide,
+    get_office_capability_contract,
+    load_model_capability_matrix,
+)
 from src.product_readiness import audit_comic_production_readiness, audit_comic_real_production_start_readiness
 from src.system_preflight import build_system_preflight
 from scripts.audit_comic_v2_handoffs import audit_handoff_inventory
@@ -551,6 +555,12 @@ def _public_model_capability_matrix() -> dict:
 async def get_model_capability_matrix_api():
     """Return the public, no-key model capability matrix."""
     return _public_model_capability_matrix()
+
+
+@app.get("/api/model-setup-guide")
+async def get_model_setup_guide_api():
+    """Return a public first-run guide for model setup without reading keys."""
+    return build_model_setup_guide()
 
 
 @app.get("/api/offices/{office_id}/model-capabilities")

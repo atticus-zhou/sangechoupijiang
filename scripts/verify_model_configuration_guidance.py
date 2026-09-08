@@ -25,6 +25,9 @@ CHECKS: list[dict[str, Any]] = [
             "办公室隔离规则",
             "python scripts/verify_model_configuration_guidance.py --format markdown",
             "docs/MODEL_CAPABILITY_MATRIX.json",
+            "GET /api/model-setup-guide",
+            "公开无 Key 演示",
+            "完整生产配置",
         ],
     },
     {
@@ -177,9 +180,27 @@ CHECKS: list[dict[str, Any]] = [
         "file": REPO_ROOT / "src" / "web" / "app.py",
         "markers": [
             "/api/model-capability-matrix",
+            "/api/model-setup-guide",
             "/api/offices/{office_id}/model-capabilities",
             "load_model_capability_matrix",
+            "build_model_setup_guide",
             "get_office_capability_contract",
+        ],
+    },
+    {
+        "id": "setup_guide_api_contract",
+        "title": "Backend provides a first-run model setup guide",
+        "file": REPO_ROOT / "src" / "model_capabilities.py",
+        "markers": [
+            "three_cobblers_model_setup_guide_v1",
+            "public_safe",
+            "requires_api_key_to_view",
+            "calls_real_models",
+            "minimum_setup",
+            "full_setup",
+            "common_misfills",
+            "config_path_hint",
+            "provider_examples",
         ],
     },
 ]

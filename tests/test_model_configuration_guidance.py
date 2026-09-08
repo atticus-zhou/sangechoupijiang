@@ -110,6 +110,8 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         self.assertIn("不需要在工部同一槽位再填一个文本模型", text)
         self.assertIn("不要提交真实 Key", text)
         self.assertIn("docs/MODEL_CAPABILITY_MATRIX.json", text)
+        self.assertIn("GET /api/model-setup-guide", text)
+        self.assertIn("公开无 Key 演示、最小可跑配置、完整生产配置", text)
 
     def test_machine_readable_matrix_matches_department_roles(self):
         matrix = json.loads(Path("docs/MODEL_CAPABILITY_MATRIX.json").read_text(encoding="utf-8"))
@@ -160,6 +162,39 @@ class ModelConfigurationGuidanceTests(unittest.TestCase):
         )
         self.assertIn("不在模型页填写普通 API Key", gongbu["model_page_hint"])
         self.assertIn("manual_screenshot_upload", gongbu["evidence_input_methods"])
+
+    def test_model_setup_guide_is_public_safe_and_human_actionable(self):
+        from src.model_capabilities import build_model_setup_guide
+
+        guide = build_model_setup_guide()
+        self.assertEqual(guide["schema"], "three_cobblers_model_setup_guide_v1")
+        self.assertTrue(guide["public_safe"])
+        self.assertFalse(guide["requires_api_key_to_view"])
+        self.assertFalse(guide["calls_real_models"])
+        self.assertFalse(guide["writes_workspace"])
+        self.assertNotIn("api_key_env", json.dumps(guide, ensure_ascii=False))
+
+        offices = {item["office_id"]: item for item in guide["offices"]}
+        comic = offices["comic_production"]
+        self.assertEqual(comic["no_key_demo"]["title"], "公开无 Key 演示")
+        self.assertEqual(comic["minimum_setup"]["title"], "最小可跑配置")
+        self.assertEqual(comic["full_setup"]["title"], "完整生产配置")
+        minimum_ids = {
+            item["department_id"]
+            for item in comic["minimum_setup"]["required_departments"]
+        }
+        full_extra_ids = {
+            item["department_id"]
+            for item in comic["full_setup"]["extra_departments_after_minimum"]
+        }
+        self.assertIn("bingbu", minimum_ids)
+        self.assertNotIn("gongbu", minimum_ids)
+        self.assertIn("gongbu", full_extra_ids)
+        self.assertIn("xingbu", full_extra_ids)
+        self.assertTrue(comic["common_misfills"])
+        self.assertTrue(
+            all(item["human_test_label"] and item["missing_impact"] for item in comic["full_setup"]["required_departments"])
+        )
 
 
 if __name__ == "__main__":

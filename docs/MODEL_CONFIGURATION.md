@@ -145,6 +145,14 @@ python scripts/verify_release_readiness.py --format markdown
 
 注意：`verify_model_configuration_guidance.py` 不会调用真实模型，不会读取或打印 API Key。它只检查文档、示例配置、前端提示和 preflight 规则是否一致。
 
+如果你想让前端、新手向导或外部检查器直接读取同一份配置说明，可以使用：
+
+```text
+GET /api/model-setup-guide
+```
+
+这个接口不会读取真实 Key，不会调用模型，也不会写工作区。它只把 `docs/MODEL_CAPABILITY_MATRIX.json` 整理成三张人能看懂的卡：公开无 Key 演示、最小可跑配置、完整生产配置。每张卡都会列出部门、能力类型、建议测试按钮、缺失影响和常见误填，适合放在模型页或首次运行页里给新用户看。
+
 ## 常见误填
 
 | 误填方式 | 为什么会出问题 | 正确做法 |

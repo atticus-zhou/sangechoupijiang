@@ -104,6 +104,41 @@ class OfficePreflightApiTests(unittest.TestCase):
         self.assertEqual(by_department["xingbu"], "vision_understanding")
         self.assertIn("safe_key_rule", office)
 
+    def test_model_setup_guide_api_is_no_key_and_actionable(self):
+        response = self.client.get("/api/model-setup-guide")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["schema"], "three_cobblers_model_setup_guide_v1")
+        self.assertTrue(payload["public_safe"])
+        self.assertFalse(payload["requires_api_key_to_view"])
+        self.assertFalse(payload["calls_real_models"])
+        self.assertFalse(payload["writes_workspace"])
+        self.assertNotIn("api_key_env", str(payload))
+        offices = {item["office_id"]: item for item in payload["offices"]}
+        comic = offices["comic_production"]
+        self.assertEqual(comic["minimum_setup"]["title"], "最小可跑配置")
+        self.assertEqual(comic["full_setup"]["title"], "完整生产配置")
+        self.assertIn("common_misfills", comic)
+        self.assertTrue(comic["common_misfills"])
+        minimum_ids = {
+            item["department_id"]
+            for item in comic["minimum_setup"]["required_departments"]
+        }
+        extra_ids = {
+            item["department_id"]
+            for item in comic["full_setup"]["extra_departments_after_minimum"]
+        }
+        self.assertIn("bingbu", minimum_ids)
+        self.assertIn("gongbu", extra_ids)
+        self.assertIn("xingbu", extra_ids)
+        gongbu = next(
+            item for item in comic["full_setup"]["required_departments"]
+            if item["department_id"] == "gongbu"
+        )
+        self.assertEqual(gongbu["config_path_hint"], "office_models.comic_production.gongbu")
+        self.assertIn("测试工部生图", gongbu["human_test_label"])
+
     def test_comic_production_preflight_blocks_when_core_text_model_is_missing(self):
         def fake_get_model_config(agent, office_id=""):
             if agent == "zhongshu":
