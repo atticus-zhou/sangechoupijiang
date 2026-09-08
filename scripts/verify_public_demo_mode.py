@@ -122,6 +122,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     quality_upgrade_path = portfolio_embed.get("quality_upgrade_path") or {}
     real_quality_upgrade_plan = portfolio_embed.get("real_quality_upgrade_plan") or {}
     runtime_acceptance = portfolio_embed.get("runtime_acceptance_summary") or {}
+    model_setup = portfolio_embed.get("model_setup_guide") or {}
     portfolio_integration = portfolio_embed.get("portfolio_integration") or {}
     portfolio_ci_proof = portfolio_integration.get("portfolio_ci_proof") or {}
     deployment_ci_verification = public_deployment.get("ci_verification") or {}
@@ -313,6 +314,14 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("下载 Word", "下载阶段报告", "不能宣称"):
         if marker not in runtime_text:
             errors.append(f"runtime acceptance summary is missing user-facing marker: {marker}")
+    if model_setup.get("schema") != "three_cobblers_model_setup_guide_v1":
+        errors.append("portfolio embed must include the public model setup guide")
+    if model_setup.get("requires_api_key_to_view") is not False or model_setup.get("calls_real_models") is not False:
+        errors.append("portfolio model setup guide must be visible without API keys or real model calls")
+    model_setup_text = json.dumps(model_setup, ensure_ascii=False)
+    for marker in ("最小可跑配置", "完整生产配置", "工部", "刑部", "常见误填"):
+        if marker not in model_setup_text:
+            errors.append(f"portfolio model setup guide is missing marker: {marker}")
     if portfolio_integration.get("recommended_path") != "static_export":
         errors.append("portfolio integration must recommend static_export for public websites")
     integration_static = portfolio_integration.get("static_export") or {}
@@ -523,6 +532,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "runtime_acceptance_count": len(runtime_checks),
         "runtime_acceptance_requires_api_key": bool(runtime_acceptance.get("requires_api_key")),
         "runtime_acceptance_calls_real_models": bool(runtime_acceptance.get("calls_real_models")),
+        "model_setup_office_count": len(model_setup.get("offices") or []),
         "portfolio_integration_option_count": len(integration_options),
         "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
         "portfolio_ci_status": portfolio_ci_proof.get("status", ""),
@@ -819,6 +829,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
         f"- 真实质量升级操作面板：status={manifest.get('real_quality_upgrade_status')} / steps={manifest.get('real_quality_upgrade_step_count')} / models={manifest.get('real_quality_upgrade_department_count')} / recovery={manifest.get('real_quality_upgrade_recovery_action')}",
         f"- 运行验收摘要：{manifest.get('runtime_acceptance_count')} 个办公室 / no_key={not manifest.get('runtime_acceptance_requires_api_key')} / real_models={manifest.get('runtime_acceptance_calls_real_models')}",
+        f"- 模型设置卡：{manifest.get('model_setup_office_count')} 个办公室 / no-key view",
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
         f"- 离线评审包：{manifest.get('reviewer_fallback_status')} / commands={manifest.get('reviewer_fallback_command_count')} / archive={manifest.get('reviewer_fallback_archive')}",
         f"- New office extension: checklist={manifest.get('office_extension_checklist_count')} / phases={manifest.get('office_extension_phase_count')} / doc={manifest.get('office_extension_doc')}",

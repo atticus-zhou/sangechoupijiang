@@ -361,6 +361,17 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         )
         self.assertEqual(len(first_run_guide["quick_checks"]), 5)
         self.assertTrue(any(item["id"] == "runtime_health" for item in first_run_guide["quick_checks"]))
+        model_setup = embed["model_setup_guide"]
+        self.assertEqual(model_setup["schema"], "three_cobblers_model_setup_guide_v1")
+        self.assertFalse(model_setup["requires_api_key_to_view"])
+        self.assertFalse(model_setup["calls_real_models"])
+        model_offices = {item["office_id"]: item for item in model_setup["offices"]}
+        self.assertIn("comic_production", model_offices)
+        self.assertIn("research", model_offices)
+        comic_setup = model_offices["comic_production"]
+        self.assertIn("gongbu", json.dumps(comic_setup["full_setup"], ensure_ascii=False))
+        self.assertIn("xingbu", json.dumps(comic_setup["full_setup"], ensure_ascii=False))
+        self.assertTrue(comic_setup["common_misfills"])
 
         reproducibility = embed["reproducibility_checklist"]
         self.assertEqual([item["order"] for item in reproducibility], [1, 2, 3, 4, 5])

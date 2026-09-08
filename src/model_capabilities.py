@@ -154,6 +154,7 @@ def build_model_setup_guide() -> dict[str, Any]:
                     "extra_departments_after_minimum": non_text_departments,
                     "ready_when": office.get("full_ready_when", ""),
                 },
+                "common_misfills_title": "常见误填",
                 "common_misfills": _office_common_misfills(office_id),
             }
         )

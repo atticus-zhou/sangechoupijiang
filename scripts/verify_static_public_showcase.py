@@ -678,6 +678,22 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static first-run guide must not call real models")
         if len(first_run_guide.get("quick_checks") or []) < 5:
             errors.append("static first-run guide must expose at least five quick checks")
+        model_setup = portfolio.get("model_setup_guide") or {}
+        if model_setup.get("schema") != "three_cobblers_model_setup_guide_v1":
+            errors.append("static showcase must embed the public model setup guide")
+        if model_setup.get("requires_api_key_to_view") is not False:
+            errors.append("static model setup guide must not require API keys to view")
+        if model_setup.get("calls_real_models") is not False:
+            errors.append("static model setup guide must not call real models")
+        model_offices = {item.get("office_id"): item for item in model_setup.get("offices") or []}
+        for office_id in ("comic_production", "research"):
+            if office_id not in model_offices:
+                errors.append(f"static model setup guide missing office: {office_id}")
+        comic_setup = model_offices.get("comic_production") or {}
+        setup_text = json.dumps(comic_setup, ensure_ascii=False)
+        for marker in ("最小可跑配置", "完整生产配置", "工部", "刑部", "常见误填", "office_models.comic_production.gongbu"):
+            if marker not in setup_text:
+                errors.append(f"static model setup guide missing marker: {marker}")
 
         reproducibility = portfolio.get("reproducibility_checklist") or []
         if len(reproducibility) < 5:
@@ -969,6 +985,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the first-run paths")
         if "portfolio.first_run_guide" not in app_text or "renderFirstRunGuideChecks" not in app_text:
             errors.append("static showcase page must render the guided first-run quick checks")
+        if "portfolio.model_setup_guide" not in app_text or "renderModelSetupGuide" not in app_text:
+            errors.append("static showcase page must render the model setup guide")
         if "portfolio.shot_contract" not in app_text or "renderShotContract" not in app_text:
             errors.append("static showcase page must render the shot contract")
         if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
@@ -991,6 +1009,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase stylesheet must style the first-run paths")
         if "first-run-guide-checks" not in style_text or "first-run-command-list" not in style_text:
             errors.append("static showcase stylesheet must style the guided first-run quick checks")
+        if "model-setup-guide" not in style_text or "model-setup-grid" not in style_text:
+            errors.append("static showcase stylesheet must style the model setup guide")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
             errors.append("static showcase stylesheet must style the reviewable download catalog")
         for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "第一次打开，先看这五步", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):
@@ -1062,6 +1082,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "runtime_acceptance_count": len(runtime_checks),
             "runtime_acceptance_requires_api_key": bool(runtime_acceptance.get("requires_api_key")),
             "runtime_acceptance_calls_real_models": bool(runtime_acceptance.get("calls_real_models")),
+            "model_setup_office_count": len((portfolio.get("model_setup_guide") or {}).get("offices") or []),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
             "office_extension_checklist_count": len(extension_checklist),
@@ -1146,6 +1167,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')} / capture_steps={payload.get('research_capture_playbook_step_count')}",
         f"- Runtime acceptance: {payload.get('runtime_acceptance_count')} offices / no_key={not payload.get('runtime_acceptance_requires_api_key')} / real_models={payload.get('runtime_acceptance_calls_real_models')}",
+        f"- Model setup guide: {payload.get('model_setup_office_count')} offices / no-key view",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- New office extension: checklist={payload.get('office_extension_checklist_count')} / phases={payload.get('office_extension_phase_count')} / doc={payload.get('office_extension_doc')}",
         f"- Future office candidates: {payload.get('office_extension_candidate_count')} / backlog={payload.get('office_extension_backlog_count')}",

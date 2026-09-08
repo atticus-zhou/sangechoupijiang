@@ -92,6 +92,7 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertEqual(payload["showcase_manifest"]["runtime_acceptance_count"], 2)
         self.assertFalse(payload["showcase_manifest"]["runtime_acceptance_requires_api_key"])
         self.assertFalse(payload["showcase_manifest"]["runtime_acceptance_calls_real_models"])
+        self.assertEqual(payload["showcase_manifest"]["model_setup_office_count"], 2)
         self.assertEqual(
             payload["showcase_manifest"]["static_export_command"],
             "python scripts/export_public_showcase.py",
@@ -195,6 +196,8 @@ class PublicDemoVerifierTests(unittest.TestCase):
         self.assertIn("action=regenerate_images", result.stdout)
         self.assertIn("运行验收摘要", result.stdout)
         self.assertIn("2 个办公室 / no_key=True / real_models=False", result.stdout)
+        self.assertIn("模型设置卡", result.stdout)
+        self.assertIn("2 个办公室 / no-key view", result.stdout)
         self.assertIn("source=dist/public-showcase", result.stdout)
         self.assertIn("New office extension: checklist=8 / phases=8 / doc=docs/NEW_OFFICE_STARTER_CHECKLIST.md", result.stdout)
         self.assertIn("Future office candidates: 4 / backlog=2", result.stdout)

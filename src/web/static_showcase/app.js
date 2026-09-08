@@ -960,6 +960,49 @@
     checks.appendChild(commandList);
   }
 
+  function renderModelSetupGuide() {
+    const portfolio = showcase.portfolio_embed || {};
+    const guide = portfolio.model_setup_guide || {};
+    const offices = Array.isArray(guide.offices) ? guide.offices : [];
+    const target = document.getElementById('model-setup-guide');
+    if (!target || !offices.length) return;
+
+    target.appendChild(element('h3', '', '真实使用前，先看模型怎么配'));
+    target.appendChild(element('p', '', '这张卡不读取 Key，也不调用模型，只告诉你每个办公室从无 Key 演示到完整生产分别缺什么。'));
+
+    const grid = element('div', 'model-setup-grid');
+    offices.forEach(function (office) {
+      const card = element('article', 'model-setup-card');
+      card.appendChild(element('h4', '', office.office_name || office.office_id));
+      const noKey = office.no_key_demo || {};
+      const minimum = office.minimum_setup || {};
+      const full = office.full_setup || {};
+      const minimumDepartments = Array.isArray(minimum.required_departments) ? minimum.required_departments : [];
+      const extraDepartments = Array.isArray(full.extra_departments_after_minimum) ? full.extra_departments_after_minimum : [];
+      card.appendChild(element('span', 'status-pill', noKey.requires_api_key ? '演示需 Key' : '演示不需要 Key'));
+      addTextRow(card, '最小可跑', minimum.ready_when || minimum.title);
+      addTextRow(card, '完整生产', full.ready_when || full.title);
+      card.appendChild(element('p', 'model-setup-line', '最小配置：' + minimumDepartments.map(function (item) {
+        return text(item.display_name || item.department_id) + ' ' + text(item.capability_label || item.required_capability);
+      }).join('、')));
+      if (extraDepartments.length) {
+        card.appendChild(element('p', 'model-setup-line', '补齐生产：' + extraDepartments.map(function (item) {
+          return text(item.display_name || item.department_id) + ' ' + text(item.capability_label || item.required_capability);
+        }).join('、')));
+      }
+      const warnings = Array.isArray(office.common_misfills) ? office.common_misfills.slice(0, 2) : [];
+      if (warnings.length) {
+        const list = element('ul', 'model-setup-warnings');
+        warnings.forEach(function (item) {
+          list.appendChild(element('li', '', text(item.mistake) + '：' + text(item.correct_action)));
+        });
+        card.appendChild(list);
+      }
+      grid.appendChild(card);
+    });
+    target.appendChild(grid);
+  }
+
   function renderPostRunValidation() {
     const portfolio = showcase.portfolio_embed || {};
     const checklist = Array.isArray(portfolio.post_run_validation) ? portfolio.post_run_validation : [];
@@ -1193,6 +1236,7 @@
   renderInterviewScript();
   renderFirstRunPaths();
   renderFirstRunGuideChecks();
+  renderModelSetupGuide();
   renderReproducibilityChecklist();
   renderPostRunValidation();
   renderOfficeExtensionStory();
