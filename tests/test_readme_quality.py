@@ -227,8 +227,12 @@ class ReadmeQualityTests(unittest.TestCase):
     def test_readme_documents_public_asset_requirement_matrix(self):
         text = Path("README.md").read_text(encoding="utf-8")
 
-        self.assertIn("Public Showcase Handoff Notes", text)
+        self.assertIn("公开展示交接说明", text)
         self.assertIn("asset requirement matrix", text)
+        self.assertIn("GitHub workflow failed", text)
+        self.assertIn("运行验收摘要", text)
+        self.assertIn("个人网站仓库运行 `npm run check:showcase-ci`", text)
+        self.assertIn("不要改产品代码去掩盖 404", text)
         self.assertIn("asset_usage_map", text)
         self.assertIn("three_view", text)
         self.assertIn("expression_sheet", text)
@@ -242,7 +246,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("npm run check:showcase", text)
         self.assertIn("npm run check:online", text)
         self.assertIn("https://www.atticus.asia/three-stooges/", text)
-        self.assertIn("Vercel authorization or redeploy", text)
+        self.assertIn("完成 Vercel 授权或从个人网站仓库重新部署", text)
 
 
 if __name__ == "__main__":

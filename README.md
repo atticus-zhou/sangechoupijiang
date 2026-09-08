@@ -459,21 +459,25 @@ python scripts/verify_github_release_evidence.py --format markdown --contract-on
 ## 当前方向
 
 三个臭皮匠希望成为一个“办公室式”的 AI 协作平台：用户不需要面对一堆模型参数，而是进入某个办公室，提交目标，和一组有分工的 Agent 一起把事情做完。
-## Public Showcase Handoff Notes
+## 公开展示交接说明
 
-The public no-key showcase now includes an asset requirement matrix for the AI
-comic-production office. Treat this matrix as part of the deliverable contract,
-not as page decoration:
+公开无 Key 展示页现在包含 AI 漫剧制片办公室的资产图片规格矩阵（asset requirement matrix）。这个矩阵不是页面装饰，而是交付契约的一部分：它告诉访客和下游操作者，人物、道具、场景分别需要什么基础图，哪些图片必须干净白底，哪些图片用于空间关系，而不是让用户只看到一个好看的 demo。
 
-- character assets must expose `three_view` and `expression_sheet` requirements;
-- prop assets must expose a `turnaround` requirement;
-- scene assets must expose `wide` and `top_down` spatial reference requirements;
-- character and prop base assets must keep `clean_background_required=true`;
-- the same matrix must be visible through `/api/demo/comic-production`,
-  `/api/demo/public-showcase`, `dist/public-showcase/showcase.json`, and the
-  personal website copy at `public/three-stooges/`.
+- 人物资产必须暴露 `three_view` 和 `expression_sheet` 要求。
+- 道具资产必须暴露 `turnaround` 要求。
+- 场景资产必须暴露 `wide` 和 `top_down` 空间参考要求。
+- 人物和道具基础资产必须保留 `clean_background_required=true`。
+- 同一份矩阵必须同时出现在 `/api/demo/comic-production`、`/api/demo/public-showcase`、`dist/public-showcase/showcase.json` 和个人网站拷贝 `public/three-stooges/` 中。
 
-Before claiming the showcase is ready for a reviewer, run:
+面试官能看到的公开页只证明“产品结构、样例交付物、下载路径、运行验收摘要和安全边界”已经准备好；它不证明陌生访客可以在线真实消耗模型，也不证明 AI 漫剧真实画质已经达到生产级。真实画质仍然要看本地真实模型运行后的 handoff manifest、图片证据、刑部视觉质检和 `production_quality_verified=true`。
+
+如果邮箱收到 GitHub workflow failed，不要直接理解成产品崩溃。先看失败来自哪个仓库：
+
+- 产品仓库失败：回到这里运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`，确认无 Key release gate 和敏感信息扫描。
+- 个人网站仓库失败：在个人网站仓库运行 `npm run check:showcase-ci`，它会复刻 GitHub Actions 的 no-key 静态展示检查。
+- 本地 CI 通过但 `/three-stooges/` 还是 404：这通常是 Vercel 还在服务旧部署，或者 Vercel 授权没有完成；继续看个人网站的 `npm run doctor:deploy` 和 `npm run check:online`，不要改产品代码去掩盖 404。
+
+在对面试官宣称公开展示已准备好之前，先运行：
 
 ```powershell
 python scripts/verify_comic_v2_downstream_handoff.py --format markdown
@@ -485,17 +489,12 @@ python scripts/verify_portfolio_showcase_sync.py --format markdown
 python scripts/verify_release_readiness.py --format markdown
 ```
 
-The production website route is a separate deployment fact. Do not describe
-`https://www.atticus.asia/three-stooges/` as live until the personal website
-repository passes:
+线上个人网站是另一件需要单独证明的事。不要把
+`https://www.atticus.asia/three-stooges/` 描述成已经 live，除非个人网站仓库通过：
 
 ```powershell
 npm run check:showcase
 npm run check:online
 ```
 
-If local checks pass but `/three-stooges/` returns 404, the remaining action is
-Vercel authorization or redeploy from the personal website repository, not a
-change to the product code. Never publish API keys, cookies, `config.yaml`,
-`.env`, `user_data/`, `output/`, browser profiles, or real user workspaces into
-the static showcase.
+如果本地检查通过但 `/three-stooges/` 返回 404，剩余动作是完成 Vercel 授权或从个人网站仓库重新部署，而不是修改产品代码。绝对不要把 API Key、Cookie、`config.yaml`、`.env`、`user_data/`、`output/`、浏览器 Profile 或真实用户工作区发布进静态展示包。
