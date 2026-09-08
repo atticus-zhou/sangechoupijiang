@@ -440,6 +440,22 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(badge["can_claim_real_quality"])
         self.assertGreaterEqual(len(badge["signals"]), 5)
         self.assertIn("verify_release_readiness.py", badge["primary_gate"])
+        runtime_acceptance = showcase["portfolio_embed"]["runtime_acceptance_summary"]
+        self.assertEqual(runtime_acceptance["mode"], "public_no_key_runtime_acceptance")
+        self.assertFalse(runtime_acceptance["requires_api_key"])
+        self.assertFalse(runtime_acceptance["calls_real_models"])
+        self.assertTrue(runtime_acceptance["public_safe"])
+        self.assertIn("verify_office_runtime_acceptance.py", runtime_acceptance["release_gate"])
+        runtime_by_office = {item["office_id"]: item for item in runtime_acceptance["checks"]}
+        self.assertEqual(set(runtime_by_office), {"comic_production", "research"})
+        self.assertEqual(
+            runtime_by_office["comic_production"]["acceptance_status"],
+            "structure_ready_needs_real_quality",
+        )
+        self.assertEqual(runtime_by_office["research"]["acceptance_status"], "staged_report_ready")
+        self.assertFalse(runtime_by_office["comic_production"]["accepted_for_real_downstream"])
+        self.assertIn("下载 Word", runtime_by_office["comic_production"]["download_labels"])
+        self.assertIn("下载阶段报告", runtime_by_office["research"]["download_labels"])
         safety_text = "\n".join(showcase["safety_boundaries"])
         self.assertIn("页面运行时不连接 FastAPI", safety_text)
         self.assertIn("真实生产声明报告", safety_text)
@@ -458,6 +474,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("可复核文件目录", index_text)
         self.assertIn("最快验收路线", index_text)
         self.assertIn("未宣称真实画质", static_script)
+        self.assertIn("现在到底能交付什么", index_text)
+        self.assertIn("renderRuntimeAcceptanceSummary", static_script)
+        self.assertIn("portfolio.runtime_acceptance_summary", static_script)
+        self.assertIn("runtime-acceptance-card", style_text)
         self.assertIn("claim.claim_upgrade_checklist", static_script)
         self.assertIn("claim.claim_upgrade_recovery", static_script)
         self.assertIn("real_quality_promotion_gate", static_script)
@@ -588,6 +608,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("Quality upgrade path: action=regenerate_images / steps=3", completed.stdout)
         self.assertIn("Research claim report: downloads/research/claim-report.json / ready=True / level=staged_research_demo / full_automation=False", completed.stdout)
         self.assertIn("Research claim upgrade checklist: 3 items / evidence_handoff=3 / capture_steps=5", completed.stdout)
+        self.assertIn("Runtime acceptance: 2 offices / no_key=True / real_models=False", completed.stdout)
         self.assertIn("New office extension: checklist=8 / phases=8 / doc=docs/NEW_OFFICE_STARTER_CHECKLIST.md", completed.stdout)
         self.assertIn("Future office candidates: 4 / backlog=2", completed.stdout)
         self.assertIn("Office launch matrix: public_ready=2/3 / primary=1 / legacy=1", completed.stdout)

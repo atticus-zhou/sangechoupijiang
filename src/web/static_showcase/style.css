@@ -621,6 +621,56 @@ h3 {
   gap: 18px;
 }
 
+.runtime-section {
+  border-top: 1px solid rgba(112, 210, 181, 0.18);
+  border-bottom: 1px solid rgba(112, 210, 181, 0.18);
+  background: linear-gradient(180deg, rgba(112, 210, 181, 0.05), rgba(15, 20, 27, 0.96));
+}
+
+.runtime-acceptance-grid {
+  display: grid;
+  grid-template-columns: 0.9fr repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.runtime-acceptance-card {
+  min-height: 0;
+  border-color: rgba(112, 210, 181, 0.24);
+}
+
+.runtime-acceptance-intro {
+  background: rgba(13, 22, 36, 0.74);
+}
+
+.runtime-acceptance-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.runtime-acceptance-head .status-pill {
+  flex: 0 0 auto;
+}
+
+.runtime-download-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.runtime-download-labels span {
+  padding: 7px 10px;
+  border: 1px solid rgba(99, 167, 255, 0.28);
+  border-radius: 999px;
+  color: #cfe3ff;
+  background: rgba(99, 167, 255, 0.08);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .first-run-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1345,6 +1395,7 @@ noscript {
     .safety-layout,
     .card-grid.three,
     .claim-grid,
+    .runtime-acceptance-grid,
     .fast-review-list,
     .catalog-grid,
     .extension-check-grid,

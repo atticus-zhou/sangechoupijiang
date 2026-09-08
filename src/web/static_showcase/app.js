@@ -349,6 +349,47 @@
     renderPublicRecoveryDrill(grid, portfolio.public_recovery_drill || {});
   }
 
+  function renderRuntimeAcceptanceSummary() {
+    const portfolio = showcase.portfolio_embed || {};
+    const summary = portfolio.runtime_acceptance_summary || {};
+    const checks = Array.isArray(summary.checks) ? summary.checks : [];
+    const target = document.getElementById('runtime-acceptance-summary');
+    const count = document.getElementById('runtime-count');
+    if (!target || !count || !checks.length) return;
+    count.textContent = checks.length + ' 个办公室';
+
+    const intro = element('article', 'card runtime-acceptance-card runtime-acceptance-intro');
+    intro.appendChild(element('h3', '', text(summary.title || '办公室运行验收摘要')));
+    intro.appendChild(element('p', '', text(summary.summary || '公开展示需要说清楚当前交付价值、声明边界和下一步。')));
+    addTextRow(intro, '公开安全', summary.public_safe ? '是' : '否');
+    addTextRow(intro, '需要 API Key', summary.requires_api_key ? '需要' : '不需要');
+    addTextRow(intro, '调用真实模型', summary.calls_real_models ? '会调用' : '不会调用');
+    if (summary.release_gate) {
+      intro.appendChild(element('code', 'hash-code', text(summary.release_gate)));
+    }
+    target.appendChild(intro);
+
+    checks.forEach(function (item) {
+      const card = element('article', 'card runtime-acceptance-card');
+      const head = element('div', 'runtime-acceptance-head');
+      head.appendChild(element('h3', '', text(item.office_name || item.office_id)));
+      head.appendChild(element('span', 'status-pill', text(item.acceptance_status || '待验收')));
+      card.appendChild(head);
+      addTextRow(card, '现在可用', item.current_user_value);
+      addTextRow(card, '用户下一步', item.user_next_action);
+      addTextRow(card, '系统下一步', item.system_next_action);
+      addTextRow(card, '边界', item.claim_boundary);
+      if (Array.isArray(item.download_labels) && item.download_labels.length) {
+        const labels = element('div', 'runtime-download-labels');
+        item.download_labels.forEach(function (label) {
+          labels.appendChild(element('span', '', text(label)));
+        });
+        card.appendChild(labels);
+      }
+      target.appendChild(card);
+    });
+  }
+
   function renderRealQualityUpgradePlan(grid, plan) {
     if (!grid || !plan || !plan.target_claim_level) return;
     const card = element('article', 'card claim-card real-quality-upgrade-plan-card');
@@ -1139,6 +1180,7 @@
   renderAudiencePaths();
   renderReleaseBadge();
   renderClaimBoundary();
+  renderRuntimeAcceptanceSummary();
   renderFastReviewRoute();
   renderOffices();
   renderReadingGuide();

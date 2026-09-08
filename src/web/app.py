@@ -2978,6 +2978,47 @@ def _public_showcase_office_launch_matrix(governance: dict) -> dict:
     }
 
 
+def _public_showcase_runtime_acceptance_summary(comic_acceptance: dict, research_claim: dict) -> dict:
+    """Summarize runtime acceptance in a public-safe, no-key form."""
+    return {
+        "mode": "public_no_key_runtime_acceptance",
+        "title": "办公室运行验收摘要",
+        "summary": "公开页也要回答同一个问题：用户现在能拿走什么、还不能宣称什么、下一步该谁处理。",
+        "public_safe": True,
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "release_gate": "python scripts/verify_office_runtime_acceptance.py --format markdown",
+        "checks": [
+            {
+                "office_id": "comic_production",
+                "office_name": "AI 漫剧制片办公室",
+                "acceptance_status": "structure_ready_needs_real_quality",
+                "current_user_value": "可以查看故事到资产、镜头、提示词和 Word 制片画布的完整结构链路。",
+                "user_next_action": "如果要交给真实下游制作，先在本地配置模型并重新生成真实图片证据。",
+                "system_next_action": "保留已确认故事和结构资产，重跑图片生产、视觉质检、Word 画布和真实生产声明。",
+                "claim_boundary": "结构样例可公开展示；不能宣称真实画质已验证，也不能直接交给下游。",
+                "download_labels": ["下载 Word", "下载引用清单", "下载提示词包", "下载验收卡"],
+                "source_status": comic_acceptance.get("downstream_status", ""),
+                "accepted_for_public_demo": comic_acceptance.get("accepted_for_public_demo", False),
+                "accepted_for_real_downstream": comic_acceptance.get("accepted_for_real_downstream", False),
+            },
+            {
+                "office_id": "research",
+                "office_name": "研究办公室",
+                "acceptance_status": "staged_report_ready",
+                "current_user_value": "可以查看阶段报告、证据清单、截图计划和待补证说明。",
+                "user_next_action": "如果要提交最终报告，需要补齐平台截图、来源核验和人工账号权限证据。",
+                "system_next_action": "把补充证据重新装配进报告，更新截图表、来源表和最终声明边界。",
+                "claim_boundary": "阶段报告可演示；不能宣称全自动登录飞瓜并完成会员级采集。",
+                "download_labels": ["下载阶段报告", "下载证据清单"],
+                "source_status": (research_claim.get("research_evidence_requirements") or {}).get("status", ""),
+                "accepted_for_public_demo": research_claim.get("can_publicly_show", False),
+                "accepted_for_real_downstream": False,
+            },
+        ],
+    }
+
+
 @app.get("/api/demo/public-showcase")
 async def get_public_showcase_demo_api():
     """Return one public, no-key manifest for portfolio pages and external demos."""
@@ -3127,6 +3168,7 @@ async def get_public_showcase_demo_api():
             "reviewer_fallback_packet": reviewer_fallback,
             "office_extension_story": _public_showcase_office_extension_story(extension_blueprint),
             "office_launch_matrix": _public_showcase_office_launch_matrix(office_governance),
+            "runtime_acceptance_summary": _public_showcase_runtime_acceptance_summary(comic_acceptance, research_claim),
             "public_recovery_drill": _public_showcase_recovery_drill(comic_claim),
             "handoff_inventory": {
                 "uri": "/api/demo/comic-production/handoff-inventory",

@@ -71,6 +71,24 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("verify_release_readiness.py", release_badge["primary_gate"])
         self.assertGreaterEqual(len(release_badge["signals"]), 5)
         self.assertTrue(any(item["label"] == "真实画质声明" for item in release_badge["signals"]))
+        runtime_acceptance = embed["runtime_acceptance_summary"]
+        self.assertEqual(runtime_acceptance["mode"], "public_no_key_runtime_acceptance")
+        self.assertFalse(runtime_acceptance["requires_api_key"])
+        self.assertFalse(runtime_acceptance["calls_real_models"])
+        self.assertTrue(runtime_acceptance["public_safe"])
+        self.assertIn("verify_office_runtime_acceptance.py", runtime_acceptance["release_gate"])
+        runtime_by_office = {item["office_id"]: item for item in runtime_acceptance["checks"]}
+        self.assertEqual(set(runtime_by_office), {"comic_production", "research"})
+        self.assertEqual(
+            runtime_by_office["comic_production"]["acceptance_status"],
+            "structure_ready_needs_real_quality",
+        )
+        self.assertEqual(runtime_by_office["research"]["acceptance_status"], "staged_report_ready")
+        self.assertFalse(runtime_by_office["comic_production"]["accepted_for_real_downstream"])
+        self.assertIn("下载 Word", runtime_by_office["comic_production"]["download_labels"])
+        self.assertIn("下载阶段报告", runtime_by_office["research"]["download_labels"])
+        self.assertIn("不能宣称", runtime_by_office["comic_production"]["claim_boundary"])
+        self.assertIn("不能宣称", runtime_by_office["research"]["claim_boundary"])
         self.assertGreaterEqual(len(embed["workflow_showcase"]), 4)
         self.assertTrue(any(item["kind"] == "screenshot_target" for item in embed["workflow_showcase"]))
         fast_review = embed["fast_review_route"]

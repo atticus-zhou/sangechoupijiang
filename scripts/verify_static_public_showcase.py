@@ -438,6 +438,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         release_badge = portfolio.get("release_badge") or {}
         real_production_claim = portfolio.get("real_production_claim") or {}
         research_claim_boundary = portfolio.get("research_claim_boundary") or {}
+        runtime_acceptance = portfolio.get("runtime_acceptance_summary") or {}
         quality_upgrade_path = portfolio.get("quality_upgrade_path") or {}
         real_quality_upgrade_plan = portfolio.get("real_quality_upgrade_plan") or {}
         office_extension_story = portfolio.get("office_extension_story") or {}
@@ -602,6 +603,34 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         if boundary_requirements.get("status") != "staged_only":
             errors.append("static portfolio research claim boundary must expose staged_only evidence requirements")
         research_claim_upgrade_checklist = research_claim_payload.get("claim_upgrade_checklist") or []
+        runtime_checks = runtime_acceptance.get("checks") or []
+        runtime_by_office = {
+            str(item.get("office_id") or ""): item
+            for item in runtime_checks
+            if isinstance(item, dict)
+        }
+        if runtime_acceptance.get("mode") != "public_no_key_runtime_acceptance":
+            errors.append("static showcase must expose the public no-key runtime acceptance summary")
+        if runtime_acceptance.get("requires_api_key") is not False:
+            errors.append("static runtime acceptance must not require an API Key")
+        if runtime_acceptance.get("calls_real_models") is not False:
+            errors.append("static runtime acceptance must not call real models")
+        if runtime_acceptance.get("public_safe") is not True:
+            errors.append("static runtime acceptance must be public safe")
+        if "verify_office_runtime_acceptance.py" not in str(runtime_acceptance.get("release_gate") or ""):
+            errors.append("static runtime acceptance must link the office runtime acceptance gate")
+        if set(runtime_by_office) != {"comic_production", "research"}:
+            errors.append("static runtime acceptance must cover the comic production and research offices")
+        if (runtime_by_office.get("comic_production") or {}).get("acceptance_status") != "structure_ready_needs_real_quality":
+            errors.append("static runtime acceptance must mark comic production as structure-ready but quality-blocked")
+        if (runtime_by_office.get("research") or {}).get("acceptance_status") != "staged_report_ready":
+            errors.append("static runtime acceptance must mark research as staged-report-ready")
+        if (runtime_by_office.get("comic_production") or {}).get("accepted_for_real_downstream") is not False:
+            errors.append("static runtime acceptance must not allow real downstream handoff for comic fixture demos")
+        runtime_text = json.dumps(runtime_acceptance, ensure_ascii=False)
+        for marker in ("下载 Word", "下载阶段报告", "不能宣称"):
+            if marker not in runtime_text:
+                errors.append(f"static runtime acceptance is missing user-facing marker: {marker}")
 
         fast_review_route = portfolio.get("fast_review_route") or []
         if [item.get("order") for item in fast_review_route] != [1, 2, 3, 4, 5]:
@@ -1030,6 +1059,9 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "research_claim_upgrade_checklist_count": len(research_claim_upgrade_checklist),
             "research_evidence_handoff_count": len(research_claim_payload.get("evidence_handoff") or []),
             "research_capture_playbook_step_count": len(research_capture_playbook.get("steps") or []),
+            "runtime_acceptance_count": len(runtime_checks),
+            "runtime_acceptance_requires_api_key": bool(runtime_acceptance.get("requires_api_key")),
+            "runtime_acceptance_calls_real_models": bool(runtime_acceptance.get("calls_real_models")),
             "quality_upgrade_recovery_action": quality_upgrade_path.get("recovery_action", ""),
             "quality_upgrade_step_count": len(quality_upgrade_path.get("steps") or []),
             "office_extension_checklist_count": len(extension_checklist),
@@ -1113,6 +1145,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Real quality human card: {payload.get('real_quality_upgrade_human_card_title') or '-'} / ladder={payload.get('real_quality_upgrade_acceptance_ladder_count')} / rebuild={payload.get('real_quality_upgrade_transition_rebuild_count')}",
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')} / capture_steps={payload.get('research_capture_playbook_step_count')}",
+        f"- Runtime acceptance: {payload.get('runtime_acceptance_count')} offices / no_key={not payload.get('runtime_acceptance_requires_api_key')} / real_models={payload.get('runtime_acceptance_calls_real_models')}",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- New office extension: checklist={payload.get('office_extension_checklist_count')} / phases={payload.get('office_extension_phase_count')} / doc={payload.get('office_extension_doc')}",
         f"- Future office candidates: {payload.get('office_extension_candidate_count')} / backlog={payload.get('office_extension_backlog_count')}",
