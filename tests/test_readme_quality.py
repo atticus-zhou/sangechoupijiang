@@ -157,6 +157,7 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn(".github/workflows/pages-showcase.yml", text)
         self.assertIn("Source 设为 GitHub Actions", text)
         self.assertIn("不需要 Vercel 授权", text)
+        self.assertIn("GitHub Pages not enabled", text)
         self.assertIn("data/comic_production_claim_report.json", text)
         self.assertIn("claim_upgrade_recovery", text)
         self.assertIn("downstream_handoff_decision", text)

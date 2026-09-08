@@ -41,6 +41,8 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("Source 设为 GitHub Actions", text)
         self.assertIn("不需要 Vercel 授权", text)
         self.assertIn("不需要任何 API Key", text)
+        self.assertIn("GitHub Pages not enabled", text)
+        self.assertIn("公开 URL 不应宣称已发布", text)
         self.assertIn("dist/public-showcase", text)
 
         self.assertIn("Asset Requirement Matrix In The Static Package", text)

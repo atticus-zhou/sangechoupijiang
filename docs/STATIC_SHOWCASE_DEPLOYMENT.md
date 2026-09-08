@@ -103,7 +103,7 @@ Netlify 的发布目录选择 `dist/public-showcase`。GitHub Pages 只发布导
 .github/workflows/pages-showcase.yml
 ```
 
-它会在 `main` 更新或手动触发时执行三步：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描，然后通过 GitHub Pages artifact 发布。这个通道不需要 Vercel 授权，也不需要任何 API Key。第一次使用前，需要在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果组织或仓库禁用了 Pages，工作流会停在部署阶段，但不会影响产品本体 release readiness。
+它会在 `main` 更新或手动触发时执行三步：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描，然后上传 GitHub Pages artifact。这个通道不需要 Vercel 授权，也不需要任何 API Key。第一次使用前，需要在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果组织或仓库禁用了 Pages，工作流会留下 `GitHub Pages not enabled` 提示，静态 artifact 仍然会完成构建和验证，但公开 URL 不应宣称已发布。
 
 ## 发布前检查
 
