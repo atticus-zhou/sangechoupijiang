@@ -157,6 +157,33 @@ Current handoff contract:
 
 Do not describe the personal website as live until `npm run check:online` passes against the production domain. If you deploy the static package outside the personal website, do not share that URL until `verify_public_showcase_live.py` passes against the same URL.
 
+## Vercel 线上仍是 404 时怎么处理
+
+如果本地 `npm run check:showcase`、`npm run prepare:vercel-prebuilt` 都通过，但 `npm run check:online` 仍然报告 `/three-stooges/` 是 404，先不要继续改三个臭皮匠产品代码。这通常只说明 Vercel 还在服务旧构建，或者 Vercel 项目没有从当前 GitHub 分支重新部署。
+
+推荐先走 Dashboard 路线：
+
+1. 打开 Vercel Dashboard。
+2. 进入 `personal-website-v2` 项目。
+3. 打开 Deployments。
+4. 找到最新的 `main` 分支提交。
+5. 点击 Redeploy。
+6. 等部署完成后，在个人网站仓库重新运行 `npm run check:online`。
+
+如果你想走命令行路线：
+
+1. 在个人网站仓库运行 `npm run check:vercel-auth`。
+2. 如果提示没有 Vercel 授权，运行 `npx vercel login`，在浏览器里完成登录。
+3. 回到终端运行 `npm run ship:vercel`。
+4. 最后运行 `npm run check:online`。
+
+两个判断要分清：
+
+- `npm run check:showcase` 通过：说明个人网站仓库里的静态展示包是好的。
+- `npm run check:online` 通过：说明 `https://www.atticus.asia/three-stooges/` 这个线上地址真的已经更新。
+
+只有第二条通过，才适合把线上链接发给面试官。任何时候都不要为了让线上检查通过，把 API Key、Cookie、`config.yaml`、`.env`、`user_data/`、`output/` 或真实运行产物放进 `public/three-stooges/`。
+
 ## Visitor Acceptance Guide
 
 The static package must also keep `data/visitor_acceptance_guide.json`.

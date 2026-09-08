@@ -56,6 +56,14 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("referenced_by_shots", text)
         self.assertIn("资产使用地图", text)
         self.assertIn("npm run check:showcase", text)
+        self.assertIn("Vercel 线上仍是 404 时怎么处理", text)
+        self.assertIn("Vercel Dashboard", text)
+        self.assertIn("Deployments", text)
+        self.assertIn("Redeploy", text)
+        self.assertIn("npm run check:vercel-auth", text)
+        self.assertIn("npx vercel login", text)
+        self.assertIn("npm run ship:vercel", text)
+        self.assertIn("只有第二条通过，才适合把线上链接发给面试官", text)
 
     def test_readme_links_the_static_deployment_path(self):
         text = Path("README.md").read_text(encoding="utf-8")
