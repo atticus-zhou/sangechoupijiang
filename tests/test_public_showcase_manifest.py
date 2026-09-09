@@ -521,6 +521,13 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(deployment_ci["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
         self.assertEqual(deployment_ci["live_authority"], "npm run check:online")
         self.assertIn("npm run build", deployment_ci["commands"])
+        static_fallback = public_deployment["static_url_fallback"]
+        self.assertEqual(static_fallback["status"], "external_required")
+        self.assertEqual(static_fallback["default_url"], "https://atticus-zhou.github.io/sangechoupijiang/")
+        self.assertEqual(static_fallback["workflow_path"], ".github/workflows/pages-showcase.yml")
+        self.assertIn("npm run check:pages-fallback", static_fallback["verification_commands"])
+        self.assertIn("fallback URL verification passes", static_fallback["do_not_claim_live_until"])
+        self.assertIn("个人网站", " ".join(static_fallback["does_not_prove"]))
         self.assertIn("config.yaml", " ".join(public_deployment["forbidden_public_assets"]))
         self.assertIn(
             "python scripts/verify_static_public_showcase.py --format markdown",

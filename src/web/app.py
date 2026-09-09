@@ -1949,8 +1949,40 @@ def _public_showcase_reviewer_fallback_packet() -> dict:
     }
 
 
+def _public_showcase_static_url_fallback() -> dict:
+    return {
+        "title": "GitHub Pages 备用静态入口",
+        "status": "external_required",
+        "default_url": "https://atticus-zhou.github.io/sangechoupijiang/",
+        "owned_by": "product_repository",
+        "workflow_path": ".github/workflows/pages-showcase.yml",
+        "enable_steps": [
+            "打开产品仓库 Settings -> Pages",
+            "把 Source 设为 GitHub Actions",
+            "重新运行 Public showcase pages workflow",
+            "用 npm run check:pages-fallback 或 verify_public_showcase_live.py 验证公开 URL",
+        ],
+        "verification_commands": [
+            "npm run check:pages-fallback",
+            "python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown",
+        ],
+        "proves_when_passed": [
+            "独立静态首页可访问",
+            "visitor acceptance guide、claim report、Word 画布、trace bundle 和面试官评审包可下载",
+            "备用 URL 不需要 Vercel 授权，也不读取 API Key",
+        ],
+        "does_not_prove": [
+            "个人网站 https://www.atticus.asia/three-stooges/ 已经刷新",
+            "真实模型调用成功",
+            "公开样例具备真实生产画质",
+        ],
+        "do_not_claim_live_until": "fallback URL verification passes",
+    }
+
+
 def _public_showcase_portfolio_integration() -> dict:
     reviewer_fallback = _public_showcase_reviewer_fallback_packet()
+    static_url_fallback = _public_showcase_static_url_fallback()
     return {
         "title": "个人网站接入方式",
         "summary": "公开展示应只接入 no-key 静态包或 /api/demo/public-showcase 数据，不接入真实生产接口、config.yaml、用户工作区或作者 API Key。",
@@ -1973,6 +2005,7 @@ def _public_showcase_portfolio_integration() -> dict:
             "do_not_claim_live_until": "npm run check:online passes",
         },
         "reviewer_fallback_packet": reviewer_fallback,
+        "static_url_fallback": static_url_fallback,
         "portfolio_ci_proof": _public_showcase_portfolio_ci_proof(),
         "integration_options": [
             {
@@ -3061,6 +3094,7 @@ async def get_public_showcase_demo_api():
     extension_blueprint = list_office_extension_blueprint()
     office_governance = audit_office_extension_governance()
     reviewer_fallback = _public_showcase_reviewer_fallback_packet()
+    static_url_fallback = _public_showcase_static_url_fallback()
     asset_requirement_matrix = comic_demo.get("asset_requirement_matrix") or {}
     asset_usage_map = comic_demo.get("asset_usage_map") or {}
     featured_demos = [
@@ -3209,6 +3243,7 @@ async def get_public_showcase_demo_api():
             "post_run_validation": _public_showcase_post_run_validation(),
             "portfolio_integration": _public_showcase_portfolio_integration(),
             "reviewer_fallback_packet": reviewer_fallback,
+            "static_url_fallback": static_url_fallback,
             "office_extension_story": _public_showcase_office_extension_story(extension_blueprint),
             "office_launch_matrix": _public_showcase_office_launch_matrix(office_governance),
             "runtime_acceptance_summary": _public_showcase_runtime_acceptance_summary(comic_acceptance, research_claim),
@@ -3335,6 +3370,7 @@ async def get_public_showcase_demo_api():
             },
             "ci_verification": _public_showcase_portfolio_ci_proof(),
             "reviewer_fallback_packet": reviewer_fallback,
+            "static_url_fallback": static_url_fallback,
             "forbidden_public_assets": [
                 "config.yaml",
                 ".env",

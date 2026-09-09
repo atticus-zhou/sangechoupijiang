@@ -387,6 +387,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(live_verification["ship_command"], "npm run ship:vercel")
         self.assertTrue(live_verification["requires_vercel_authorization"])
         self.assertIn("check:online", live_verification["do_not_claim_live_until"])
+        static_fallback = deploy_manifest["static_url_fallback"]
+        self.assertEqual(static_fallback["status"], "external_required")
+        self.assertEqual(static_fallback["default_url"], "https://atticus-zhou.github.io/sangechoupijiang/")
+        self.assertEqual(static_fallback["workflow_path"], ".github/workflows/pages-showcase.yml")
+        self.assertIn("npm run check:pages-fallback", static_fallback["verification_commands"])
+        self.assertIn("fallback URL verification passes", static_fallback["do_not_claim_live_until"])
         deploy_ci = deploy_manifest["ci_verification"]
         self.assertEqual(deploy_ci["status"], "repo_static_checks")
         self.assertEqual(deploy_ci["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
@@ -408,6 +414,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(showcase_live_verification["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(showcase_live_verification["check_command"], "npm run check:online")
         self.assertEqual(showcase_live_verification["live_url"], "https://www.atticus.asia/three-stooges/")
+        showcase_static_fallback = showcase["public_deployment"]["static_url_fallback"]
+        self.assertEqual(showcase_static_fallback["status"], "external_required")
+        self.assertEqual(showcase_static_fallback["default_url"], "https://atticus-zhou.github.io/sangechoupijiang/")
+        self.assertIn("npm run check:pages-fallback", showcase_static_fallback["verification_commands"])
+        visitor_fallback = visitor_guide["static_url_fallback"]
+        self.assertEqual(visitor_fallback["default_url"], "https://atticus-zhou.github.io/sangechoupijiang/")
         showcase_ci = showcase["public_deployment"]["ci_verification"]
         self.assertEqual(showcase_ci["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
         self.assertEqual(showcase_ci["live_authority"], "npm run check:online")

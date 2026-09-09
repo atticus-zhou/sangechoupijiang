@@ -224,6 +224,7 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
     fast_review = portfolio.get("fast_review_route") or []
     download_catalog = static_showcase.get("download_catalog") or []
     fallback = deployment.get("reviewer_fallback_packet") or portfolio.get("reviewer_fallback_packet") or {}
+    static_url_fallback = deployment.get("static_url_fallback") or portfolio.get("static_url_fallback") or {}
 
     return {
         "mode": "public_no_key_visitor_acceptance",
@@ -313,6 +314,19 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
             "proves": fallback.get("proves", []),
             "does_not_prove": fallback.get("does_not_prove", []),
             "forbidden_materials": fallback.get("forbidden_materials", []),
+        },
+        "static_url_fallback": {
+            "status": static_url_fallback.get("status", "external_required"),
+            "default_url": static_url_fallback.get("default_url", "https://atticus-zhou.github.io/sangechoupijiang/"),
+            "workflow_path": static_url_fallback.get("workflow_path", ".github/workflows/pages-showcase.yml"),
+            "verification_commands": static_url_fallback.get(
+                "verification_commands",
+                [
+                    "npm run check:pages-fallback",
+                    "python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown",
+                ],
+            ),
+            "do_not_claim_live_until": static_url_fallback.get("do_not_claim_live_until", "fallback URL verification passes"),
         },
         "ci_verification": {
             "status": ci_verification.get("status", "repo_static_checks"),
@@ -510,6 +524,10 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "reviewer_fallback_packet",
             (static_showcase.get("portfolio_embed") or {}).get("reviewer_fallback_packet") or {},
         )
+        deployment.setdefault(
+            "static_url_fallback",
+            (static_showcase.get("portfolio_embed") or {}).get("static_url_fallback") or {},
+        )
         visitor_acceptance_guide = _build_visitor_acceptance_guide(static_showcase)
         visitor_acceptance_path = "data/visitor_acceptance_guide.json"
         static_showcase["visitor_acceptance_guide"] = {
@@ -565,6 +583,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "do_not_claim_live_until": ci_verification.get("do_not_claim_live_until", "npm run check:online passes"),
             },
             "reviewer_fallback_packet": (static_showcase.get("public_deployment") or {}).get("reviewer_fallback_packet") or {},
+            "static_url_fallback": (static_showcase.get("public_deployment") or {}).get("static_url_fallback") or {},
             "required_files": [
                 "index.html",
                 "data.js",
