@@ -2577,6 +2577,18 @@ def _research_demo_evidence_capture_playbook() -> dict:
         "status": "human_account_required",
         "summary": "公开样例不自动登录第三方平台；真实调研时由人完成登录和截图，研究办公室负责把截图、来源说明和待核验项重新整理进报告。",
         "file_naming_rule": "evidence_{order:02d}_{platform}_{page_or_metric}.png，例如 evidence_01_feigua_price_band.png。",
+        "human_only_needs_to": [
+            "在第三方平台自己的页面完成登录，不把账号密码交给产品或公开页面。",
+            "按待补证据卡打开对应页面，确认账号权限足够。",
+            "在关键页面截图或导出平台允许导出的文件，并遮挡账号、手机号、店铺后台等敏感信息。",
+            "把截图按 evidence_ 文件命名放回工作区，必要时补一句这张图证明什么。",
+        ],
+        "system_will_do": [
+            "读取证据清单，把截图和报告中的数据、竞品、评论痛点或风险项建立引用关系。",
+            "保留已确认调研范围和已上传截图，只重建来源说明、数据表、竞品表、阶段报告和 claim report。",
+            "把仍然缺失或权限不足的页面继续标成待补证据，而不是编造数据。",
+            "补证后重新运行 readiness 和 release gates，只有证据链通过时才升级公开声明。",
+        ],
         "must_not_collect": [
             "账号密码",
             "Cookie",

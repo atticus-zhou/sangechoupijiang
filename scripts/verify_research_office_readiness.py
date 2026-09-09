@@ -138,6 +138,8 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
     capture_playbook = payload.get("evidence_capture_playbook") or {}
     research_evidence_requirements = payload.get("research_evidence_requirements") or {}
     capture_steps = capture_playbook.get("steps") or []
+    human_only_needs_to = capture_playbook.get("human_only_needs_to") or []
+    system_will_do = capture_playbook.get("system_will_do") or []
     claim_response = client.get("/api/demo/research/claim-report")
     claim_report = claim_response.json() if claim_response.status_code == 200 else {}
     claim_capture_playbook = claim_report.get("evidence_capture_playbook") or {}
@@ -184,6 +186,16 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
         errors.append("research evidence capture playbook must define evidence file naming")
     if "账号密码" not in "\n".join(capture_playbook.get("must_not_collect") or []):
         errors.append("research evidence capture playbook must forbid collecting account passwords")
+    if len(human_only_needs_to) < 3:
+        errors.append("research evidence capture playbook must explain what the human does")
+    if not any("登录" in str(item) for item in human_only_needs_to):
+        errors.append("research evidence capture playbook must say humans handle third-party login")
+    if not any("账号密码" in str(item) for item in human_only_needs_to):
+        errors.append("research evidence capture playbook must say humans do not give passwords to the product")
+    if len(system_will_do) < 3:
+        errors.append("research evidence capture playbook must explain what the system does")
+    if not any("重建" in str(item) or "重新运行" in str(item) for item in system_will_do):
+        errors.append("research evidence capture playbook must say the system rebuilds or reruns evidence checks")
     for item in capture_steps:
         if not item.get("owner") or not item.get("action") or not item.get("expected_artifact") or not item.get("acceptance"):
             errors.append(f"research evidence capture step is incomplete: {item.get('order') or item.get('action')}")
@@ -323,6 +335,8 @@ def _verify_demo_endpoint(errors: list[str]) -> dict[str, Any]:
             if item.get("owner") and item.get("action") and item.get("expected_artifact") and item.get("acceptance")
         ),
         "capture_playbook_command_count": len(capture_playbook.get("after_capture_commands") or []),
+        "human_only_action_count": len(human_only_needs_to),
+        "system_action_count": len(system_will_do),
         "claim_report_status_code": claim_response.status_code,
         "claim_level": claim_report.get("claim_level", ""),
         "can_claim_full_automation": bool(claim_report.get("can_claim_full_automation")),
@@ -406,6 +420,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Evidence handoff: {demo.get('evidence_handoff_ready_count')}/{demo.get('evidence_handoff_count')}",
         f"- Evidence gap cards: {demo.get('evidence_gap_card_ready_count')}/{demo.get('evidence_gap_card_count')}",
         f"- Evidence capture playbook: {demo.get('capture_playbook_status')} / steps={demo.get('capture_playbook_ready_count')}/{demo.get('capture_playbook_step_count')} / commands={demo.get('capture_playbook_command_count')}",
+        f"- Human-only actions: {demo.get('human_only_action_count')} / system actions: {demo.get('system_action_count')}",
         f"- Claim report: HTTP {demo.get('claim_report_status_code')} / {demo.get('claim_level')} / full_automation={demo.get('can_claim_full_automation')}",
         f"- Claim upgrade checklist: {demo.get('claim_upgrade_checklist_count')} items",
         f"- Public demo boundary: {demo.get('public_demo_boundary')}",
