@@ -421,6 +421,8 @@ GET /api/comic-production/latest-real-run-audit
 
 这个接口不会调用模型、不会读取 API Key、不会写工作区，只扫描 `output/workspaces/` 里最新完整可审计的 AI 漫剧制片包。它会跳过空 JSON、测试残留和没有图片/资产/镜头/Word 画布的半成品 manifest；如果没有完整产物，会返回 `status=no_auditable_manifest`，并告诉用户应该先完成故事确认、资产拆解、图片质检和 Word 画布生成。找到完整产物后，它会返回 `claim_level`、`handoff_allowed`、`image_summary`、`missing_checks` 和 `safe_public_claim`，前端或历史页可以直接把它渲染成“当前能不能交给下游”的判断卡。
 
+AI 漫剧制片办公室工作台已经接入这张判断卡，名称是“最新真实制片包审计”。它不跟随当前下拉选中的项目盲目变化，而是读取本机最新完整可审计交付物：没有完整包时提醒还缺故事确认、资产审核、图片质检或 Word 画布；找到完整包后显示它来自哪个工作空间、图片总数/可用数/返工数、Word 画布和引用清单下载入口，以及当前能否安全对外宣称真实质量。
+
 声明报告里的 `real_quality_promotion_gate` 是最终升级门。它会逐项检查制片包结构、manifest 内置质量基准、真实模型图片、视觉质检、图片返工数、导演式提示词、提示词策略追溯、blocker 和 `production_quality_verified`。其中 `prompt_strategy_lineage` 负责确认提示词包、图片提示词和镜头提示词都绑定同一套当前策略版本；只要有一项缺失，就只能显示 `evidence_missing`，不能把这次交付说成真实生产质量。
 
 如果你要把无 Key 样例升级成真实模型质量验证，可以先看操作面板：
