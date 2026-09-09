@@ -38,6 +38,7 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", checked_paths)
         self.assertIn("docs/OFFICE_EXPANSION_DECISION_BRIEF.md", checked_paths)
         self.assertIn("docs/FIRST_RUN_DECISION_CARD.md", checked_paths)
+        self.assertIn("docs/INTERVIEWER_REVIEW_PACKET.md", checked_paths)
         static_doc = next(item for item in payload["docs"] if item["path"] == "docs/STATIC_SHOWCASE_DEPLOYMENT.md")
         self.assertFalse(static_doc["missing_markers"])
         for item in payload["docs"]:
@@ -81,6 +82,8 @@ class PublicDocsReadabilityVerifierTests(unittest.TestCase):
         self.assertIn("docs/FIRST_RUN_DECISION_CARD.md", completed.stdout)
         self.assertIn("docs/NEW_OFFICE_STARTER_CHECKLIST.md", completed.stdout)
         self.assertIn("docs/OFFICE_EXPANSION_DECISION_BRIEF.md", completed.stdout)
+        self.assertIn("interviewer review packet", completed.stdout)
+        self.assertIn("docs/INTERVIEWER_REVIEW_PACKET.md", completed.stdout)
         self.assertIn("Docs: `", completed.stdout)
 
     def test_suspicious_marker_detector_catches_mojibake_without_flagging_clean_chinese(self):

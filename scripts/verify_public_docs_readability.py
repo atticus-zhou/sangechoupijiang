@@ -257,6 +257,23 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "python scripts/verify_office_expansion_decision_brief.py --format markdown",
         ],
     },
+    {
+        "path": "docs/INTERVIEWER_REVIEW_PACKET.md",
+        "role": "interviewer review packet",
+        "required_markers": [
+            "面试官评审包说明",
+            "no-key demo",
+            "5 分钟评审路线",
+            "面试时可以这样讲",
+            "不能这样讲",
+            "线上 404 时怎么解释",
+            "API Key",
+            "config.yaml",
+            "user_data/",
+            "npm run check:online",
+            "公开样例只证明结构、流程和交付格式",
+        ],
+    },
 ]
 
 SUSPICIOUS_TEXT_MARKERS = [
