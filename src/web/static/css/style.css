@@ -2719,6 +2719,22 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     border-color: rgba(63, 185, 80, 0.28);
     background: rgba(63, 185, 80, 0.08);
 }
+.latest-real-run-incomplete {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid rgba(210, 153, 34, 0.2);
+    border-radius: 12px;
+    background: rgba(210, 153, 34, 0.06);
+}
+.latest-real-run-incomplete b,
+.latest-real-run-incomplete strong {
+    color: var(--text);
+}
+.latest-real-run-incomplete span {
+    color: var(--text2);
+    line-height: 1.55;
+}
 .latest-real-run-audit-meta,
 .latest-real-run-audit-metrics,
 .latest-real-run-audit-actions {

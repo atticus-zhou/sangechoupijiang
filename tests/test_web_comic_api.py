@@ -97,6 +97,64 @@ class WebComicApiTests(unittest.TestCase):
         self.assertNotIn("E:\\", payload["audited_manifest"])
         self.assertIn("下游", payload["human_message"])
 
+    def test_latest_real_run_audit_points_to_recent_incomplete_workspace(self):
+        workspace_id = f"ws_incomplete_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        config_manager.create_workspace(
+            workspace_id=workspace_id,
+            office_id="comic_production",
+            title="测试未完成漫剧",
+            brief="用于验证审计卡能指向卡住的项目",
+        )
+        state = {
+            "pipeline_version": 2,
+            "workspace_id": workspace_id,
+            "office_id": "comic_production",
+            "status": "active",
+            "stage": "asset_review",
+            "story_id": "story_test",
+            "story_version": 1,
+            "style_id": "style_test",
+            "style_version": 1,
+            "current_agent": "门下省",
+            "current_object": "资产拆解包 v1",
+            "completed": 2,
+            "total": 4,
+            "blocking_reason": "等待用户审核人物、道具和场景。",
+            "next_action": "审核资产拆解包；不满意时填写缺漏后退回重新拆解。",
+            "can_generate_images": False,
+            "assets_status": "pending_review",
+            "shots_status": "not_started",
+            "document_status": "not_started",
+            "contract": {"status": "visual_bible_approved"},
+            "asset_manifest": {},
+            "prompt_package": {},
+            "image_production": {},
+            "delivery": {},
+        }
+        config_manager.set_kv(f"comic_v2_state:{workspace_id}", json.dumps(state, ensure_ascii=False))
+
+        with patch(
+            "scripts.verify_comic_real_run_evidence_intake.find_latest_user_handoff_manifest",
+            return_value=None,
+        ):
+            response = self.client.get("/api/comic-production/latest-real-run-audit")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "no_auditable_manifest")
+        self.assertFalse(payload["can_handoff_to_downstream"])
+        self.assertEqual(payload["handoff_decision_label"], "不能交给下游")
+        incomplete = payload["latest_incomplete_workspace"]
+        self.assertEqual(incomplete["workspace_id"], workspace_id)
+        self.assertEqual(incomplete["title"], "测试未完成漫剧")
+        self.assertEqual(incomplete["stage"], "asset_review")
+        self.assertEqual(incomplete["stage_label"], "资产审核")
+        self.assertEqual(incomplete["current_agent"], "门下省")
+        self.assertIn("资产拆解包", incomplete["current_object"])
+        self.assertIn("审核资产拆解包", payload["recommended_user_action"])
+        self.assertEqual(payload["download_actions"], [])
+
     def test_handoff_lineage_summary_preserves_handoff_and_acceptance_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
             manifest_path = Path(tmp) / "handoff.json"

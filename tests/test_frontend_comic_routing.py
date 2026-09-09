@@ -482,6 +482,9 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("download_actions", render_fn)
         self.assertIn("能否交给下游", render_fn)
         self.assertIn("建议动作", render_fn)
+        self.assertIn("latest_incomplete_workspace", render_fn)
+        self.assertIn("最近未完成项目", render_fn)
+        self.assertIn("为什么停下", render_fn)
         self.assertIn("user_next_actions", render_fn)
         self.assertIn("image_quality_summary", render_fn)
         self.assertIn("word_canvas_uri", render_fn)
@@ -493,6 +496,7 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn(".latest-real-run-audit-card", css)
         self.assertIn(".latest-real-run-audit-card.ready", css)
         self.assertIn(".latest-real-run-decision", css)
+        self.assertIn(".latest-real-run-incomplete", css)
         self.assertIn(".latest-real-run-audit-list", css)
 
     def test_v2_action_error_stays_visible_in_stage_board(self):

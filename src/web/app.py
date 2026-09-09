@@ -3612,12 +3612,17 @@ async def get_latest_comic_real_run_audit_api():
 
     manifest_path = find_latest_user_handoff_manifest(DEFAULT_USER_OUTPUT_ROOT)
     if manifest_path is None:
+        latest_incomplete = _latest_comic_v2_incomplete_workspace()
         decision = {
             "status": "no_auditable_manifest",
             "label": "不能交给下游",
             "handoff_allowed": False,
             "human_message": "还没有找到完整可审计的 AI 漫剧制片包。",
-            "operator_next_step": "先完成故事确认、资产审核、图片生成、视觉质检和 Word 画布生成；完成后刷新这张卡片。",
+            "operator_next_step": (
+                latest_incomplete.get("recommended_action")
+                if latest_incomplete
+                else "先完成故事确认、资产审核、图片生成、视觉质检和 Word 画布生成；完成后刷新这张卡片。"
+            ),
             "missing_before_handoff": [
                 "可审计 handoff manifest",
                 "Word 制片画布",
@@ -3641,6 +3646,7 @@ async def get_latest_comic_real_run_audit_api():
             "can_handoff_to_downstream": False,
             "cannot_handoff_reasons": decision["missing_before_handoff"],
             "recommended_user_action": decision["operator_next_step"],
+            "latest_incomplete_workspace": latest_incomplete,
             "download_actions": [],
             "why": "系统会跳过空 JSON、测试残留，以及缺少图片、资产、镜头或 Word 画布的半成品 manifest，避免把半成品误判为最新交付。",
             "user_next_actions": [
@@ -3798,6 +3804,77 @@ async def get_latest_comic_real_run_audit_api():
             else "只能说当前有结构或部分流程证据，不能宣称真实画质和下游生产质量已验证。"
         ),
     }
+
+
+def _latest_comic_v2_incomplete_workspace() -> dict:
+    """Return a public-safe summary for the latest comic workspace without a complete handoff."""
+    for workspace in config_manager.list_workspaces(limit=12, office_id="comic_production"):
+        workspace_id = str(workspace.get("workspace_id") or "")
+        if not workspace_id:
+            continue
+        raw = config_manager.get_kv(_comic_v2_key(workspace_id), "")
+        if not raw:
+            continue
+        try:
+            state = ComicProductionV2.from_dict(json.loads(raw))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return {
+                "workspace_id": workspace_id,
+                "title": workspace.get("title") or workspace_id,
+                "stage": "state_load_failed",
+                "stage_label": "状态读取失败",
+                "current_agent": "尚书省",
+                "current_object": "项目状态",
+                "progress": "",
+                "blocking_reason": "这个项目的生产状态损坏，系统无法判断它卡在哪一步。",
+                "recommended_action": "回到该项目刷新；如果仍失败，请重新创建项目或清理损坏状态后再确认故事。",
+            }
+        if state.stage == "ready_for_handoff" and state.delivery:
+            continue
+        return {
+            "workspace_id": workspace_id,
+            "title": workspace.get("title") or workspace_id,
+            "stage": state.stage,
+            "stage_label": _comic_v2_stage_label(state.stage),
+            "current_agent": state.current_agent,
+            "current_object": state.current_object,
+            "progress": f"{state.completed}/{state.total}",
+            "blocking_reason": state.blocking_reason,
+            "recommended_action": state.next_action or _comic_v2_stage_next_action(state.stage),
+        }
+    return {}
+
+
+def _comic_v2_stage_label(stage: str) -> str:
+    labels = {
+        "not_started": "尚未开始",
+        "story_confirmed": "故事已确认",
+        "visual_bible_review": "视觉母版审核",
+        "asset_planning": "资产拆解中",
+        "asset_review": "资产审核",
+        "prompt_planning": "提示词规划",
+        "image_generation": "图片生成与质检",
+        "visual_review": "视觉质检",
+        "document_generation": "Word 画布组装",
+        "ready_for_handoff": "可交接",
+        "state_load_failed": "状态读取失败",
+    }
+    return labels.get(str(stage or ""), str(stage or "未知阶段"))
+
+
+def _comic_v2_stage_next_action(stage: str) -> str:
+    actions = {
+        "not_started": "先在工作台输入灵感或完整故事，并开始聊故事。",
+        "story_confirmed": "继续生成故事合同和视觉母版。",
+        "visual_bible_review": "确认视觉母版，或填写修改意见后退回重做。",
+        "asset_planning": "等待资产拆解完成后审核人物、道具和场景。",
+        "asset_review": "审核资产拆解包；如果不满意，填写具体缺漏后退回重新拆解。",
+        "prompt_planning": "继续生成资产提示词和镜头执行卡。",
+        "image_generation": "继续生成基础资产图片，并查看失败图和返工建议。",
+        "visual_review": "等待视觉质检完成，未通过的图片需要返工。",
+        "document_generation": "点击生成 Word 制片画布，并下载引用清单。",
+    }
+    return actions.get(str(stage or ""), "回到该项目查看阶段看板，并按红色主按钮继续。")
 
 
 @app.post("/api/workspaces")

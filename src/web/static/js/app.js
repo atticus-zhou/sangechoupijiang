@@ -1884,6 +1884,7 @@ function renderLatestComicRealRunAudit(audit) {
             audit.trace_uri ? { label: '下载追溯记录', uri: audit.trace_uri, why: '生产过程复核' } : null,
         ].filter(Boolean);
     const imageSummary = audit.image_quality_summary || {};
+    const incomplete = audit.latest_incomplete_workspace || {};
     const totalImages = Number(imageSummary.total_images || 0);
     const usableImages = Number(imageSummary.usable_images || 0);
     const reworkImages = Number(imageSummary.waste_or_rework_images || 0);
@@ -1910,6 +1911,16 @@ function renderLatestComicRealRunAudit(audit) {
                 <b>能否交给下游：${escapeHtml(statusText)}</b>
                 <span>${escapeHtml(decision.human_message || (ready ? '可以作为下游生产输入。' : '还不能作为正式生产输入。'))}</span>
             </div>
+            ${incomplete.workspace_id ? `
+                <div class="latest-real-run-incomplete">
+                    <b>最近未完成项目</b>
+                    <strong>${escapeHtml(incomplete.title || incomplete.workspace_id)}</strong>
+                    <span>阶段：${escapeHtml(incomplete.stage_label || incomplete.stage || '未知阶段')} · 负责人：${escapeHtml(incomplete.current_agent || '待确认')}</span>
+                    <span>对象：${escapeHtml(incomplete.current_object || '待确认')}</span>
+                    ${incomplete.blocking_reason ? `<span>为什么停下：${escapeHtml(incomplete.blocking_reason)}</span>` : ''}
+                    ${incomplete.recommended_action ? `<span>下一步：${escapeHtml(incomplete.recommended_action)}</span>` : ''}
+                </div>
+            ` : ''}
             ${audit.safe_public_claim ? `<p class="latest-real-run-claim">${escapeHtml(audit.safe_public_claim)}</p>` : ''}
             ${totalImages ? `
                 <div class="latest-real-run-audit-metrics">
