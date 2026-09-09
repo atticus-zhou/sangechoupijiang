@@ -80,6 +80,18 @@ class WebComicApiTests(unittest.TestCase):
         self.assertEqual(payload["claim_level"], "real_quality_verified")
         self.assertTrue(payload["can_claim_real_quality"])
         self.assertTrue(payload["handoff_allowed"])
+        self.assertTrue(payload["can_handoff_to_downstream"])
+        self.assertEqual(payload["handoff_decision_label"], "可以交给下游")
+        self.assertEqual(payload["downstream_decision"]["status"], "ready_for_downstream")
+        self.assertTrue(payload["downstream_decision"]["handoff_allowed"])
+        self.assertIn("下游", payload["recommended_user_action"])
+        self.assertTrue(payload["word_canvas_uri"].startswith(f"/api/workspaces/{workspace_id}/files/delivery/"))
+        download_kinds = {item["kind"] for item in payload["download_actions"]}
+        self.assertIn("word_canvas", download_kinds)
+        self.assertIn("handoff_manifest", download_kinds)
+        for item in payload["download_actions"]:
+            self.assertTrue(item["uri"].startswith(f"/api/workspaces/{workspace_id}/files/delivery/"))
+            self.assertNotIn("E:\\", item["uri"])
         self.assertEqual(payload["image_summary"]["waste_or_rework_images"], 0)
         self.assertTrue(payload["audited_manifest_uri"].startswith(f"/api/workspaces/{workspace_id}/files/delivery/"))
         self.assertNotIn("E:\\", payload["audited_manifest"])

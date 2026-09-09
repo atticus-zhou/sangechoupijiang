@@ -2699,6 +2699,26 @@ button.btn-ghost:hover { background: var(--line2); color: var(--red); }
     color: var(--side-active);
     font-size: 12px;
 }
+.latest-real-run-decision {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid rgba(88, 166, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(9, 14, 25, 0.42);
+}
+.latest-real-run-decision b {
+    color: var(--text);
+    font-size: 14px;
+}
+.latest-real-run-decision span {
+    color: var(--text2);
+    line-height: 1.55;
+}
+.latest-real-run-audit-card.ready .latest-real-run-decision {
+    border-color: rgba(63, 185, 80, 0.28);
+    background: rgba(63, 185, 80, 0.08);
+}
 .latest-real-run-audit-meta,
 .latest-real-run-audit-metrics,
 .latest-real-run-audit-actions {

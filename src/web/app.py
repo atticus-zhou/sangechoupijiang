@@ -3612,6 +3612,19 @@ async def get_latest_comic_real_run_audit_api():
 
     manifest_path = find_latest_user_handoff_manifest(DEFAULT_USER_OUTPUT_ROOT)
     if manifest_path is None:
+        decision = {
+            "status": "no_auditable_manifest",
+            "label": "不能交给下游",
+            "handoff_allowed": False,
+            "human_message": "还没有找到完整可审计的 AI 漫剧制片包。",
+            "operator_next_step": "先完成故事确认、资产审核、图片生成、视觉质检和 Word 画布生成；完成后刷新这张卡片。",
+            "missing_before_handoff": [
+                "可审计 handoff manifest",
+                "Word 制片画布",
+                "图片生成记录",
+                "视觉质检记录",
+            ],
+        }
         return {
             "mode": "local_no_key_comic_real_run_audit",
             "office_id": "comic_production",
@@ -3623,6 +3636,12 @@ async def get_latest_comic_real_run_audit_api():
             "audited_manifest": "",
             "audited_manifest_uri": "",
             "human_message": "还没有找到完整可审计的 AI 漫剧制片包。",
+            "downstream_decision": decision,
+            "handoff_decision_label": decision["label"],
+            "can_handoff_to_downstream": False,
+            "cannot_handoff_reasons": decision["missing_before_handoff"],
+            "recommended_user_action": decision["operator_next_step"],
+            "download_actions": [],
             "why": "系统会跳过空 JSON、测试残留，以及缺少图片、资产、镜头或 Word 画布的半成品 manifest，避免把半成品误判为最新交付。",
             "user_next_actions": [
                 "在 AI 漫剧制片办公室完成故事确认。",
@@ -3638,6 +3657,11 @@ async def get_latest_comic_real_run_audit_api():
         }
 
     payload = verify_real_run_evidence_intake(manifest_path=manifest_path)
+    manifest_payload: dict = {}
+    try:
+        manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        manifest_payload = {}
     try:
         relative_manifest = manifest_path.relative_to(APP_BASE_DIR).as_posix()
     except ValueError:
@@ -3653,6 +3677,19 @@ async def get_latest_comic_real_run_audit_api():
         if workspace_id
         else ""
     )
+    word_canvas = manifest_payload.get("word_canvas") or {}
+    word_filename = Path(str(word_canvas.get("relative_path") or word_canvas.get("filename") or "")).name
+    word_canvas_uri = (
+        f"/api/workspaces/{workspace_id}/files/delivery/{word_filename}"
+        if workspace_id and word_filename
+        else ""
+    )
+    trace_path = manifest_path.with_name("trace.json")
+    trace_uri = (
+        f"/api/workspaces/{workspace_id}/files/delivery/trace.json"
+        if workspace_id and trace_path.exists()
+        else ""
+    )
     image_summary = payload.get("image_quality_summary") or {}
     evidence = payload.get("real_model_evidence_requirements") or {}
     strategy = payload.get("prompt_strategy_lineage") or {}
@@ -3664,6 +3701,51 @@ async def get_latest_comic_real_run_audit_api():
     handoff_allowed = bool(payload.get("handoff_allowed"))
     can_claim_real_quality = bool(payload.get("can_claim_real_quality"))
     status = "ready_for_downstream" if handoff_allowed and can_claim_real_quality else "needs_review"
+    decision_source = payload.get("downstream_handoff_decision") or {}
+    cannot_handoff_reasons = list(decision_source.get("missing_before_handoff") or missing_checks)
+    handoff_label = "可以交给下游" if status == "ready_for_downstream" else "不能交给下游"
+    recommended_user_action = str(
+        decision_source.get("operator_next_step")
+        or (
+            "下载 Word 画布、handoff manifest 和追溯记录，按镜头逐项交给下游视频平台。"
+            if status == "ready_for_downstream"
+            else "先补齐缺失证据，再重新生成 Word 画布和 handoff manifest。"
+        )
+    )
+    downstream_decision = {
+        "status": status,
+        "label": handoff_label,
+        "handoff_allowed": handoff_allowed and can_claim_real_quality,
+        "human_message": (
+            "这份制片包已经具备真实模型图片、视觉质检和可追溯交付物，可以作为下游生产输入。"
+            if status == "ready_for_downstream"
+            else "这份制片包还不能交给下游当作正式生产输入。"
+        ),
+        "operator_next_step": recommended_user_action,
+        "missing_before_handoff": cannot_handoff_reasons,
+    }
+    download_actions = []
+    if word_canvas_uri:
+        download_actions.append({
+            "kind": "word_canvas",
+            "label": "下载 Word 制片画布",
+            "uri": word_canvas_uri,
+            "why": "给人阅读和交给下游执行的主文件。",
+        })
+    if manifest_uri:
+        download_actions.append({
+            "kind": "handoff_manifest",
+            "label": "下载 handoff manifest",
+            "uri": manifest_uri,
+            "why": "机器可读的资产、图片、镜头和提示词引用清单。",
+        })
+    if trace_uri:
+        download_actions.append({
+            "kind": "trace_bundle",
+            "label": "下载追溯记录",
+            "uri": trace_uri,
+            "why": "复核每一步由哪个阶段生成、审过和交付。",
+        })
     return {
         "mode": "local_no_key_comic_real_run_audit",
         "office_id": "comic_production",
@@ -3675,10 +3757,18 @@ async def get_latest_comic_real_run_audit_api():
         "workspace_id": workspace_id,
         "audited_manifest": relative_manifest,
         "audited_manifest_uri": manifest_uri,
+        "word_canvas_uri": word_canvas_uri,
+        "trace_uri": trace_uri,
         "claim_level": payload.get("claim_level"),
         "can_claim_real_quality": can_claim_real_quality,
         "downstream_status": payload.get("downstream_status"),
         "handoff_allowed": handoff_allowed,
+        "downstream_decision": downstream_decision,
+        "handoff_decision_label": handoff_label,
+        "can_handoff_to_downstream": handoff_allowed and can_claim_real_quality,
+        "cannot_handoff_reasons": cannot_handoff_reasons,
+        "recommended_user_action": recommended_user_action,
+        "download_actions": download_actions,
         "real_quality_promotion_ready": bool(payload.get("real_quality_promotion_ready")),
         "visual_evidence_level": payload.get("visual_evidence_level"),
         "image_summary": {

@@ -1871,20 +1871,27 @@ function renderLatestComicRealRunAudit(audit) {
     }
     const status = audit.status || 'waiting';
     const ready = status === 'ready_for_downstream' || audit.claim_level === 'ready_for_downstream';
-    const missing = Array.isArray(audit.missing_checks) ? audit.missing_checks.slice(0, 5) : [];
+    const decision = audit.downstream_decision || {};
+    const missing = Array.isArray(audit.cannot_handoff_reasons) && audit.cannot_handoff_reasons.length
+        ? audit.cannot_handoff_reasons.slice(0, 5)
+        : (Array.isArray(audit.missing_checks) ? audit.missing_checks.slice(0, 5) : []);
     const nextActions = Array.isArray(audit.user_next_actions) ? audit.user_next_actions.slice(0, 5) : [];
-    const downloads = [
-        audit.word_canvas_uri ? ['下载 Word 画布', audit.word_canvas_uri] : null,
-        audit.audited_manifest_uri ? ['下载引用清单', audit.audited_manifest_uri] : null,
-    ].filter(Boolean);
+    const downloads = Array.isArray(audit.download_actions) && audit.download_actions.length
+        ? audit.download_actions
+        : [
+            audit.word_canvas_uri ? { label: '下载 Word 画布', uri: audit.word_canvas_uri, why: '主交付文件' } : null,
+            audit.audited_manifest_uri ? { label: '下载引用清单', uri: audit.audited_manifest_uri, why: '资产与镜头追溯' } : null,
+            audit.trace_uri ? { label: '下载追溯记录', uri: audit.trace_uri, why: '生产过程复核' } : null,
+        ].filter(Boolean);
     const imageSummary = audit.image_quality_summary || {};
     const totalImages = Number(imageSummary.total_images || 0);
     const usableImages = Number(imageSummary.usable_images || 0);
     const reworkImages = Number(imageSummary.waste_or_rework_images || 0);
     const workspaceText = audit.workspace_id ? `来自 ${audit.workspace_id}` : '等待完整工作空间';
-    const statusText = ready
+    const statusText = audit.handoff_decision_label || (ready
         ? '可交给下游'
-        : (status === 'no_auditable_manifest' ? '等待完整包' : '需复核');
+        : (status === 'no_auditable_manifest' ? '等待完整包' : '需复核'));
+    const recommendedAction = audit.recommended_user_action || decision.operator_next_step || '';
     return `
         <section class="latest-real-run-audit-card ${ready ? 'ready' : 'waiting'}">
             <div class="latest-real-run-audit-head">
@@ -1898,6 +1905,10 @@ function renderLatestComicRealRunAudit(audit) {
                 <span>${escapeHtml(workspaceText)}</span>
                 <span>${escapeHtml(audit.claim_level || audit.visual_evidence_level || status)}</span>
                 <span>${escapeHtml(audit.calls_real_models ? '含真实模型调用证据' : '无 Key 审计，不调用模型')}</span>
+            </div>
+            <div class="latest-real-run-decision">
+                <b>能否交给下游：${escapeHtml(statusText)}</b>
+                <span>${escapeHtml(decision.human_message || (ready ? '可以作为下游生产输入。' : '还不能作为正式生产输入。'))}</span>
             </div>
             ${audit.safe_public_claim ? `<p class="latest-real-run-claim">${escapeHtml(audit.safe_public_claim)}</p>` : ''}
             ${totalImages ? `
@@ -1913,6 +1924,12 @@ function renderLatestComicRealRunAudit(audit) {
                     ${missing.map(item => `<span>${escapeHtml(item)}</span>`).join('')}
                 </div>
             ` : ''}
+            ${recommendedAction ? `
+                <div class="latest-real-run-audit-list">
+                    <b>建议动作</b>
+                    <span>${escapeHtml(recommendedAction)}</span>
+                </div>
+            ` : ''}
             ${nextActions.length ? `
                 <div class="latest-real-run-audit-list">
                     <b>下一步</b>
@@ -1921,7 +1938,7 @@ function renderLatestComicRealRunAudit(audit) {
             ` : ''}
             ${downloads.length ? `
                 <div class="latest-real-run-audit-actions">
-                    ${downloads.map(([label, uri]) => `<a class="ghost btn-sm" href="${escapeHtml(uri)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`).join('')}
+                    ${downloads.map(item => `<a class="ghost btn-sm" href="${escapeHtml(item.uri)}" target="_blank" rel="noreferrer" title="${escapeHtml(item.why || '')}">${escapeHtml(item.label)}</a>`).join('')}
                 </div>
             ` : ''}
         </section>
