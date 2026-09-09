@@ -3579,6 +3579,115 @@ async def list_workspace_api(limit: int = 50, office_id: str = ""):
     return {"workspaces": config_manager.list_workspaces(limit=limit, office_id=office_id)}
 
 
+@app.get("/api/comic-production/latest-real-run-audit")
+async def get_latest_comic_real_run_audit_api():
+    """Return a local, no-key audit card for the latest complete comic delivery."""
+    from scripts.verify_comic_real_run_evidence_intake import (
+        DEFAULT_USER_OUTPUT_ROOT,
+        find_latest_user_handoff_manifest,
+        verify_real_run_evidence_intake,
+    )
+
+    manifest_path = find_latest_user_handoff_manifest(DEFAULT_USER_OUTPUT_ROOT)
+    if manifest_path is None:
+        return {
+            "mode": "local_no_key_comic_real_run_audit",
+            "office_id": "comic_production",
+            "status": "no_auditable_manifest",
+            "ui_status": "waiting_for_delivery",
+            "requires_api_key": False,
+            "calls_real_models": False,
+            "writes_workspace": False,
+            "audited_manifest": "",
+            "audited_manifest_uri": "",
+            "human_message": "还没有找到完整可审计的 AI 漫剧制片包。",
+            "why": "系统会跳过空 JSON、测试残留，以及缺少图片、资产、镜头或 Word 画布的半成品 manifest，避免把半成品误判为最新交付。",
+            "user_next_actions": [
+                "在 AI 漫剧制片办公室完成故事确认。",
+                "生成并审核资产拆解包。",
+                "生成图片和视觉质检记录。",
+                "生成 Word 制片画布和 handoff manifest 后再查看本卡片。",
+            ],
+            "developer_next_actions": [
+                "如需审计指定旧项目，使用 --manifest 指向具体 *_handoff_manifest.json。",
+                "如页面显示已完成但本卡片仍无完整产物，优先检查 delivery/build 是否真的写入 Word 画布和 manifest。",
+            ],
+            "safe_public_claim": "当前不能宣称真实画质或下游生产质量已验证。",
+        }
+
+    payload = verify_real_run_evidence_intake(manifest_path=manifest_path)
+    try:
+        relative_manifest = manifest_path.relative_to(APP_BASE_DIR).as_posix()
+    except ValueError:
+        relative_manifest = manifest_path.name
+    workspace_id = ""
+    parts = manifest_path.parts
+    if "workspaces" in parts:
+        index = parts.index("workspaces")
+        if index + 1 < len(parts):
+            workspace_id = parts[index + 1]
+    manifest_uri = (
+        f"/api/workspaces/{workspace_id}/files/delivery/{manifest_path.name}"
+        if workspace_id
+        else ""
+    )
+    image_summary = payload.get("image_quality_summary") or {}
+    evidence = payload.get("real_model_evidence_requirements") or {}
+    strategy = payload.get("prompt_strategy_lineage") or {}
+    missing_checks = sorted({
+        *list(evidence.get("missing_check_ids") or []),
+        *list(strategy.get("missing_check_ids") or []),
+        *list(payload.get("errors") or []),
+    })
+    handoff_allowed = bool(payload.get("handoff_allowed"))
+    can_claim_real_quality = bool(payload.get("can_claim_real_quality"))
+    status = "ready_for_downstream" if handoff_allowed and can_claim_real_quality else "needs_review"
+    return {
+        "mode": "local_no_key_comic_real_run_audit",
+        "office_id": "comic_production",
+        "status": status,
+        "ui_status": "ready" if status == "ready_for_downstream" else "needs_attention",
+        "requires_api_key": False,
+        "calls_real_models": False,
+        "writes_workspace": False,
+        "workspace_id": workspace_id,
+        "audited_manifest": relative_manifest,
+        "audited_manifest_uri": manifest_uri,
+        "claim_level": payload.get("claim_level"),
+        "can_claim_real_quality": can_claim_real_quality,
+        "downstream_status": payload.get("downstream_status"),
+        "handoff_allowed": handoff_allowed,
+        "real_quality_promotion_ready": bool(payload.get("real_quality_promotion_ready")),
+        "visual_evidence_level": payload.get("visual_evidence_level"),
+        "image_summary": {
+            "total_images": image_summary.get("total_images", 0),
+            "usable_images": image_summary.get("usable_images", 0),
+            "waste_or_rework_images": image_summary.get("waste_or_rework_images", 0),
+            "failed_image_ids": list(image_summary.get("failed_image_ids") or []),
+        },
+        "missing_checks": missing_checks,
+        "human_message": (
+            "这份制片包已经可以交给下游继续生产。"
+            if status == "ready_for_downstream"
+            else "这份制片包还不能宣称真实质量已验证，请先补齐缺失证据。"
+        ),
+        "user_next_actions": (
+            ["下载 Word 画布和 handoff manifest，交给下游视频平台继续生产。"]
+            if status == "ready_for_downstream"
+            else [
+                "先查看缺失检查项，判断是图片、视觉质检、提示词谱系还是交付文件缺失。",
+                "优先保留已确认故事和资产拆解，只重跑缺失阶段。",
+                "重新生成 Word 画布和 handoff manifest 后再刷新本卡片。",
+            ]
+        ),
+        "safe_public_claim": (
+            "可以把当前制片包描述为真实质量已验证。"
+            if status == "ready_for_downstream"
+            else "只能说当前有结构或部分流程证据，不能宣称真实画质和下游生产质量已验证。"
+        ),
+    }
+
+
 @app.post("/api/workspaces")
 async def create_workspace_api(req: WorkspaceCreate):
     """Create a project workspace."""

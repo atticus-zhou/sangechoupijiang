@@ -10,7 +10,10 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from src.llm.providers import LLMResponse, LiteLLMProvider, ModelConfig
+from scripts.verify_comic_v2_delivery import verify_delivery
+from src.comic_office.v2.production_benchmark import audit_handoff_manifest
 from src.comic_office.v2.pipeline import not_started_state
+from src.comic_office.v2.visual_review import REVIEW_DIMENSIONS
 from src.web.app import (
     _comic_image_specs,
     _history_delivery_summary,
@@ -19,6 +22,8 @@ from src.web.app import (
     app,
     config_manager,
 )
+
+COMIC_V2_FIXTURE = Path("tests/fixtures/comic_v2_sample.json")
 
 
 class WebComicApiTests(unittest.TestCase):
@@ -41,6 +46,44 @@ class WebComicApiTests(unittest.TestCase):
         conn.close()
         for workspace_id in self.created_workspaces:
             shutil.rmtree(Path("output") / "workspaces" / workspace_id, ignore_errors=True)
+
+    def test_latest_real_run_audit_api_returns_human_safe_ready_card(self):
+        workspace_id = f"ws_api_latest_{str(uuid.uuid4())[:8]}"
+        self.created_workspaces.append(workspace_id)
+        delivery_root = Path("output") / "workspaces" / workspace_id / "delivery"
+        result = verify_delivery(COMIC_V2_FIXTURE, delivery_root)
+        manifest_path = Path(result["handoff_manifest_path"])
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for image in manifest["images"]:
+            image["provider"] = "doubao"
+            image["model"] = "seedream"
+            image["review"] = {
+                "status": "pass",
+                "handoff_ready": True,
+                "fixture": False,
+                "scores": {dimension: 94 for dimension in REVIEW_DIMENSIONS},
+            }
+        manifest["quality_benchmark"] = audit_handoff_manifest(manifest)
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        response = self.client.get("/api/comic-production/latest-real-run-audit")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["mode"], "local_no_key_comic_real_run_audit")
+        self.assertEqual(payload["office_id"], "comic_production")
+        self.assertEqual(payload["status"], "ready_for_downstream")
+        self.assertFalse(payload["requires_api_key"])
+        self.assertFalse(payload["calls_real_models"])
+        self.assertFalse(payload["writes_workspace"])
+        self.assertEqual(payload["workspace_id"], workspace_id)
+        self.assertEqual(payload["claim_level"], "real_quality_verified")
+        self.assertTrue(payload["can_claim_real_quality"])
+        self.assertTrue(payload["handoff_allowed"])
+        self.assertEqual(payload["image_summary"]["waste_or_rework_images"], 0)
+        self.assertTrue(payload["audited_manifest_uri"].startswith(f"/api/workspaces/{workspace_id}/files/delivery/"))
+        self.assertNotIn("E:\\", payload["audited_manifest"])
+        self.assertIn("下游", payload["human_message"])
 
     def test_handoff_lineage_summary_preserves_handoff_and_acceptance_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
