@@ -241,6 +241,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("公开展示交接说明", text)
         self.assertIn("asset requirement matrix", text)
         self.assertIn("GitHub workflow failed", text)
+        self.assertIn("Public showcase pages", text)
+        self.assertIn("workflow_dispatch", text)
         self.assertIn("运行验收摘要", text)
         self.assertIn("个人网站仓库运行 `npm run check:showcase-ci`", text)
         self.assertIn("不要改产品代码去掩盖 404", text)

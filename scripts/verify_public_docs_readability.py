@@ -49,6 +49,8 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "公开演示和部署边界",
             "公开展示交接说明",
             "GitHub workflow failed",
+            "Public showcase pages",
+            "workflow_dispatch",
             "运行验收摘要",
             "真实生产声明",
             "模型台阶可以这样理解",
@@ -165,6 +167,8 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "GitHub 邮件失败怎么判断",
             "npm run check:showcase-ci",
             "不要为了消掉 404 去改产品展示数据",
+            "Public showcase pages",
+            "workflow_dispatch",
         ],
     },
     {

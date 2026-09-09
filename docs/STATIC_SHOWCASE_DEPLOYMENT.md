@@ -126,10 +126,11 @@ python scripts/check_no_secrets.py
 如果邮箱提示 `Three Cobblers showcase workflow run failed`，先不要把它当成真实产品崩溃。这个邮件通常只说明某一次 GitHub Actions 没有通过，需要先定位它属于哪条链路：
 
 - 产品本体仓库失败：运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`。如果这两条通过，公开 no-key release gate 和安全扫描在本机是成立的。
+- 产品本体仓库的 `Public showcase pages` 失败：它只负责 GitHub Pages 备用公开入口。先打开失败 run，核对 head commit 是否还是当前 `main`；如果邮件来自旧提交，而且当前 workflow 只有 `workflow_dispatch`，可以把这封失败邮件当作旧发布尝试的残留通知处理。它不会证明当前产品不可运行，也不该触发产品代码回滚。
 - 个人网站仓库失败：进入个人网站仓库运行 `npm run check:showcase-ci`。这条会按 GitHub Actions 的顺序检查本地静态展示、交接文档、备用审阅包、构建和 build-info。
 - 本地 `check:showcase-ci` 通过但线上还是 404：问题通常在 Vercel 授权、Vercel 没有重新部署、或者线上仍在服务旧 bundle。继续运行个人网站仓库的 `npm run doctor:deploy` 和 `npm run check:online`，不要为了消掉 404 去改产品展示数据。
 
-这三种结果的边界要分清：产品仓库的 release readiness 证明仓库构建和 no-key 展示包；Pages workflow 只有在公开 Pages URL 也能访问时才应该成功；`check:showcase-ci` 证明个人网站仓库里的静态拷贝能构建；`check:online` 才证明生产域名真的已经更新。
+这几种结果的边界要分清：产品仓库的 release readiness 证明仓库构建和 no-key 展示包；Pages workflow 只有在公开 Pages URL 也能访问时才应该成功；`check:showcase-ci` 证明个人网站仓库里的静态拷贝能构建；`check:online` 才证明生产域名真的已经更新。
 
 ## 安全边界
 

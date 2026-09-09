@@ -487,6 +487,7 @@ python scripts/verify_github_release_evidence.py --format markdown --contract-on
 
 - 产品仓库失败：回到这里运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`，确认无 Key release gate 和敏感信息扫描。
 - 个人网站仓库失败：在个人网站仓库运行 `npm run check:showcase-ci`，它会复刻 GitHub Actions 的 no-key 静态展示检查。
+- 产品仓库里的 `Public showcase pages` 失败：这是 GitHub Pages 备用入口，不是本地真实服务。先比对邮件里的 commit SHA 和当前 `main`；如果失败发生在旧提交，且当前 `.github/workflows/pages-showcase.yml` 只有 `workflow_dispatch`，说明它不会再随 push 自动失败发信。要真正使用这个备用入口，再到 Settings -> Pages 把 Source 设为 GitHub Actions 后手动触发。
 - 本地 CI 通过但 `/three-stooges/` 还是 404：这通常是 Vercel 还在服务旧部署，或者 Vercel 授权没有完成；继续看个人网站的 `npm run doctor:deploy` 和 `npm run check:online`，不要改产品代码去掩盖 404。
 
 在对面试官宣称公开展示已准备好之前，先运行：

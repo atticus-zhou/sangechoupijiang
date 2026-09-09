@@ -66,6 +66,10 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("npx vercel login", text)
         self.assertIn("npm run ship:vercel", text)
         self.assertIn("只有第二条通过，才适合把线上链接发给面试官", text)
+        self.assertIn("Public showcase pages", text)
+        self.assertIn("旧发布尝试的残留通知", text)
+        self.assertIn("workflow_dispatch", text)
+        self.assertIn("不该触发产品代码回滚", text)
 
     def test_readme_links_the_static_deployment_path(self):
         text = Path("README.md").read_text(encoding="utf-8")
