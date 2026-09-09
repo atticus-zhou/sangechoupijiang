@@ -992,7 +992,13 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the asset usage map")
         if "asset-usage-map" not in index_text or "asset-usage-card" not in style_text:
             errors.append("static showcase markup/styles must include the asset usage map")
-        if "research-capture-playbook-card" not in app_text or "research-capture-steps" not in app_text:
+        if (
+            "research-capture-playbook-card" not in app_text
+            or "research-capture-steps" not in app_text
+            or "research-capture-responsibilities" not in app_text
+            or "human_only_needs_to" not in app_text
+            or "system_will_do" not in app_text
+        ):
             errors.append("static showcase page must render the research evidence capture playbook")
         if "showcase.download_catalog" not in app_text or "renderDownloadCatalog" not in app_text:
             errors.append("static showcase page must render the reviewable download catalog")
@@ -1016,7 +1022,12 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase stylesheet must style the claim upgrade checklist")
         if "downstream-handoff-card" not in style_text or "downstream-action-steps" not in style_text:
             errors.append("static showcase stylesheet must style the downstream handoff decision")
-        if "research-capture-playbook-card" not in style_text or "research-capture-steps" not in style_text:
+        if (
+            "research-capture-playbook-card" not in style_text
+            or "research-capture-steps" not in style_text
+            or "research-capture-responsibilities" not in style_text
+            or "research-capture-responsibility-group" not in style_text
+        ):
             errors.append("static showcase stylesheet must style the research evidence capture playbook")
         if "extension-check-grid" not in style_text or "extension-panel" not in style_text:
             errors.append("static showcase stylesheet must style the office extension checklist")
