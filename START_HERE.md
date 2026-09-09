@@ -34,6 +34,12 @@ Windows 用户可以先用一键启动入口：
 .\start_windows.bat 8081
 ```
 
+只想检查启动条件、不启动服务器时：
+
+```powershell
+.\start_windows.bat --check
+```
+
 想手动一步步执行，可以按下面走：
 
 ```powershell

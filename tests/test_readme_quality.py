@@ -25,6 +25,8 @@ class ReadmeQualityTests(unittest.TestCase):
         self.assertIn("故事版本", text)
         self.assertIn("资产版本", text)
         self.assertIn("使用者填写自己的 Key", text)
+        self.assertIn(".\\start_windows.bat", text)
+        self.assertIn(".\\start_windows.bat --check", text)
         self.assertIn("python scripts/doctor.py", text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", text)
         self.assertIn("python scripts/verify_office_runtime_acceptance.py --format markdown", text)

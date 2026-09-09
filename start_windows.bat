@@ -3,7 +3,14 @@ setlocal
 
 cd /d "%~dp0"
 
-set "PORT=%~1"
+set "CHECK_ONLY=0"
+if /I "%~1"=="--check" (
+  set "CHECK_ONLY=1"
+  set "PORT=%~2"
+) else (
+  set "PORT=%~1"
+)
+
 if "%PORT%"=="" set "PORT=8080"
 
 echo.
@@ -48,6 +55,12 @@ if errorlevel 1 (
   echo.
   echo Doctor found a startup blocker. Fix the item above, then run this file again.
   exit /b 1
+)
+
+if "%CHECK_ONLY%"=="1" (
+  echo.
+  echo Check-only mode passed. The server was not started.
+  exit /b 0
 )
 
 echo.

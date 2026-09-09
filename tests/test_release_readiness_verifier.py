@@ -68,7 +68,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
             self.assertTrue(check["command"].startswith("python scripts/"))
         first_run = next(item for item in payload["checks"] if item["id"] == "first_run")
         self.assertIn("deployment_modes=3", first_run["summary"])
-        self.assertIn("github_download=ready:15/15", first_run["summary"])
+        self.assertIn("github_download=ready:16/16", first_run["summary"])
         self.assertIn("private_boundaries=10", first_run["summary"])
         model_guidance = next(item for item in payload["checks"] if item["id"] == "model_guidance")
         self.assertIn("offices=2", model_guidance["summary"])
@@ -236,7 +236,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
 
         self.assertIn("Release Readiness Audit", completed.stdout)
         self.assertIn("Safe for public release", completed.stdout)
-        self.assertIn("github_download=ready:15/15", completed.stdout)
+        self.assertIn("github_download=ready:16/16", completed.stdout)
         self.assertIn("deployment_modes=3", completed.stdout)
         self.assertIn("private_boundaries=10", completed.stdout)
         self.assertIn("Productization objective coverage", completed.stdout)

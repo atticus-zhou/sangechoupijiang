@@ -37,6 +37,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "README.md",
             "requirements.txt",
             "config.example.yaml",
+            "start_windows.bat",
             "scripts/doctor.py",
             "scripts/verify_release_readiness.py",
             "docs/FIRST_RUN_DECISION_CARD.md",
@@ -227,6 +228,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("real_production.status=", result.stdout)
         self.assertIn("developer_extension", result.stdout)
         self.assertIn("python run.py --port 8080", result.stdout)
+        self.assertIn("start_windows.bat", result.stdout)
         self.assertIn("python scripts/verify_public_demo_mode.py --format markdown", result.stdout)
         self.assertIn("python scripts/export_public_showcase.py", result.stdout)
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", result.stdout)
