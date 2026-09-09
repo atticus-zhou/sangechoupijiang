@@ -578,6 +578,14 @@ def list_office_extension_blueprint() -> dict:
                 "reuse_from_existing_offices": ["comic_production", "research"],
                 "defer_until": "AI 漫剧素材包能稳定交付可用图片/提示词，且研究办公室能提供可追溯的卖点和人群证据。",
                 "required_before_public": ["no_key_demo", "model_preflight", "sample_delivery", "schema_gate", "failure_recovery", "public_claim_report", "public_safety_boundaries"],
+                "first_no_key_sample": {
+                    "input": "一个已完成研究样例和一组漫画/短视频素材样例。",
+                    "deliverables": ["投放假设卡", "脚本矩阵", "素材清单", "平台数据缺口表", "复盘表模板"],
+                    "acceptance": "访客能看懂卖点、素材、投放假设和复盘口径，但页面必须说明没有真实消耗广告账户。",
+                },
+                "first_schema_outputs": ["ad_hypothesis_pack", "creative_script_matrix", "material_usage_manifest", "ad_review_risk_report"],
+                "human_review_points": ["确认产品卖点", "确认目标人群", "确认素材能否进入投放", "确认复盘指标口径"],
+                "forbidden_shortcuts": ["不能伪造真实投放数据", "不能读取或展示广告账户 Cookie", "不能把漫剧素材自动当成已过审素材"],
             },
             {
                 "id": "ecommerce_selection",
@@ -590,6 +598,14 @@ def list_office_extension_blueprint() -> dict:
                 "reuse_from_existing_offices": ["research"],
                 "defer_until": "研究办公室证据采集/人工补证流程稳定，并能提供一份完整的选品样例包。",
                 "required_before_public": ["no_key_demo", "source_trace", "sample_delivery", "schema_gate", "history_trace", "public_claim_report", "release_gate"],
+                "first_no_key_sample": {
+                    "input": "一个明确品类，例如民用无人机、七色糙米或眼部按摩仪。",
+                    "deliverables": ["选品决策报告", "来源清单", "竞品价格带", "评论痛点表", "证据缺口卡", "阶段性交付声明"],
+                    "acceptance": "用户能据此判断是否继续补证据、是否值得立项；不能把无来源数据当成真实平台结论。",
+                },
+                "first_schema_outputs": ["selection_decision_report", "competitor_price_band", "review_pain_point_table", "evidence_gap_cards"],
+                "human_review_points": ["确认品类范围", "确认目标平台", "确认待补截图", "确认阶段结论能否交给老板"],
+                "forbidden_shortcuts": ["不能伪造飞瓜或电商后台数据", "不能把 staged demo 说成全自动采集", "不能复用研究办公室 workspace_id 写真实产物"],
             },
             {
                 "id": "story_ip",
@@ -602,6 +618,14 @@ def list_office_extension_blueprint() -> dict:
                 "reuse_from_existing_offices": ["comic_production"],
                 "defer_until": "AI 漫剧制片办公室的故事合约、资产 manifest、提示词包和 Word 画布协议足够稳定，可被抽象复用。",
                 "required_before_public": ["no_key_demo", "human_checkpoints", "sample_delivery", "schema_gate", "recovery_actions", "public_claim_report", "public_safety_boundaries"],
+                "first_no_key_sample": {
+                    "input": "一个已有故事梗概或完整短篇故事。",
+                    "deliverables": ["IP 改编企划案", "受众定位", "人物关系图", "分集卖点表", "版权/素材边界说明"],
+                    "acceptance": "它只证明 IP 企划和改编路线，不替 AI 漫剧制片办公室生成资产图或 Word 制片画布。",
+                },
+                "first_schema_outputs": ["ip_adaptation_plan", "audience_positioning", "episode_hook_matrix", "copyright_boundary_report"],
+                "human_review_points": ["确认是否改编原故事", "确认目标受众", "确认分集卖点", "确认版权和素材边界"],
+                "forbidden_shortcuts": ["不能和 AI 漫剧制片办公室共用故事生产状态", "不能绕过内阁故事确认", "不能宣称拥有用户未授权 IP 的商业使用权"],
             },
             {
                 "id": "technical_project",
@@ -614,6 +638,14 @@ def list_office_extension_blueprint() -> dict:
                 "reuse_from_existing_offices": [],
                 "defer_until": "办公室隔离、权限授权、代码变更审计、CI 证据采集和失败回滚协议都能被独立验证。",
                 "required_before_public": ["office_id_isolation", "repo_boundary", "sample_delivery", "schema_gate", "failure_recovery", "public_claim_report", "secret_scan"],
+                "first_no_key_sample": {
+                    "input": "一个固定样例仓库或伪代码任务，不连接用户私有仓库。",
+                    "deliverables": ["需求拆解", "实现计划", "测试证据表", "风险清单", "部署边界说明"],
+                    "acceptance": "访客能看懂技术交接链路，但不能误以为系统已经获得真实仓库写权限或 CI 权限。",
+                },
+                "first_schema_outputs": ["technical_brief", "implementation_trace", "test_evidence_table", "deployment_boundary_report"],
+                "human_review_points": ["确认仓库权限范围", "确认是否允许写文件", "确认测试命令", "确认回滚策略"],
+                "forbidden_shortcuts": ["不能默认读取私有仓库", "不能自动提交未审查代码", "不能把本地测试通过说成线上部署成功"],
             },
         ],
         "future_office_prioritization": {

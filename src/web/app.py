@@ -2907,6 +2907,10 @@ def _public_showcase_office_extension_story(blueprint: dict) -> dict:
                 "reuse_from_existing_offices": item.get("reuse_from_existing_offices", []),
                 "defer_until": item.get("defer_until", ""),
                 "required_before_public": item.get("required_before_public", []),
+                "first_no_key_sample": item.get("first_no_key_sample", {}),
+                "first_schema_outputs": item.get("first_schema_outputs", []),
+                "human_review_points": item.get("human_review_points", []),
+                "forbidden_shortcuts": item.get("forbidden_shortcuts", []),
             }
             for item in candidates
         ],

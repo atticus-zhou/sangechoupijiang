@@ -80,6 +80,15 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         errors.append("schema_gate requirement must map to future_schema_validators")
     if required_set & {"failure_recovery", "recovery_actions", "history_trace"} and "future_recovery_events" not in blocking_backlog:
         errors.append("recovery or trace requirement must map to future_recovery_events")
+    first_sample = candidate.get("first_no_key_sample") or {}
+    if not first_sample.get("input") or len(first_sample.get("deliverables") or []) < 3 or not first_sample.get("acceptance"):
+        errors.append("candidate must declare a first no-key sample with input, deliverables, and acceptance")
+    if len(candidate.get("first_schema_outputs") or []) < 3:
+        errors.append("candidate must declare first_schema_outputs before public work starts")
+    if len(candidate.get("human_review_points") or []) < 3:
+        errors.append("candidate must declare human_review_points before public work starts")
+    if len(candidate.get("forbidden_shortcuts") or []) < 3:
+        errors.append("candidate must declare forbidden_shortcuts before public work starts")
     return {
         "id": candidate.get("id", ""),
         "name": candidate.get("name", ""),
@@ -91,6 +100,10 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         "reuse_from_existing_offices": candidate.get("reuse_from_existing_offices", []),
         "defer_until": candidate.get("defer_until", ""),
         "required_before_public": required,
+        "first_no_key_sample": first_sample,
+        "first_schema_outputs": candidate.get("first_schema_outputs", []),
+        "human_review_points": candidate.get("human_review_points", []),
+        "forbidden_shortcuts": candidate.get("forbidden_shortcuts", []),
         "blocking_backlog_ids": blocking_backlog,
         "missing_core_blockers": missing_core_blockers,
         "status": "blocked_until_evidence" if not errors else "needs_backlog_detail",
@@ -185,15 +198,18 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Priority order: {', '.join(payload.get('priority_order') or [])}",
         f"- Prioritization: {payload.get('prioritization_status')} — {payload.get('decision_rule')}",
         "",
-        "| Candidate | Priority | Status | Required before public | Platform blockers |",
-        "| --- | --- | --- | --- | --- |",
+        "| Candidate | Priority | Status | First sample | Required before public | Platform blockers |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for item in payload.get("reports") or []:
+        first_sample = item.get("first_no_key_sample") or {}
+        sample_summary = "; ".join(first_sample.get("deliverables") or []) or "-"
         lines.append(
-            "| {id} | {priority} | {status} | {required} | {backlog} |".format(
+            "| {id} | {priority} | {status} | {sample} | {required} | {backlog} |".format(
                 id=item.get("id", ""),
                 priority=f"{item.get('priority_rank')}. {item.get('priority_label')}",
                 status=item.get("status", ""),
+                sample=sample_summary,
                 required=", ".join(item.get("required_before_public") or []),
                 backlog=", ".join(item.get("blocking_backlog_ids") or []) or "-",
             )

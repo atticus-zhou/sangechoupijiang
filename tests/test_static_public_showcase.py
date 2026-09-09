@@ -347,6 +347,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             {"short_video_ads", "ecommerce_selection", "story_ip", "technical_project"},
         )
         self.assertTrue(all(item["not_ready_reason"] for item in extension_story["future_office_candidates"]))
+        for candidate in extension_story["future_office_candidates"]:
+            self.assertTrue(candidate["first_no_key_sample"]["input"])
+            self.assertGreaterEqual(len(candidate["first_no_key_sample"]["deliverables"]), 3)
+            self.assertGreaterEqual(len(candidate["first_schema_outputs"]), 3)
+            self.assertGreaterEqual(len(candidate["human_review_points"]), 3)
+            self.assertGreaterEqual(len(candidate["forbidden_shortcuts"]), 3)
         self.assertEqual(
             [
                 item["id"]
@@ -607,6 +613,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("future_office_candidates", static_script)
         self.assertIn("future_platform_backlog", static_script)
         self.assertIn("future_office_prioritization", static_script)
+        self.assertIn("第一份样例", static_script)
+        self.assertIn("第一批 schema", static_script)
+        self.assertIn("人工审核点", static_script)
+        self.assertIn("禁止捷径", static_script)
         self.assertIn("office-priority-grid", style_text)
         self.assertIn("prompt_quality_summary", static_script)
         self.assertIn("prompt-gate-checks", static_script)

@@ -472,6 +472,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
             {"short_video_ads", "ecommerce_selection", "story_ip", "technical_project"},
         )
         self.assertTrue(all(item["not_ready_reason"] for item in extension_story["future_office_candidates"]))
+        for candidate in extension_story["future_office_candidates"]:
+            self.assertTrue(candidate["first_no_key_sample"]["input"])
+            self.assertGreaterEqual(len(candidate["first_no_key_sample"]["deliverables"]), 3)
+            self.assertGreaterEqual(len(candidate["first_schema_outputs"]), 3)
+            self.assertGreaterEqual(len(candidate["human_review_points"]), 3)
+            self.assertGreaterEqual(len(candidate["forbidden_shortcuts"]), 3)
         self.assertEqual(
             [
                 item["id"]

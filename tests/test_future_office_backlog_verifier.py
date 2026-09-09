@@ -53,6 +53,12 @@ class FutureOfficeBacklogVerifierTests(unittest.TestCase):
             self.assertIn("public_claim_report", report["required_before_public"])
             self.assertIn("future_schema_validators", report["blocking_backlog_ids"])
             self.assertIn("future_recovery_events", report["blocking_backlog_ids"])
+            self.assertTrue(report["first_no_key_sample"]["input"])
+            self.assertGreaterEqual(len(report["first_no_key_sample"]["deliverables"]), 3)
+            self.assertTrue(report["first_no_key_sample"]["acceptance"])
+            self.assertGreaterEqual(len(report["first_schema_outputs"]), 3)
+            self.assertGreaterEqual(len(report["human_review_points"]), 3)
+            self.assertGreaterEqual(len(report["forbidden_shortcuts"]), 3)
 
     def test_markdown_lists_each_candidate_and_platform_blocker(self):
         completed = subprocess.run(
@@ -80,6 +86,9 @@ class FutureOfficeBacklogVerifierTests(unittest.TestCase):
         self.assertIn("technical_project", completed.stdout)
         self.assertIn("future_schema_validators", completed.stdout)
         self.assertIn("future_recovery_events", completed.stdout)
+        self.assertIn("First sample", completed.stdout)
+        self.assertIn("选品决策报告", completed.stdout)
+        self.assertIn("脚本矩阵", completed.stdout)
 
 
 if __name__ == "__main__":

@@ -153,6 +153,12 @@ class OfficeProfileTests(unittest.TestCase):
             self.assertTrue(candidate["defer_until"])
             self.assertIn("schema_gate", candidate["required_before_public"])
             self.assertIn("public_claim_report", candidate["required_before_public"])
+            self.assertTrue(candidate["first_no_key_sample"]["input"])
+            self.assertGreaterEqual(len(candidate["first_no_key_sample"]["deliverables"]), 3)
+            self.assertTrue(candidate["first_no_key_sample"]["acceptance"])
+            self.assertGreaterEqual(len(candidate["first_schema_outputs"]), 3)
+            self.assertGreaterEqual(len(candidate["human_review_points"]), 3)
+            self.assertGreaterEqual(len(candidate["forbidden_shortcuts"]), 3)
         prioritized = sorted(blueprint["future_office_candidates"], key=lambda item: item["priority_rank"])
         self.assertEqual(
             [item["id"] for item in prioritized],

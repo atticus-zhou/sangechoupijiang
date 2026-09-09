@@ -1169,6 +1169,11 @@
         addTextRow(card, '启动条件', candidate.defer_until);
         addTextRow(card, '复用基础', (candidate.reuse_from_existing_offices || []).join(' / ') || '待设计');
         addTextRow(card, '上线前证据', (candidate.required_before_public || []).join(' / '));
+        const firstSample = candidate.first_no_key_sample || {};
+        addTextRow(card, '第一份样例', (firstSample.deliverables || []).join(' / ') || firstSample.acceptance || '');
+        addTextRow(card, '第一批 schema', (candidate.first_schema_outputs || []).join(' / '));
+        addTextRow(card, '人工审核点', (candidate.human_review_points || []).join(' / '));
+        addTextRow(card, '禁止捷径', (candidate.forbidden_shortcuts || []).join(' / '));
         candidateGrid.appendChild(card);
       });
       target.appendChild(candidateGrid);
