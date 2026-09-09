@@ -654,6 +654,32 @@ h3 {
   flex: 0 0 auto;
 }
 
+.latest-real-run-audit-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(46, 107, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(46, 107, 255, 0.06);
+}
+
+.latest-real-run-audit-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.latest-real-run-audit-preview-head strong {
+  color: var(--ink);
+}
+
+.latest-real-run-audit-preview p {
+  margin: 0;
+  line-height: 1.6;
+}
+
 .runtime-download-labels {
   display: flex;
   flex-wrap: wrap;

@@ -609,6 +609,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             for item in runtime_checks
             if isinstance(item, dict)
         }
+        comic_runtime = runtime_by_office.get("comic_production") or {}
+        latest_audit_card = comic_runtime.get("latest_real_run_audit_card") or {}
         if runtime_acceptance.get("mode") != "public_no_key_runtime_acceptance":
             errors.append("static showcase must expose the public no-key runtime acceptance summary")
         if runtime_acceptance.get("requires_api_key") is not False:
@@ -623,13 +625,20 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static runtime acceptance must cover the comic production and research offices")
         if (runtime_by_office.get("comic_production") or {}).get("acceptance_status") != "structure_ready_needs_real_quality":
             errors.append("static runtime acceptance must mark comic production as structure-ready but quality-blocked")
-        comic_runtime = runtime_by_office.get("comic_production") or {}
         runtime_image_quality = comic_runtime.get("image_quality_summary") or {}
         if "failed_image_ids" not in runtime_image_quality or not isinstance(runtime_image_quality.get("failed_image_ids"), list):
             errors.append("static runtime acceptance must expose comic failed image ids")
         runtime_recovery_scope = comic_runtime.get("recovery_scope") or {}
         if "问题图片" not in str(runtime_recovery_scope.get("policy") or ""):
             errors.append("static runtime acceptance must explain failed-image scoped recovery")
+        if latest_audit_card.get("endpoint") != "/api/comic-production/latest-real-run-audit":
+            errors.append("static runtime acceptance must expose the latest comic real-run audit endpoint")
+        if latest_audit_card.get("requires_api_key") is not False or latest_audit_card.get("calls_real_models") is not False:
+            errors.append("static latest comic real-run audit card must stay no-key and public-safe")
+        latest_audit_text = json.dumps(latest_audit_card, ensure_ascii=False)
+        for marker in ("最新真实制片包审计", "status=no_auditable_manifest", "Word 画布", "真实质量必须"):
+            if marker not in latest_audit_text:
+                errors.append(f"static latest comic real-run audit card is missing marker: {marker}")
         if (runtime_by_office.get("research") or {}).get("acceptance_status") != "staged_report_ready":
             errors.append("static runtime acceptance must mark research as staged-report-ready")
         if (runtime_by_office.get("comic_production") or {}).get("accepted_for_real_downstream") is not False:
@@ -1010,6 +1019,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase page must render the guided first-run quick checks")
         if "portfolio.model_setup_guide" not in app_text or "renderModelSetupGuide" not in app_text:
             errors.append("static showcase page must render the model setup guide")
+        if "latest_real_run_audit_card" not in app_text or "renderLatestRealRunAuditCard" not in app_text:
+            errors.append("static showcase page must render the latest real-run audit preview")
         if "portfolio.shot_contract" not in app_text or "renderShotContract" not in app_text:
             errors.append("static showcase page must render the shot contract")
         if "portfolio.office_extension_story" not in app_text or "renderOfficeExtensionStory" not in app_text:
@@ -1039,6 +1050,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase stylesheet must style the guided first-run quick checks")
         if "model-setup-guide" not in style_text or "model-setup-grid" not in style_text:
             errors.append("static showcase stylesheet must style the model setup guide")
+        if "latest-real-run-audit-preview" not in style_text:
+            errors.append("static showcase stylesheet must style the latest real-run audit preview")
         if "catalog-card" not in style_text or "hash-code" not in style_text:
             errors.append("static showcase stylesheet must style the reviewable download catalog")
         for marker in ("data.js", "app.js", "assets/public-showcase-desktop.png", "公开发布状态", "第一次打开，先看这五步", "交付物阅读顺序", "可复核文件目录", "下游生产 quick-start", "复现与验收清单", "真实产物验收", "公开部署安全边界"):
@@ -1110,6 +1123,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "runtime_acceptance_count": len(runtime_checks),
             "runtime_acceptance_requires_api_key": bool(runtime_acceptance.get("requires_api_key")),
             "runtime_acceptance_calls_real_models": bool(runtime_acceptance.get("calls_real_models")),
+            "latest_real_run_audit_card_ready": latest_audit_card.get("endpoint") == "/api/comic-production/latest-real-run-audit",
             "handoff_inventory_failed_image_count": handoff_inventory_embed.get("failed_image_count", 0),
             "handoff_inventory_targeted_recovery_label": targeted_recovery_policy.get("human_label", ""),
             "model_setup_office_count": len((portfolio.get("model_setup_guide") or {}).get("offices") or []),
@@ -1197,6 +1211,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Research claim report: {payload.get('research_claim_report_uri')} / ready={payload.get('research_claim_report_ready')} / level={payload.get('research_claim_level')} / full_automation={payload.get('research_can_claim_full_automation')}",
         f"- Research claim upgrade checklist: {payload.get('research_claim_upgrade_checklist_count')} items / evidence_handoff={payload.get('research_evidence_handoff_count')} / capture_steps={payload.get('research_capture_playbook_step_count')}",
         f"- Runtime acceptance: {payload.get('runtime_acceptance_count')} offices / no_key={not payload.get('runtime_acceptance_requires_api_key')} / real_models={payload.get('runtime_acceptance_calls_real_models')}",
+        f"- Latest real-run audit card: ready={payload.get('latest_real_run_audit_card_ready')}",
         f"- Model setup guide: {payload.get('model_setup_office_count')} offices / no-key view",
         f"- Quality upgrade path: action={payload.get('quality_upgrade_recovery_action')} / steps={payload.get('quality_upgrade_step_count')}",
         f"- New office extension: checklist={payload.get('office_extension_checklist_count')} / phases={payload.get('office_extension_phase_count')} / doc={payload.get('office_extension_doc')}",

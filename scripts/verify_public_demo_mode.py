@@ -305,6 +305,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         for item in runtime_checks
         if isinstance(item, dict)
     }
+    comic_runtime = runtime_by_office.get("comic_production") or {}
+    latest_audit_card = comic_runtime.get("latest_real_run_audit_card") or {}
     if runtime_acceptance.get("mode") != "public_no_key_runtime_acceptance":
         errors.append("portfolio embed must expose the public no-key runtime acceptance summary")
     if runtime_acceptance.get("requires_api_key") is not False:
@@ -317,13 +319,20 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         errors.append("runtime acceptance summary must cover comic production and research offices")
         if (runtime_by_office.get("comic_production") or {}).get("acceptance_status") != "structure_ready_needs_real_quality":
             errors.append("runtime acceptance summary must mark comic production as structure-ready but real-quality blocked")
-        comic_runtime = runtime_by_office.get("comic_production") or {}
         runtime_image_quality = comic_runtime.get("image_quality_summary") or {}
         if "failed_image_ids" not in runtime_image_quality:
             errors.append("runtime acceptance summary must expose comic failed image ids")
         runtime_recovery_scope = comic_runtime.get("recovery_scope") or {}
         if runtime_recovery_scope.get("policy") and "问题图片" not in runtime_recovery_scope.get("policy"):
             errors.append("runtime acceptance recovery scope must be human-readable")
+        if latest_audit_card.get("endpoint") != "/api/comic-production/latest-real-run-audit":
+            errors.append("runtime acceptance must expose the latest comic real-run audit card endpoint")
+        if latest_audit_card.get("requires_api_key") is not False or latest_audit_card.get("calls_real_models") is not False:
+            errors.append("latest comic real-run audit card must be public-safe and no-key")
+        latest_audit_text = json.dumps(latest_audit_card, ensure_ascii=False)
+        for marker in ("最新真实制片包审计", "status=no_auditable_manifest", "Word 画布", "真实质量必须"):
+            if marker not in latest_audit_text:
+                errors.append(f"latest comic real-run audit card is missing marker: {marker}")
     if (runtime_by_office.get("research") or {}).get("acceptance_status") != "staged_report_ready":
         errors.append("runtime acceptance summary must mark research as staged-report-ready")
     runtime_text = json.dumps(runtime_acceptance, ensure_ascii=False)
@@ -550,6 +559,7 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "runtime_acceptance_count": len(runtime_checks),
         "runtime_acceptance_requires_api_key": bool(runtime_acceptance.get("requires_api_key")),
         "runtime_acceptance_calls_real_models": bool(runtime_acceptance.get("calls_real_models")),
+        "latest_real_run_audit_card_ready": latest_audit_card.get("endpoint") == "/api/comic-production/latest-real-run-audit",
         "model_setup_office_count": len(model_setup.get("offices") or []),
         "portfolio_integration_option_count": len(integration_options),
         "portfolio_integration_source_dir": integration_static.get("source_dir", ""),
@@ -847,6 +857,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- 真实证据升级路径：action={manifest.get('quality_upgrade_recovery_action')} / steps={manifest.get('quality_upgrade_step_count')}",
         f"- 真实质量升级操作面板：status={manifest.get('real_quality_upgrade_status')} / steps={manifest.get('real_quality_upgrade_step_count')} / models={manifest.get('real_quality_upgrade_department_count')} / recovery={manifest.get('real_quality_upgrade_recovery_action')}",
         f"- 运行验收摘要：{manifest.get('runtime_acceptance_count')} 个办公室 / no_key={not manifest.get('runtime_acceptance_requires_api_key')} / real_models={manifest.get('runtime_acceptance_calls_real_models')}",
+        f"- 最新真实制片包审计卡：ready={manifest.get('latest_real_run_audit_card_ready')}",
         f"- 模型设置卡：{manifest.get('model_setup_office_count')} 个办公室 / no-key view",
         f"- 个人网站接入：source={manifest.get('portfolio_integration_source_dir')} / options={manifest.get('portfolio_integration_option_count')}",
         f"- 离线评审包：{manifest.get('reviewer_fallback_status')} / commands={manifest.get('reviewer_fallback_command_count')} / archive={manifest.get('reviewer_fallback_archive')}",

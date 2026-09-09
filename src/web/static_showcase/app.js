@@ -410,8 +410,34 @@
         });
         card.appendChild(labels);
       }
+      if (item.latest_real_run_audit_card) {
+        renderLatestRealRunAuditCard(card, item.latest_real_run_audit_card);
+      }
       target.appendChild(card);
     });
+  }
+
+  function renderLatestRealRunAuditCard(parent, auditCard) {
+    if (!parent || !auditCard) return;
+    const panel = element('div', 'latest-real-run-audit-preview');
+    const head = element('div', 'latest-real-run-audit-preview-head');
+    head.appendChild(element('strong', '', text(auditCard.title || '最新真实制片包审计')));
+    head.appendChild(element('span', 'status-pill', auditCard.requires_api_key ? '需要 Key' : '无 Key 审计'));
+    panel.appendChild(head);
+    addTextRow(panel, '本地入口', auditCard.endpoint);
+    addTextRow(panel, '公开页行为', auditCard.public_page_behavior);
+    addTextRow(panel, '本地行为', auditCard.local_behavior);
+    addTextRow(panel, '没有完整包时', auditCard.empty_state);
+    addTextRow(panel, '找到完整包后', auditCard.ready_state);
+    addTextRow(panel, '声明边界', auditCard.safe_public_claim);
+    if (Array.isArray(auditCard.download_labels) && auditCard.download_labels.length) {
+      const labels = element('div', 'runtime-download-labels');
+      auditCard.download_labels.forEach(function (label) {
+        labels.appendChild(element('span', '', text(label)));
+      });
+      panel.appendChild(labels);
+    }
+    parent.appendChild(panel);
   }
 
   function renderRealQualityUpgradePlan(grid, plan) {

@@ -3042,6 +3042,7 @@ def _public_showcase_runtime_acceptance_summary(comic_acceptance: dict, research
     """Summarize runtime acceptance in a public-safe, no-key form."""
     comic_image_quality = comic_acceptance.get("image_quality_summary") or {}
     comic_recovery = comic_acceptance.get("recovery_action") or {}
+    comic_downloads = comic_acceptance.get("downloads") or {}
     return {
         "mode": "public_no_key_runtime_acceptance",
         "title": "办公室运行验收摘要",
@@ -3075,6 +3076,23 @@ def _public_showcase_runtime_acceptance_summary(comic_acceptance: dict, research
                     "target_image_ids": list(comic_recovery.get("target_image_ids") or []),
                     "target_image_count": int(comic_recovery.get("target_image_count") or 0),
                     "policy": "只处理质量账本列出的问题图片；没有失败图时才按阶段恢复整包证据。",
+                },
+                "latest_real_run_audit_card": {
+                    "title": "最新真实制片包审计",
+                    "mode": "public_preview_of_local_no_key_audit",
+                    "endpoint": "/api/comic-production/latest-real-run-audit",
+                    "public_page_behavior": "公开静态页不扫描访客电脑、不读取 API Key、不调用真实模型，只说明本地真实运行结束后工作台会出现同名判断卡。",
+                    "local_behavior": "本地工作台会读取 output/workspaces/ 中最新完整可审计制片包，跳过空 JSON、测试残留和缺图片/资产/镜头/Word 的半成品。",
+                    "empty_state": "没有完整包时显示 status=no_auditable_manifest，并提示先完成故事确认、资产审核、图片质检和 Word 画布。",
+                    "ready_state": "找到完整包后显示来源工作空间、图片总数/可用数/返工数、Word 画布和引用清单下载入口，以及当前能否安全对外宣称真实质量。",
+                    "requires_api_key": False,
+                    "calls_real_models": False,
+                    "writes_workspace": False,
+                    "download_labels": [
+                        comic_downloads.get("word_canvas_label") or "下载 Word 画布",
+                        comic_downloads.get("handoff_manifest_label") or "下载引用清单",
+                    ],
+                    "safe_public_claim": "公开页只能证明审计卡的结构和边界；真实质量必须由本地完整 handoff manifest 和真实模型图片证据证明。",
                 },
             },
             {
