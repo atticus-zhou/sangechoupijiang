@@ -985,6 +985,7 @@ let currentComicRuntimeStatus = null;
 let currentComicV2Status = null;
 let currentComicV2ActionError = null;
 let currentComicV2PendingAction = null;
+let currentComicRealRunAudit = null;
 let comicTaskPoller = null;
 
 const COMIC_REQUIRED_ARTIFACTS = [
@@ -1029,6 +1030,7 @@ async function loadComicOffice() {
         loadComicProfile(),
         loadComicWorkspaces(),
         loadOfficePreflight(activeComicOfficeId(), 'comic-preflight-panel'),
+        loadLatestComicRealRunAudit(),
     ]);
 }
 
@@ -1108,6 +1110,7 @@ async function selectComicWorkspace(workspaceId) {
         await loadComicArtifacts('');
         await loadComicTimeline('');
         renderOfficeRuntimeStatus(null, '选择一个漫剧项目后查看当前阶段、产物缺口和可恢复动作。');
+        renderComicPackageBoard([]);
         
         // 重新渲染左侧列表高亮状态
         const items = document.querySelectorAll('#comic-workspaces .workspace-item');
@@ -1131,7 +1134,12 @@ async function selectComicWorkspace(workspaceId) {
 
     await loadComicRuntimeStatus(workspaceId);
     await loadComicV2Status(workspaceId);
-    await Promise.all([loadComicArtifacts(workspaceId), loadComicTimeline(workspaceId), loadComicCabinetSession(workspaceId)]);
+    await Promise.all([
+        loadComicArtifacts(workspaceId),
+        loadComicTimeline(workspaceId),
+        loadComicCabinetSession(workspaceId),
+        loadLatestComicRealRunAudit(),
+    ]);
 }
 
 function resetComicWorkspaceState(options = {}) {
@@ -1431,6 +1439,28 @@ async function loadComicV2Status(workspaceId) {
     return currentComicV2Status;
 }
 
+async function loadLatestComicRealRunAudit() {
+    if (activeComicOfficeId() !== 'comic_production') {
+        currentComicRealRunAudit = null;
+        return null;
+    }
+    try {
+        currentComicRealRunAudit = await API.get('/api/comic-production/latest-real-run-audit');
+    } catch (e) {
+        currentComicRealRunAudit = {
+            mode: 'local_no_key_comic_real_run_audit',
+            status: 'audit_status_error',
+            ui_status: 'needs_attention',
+            human_message: '最新真实制片包审计读取失败。',
+            why: e.message || String(e),
+            user_next_actions: ['刷新工作台。', '如果仍失败，请查看后端日志。'],
+            safe_public_claim: '当前不能宣称真实画质或下游生产质量已验证。',
+        };
+    }
+    renderComicPackageBoard(currentComicArtifacts);
+    return currentComicRealRunAudit;
+}
+
 async function refreshComicV2Panel(message = '') {
     if (!currentComicWorkspace) return null;
     const status = await loadComicV2Status(currentComicWorkspace);
@@ -1439,6 +1469,7 @@ async function refreshComicV2Panel(message = '') {
         loadComicRuntimeStatus(currentComicWorkspace),
         loadComicArtifacts(currentComicWorkspace),
         loadComicTimeline(currentComicWorkspace),
+        loadLatestComicRealRunAudit(),
     ]);
     renderComicPackageBoard(currentComicArtifacts);
     if (message) toast(message, 'success');
@@ -1778,14 +1809,17 @@ function renderComicPackageBoard(artifacts) {
             && (benchmark.package_quality_ready !== false);
         score.className = packageReady ? 'badge badge-ok' : 'badge badge-info';
         board.className = 'package-board';
-        board.innerHTML = renderComicV2ProductionFlow();
+        board.innerHTML = `${renderComicV2ProductionFlow()}${renderLatestComicRealRunAudit(currentComicRealRunAudit)}`;
         return;
     }
     if (!items.length) {
         score.textContent = '未开始';
         score.className = 'badge badge-info';
         board.className = 'package-board';
-        board.innerHTML = '<div class="empty-state">选择一个漫剧项目后查看剧本、资产、分镜和提示词完成度。</div>';
+        board.innerHTML = `
+            <div class="empty-state">选择一个漫剧项目后查看剧本、资产、分镜和提示词完成度。</div>
+            ${renderLatestComicRealRunAudit(currentComicRealRunAudit)}
+        `;
         return;
     }
     const byType = new Map();
@@ -1816,6 +1850,81 @@ function renderComicPackageBoard(artifacts) {
             }).join('')}
         </div>
         ${renderComicProductionFlow(items)}
+        ${renderLatestComicRealRunAudit(currentComicRealRunAudit)}
+    `;
+}
+
+function renderLatestComicRealRunAudit(audit) {
+    if (activeComicOfficeId() !== 'comic_production') return '';
+    if (!audit) {
+        return `
+            <section class="latest-real-run-audit-card waiting">
+                <div class="latest-real-run-audit-head">
+                    <div>
+                        <strong>最新真实制片包审计</strong>
+                        <span>正在读取最近一次完整交付物。</span>
+                    </div>
+                    <b>读取中</b>
+                </div>
+            </section>
+        `;
+    }
+    const status = audit.status || 'waiting';
+    const ready = status === 'ready_for_downstream' || audit.claim_level === 'ready_for_downstream';
+    const missing = Array.isArray(audit.missing_checks) ? audit.missing_checks.slice(0, 5) : [];
+    const nextActions = Array.isArray(audit.user_next_actions) ? audit.user_next_actions.slice(0, 5) : [];
+    const downloads = [
+        audit.word_canvas_uri ? ['下载 Word 画布', audit.word_canvas_uri] : null,
+        audit.audited_manifest_uri ? ['下载引用清单', audit.audited_manifest_uri] : null,
+    ].filter(Boolean);
+    const imageSummary = audit.image_quality_summary || {};
+    const totalImages = Number(imageSummary.total_images || 0);
+    const usableImages = Number(imageSummary.usable_images || 0);
+    const reworkImages = Number(imageSummary.waste_or_rework_images || 0);
+    const workspaceText = audit.workspace_id ? `来自 ${audit.workspace_id}` : '等待完整工作空间';
+    const statusText = ready
+        ? '可交给下游'
+        : (status === 'no_auditable_manifest' ? '等待完整包' : '需复核');
+    return `
+        <section class="latest-real-run-audit-card ${ready ? 'ready' : 'waiting'}">
+            <div class="latest-real-run-audit-head">
+                <div>
+                    <strong>最新真实制片包审计</strong>
+                    <span>${escapeHtml(audit.human_message || audit.summary || '用于判断最近一次真实输出能不能交给下游。')}</span>
+                </div>
+                <b>${escapeHtml(statusText)}</b>
+            </div>
+            <div class="latest-real-run-audit-meta">
+                <span>${escapeHtml(workspaceText)}</span>
+                <span>${escapeHtml(audit.claim_level || audit.visual_evidence_level || status)}</span>
+                <span>${escapeHtml(audit.calls_real_models ? '含真实模型调用证据' : '无 Key 审计，不调用模型')}</span>
+            </div>
+            ${audit.safe_public_claim ? `<p class="latest-real-run-claim">${escapeHtml(audit.safe_public_claim)}</p>` : ''}
+            ${totalImages ? `
+                <div class="latest-real-run-audit-metrics">
+                    <span>图片 ${totalImages}</span>
+                    <span>可用 ${usableImages}</span>
+                    <span>需返工 ${reworkImages}</span>
+                </div>
+            ` : ''}
+            ${missing.length ? `
+                <div class="latest-real-run-audit-list">
+                    <b>还缺什么</b>
+                    ${missing.map(item => `<span>${escapeHtml(item)}</span>`).join('')}
+                </div>
+            ` : ''}
+            ${nextActions.length ? `
+                <div class="latest-real-run-audit-list">
+                    <b>下一步</b>
+                    ${nextActions.map(item => `<span>${escapeHtml(item)}</span>`).join('')}
+                </div>
+            ` : ''}
+            ${downloads.length ? `
+                <div class="latest-real-run-audit-actions">
+                    ${downloads.map(([label, uri]) => `<a class="ghost btn-sm" href="${escapeHtml(uri)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`).join('')}
+                </div>
+            ` : ''}
+        </section>
     `;
 }
 

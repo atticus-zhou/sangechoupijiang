@@ -462,6 +462,31 @@ class FrontendComicRoutingTests(unittest.TestCase):
         self.assertIn("停在视觉母版审核", js)
         self.assertIn("停在资产审核", js)
         self.assertIn("显示可用图、失败图和返工建议", js)
+
+    def test_comic_workbench_renders_latest_real_run_audit_card(self):
+        js = APP_JS.read_text(encoding="utf-8")
+        css = STYLE_CSS.read_text(encoding="utf-8")
+        load_fn = js[js.index("async function loadLatestComicRealRunAudit"):js.index("async function refreshComicV2Panel")]
+        render_fn = js[js.index("function renderLatestComicRealRunAudit"):js.index("function latestComicProductionChain")]
+        board_fn = js[js.index("function renderComicPackageBoard"):js.index("function latestComicProductionChain")]
+
+        self.assertIn("let currentComicRealRunAudit = null;", js)
+        self.assertIn("/api/comic-production/latest-real-run-audit", load_fn)
+        self.assertIn("currentComicRealRunAudit", load_fn)
+        self.assertIn("audit_status_error", load_fn)
+        self.assertIn("no_auditable_manifest", render_fn)
+        self.assertIn("safe_public_claim", render_fn)
+        self.assertIn("user_next_actions", render_fn)
+        self.assertIn("image_quality_summary", render_fn)
+        self.assertIn("word_canvas_uri", render_fn)
+        self.assertIn("audited_manifest_uri", render_fn)
+        self.assertIn("最新真实制片包审计", render_fn)
+        self.assertIn("renderLatestComicRealRunAudit(currentComicRealRunAudit)", board_fn)
+        self.assertIn("loadLatestComicRealRunAudit()", js)
+        self.assertIn(".latest-real-run-audit-card", css)
+        self.assertIn(".latest-real-run-audit-card.ready", css)
+        self.assertIn(".latest-real-run-audit-list", css)
+
     def test_v2_action_error_stays_visible_in_stage_board(self):
         js = APP_JS.read_text(encoding="utf-8")
         css = Path("src/web/static/css/style.css").read_text(encoding="utf-8")
