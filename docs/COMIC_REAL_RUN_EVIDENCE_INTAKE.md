@@ -21,7 +21,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdo
 python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
 
-优先使用 `--latest`。它会自动从 `output/workspaces/` 中寻找最新的 `*_handoff_manifest.json`，避开验证脚本自己生成的临时审计目录。只有你要审计某个旧项目、备份目录或外部交付包时，才需要手动使用 `--manifest` 指向具体文件。
+优先使用 `--latest`。它会自动从 `output/workspaces/` 中寻找最新的完整可审计 `*_handoff_manifest.json`，避开验证脚本自己生成的临时审计目录，也会跳过空 JSON、测试残留和没有图片/资产/镜头/Word 画布的半成品 manifest。只有你要审计某个旧项目、备份目录或外部交付包时，才需要手动使用 `--manifest` 指向具体文件。
 
 这条命令不调用模型，只读取已经生成的 `handoff_manifest.json`、它引用的 Word 画布和清单里的图片/质检记录。它会同时跑生产质量基准、公开声明边界和下游交接验收，并输出：当前是 `real_quality_verified`、`demo_structure_only` 还是 `needs_review`；缺的是模型证据、图片证据、七维视觉质检、提示词谱系，还是 Word/manifest/trace 对不上。
 

@@ -68,8 +68,27 @@ EXPECTED_RECOVERY_ACTIONS = [
 ]
 
 
+def _is_auditable_user_manifest(path: Path) -> bool:
+    """Return True when a workspace manifest is complete enough for real-run intake."""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if not isinstance(payload.get("images"), list) or not payload["images"]:
+        return False
+    if not isinstance(payload.get("assets"), list) or not payload["assets"]:
+        return False
+    if not isinstance(payload.get("shots"), list) or not payload["shots"]:
+        return False
+    if not isinstance(payload.get("word_canvas"), dict):
+        return False
+    return True
+
+
 def find_latest_user_handoff_manifest(output_root: Path = DEFAULT_USER_OUTPUT_ROOT) -> Path | None:
-    """Find the newest real workspace handoff manifest without reading verifier output."""
+    """Find the newest auditable workspace handoff manifest without reading verifier output."""
     root = Path(output_root)
     if not root.exists():
         return None
@@ -78,9 +97,10 @@ def find_latest_user_handoff_manifest(output_root: Path = DEFAULT_USER_OUTPUT_RO
         for path in root.rglob("*handoff_manifest.json")
         if path.is_file()
     ]
-    if not candidates:
+    auditable_candidates = [path for path in candidates if _is_auditable_user_manifest(path)]
+    if not auditable_candidates:
         return None
-    return max(candidates, key=lambda path: (path.stat().st_mtime, str(path)))
+    return max(auditable_candidates, key=lambda path: (path.stat().st_mtime, str(path)))
 
 
 def _read_doc() -> tuple[str, str | None]:
@@ -269,9 +289,24 @@ def main() -> int:
                 "mode": "comic_real_run_evidence_intake",
                 "audit_subject": "latest_user_manifest",
                 "audited_manifest": "",
-                "summary": "No user handoff manifest was found under output/workspaces.",
+                "summary": "No auditable user handoff manifest was found under output/workspaces.",
+                "document": "docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md",
+                "line_count": 0,
+                "missing_marker_count": 0,
+                "human_flow_step_count": 0,
+                "recovery_action_count": 0,
+                "section_status": {},
+                "benchmark_claim": "not_audited",
+                "benchmark_real_quality_verified": False,
+                "claim_level": "not_audited",
+                "can_claim_real_quality": False,
+                "downstream_status": "not_audited",
+                "handoff_allowed": False,
+                "real_quality_promotion_ready": False,
+                "visual_evidence_level": "not_audited",
+                "structural_downstream_handoff_ready": False,
                 "errors": [
-                    "没有找到真实工作区制片包。请先在 AI 漫剧制片办公室生成 Word 画布，或使用 --manifest 指向具体的 *_handoff_manifest.json。"
+                    "没有找到完整可审计的真实工作区制片包。请先在 AI 漫剧制片办公室生成包含图片、资产、镜头和 Word 画布的交付包，或使用 --manifest 指向具体的 *_handoff_manifest.json。"
                 ],
             }
             if args.format == "json":

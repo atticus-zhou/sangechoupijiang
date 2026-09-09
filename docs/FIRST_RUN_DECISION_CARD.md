@@ -52,7 +52,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 python scripts/verify_comic_v2_production_benchmark.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
 
-`--latest` 这一条是总收口：它会自动找到最新真实工作区制片包，把 Word 画布、manifest、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放在一起判断。如果要复核旧项目，再把它输出里的 `Audited manifest` 路径传给后面的分项检查。只有这些检查都通过，才适合说这次真实产物已经达到可交给下游继续生产的状态。
+`--latest` 这一条是总收口：它会自动找到最新完整可审计的真实工作区制片包，并跳过空 JSON、测试残留和没有图片/资产/镜头/Word 画布的半成品 manifest，再把 Word 画布、manifest、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放在一起判断。如果要复核旧项目，再把它输出里的 `Audited manifest` 路径传给后面的分项检查。只有这些检查都通过，才适合说这次真实产物已经达到可交给下游继续生产的状态。
 
 如果服务窗口已经出现 `Uvicorn running`，但 PowerShell 检查 `/health` 时显示 `502 Bad Gateway`，先用浏览器打开 `http://127.0.0.1:8080/`，或运行：
 

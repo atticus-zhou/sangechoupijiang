@@ -130,10 +130,8 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
             root = Path(tmp)
             old_path = root / "ws_old" / "delivery" / "old_handoff_manifest.json"
             new_path = root / "ws_new" / "delivery" / "new_handoff_manifest.json"
-            old_path.parent.mkdir(parents=True)
-            new_path.parent.mkdir(parents=True)
-            old_path.write_text("{}", encoding="utf-8")
-            new_path.write_text("{}", encoding="utf-8")
+            old_path = _real_verified_manifest(old_path.parent)
+            new_path = _real_verified_manifest(new_path.parent)
 
             old_time = 1_700_000_000
             new_time = 1_800_000_000
@@ -145,6 +143,15 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
             os.utime(new_path, (new_time, new_time))
 
             self.assertEqual(find_latest_user_handoff_manifest(root), new_path)
+
+    def test_latest_manifest_finder_ignores_incomplete_workspace_manifests(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            incomplete = root / "ws_new" / "delivery" / "test_v2_canvas_handoff_manifest.json"
+            incomplete.parent.mkdir(parents=True)
+            incomplete.write_text("{}", encoding="utf-8")
+
+            self.assertIsNone(find_latest_user_handoff_manifest(root))
 
     def test_latest_cli_audits_newest_user_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -174,6 +181,34 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertEqual(payload["audited_manifest"], str(manifest_path))
         self.assertEqual(payload["claim_level"], "real_quality_verified")
         self.assertTrue(payload["handoff_allowed"])
+
+    def test_latest_cli_explains_when_no_auditable_manifest_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            incomplete = root / "ws_latest" / "delivery" / "test_v2_canvas_handoff_manifest.json"
+            incomplete.parent.mkdir(parents=True)
+            incomplete.write_text("{}", encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/verify_comic_real_run_evidence_intake.py",
+                    "--latest",
+                    "--latest-output-root",
+                    str(root),
+                    "--format",
+                    "markdown",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("No auditable user handoff manifest", completed.stdout)
+        self.assertIn("not_audited", completed.stdout)
+        self.assertIn("完整可审计", completed.stdout)
+        self.assertNotIn("`None`", completed.stdout)
 
 
 if __name__ == "__main__":
