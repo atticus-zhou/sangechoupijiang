@@ -22,6 +22,20 @@ python scripts/verify_static_public_showcase.py --format markdown --existing-dir
 
 需要你自己的模型 Key。
 
+Windows 用户可以先用一键启动入口：
+
+```powershell
+.\start_windows.bat
+```
+
+它会检查 Python 依赖，缺依赖时安装 `requirements.txt`，缺 `config.yaml` 时从 `config.example.yaml` 创建一份本地配置，然后运行 `doctor.py`，最后启动 `http://127.0.0.1:8080/`。如果你想用别的端口：
+
+```powershell
+.\start_windows.bat 8081
+```
+
+想手动一步步执行，可以按下面走：
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

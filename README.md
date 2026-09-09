@@ -55,6 +55,14 @@ V2 的目标交付不是一部成片，而是一份可生产的制片包：人�
 第一次下载后先跑本地自检，它不会调用真实模型，也不会打印 API Key：
 
 ```powershell
+.\start_windows.bat
+```
+
+Windows 上这条命令会先检查依赖和本地配置，再运行 `doctor.py`，最后启动 `http://127.0.0.1:8080/`。如果端口被占用，可以指定端口，例如 `.\start_windows.bat 8081`。
+
+也可以手动分步执行：
+
+```powershell
 python scripts/doctor.py
 ```
 
