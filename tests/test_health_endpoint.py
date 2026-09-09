@@ -63,6 +63,9 @@ class HealthEndpointTests(unittest.TestCase):
         self.assertEqual(payload["title"], "第一次使用应该先做什么")
         self.assertIn("无 Key 演示", payload["summary"])
         self.assertIn("逐个部门测试", payload["primary_next_action"])
+        serialized_human_text = str(payload)
+        for marker in ("�", "绗", "鐢", "娴", "鍔", "璇", "鎶"):
+            self.assertNotIn(marker, serialized_human_text)
 
         paths = {item["id"]: item for item in payload["paths"]}
         self.assertEqual(set(paths), {"public_demo", "local_real_use", "developer_extension"})
@@ -81,7 +84,7 @@ class HealthEndpointTests(unittest.TestCase):
         self.assertIn("model_guidance", quick_checks)
         self.assertIn("onboarding_packet", quick_checks)
         self.assertIn("release_gate", quick_checks)
-        serialized = str(payload).lower()
+        serialized = serialized_human_text.lower()
         self.assertNotIn("password", serialized)
         self.assertNotIn("secret", serialized)
         self.assertNotIn("sk-", serialized)
