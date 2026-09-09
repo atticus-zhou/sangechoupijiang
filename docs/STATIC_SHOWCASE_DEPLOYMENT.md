@@ -103,7 +103,7 @@ Netlify 的发布目录选择 `dist/public-showcase`。GitHub Pages 只发布导
 .github/workflows/pages-showcase.yml
 ```
 
-它会在 `main` 更新或手动触发时执行三步：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描，然后上传 GitHub Pages artifact。这个通道不需要 Vercel 授权，也不需要任何 API Key。第一次使用前，需要在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果组织或仓库禁用了 Pages，工作流会留下 `GitHub Pages not enabled` 提示，静态 artifact 仍然会完成构建和验证，但公开 URL 不应宣称已发布。
+它会在 `main` 更新或手动触发时执行四步：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描、上传并部署 GitHub Pages，然后再访问 `https://atticus-zhou.github.io/sangechoupijiang/` 做线上 URL 验证。这个通道不需要 Vercel 授权，也不需要任何 API Key。第一次使用前，需要在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果组织或仓库禁用了 Pages，或者 Pages URL 仍然返回 404，workflow 应该失败。这个失败说明备用公开入口还没有真的上线，不说明 no-key 静态包或本地产品崩溃。
 
 ## 发布前检查
 
@@ -129,7 +129,7 @@ python scripts/check_no_secrets.py
 - 个人网站仓库失败：进入个人网站仓库运行 `npm run check:showcase-ci`。这条会按 GitHub Actions 的顺序检查本地静态展示、交接文档、备用审阅包、构建和 build-info。
 - 本地 `check:showcase-ci` 通过但线上还是 404：问题通常在 Vercel 授权、Vercel 没有重新部署、或者线上仍在服务旧 bundle。继续运行个人网站仓库的 `npm run doctor:deploy` 和 `npm run check:online`，不要为了消掉 404 去改产品展示数据。
 
-这三种结果的边界要分清：GitHub Actions 证明仓库构建和 no-key 展示包；`check:showcase-ci` 证明个人网站仓库里的静态拷贝能构建；`check:online` 才证明生产域名真的已经更新。
+这三种结果的边界要分清：产品仓库的 release readiness 证明仓库构建和 no-key 展示包；Pages workflow 只有在公开 Pages URL 也能访问时才应该成功；`check:showcase-ci` 证明个人网站仓库里的静态拷贝能构建；`check:online` 才证明生产域名真的已经更新。
 
 ## 安全边界
 

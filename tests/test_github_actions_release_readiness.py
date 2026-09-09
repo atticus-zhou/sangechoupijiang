@@ -41,10 +41,13 @@ class GitHubActionsReleaseReadinessTests(unittest.TestCase):
         self.assertIn("actions/upload-pages-artifact@v3", text)
         self.assertIn("actions/deploy-pages@v4", text)
         self.assertIn("path: dist/public-showcase", text)
-        self.assertIn("continue-on-error: true", text)
-        self.assertIn("GitHub Pages not enabled", text)
-        self.assertIn("Settings -> Pages", text)
-        self.assertIn("Source to GitHub Actions", text)
+        self.assertIn("Verify published Pages URL", text)
+        self.assertIn(
+            "python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown",
+            text,
+        )
+        self.assertIn("GitHub Pages deployed and verified", text)
+        self.assertNotIn("continue-on-error: true", text)
         self.assertNotIn("OPENAI_API_KEY", text)
         self.assertNotIn("DASHSCOPE_API_KEY", text)
         self.assertNotIn("DEEPSEEK_API_KEY", text)

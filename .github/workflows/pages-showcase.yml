@@ -56,7 +56,6 @@ jobs:
 
       - name: Configure Pages
         id: configure_pages
-        continue-on-error: true
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
@@ -66,13 +65,19 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        continue-on-error: true
         uses: actions/deploy-pages@v4
+
+      - name: Verify published Pages URL
+        run: |
+          for attempt in 1 2 3 4 5; do
+            echo "Checking GitHub Pages URL, attempt ${attempt}/5..."
+            if python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown --timeout 20; then
+              exit 0
+            fi
+            sleep 15
+          done
+          python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown --timeout 20
 
       - name: Explain Pages deployment result
         run: |
-          if [ "${{ steps.deployment.outcome }}" = "success" ]; then
-            echo "GitHub Pages deployed: ${{ steps.deployment.outputs.page_url }}"
-          else
-            echo "::notice title=GitHub Pages not enabled::The no-key showcase artifact was built and verified. To publish it, open repository Settings -> Pages, set Source to GitHub Actions, then rerun this workflow."
-          fi
+          echo "GitHub Pages deployed and verified: ${{ steps.deployment.outputs.page_url }}"
