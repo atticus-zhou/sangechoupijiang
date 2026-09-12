@@ -25,6 +25,21 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 
 这条命令不调用模型，只读取已经生成的 `handoff_manifest.json`、它引用的 Word 画布和清单里的图片/质检记录。它会同时跑生产质量基准、公开声明边界和下游交接验收，并输出：当前是 `real_quality_verified`、`demo_structure_only` 还是 `needs_review`；缺的是模型证据、图片证据、七维视觉质检、提示词谱系，还是 Word/manifest/trace 对不上。
 
+## 证据导入模板
+
+真实模型运行结束后，先把关键证据整理成 `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json` 同结构的 evidence intake 文件，再把其中的字段并入最终 `handoff_manifest.json`、`trace.json` 和 `production-acceptance.json`。模板不是让用户填写 API Key，而是让系统或开发者记录“这次真实生成到底用了什么模型、生成了哪些图片、哪些图通过刑部质检、哪些图需要返工、最终 Word 和 manifest 是否一致”。
+
+模板必须保留以下边界：
+
+- `office_id` 必须是 `comic_production`，避免把研究办公室或旧办公室产物混进来。
+- `model_evidence` 只记录 provider、model、request_trace_ids 或等价 job id，不记录 API Key、Cookie、浏览器 Profile 或控制台敏感截图。
+- `generated_images` 中每张图都必须声明 `fixture=false`、provider/model、图片角色、引用资产或镜头，以及是否要求干净背景。
+- `visual_reviews` 必须由刑部或视觉质检阶段写入七维评分、通过状态、问题列表和恢复动作。
+- `image_quality_summary` 必须能让人立刻知道总图数、可用图数、废片/返工图数和失败图片 ID。
+- `prompt_strategy_lineage` 必须证明资产提示词、镜头提示词和 Word 画布来自同一版策略。
+- `delivery_files` 必须指向 Word 画布、handoff manifest、trace 和 production acceptance card。
+- `downstream_handoff_decision` 必须明确 `handoff_allowed`，不能只说“已完成”。
+
 ## 必须提交的证据
 
 真实运行后，`handoff_manifest.json`、`trace.json`、`production-acceptance.json` 和 `word_canvas.docx` 必须能互相对上。最低证据包括：

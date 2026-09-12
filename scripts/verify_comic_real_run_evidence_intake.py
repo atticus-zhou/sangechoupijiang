@@ -17,6 +17,7 @@ from scripts.verify_comic_v2_downstream_handoff import verify_downstream_handoff
 from scripts.verify_comic_v2_production_benchmark import verify_production_benchmark
 
 DOC_PATH = REPO_ROOT / "docs" / "COMIC_REAL_RUN_EVIDENCE_INTAKE.md"
+TEMPLATE_PATH = REPO_ROOT / "docs" / "COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json"
 INTAKE_OUTPUT_ROOT = REPO_ROOT / "output" / "comic_real_run_evidence_intake"
 DEFAULT_USER_OUTPUT_ROOT = REPO_ROOT / "output" / "workspaces"
 
@@ -49,6 +50,8 @@ REQUIRED_MARKERS = [
     "python scripts/verify_comic_v2_production_benchmark.py --format markdown",
     "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
     "python scripts/verify_release_readiness.py --format markdown",
+    "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json",
+    "证据导入模板",
 ]
 
 EXPECTED_HUMAN_FLOW = [
@@ -66,6 +69,128 @@ EXPECTED_RECOVERY_ACTIONS = [
     "退回兵部",
     "退回礼部",
 ]
+
+TEMPLATE_REQUIRED_TOP_LEVEL = [
+    "schema",
+    "office_id",
+    "claim_boundary",
+    "workspace",
+    "model_evidence",
+    "generated_images",
+    "visual_reviews",
+    "image_quality_summary",
+    "prompt_strategy_lineage",
+    "delivery_files",
+    "downstream_handoff_decision",
+]
+
+TEMPLATE_FORBIDDEN_MARKERS = [
+    "api_key",
+    "cookie",
+    "browser_profile",
+    "config.yaml",
+    ".env",
+    "user_data",
+    "raw_provider_secret",
+]
+
+
+def _verify_template_contract() -> dict[str, Any]:
+    errors: list[str] = []
+    try:
+        template = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {
+            "status": "failed",
+            "path": str(TEMPLATE_PATH.relative_to(REPO_ROOT)),
+            "errors": ["real-run evidence intake template is missing"],
+        }
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return {
+            "status": "failed",
+            "path": str(TEMPLATE_PATH.relative_to(REPO_ROOT)),
+            "errors": [f"real-run evidence intake template is not valid JSON: {exc}"],
+        }
+
+    missing = [field for field in TEMPLATE_REQUIRED_TOP_LEVEL if field not in template]
+    if missing:
+        errors.append(f"template missing top-level fields: {', '.join(missing)}")
+    if template.get("schema") != "comic_real_run_evidence_intake_v1":
+        errors.append("template schema must be comic_real_run_evidence_intake_v1")
+    if template.get("office_id") != "comic_production":
+        errors.append("template office_id must be comic_production")
+
+    claim_boundary = template.get("claim_boundary") or {}
+    must_not_include = claim_boundary.get("must_not_include") or []
+    for marker in TEMPLATE_FORBIDDEN_MARKERS:
+        if marker not in must_not_include:
+            errors.append(f"template claim_boundary.must_not_include must list {marker}")
+    if "downstream_handoff_allowed" not in (claim_boundary.get("public_claim_allowed_only_after") or []):
+        errors.append("template must require downstream_handoff_allowed before public real-quality claims")
+
+    model_evidence = template.get("model_evidence") or {}
+    for department in ("gongbu_image_generation", "xingbu_visual_review", "bingbu_prompt_director"):
+        evidence = model_evidence.get(department) or {}
+        if not all(evidence.get(field) for field in ("provider", "model", "request_trace_ids")):
+            errors.append(f"template model_evidence.{department} must include provider, model, and request_trace_ids")
+
+    generated_images = template.get("generated_images") or []
+    if not generated_images:
+        errors.append("template generated_images must include at least one image record")
+    for index, image in enumerate(generated_images):
+        required = ("image_id", "production_role", "file_path", "provider", "model", "fixture", "prompt_hash")
+        missing_image = [field for field in required if field not in image]
+        if missing_image:
+            errors.append(f"template generated_images[{index}] missing fields: {', '.join(missing_image)}")
+        if image.get("fixture") is not False:
+            errors.append(f"template generated_images[{index}].fixture must be false")
+        if not (image.get("asset_id") or image.get("shot_id")):
+            errors.append(f"template generated_images[{index}] must bind to asset_id or shot_id")
+
+    reviews = template.get("visual_reviews") or []
+    if not reviews:
+        errors.append("template visual_reviews must include at least one review record")
+    for index, review in enumerate(reviews):
+        if review.get("reviewer_department") != "xingbu":
+            errors.append(f"template visual_reviews[{index}] must be owned by xingbu")
+        scores = review.get("scores") or {}
+        if len(scores) < 7:
+            errors.append(f"template visual_reviews[{index}] must include seven-dimensional scores")
+        if review.get("status") not in {"pass", "needs_review", "fail"}:
+            errors.append(f"template visual_reviews[{index}].status must be pass, needs_review, or fail")
+
+    summary = template.get("image_quality_summary") or {}
+    for field in ("total_images", "usable_images", "waste_or_rework_images", "failed_image_ids", "rework_instructions"):
+        if field not in summary:
+            errors.append(f"template image_quality_summary must include {field}")
+
+    lineage = template.get("prompt_strategy_lineage") or {}
+    if lineage.get("status") != "ready":
+        errors.append("template prompt_strategy_lineage.status must show the ready target state")
+    for field in ("expected_prompt_strategy_version", "package_prompt_strategy_version", "asset_prompt_count", "shot_prompt_count"):
+        if field not in lineage:
+            errors.append(f"template prompt_strategy_lineage must include {field}")
+
+    delivery = template.get("delivery_files") or {}
+    for field in ("word_canvas_path", "handoff_manifest_path", "trace_path", "production_acceptance_path"):
+        if not delivery.get(field):
+            errors.append(f"template delivery_files must include {field}")
+
+    decision = template.get("downstream_handoff_decision") or {}
+    if decision.get("status") != "ready_for_downstream":
+        errors.append("template downstream_handoff_decision.status must show the ready target state")
+    if decision.get("handoff_allowed") is not True:
+        errors.append("template downstream_handoff_decision.handoff_allowed must show the ready target state")
+
+    return {
+        "status": "passed" if not errors else "failed",
+        "path": str(TEMPLATE_PATH.relative_to(REPO_ROOT)),
+        "schema": template.get("schema"),
+        "image_record_count": len(generated_images),
+        "visual_review_count": len(reviews),
+        "forbidden_marker_count": len(must_not_include),
+        "errors": errors,
+    }
 
 
 def _is_auditable_user_manifest(path: Path) -> bool:
@@ -114,6 +239,7 @@ def _read_doc() -> tuple[str, str | None]:
 
 def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[str, Any]:
     text, read_error = _read_doc()
+    template_contract = _verify_template_contract()
     benchmark = verify_production_benchmark(output_dir=INTAKE_OUTPUT_ROOT / "benchmark", manifest_path=manifest_path)
     claim = build_claim_report(manifest_path=manifest_path, output_dir=INTAKE_OUTPUT_ROOT / "claim")
     handoff = verify_downstream_handoff(output_dir=INTAKE_OUTPUT_ROOT / "handoff", manifest_path=manifest_path)
@@ -131,6 +257,8 @@ def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[s
         errors.append(f"real-run evidence intake doc missing human flow markers: {', '.join(missing_flow)}")
     if missing_recovery:
         errors.append(f"real-run evidence intake doc missing recovery markers: {', '.join(missing_recovery)}")
+    if template_contract.get("status") != "passed":
+        errors.extend(template_contract.get("errors") or ["real-run evidence intake template contract failed"])
 
     if benchmark.get("status") != "passed":
         errors.append("comic production benchmark verifier must pass")
@@ -178,6 +306,7 @@ def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[s
         "missing_marker_count": len(missing_markers),
         "human_flow_step_count": len(EXPECTED_HUMAN_FLOW) - len(missing_flow),
         "recovery_action_count": len(EXPECTED_RECOVERY_ACTIONS) - len(missing_recovery),
+        "template_contract": template_contract,
         "section_status": text_sections,
         "benchmark_claim": benchmark.get("quality_claim"),
         "benchmark_real_quality_verified": benchmark.get("production_quality_verified"),
@@ -222,6 +351,19 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
     ]
     lines.extend(f"- {name}: `{status}`" for name, status in sections.items())
+    template = payload.get("template_contract") or {}
+    if template:
+        lines.extend([
+            "",
+            "## Evidence Template",
+            "",
+            f"- Status: `{template.get('status')}`",
+            f"- Path: `{template.get('path')}`",
+            f"- Schema: `{template.get('schema')}`",
+            f"- Image records: `{template.get('image_record_count')}`",
+            f"- Visual reviews: `{template.get('visual_review_count')}`",
+            f"- Forbidden markers: `{template.get('forbidden_marker_count')}`",
+        ])
     image_summary = payload.get("image_quality_summary") or {}
     if image_summary:
         lines.extend([

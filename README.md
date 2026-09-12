@@ -168,6 +168,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 python scripts/verify_comic_v2_production_benchmark.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
 ```
 
+真实模型图片、视觉质检和提示词策略证据先按 [docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json](docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json) 的结构收口，再并入 `handoff_manifest.json`、`trace.json` 和 `production-acceptance.json`。这个模板只记录 provider、model、request/job id、图片记录、刑部七维质检、废片/返工统计、提示词谱系和下游交接决策；不要把 API Key、Cookie、浏览器登录态、`.env`、`config.yaml` 或用户私有工作区写进去。
+
 第一条盘点命令会在顶部给出 `Recommended Manifest` 和重复导出分组。输出目录里如果有很多同名验证副本，先打开推荐路径；`Duplicate Groups` 里的其他路径作为历史证据保留，不需要逐个打开判断。
 
 只有交付物清点可追溯、真实生产声明显示 `can_claim_real_quality=True`，制片质量基准显示 `production_quality_verified`，并且 `prompt_strategy_lineage.ready_for_real_quality_claim=True` 时，才把这次产物对外描述为真实生产质量。否则只能说它完成了结构、流程或部分模型验证。

@@ -1,0 +1,136 @@
+{
+  "schema": "comic_real_run_evidence_intake_v1",
+  "office_id": "comic_production",
+  "claim_boundary": {
+    "target_claim_level": "real_quality_verified",
+    "must_not_include": [
+      "api_key",
+      "cookie",
+      "browser_profile",
+      "config.yaml",
+      ".env",
+      "user_data",
+      "raw_provider_secret"
+    ],
+    "public_claim_allowed_only_after": [
+      "all_generated_images_are_non_fixture",
+      "all_visual_reviews_pass",
+      "waste_or_rework_images_is_zero_or_resolved",
+      "prompt_strategy_lineage_ready",
+      "word_canvas_manifest_trace_consistent",
+      "downstream_handoff_allowed"
+    ]
+  },
+  "workspace": {
+    "workspace_id": "ws_replace_with_real_workspace_id",
+    "task_id": "task_replace_with_real_task_id",
+    "story_version": "story_v_replace",
+    "visual_bible_version": "style_v_replace",
+    "asset_manifest_version": "asset_manifest_v_replace",
+    "prompt_strategy_version": "prompt_strategy_v_replace"
+  },
+  "model_evidence": {
+    "gongbu_image_generation": {
+      "provider": "replace_provider_name",
+      "model": "replace_image_model_name",
+      "request_trace_ids": [
+        "replace_provider_request_or_job_id"
+      ],
+      "evidence_note": "只记录可追溯 ID，不记录密钥、Cookie 或控制台截图里的敏感字段。"
+    },
+    "xingbu_visual_review": {
+      "provider": "replace_provider_name",
+      "model": "replace_vision_model_name",
+      "request_trace_ids": [
+        "replace_provider_request_or_job_id"
+      ],
+      "evidence_note": "记录视觉质检模型和请求追踪 ID，用于证明不是人工目测冒充自动质检。"
+    },
+    "bingbu_prompt_director": {
+      "provider": "replace_provider_name",
+      "model": "replace_text_model_name",
+      "request_trace_ids": [
+        "replace_provider_request_or_job_id"
+      ],
+      "evidence_note": "记录导演式提示词生成模型和版本，用于绑定提示词策略谱系。"
+    }
+  },
+  "generated_images": [
+    {
+      "image_id": "img_char_001_three_view",
+      "asset_id": "char_001",
+      "shot_id": "",
+      "production_role": "clean_character_identity_three_view",
+      "file_path": "output/workspaces/ws_xxx/images/img_char_001_three_view.png",
+      "provider": "replace_provider_name",
+      "model": "replace_model_name",
+      "provider_job_id": "replace_provider_job_id",
+      "fixture": false,
+      "clean_background_required": true,
+      "reference_policy": "人物资产用于后续镜头身份一致性参考，不负责讲述剧情。",
+      "prompt_hash": "replace_prompt_hash",
+      "generated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "image_id": "img_scene_001_top_down",
+      "asset_id": "scene_001",
+      "shot_id": "",
+      "production_role": "scene_top_down_layout",
+      "file_path": "output/workspaces/ws_xxx/images/img_scene_001_top_down.png",
+      "provider": "replace_provider_name",
+      "model": "replace_model_name",
+      "provider_job_id": "replace_provider_job_id",
+      "fixture": false,
+      "clean_background_required": false,
+      "reference_policy": "场景俯视图用于空间关系和机位规划。",
+      "prompt_hash": "replace_prompt_hash",
+      "generated_at": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "visual_reviews": [
+    {
+      "image_id": "img_char_001_three_view",
+      "reviewer_department": "xingbu",
+      "review_model": "replace_vision_model_name",
+      "status": "pass",
+      "scores": {
+        "identity_consistency": 94,
+        "style_consistency": 94,
+        "asset_cleanliness": 94,
+        "story_fit": 94,
+        "prompt_adherence": 94,
+        "technical_quality": 94,
+        "downstream_usability": 94
+      },
+      "issues": [],
+      "recovery_action": ""
+    }
+  ],
+  "image_quality_summary": {
+    "total_images": 2,
+    "usable_images": 2,
+    "waste_or_rework_images": 0,
+    "failed_image_ids": [],
+    "rework_instructions": []
+  },
+  "prompt_strategy_lineage": {
+    "status": "ready",
+    "expected_prompt_strategy_version": "prompt_strategy_v_replace",
+    "package_prompt_strategy_version": "prompt_strategy_v_replace",
+    "asset_prompt_count": 0,
+    "shot_prompt_count": 0,
+    "missing_check_ids": []
+  },
+  "delivery_files": {
+    "word_canvas_path": "output/workspaces/ws_xxx/delivery/project_word_canvas.docx",
+    "handoff_manifest_path": "output/workspaces/ws_xxx/delivery/project_handoff_manifest.json",
+    "trace_path": "output/workspaces/ws_xxx/delivery/trace.json",
+    "production_acceptance_path": "output/workspaces/ws_xxx/delivery/production-acceptance.json"
+  },
+  "downstream_handoff_decision": {
+    "status": "ready_for_downstream",
+    "handoff_allowed": true,
+    "blocked_reasons": [],
+    "next_action": "可以交给下游视频平台继续生产；同时保留本 evidence intake 文件用于复核。"
+  }
+}

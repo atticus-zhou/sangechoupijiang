@@ -54,6 +54,9 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertEqual(payload["missing_marker_count"], 0)
         self.assertEqual(payload["human_flow_step_count"], 6)
         self.assertEqual(payload["recovery_action_count"], 4)
+        self.assertEqual(payload["template_contract"]["status"], "passed")
+        self.assertEqual(payload["template_contract"]["schema"], "comic_real_run_evidence_intake_v1")
+        self.assertGreaterEqual(payload["template_contract"]["forbidden_marker_count"], 7)
         self.assertEqual(payload["benchmark_claim"], "demo_structure_verified")
         self.assertFalse(payload["benchmark_real_quality_verified"])
         self.assertEqual(payload["claim_level"], "demo_structure_only")
@@ -93,6 +96,25 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("Audit subject: `fixed_public_sample`", completed.stdout)
         self.assertIn("Image Evidence", completed.stdout)
         self.assertIn("Real Model Evidence", completed.stdout)
+        self.assertIn("Evidence Template", completed.stdout)
+        self.assertIn("COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", completed.stdout)
+
+    def test_real_run_evidence_template_is_machine_readable_and_safe(self):
+        template_path = Path("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json")
+        template = json.loads(template_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(template["schema"], "comic_real_run_evidence_intake_v1")
+        self.assertEqual(template["office_id"], "comic_production")
+        self.assertIn("api_key", template["claim_boundary"]["must_not_include"])
+        self.assertIn("cookie", template["claim_boundary"]["must_not_include"])
+        self.assertIn("raw_provider_secret", template["claim_boundary"]["must_not_include"])
+        self.assertIn("gongbu_image_generation", template["model_evidence"])
+        self.assertIn("xingbu_visual_review", template["model_evidence"])
+        self.assertIn("bingbu_prompt_director", template["model_evidence"])
+        self.assertFalse(template["generated_images"][0]["fixture"])
+        self.assertEqual(template["visual_reviews"][0]["reviewer_department"], "xingbu")
+        self.assertGreaterEqual(len(template["visual_reviews"][0]["scores"]), 7)
+        self.assertTrue(template["downstream_handoff_decision"]["handoff_allowed"])
 
     def test_existing_real_manifest_can_pass_the_intake_gate(self):
         with tempfile.TemporaryDirectory() as tmp:
