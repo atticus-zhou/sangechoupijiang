@@ -10,6 +10,8 @@
 
 下一间办公室暂不启动真实功能开发。当前状态是 decision_ready_but_not_started：扩展顺序和准入条件已经明确，但候选办公室必须先补齐办公室专属 schema、恢复事件、无 Key 样例交付、公开声明边界和发布门禁，才能从 backlog 进入正式办公室矩阵。
 
+当前候选清单已经增加“开工前合同”：每个候选办公室必须先写出第一批 schema contract 和 recovery events。schema contract 要写明 `schema_id`、责任 Agent、必填字段和验收标准；recovery events 要写明失败阶段、恢复动作、保留哪些内容、清理哪些内容，以及给用户看的说明。这样后续开发不会只新增一个办公室卡片，而是从第一天就能被 schema gate、runtime status、history trace 和失败恢复验证。
+
 ## 稳定后评估结论
 
 当前可以进入“评估完成，但不扩办公室”的状态。理由是：AI 漫剧制片办公室已经具备无 Key 样例、交付画布、追溯包、失败恢复和 release gate；研究办公室也已经通过 staged readiness，能够展示阶段报告、来源、数据、竞品、截图计划和证据缺口；但两者都还没有把“真实账号/真实模型/真实生产质量”升级证据连续跑到足够稳定。
@@ -65,6 +67,7 @@
 - 明确用户任务、输入类型、输出类型、模型能力要求和人工确认节点。
 - 拥有办公室专属 schema gate，不能复用不相干办公室的校验器假装通过。
 - 拥有办公室专属 recovery actions，说明失败后保留什么、清理什么、如何重试。
+- 在进入真实开发前，先补 `first_schema_contracts` 和 `first_recovery_events`：前者规定模型输出必须有哪些字段，后者规定每个失败阶段如何保留已确认内容、清理坏证据并让用户知道下一步。
 - 拥有无 Key demo、样例交付物、下载清单、阅读指南和 public claim report。
 - README、部署文档、公开演示和 release readiness 都能解释它可以宣称什么，不能宣称什么。
 - `python scripts/check_no_secrets.py` 必须通过，公开展示包不能包含 API Key、cookie、浏览器登录态、用户数据或 runtime 输出。

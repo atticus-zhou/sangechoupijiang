@@ -85,6 +85,35 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         errors.append("candidate must declare a first no-key sample with input, deliverables, and acceptance")
     if len(candidate.get("first_schema_outputs") or []) < 3:
         errors.append("candidate must declare first_schema_outputs before public work starts")
+    schema_contracts = candidate.get("first_schema_contracts") or []
+    schema_output_ids = set(str(item) for item in (candidate.get("first_schema_outputs") or []))
+    if len(schema_contracts) < 2:
+        errors.append("candidate must declare first_schema_contracts before public work starts")
+    for contract in schema_contracts:
+        schema_id = str(contract.get("schema_id") or "")
+        if schema_id not in schema_output_ids:
+            errors.append(f"schema contract does not match first_schema_outputs: {schema_id or 'missing_schema_id'}")
+        if not contract.get("owner_agent"):
+            errors.append(f"schema contract is missing owner_agent: {schema_id or 'missing_schema_id'}")
+        if len(contract.get("required_fields") or []) < 4:
+            errors.append(f"schema contract must list at least four required fields: {schema_id or 'missing_schema_id'}")
+        if not contract.get("acceptance"):
+            errors.append(f"schema contract is missing acceptance: {schema_id or 'missing_schema_id'}")
+    recovery_events = candidate.get("first_recovery_events") or []
+    if len(recovery_events) < 2:
+        errors.append("candidate must declare first_recovery_events before public work starts")
+    for event in recovery_events:
+        event_id = str(event.get("action") or event.get("stage") or "missing_recovery_event")
+        preserves = [str(item) for item in (event.get("preserves") or []) if str(item).strip()]
+        clears = [str(item) for item in (event.get("clears") or []) if str(item).strip()]
+        if not event.get("stage") or not event.get("action"):
+            errors.append(f"recovery event must declare stage and action: {event_id}")
+        if len(preserves) < 1 or len(clears) < 1:
+            errors.append(f"recovery event must declare preserves and clears: {event_id}")
+        if set(preserves) & set(clears):
+            errors.append(f"recovery event preserves and clears overlap: {event_id}")
+        if not event.get("user_message"):
+            errors.append(f"recovery event is missing user_message: {event_id}")
     if len(candidate.get("human_review_points") or []) < 3:
         errors.append("candidate must declare human_review_points before public work starts")
     if len(candidate.get("forbidden_shortcuts") or []) < 3:
@@ -102,6 +131,8 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         "required_before_public": required,
         "first_no_key_sample": first_sample,
         "first_schema_outputs": candidate.get("first_schema_outputs", []),
+        "first_schema_contracts": schema_contracts,
+        "first_recovery_events": recovery_events,
         "human_review_points": candidate.get("human_review_points", []),
         "forbidden_shortcuts": candidate.get("forbidden_shortcuts", []),
         "blocking_backlog_ids": blocking_backlog,
@@ -198,18 +229,20 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Priority order: {', '.join(payload.get('priority_order') or [])}",
         f"- Prioritization: {payload.get('prioritization_status')} — {payload.get('decision_rule')}",
         "",
-        "| Candidate | Priority | Status | First sample | Required before public | Platform blockers |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Candidate | Priority | Status | First sample | Schema contracts | Recovery events | Required before public | Platform blockers |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for item in payload.get("reports") or []:
         first_sample = item.get("first_no_key_sample") or {}
         sample_summary = "; ".join(first_sample.get("deliverables") or []) or "-"
         lines.append(
-            "| {id} | {priority} | {status} | {sample} | {required} | {backlog} |".format(
+            "| {id} | {priority} | {status} | {sample} | {contracts} | {recovery} | {required} | {backlog} |".format(
                 id=item.get("id", ""),
                 priority=f"{item.get('priority_rank')}. {item.get('priority_label')}",
                 status=item.get("status", ""),
                 sample=sample_summary,
+                contracts=str(len(item.get("first_schema_contracts") or [])),
+                recovery=str(len(item.get("first_recovery_events") or [])),
                 required=", ".join(item.get("required_before_public") or []),
                 backlog=", ".join(item.get("blocking_backlog_ids") or []) or "-",
             )

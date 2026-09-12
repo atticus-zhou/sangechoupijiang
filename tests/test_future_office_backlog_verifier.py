@@ -57,6 +57,21 @@ class FutureOfficeBacklogVerifierTests(unittest.TestCase):
             self.assertGreaterEqual(len(report["first_no_key_sample"]["deliverables"]), 3)
             self.assertTrue(report["first_no_key_sample"]["acceptance"])
             self.assertGreaterEqual(len(report["first_schema_outputs"]), 3)
+            self.assertGreaterEqual(len(report["first_schema_contracts"]), 2)
+            schema_outputs = set(report["first_schema_outputs"])
+            for contract in report["first_schema_contracts"]:
+                self.assertIn(contract["schema_id"], schema_outputs)
+                self.assertTrue(contract["owner_agent"])
+                self.assertGreaterEqual(len(contract["required_fields"]), 4)
+                self.assertTrue(contract["acceptance"])
+            self.assertGreaterEqual(len(report["first_recovery_events"]), 2)
+            for event in report["first_recovery_events"]:
+                self.assertTrue(event["stage"])
+                self.assertTrue(event["action"])
+                self.assertTrue(event["preserves"])
+                self.assertTrue(event["clears"])
+                self.assertFalse(set(event["preserves"]) & set(event["clears"]))
+                self.assertTrue(event["user_message"])
             self.assertGreaterEqual(len(report["human_review_points"]), 3)
             self.assertGreaterEqual(len(report["forbidden_shortcuts"]), 3)
 
@@ -87,6 +102,8 @@ class FutureOfficeBacklogVerifierTests(unittest.TestCase):
         self.assertIn("future_schema_validators", completed.stdout)
         self.assertIn("future_recovery_events", completed.stdout)
         self.assertIn("First sample", completed.stdout)
+        self.assertIn("Schema contracts", completed.stdout)
+        self.assertIn("Recovery events", completed.stdout)
         self.assertIn("选品决策报告", completed.stdout)
         self.assertIn("脚本矩阵", completed.stdout)
 
