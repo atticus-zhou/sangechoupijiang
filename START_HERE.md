@@ -103,7 +103,7 @@ python scripts/verify_portfolio_showcase_sync.py --format markdown
 - `atticus-zhou/me`：这是个人网站展示检查失败，先在个人网站仓库跑 `npm run check:showcase-ci`。它通常和展示包同步、GitHub 云端旧提交或 Vercel 发布有关，不代表三个臭皮匠产品本体崩了。
 - `atticus-zhou/sangechoupijiang`：这是产品本体公开发布门禁失败，回到本仓库跑 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`。
 
-如果邮件来自 `Public showcase pages`，它是 GitHub Pages 备用公开入口，不是本地真实产品服务。先核对邮件里的提交号是不是当前 `main`，再看 `.github/workflows/pages-showcase.yml` 是否仍然只有 `workflow_dispatch`。如果它已经只允许手动触发，旧提交上的失败邮件可以归档；不要因为旧 run 失败就回滚产品代码。只有你真的想启用 GitHub Pages 备用入口时，才需要去 Settings -> Pages 把 Source 设为 GitHub Actions，然后手动运行这个 workflow。
+如果邮件来自 `Public showcase pages`，它是 GitHub Pages 备用公开入口，不是本地真实产品服务。先核对邮件里的提交号是不是当前 `main`，再看 `.github/workflows/pages-showcase.yml` 是否仍然只有 `workflow_dispatch`。如果它已经只允许手动触发，旧提交上的失败邮件可以归档；不要因为旧 run 失败就回滚产品代码。新版本 workflow 会先构建、验证和扫描 no-key 静态包；如果只提示 `GitHub Pages not enabled`，说明 Pages 设置没开，公开 URL 还不能分享，但这不是产品构建失败。只有你真的想启用 GitHub Pages 备用入口时，才需要去 Settings -> Pages 把 Source 设为 GitHub Actions，然后手动运行这个 workflow。
 
 线上地址是否真的可用，必须用实际 URL 检查。对于作者当前个人网站，权威检查是：
 

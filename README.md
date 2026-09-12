@@ -98,7 +98,7 @@ python scripts/verify_portfolio_showcase_sync.py --format markdown
 
 输出目录是 `dist/public-showcase/index.html`。部署细节见 [docs/STATIC_SHOWCASE_DEPLOYMENT.md](docs/STATIC_SHOWCASE_DEPLOYMENT.md)。线上 URL 只有在 `npm run check:online` 通过后，才能说已经部署成功；如果部署的是独立静态站点或 GitHub Pages，也要用 `python scripts/verify_public_showcase_live.py --url <公开展示地址> --format markdown` 验证公开地址。
 
-如果 Vercel 授权暂时卡住，仓库还提供 `.github/workflows/pages-showcase.yml` 作为备用公开展示通道。它只处理无 Key 静态包：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描，再上传 GitHub Pages artifact，不需要 Vercel 授权，也不需要任何 API Key。这个 workflow 只支持手动触发，避免在 Pages 尚未启用时每次推送都失败并发送邮件。第一次使用前，在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果工作流提示 `GitHub Pages not enabled`，说明静态包已经构建验证，但公开 URL 还不能宣称发布成功。
+如果 Vercel 授权暂时卡住，仓库还提供 `.github/workflows/pages-showcase.yml` 作为备用公开展示通道。它只处理无 Key 静态包：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描，再检查 GitHub Pages 是否已启用，不需要 Vercel 授权，也不需要任何 API Key。这个 workflow 只支持手动触发，避免在 Pages 尚未启用时每次推送都失败并发送邮件。第一次使用前，在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果工作流提示 `GitHub Pages not enabled`，说明静态包已经构建验证，但部署被跳过，公开 URL 还不能宣称发布成功。
 如果你把静态包复制到个人网站 `public/three-stooges/`，再运行 `python scripts/verify_portfolio_showcase_sync.py --format markdown`。它会逐个比对 `dist/public-showcase` 和个人网站拷贝的文件哈希：通过只能说明个人网站仓库里的静态拷贝和产品本体一致，不能说明线上 Vercel 已经刷新；线上仍必须由个人网站仓库的 `npm run check:online` 证明。其他开发者没有我的个人网站目录时，这条检查会显示 `skipped`；复制到自己的作品集目录后，可以用 `--target-dir` 指向自己的 `public/three-stooges`。
 如果已经部署到任意公开静态域名，再用产品仓库里的线上检查器复核真实 URL：
 
@@ -495,7 +495,7 @@ python scripts/verify_github_release_evidence.py --format markdown --contract-on
 
 - 产品仓库失败：回到这里运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`，确认无 Key release gate 和敏感信息扫描。
 - 个人网站仓库失败：在个人网站仓库运行 `npm run check:showcase-ci`，它会复刻 GitHub Actions 的 no-key 静态展示检查。
-- 产品仓库里的 `Public showcase pages` 失败：这是 GitHub Pages 备用入口，不是本地真实服务。先比对邮件里的 commit SHA 和当前 `main`；如果失败发生在旧提交，且当前 `.github/workflows/pages-showcase.yml` 只有 `workflow_dispatch`，说明它不会再随 push 自动失败发信。要真正使用这个备用入口，再到 Settings -> Pages 把 Source 设为 GitHub Actions 后手动触发。
+- 产品仓库里的 `Public showcase pages` 失败：这是 GitHub Pages 备用入口，不是本地真实服务。先比对邮件里的 commit SHA 和当前 `main`；如果失败发生在旧提交，且当前 `.github/workflows/pages-showcase.yml` 只有 `workflow_dispatch`，说明它不会再随 push 自动失败发信。新版本 workflow 如果只看到 `GitHub Pages not enabled`，表示 no-key 静态包已验证但 Pages 设置没开；要真正使用这个备用入口，再到 Settings -> Pages 把 Source 设为 GitHub Actions 后手动触发。
 - 本地 CI 通过但 `/three-stooges/` 还是 404：这通常是 Vercel 还在服务旧部署，或者 Vercel 授权没有完成；继续看个人网站的 `npm run doctor:deploy` 和 `npm run check:online`，不要改产品代码去掩盖 404。
 
 在对面试官宣称公开展示已准备好之前，先运行：

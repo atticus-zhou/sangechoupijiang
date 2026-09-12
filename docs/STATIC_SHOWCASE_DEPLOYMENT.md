@@ -103,7 +103,7 @@ Netlify 的发布目录选择 `dist/public-showcase`。GitHub Pages 只发布导
 .github/workflows/pages-showcase.yml
 ```
 
-它只在手动触发时执行四步：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描、上传并部署 GitHub Pages，然后再访问 `https://atticus-zhou.github.io/sangechoupijiang/` 做线上 URL 验证。这个通道不需要 Vercel 授权，也不需要任何 API Key。第一次使用前，需要在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果组织或仓库禁用了 Pages，或者 Pages URL 仍然返回 404，workflow 应该失败。这个失败说明备用公开入口还没有真的上线，不说明 no-key 静态包或本地产品崩溃。为了避免 Pages 尚未启用时每次 push 都触发失败邮件，这条 workflow 不绑定 `main` 自动推送。
+它只在手动触发时执行：导出 `dist/public-showcase`、验证静态包、运行敏感信息扫描，然后检查 GitHub Pages 是否已经启用。这个通道不需要 Vercel 授权，也不需要任何 API Key。第一次使用前，需要在 GitHub 仓库 Settings -> Pages 中把 Source 设为 GitHub Actions；如果 Pages 还没启用，workflow 会在构建和扫描通过后显示 `GitHub Pages not enabled` 并跳过部署，避免把外部设置缺口变成反复失败邮件。这种跳过不代表备用公开 URL 已经上线，只能说明 no-key 静态包是好的；此时备用公开入口还没有真的上线。启用 Pages 后重新手动运行 workflow，它才会上传 artifact、部署 GitHub Pages，并访问 `https://atticus-zhou.github.io/sangechoupijiang/` 做线上 URL 验证；只有公开 URL 验证通过，才能分享这个备用入口。
 
 ## 发布前检查
 
@@ -126,7 +126,7 @@ python scripts/check_no_secrets.py
 如果邮箱提示 `Three Cobblers showcase workflow run failed`，先不要把它当成真实产品崩溃。这个邮件通常只说明某一次 GitHub Actions 没有通过，需要先定位它属于哪条链路：
 
 - 产品本体仓库失败：运行 `python scripts/verify_release_readiness.py --format markdown` 和 `python scripts/check_no_secrets.py`。如果这两条通过，公开 no-key release gate 和安全扫描在本机是成立的。
-- 产品本体仓库的 `Public showcase pages` 失败：它只负责 GitHub Pages 备用公开入口。先打开失败 run，核对 head commit 是否还是当前 `main`；如果邮件来自旧提交，而且当前 workflow 只有 `workflow_dispatch`，可以把这封失败邮件当作旧发布尝试的残留通知处理。它不会证明当前产品不可运行，也不该触发产品代码回滚。
+- 产品本体仓库的 `Public showcase pages` 失败：它只负责 GitHub Pages 备用公开入口。先打开失败 run，核对 head commit 是否还是当前 `main`；如果邮件来自旧提交，而且当前 workflow 只有 `workflow_dispatch`，可以把这封失败邮件当作旧发布尝试的残留通知处理。新版本 workflow 会先构建、验证和扫描 no-key 静态包；如果只是 Pages 没启用，会显示 `GitHub Pages not enabled` 并跳过部署，而不是红色失败。它不会证明当前产品不可运行，也不该触发产品代码回滚。
 - 个人网站仓库失败：进入个人网站仓库运行 `npm run check:showcase-ci`。这条会按 GitHub Actions 的顺序检查本地静态展示、交接文档、备用审阅包、构建和 build-info。
 - 本地 `check:showcase-ci` 通过但线上还是 404：问题通常在 Vercel 授权、Vercel 没有重新部署、或者线上仍在服务旧 bundle。继续运行个人网站仓库的 `npm run doctor:deploy` 和 `npm run check:online`，不要为了消掉 404 去改产品展示数据。
 

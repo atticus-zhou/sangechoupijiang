@@ -38,6 +38,10 @@ class GitHubActionsReleaseReadinessTests(unittest.TestCase):
         self.assertIn("python scripts/export_public_showcase.py --output dist/public-showcase --format json", text)
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown --existing-dir dist/public-showcase", text)
         self.assertIn("python scripts/check_no_secrets.py", text)
+        self.assertIn("Check GitHub Pages configuration", text)
+        self.assertIn("GitHub Pages not enabled", text)
+        self.assertIn("steps.pages_preflight.outputs.configured == 'true'", text)
+        self.assertIn("Explain skipped Pages deployment", text)
         self.assertIn("actions/upload-pages-artifact@v3", text)
         self.assertIn("actions/deploy-pages@v4", text)
         self.assertIn("path: dist/public-showcase", text)
@@ -47,6 +51,7 @@ class GitHubActionsReleaseReadinessTests(unittest.TestCase):
             text,
         )
         self.assertIn("GitHub Pages deployed and verified", text)
+        self.assertIn("Enable Settings -> Pages -> Source: GitHub Actions", text)
         self.assertNotIn("continue-on-error: true", text)
         self.assertNotIn("OPENAI_API_KEY", text)
         self.assertNotIn("DASHSCOPE_API_KEY", text)
