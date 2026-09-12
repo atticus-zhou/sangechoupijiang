@@ -35,6 +35,8 @@ COPY_FILES = [
     ("docs/PUBLIC_RELEASE_HANDOFF.md", "docs/PUBLIC_RELEASE_HANDOFF.md", "Public release handoff and reviewer boundary."),
     ("docs/REAL_PRODUCTION_CLAIMS.md", "docs/REAL_PRODUCTION_CLAIMS.md", "When real production quality can be claimed."),
     ("docs/COMIC_DOWNSTREAM_HANDOFF.md", "docs/COMIC_DOWNSTREAM_HANDOFF.md", "How the comic production package hands off downstream."),
+    ("docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", "docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", "How to audit real comic model runs before claiming production quality."),
+    ("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", "Machine-readable evidence intake template for real model runs."),
     ("docs/NEW_OFFICE_STARTER_CHECKLIST.md", "docs/NEW_OFFICE_STARTER_CHECKLIST.md", "Checklist for adding future offices safely."),
 ]
 
@@ -118,7 +120,9 @@ def _summarize_command(name: str, parsed: Any, stdout: str) -> str:
                 f"github_download={checklist.get('status')}:{checklist.get('present_public_file_count')}/{checklist.get('expected_public_file_count')}"
             )
         if name == "model_guidance":
-            return f"status={parsed.get('status')}; offices={parsed.get('office_count')}; checks={parsed.get('check_count')}"
+            offices = parsed.get("office_model_setup_summary") or []
+            checks = parsed.get("checks") or []
+            return f"status={parsed.get('status')}; offices={len(offices)}; checks={len(checks)}"
         if name == "public_docs":
             return f"status={parsed.get('status')}; docs={parsed.get('passed_count')}/{parsed.get('doc_count')}; failures={len(parsed.get('failures') or [])}"
     if "Sensitive data scan passed" in stdout:
@@ -138,10 +142,11 @@ def _write_readme(output_dir: Path, manifest: dict[str, Any]) -> None:
         "2. `README.md`",
         "3. `docs/FIRST_RUN_DECISION_CARD.md`",
         "4. `docs/MODEL_CONFIGURATION.md`",
-        "5. `verification/first_run.json`",
-        "6. `verification/model_guidance.json`",
-        "7. `verification/public_docs.json`",
-        "8. `verification/secret_scan.txt`",
+        "5. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`",
+        "6. `verification/first_run.json`",
+        "7. `verification/model_guidance.json`",
+        "8. `verification/public_docs.json`",
+        "9. `verification/secret_scan.txt`",
         "",
         "Safe boundary:",
         "",
