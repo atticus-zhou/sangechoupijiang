@@ -40,10 +40,144 @@ SCHEMA_GATED_ARTIFACTS = {
     "competitor_table": "research_competitor_table",
 }
 
+RESEARCH_EVIDENCE_TEMPLATE_PATH = REPO_ROOT / "docs" / "RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json"
+
+RESEARCH_TEMPLATE_REQUIRED_TOP_LEVEL = [
+    "schema",
+    "office_id",
+    "claim_boundary",
+    "workspace",
+    "source_records",
+    "screenshot_records",
+    "data_rows",
+    "claim_records",
+    "evidence_gap_cards",
+    "report_rebuild",
+    "research_evidence_summary",
+]
+
+RESEARCH_TEMPLATE_FORBIDDEN_MARKERS = [
+    "api_key",
+    "cookie",
+    "browser_profile",
+    "account_password",
+    "config.yaml",
+    ".env",
+    "user_data",
+    "raw_private_dashboard_export",
+]
+
 
 def _load_fixture() -> dict[str, Any]:
     fixture_path = REPO_ROOT / "tests" / "fixtures" / "research_sample.json"
     return json.loads(fixture_path.read_text(encoding="utf-8"))
+
+
+def _verify_research_evidence_template(errors: list[str]) -> dict[str, Any]:
+    try:
+        template = json.loads(RESEARCH_EVIDENCE_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append("research evidence intake template is missing")
+        return {"status": "failed", "path": str(RESEARCH_EVIDENCE_TEMPLATE_PATH.relative_to(REPO_ROOT))}
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        errors.append(f"research evidence intake template is invalid JSON: {exc}")
+        return {"status": "failed", "path": str(RESEARCH_EVIDENCE_TEMPLATE_PATH.relative_to(REPO_ROOT))}
+
+    template_errors: list[str] = []
+    missing = [field for field in RESEARCH_TEMPLATE_REQUIRED_TOP_LEVEL if field not in template]
+    if missing:
+        template_errors.append("missing top-level fields: " + ", ".join(missing))
+    if template.get("schema") != "research_evidence_intake_v1":
+        template_errors.append("schema must be research_evidence_intake_v1")
+    if template.get("office_id") != "research":
+        template_errors.append("office_id must be research")
+
+    claim_boundary = template.get("claim_boundary") or {}
+    must_not_include = claim_boundary.get("must_not_include") or []
+    for marker in RESEARCH_TEMPLATE_FORBIDDEN_MARKERS:
+        if marker not in must_not_include:
+            template_errors.append(f"claim_boundary.must_not_include must list {marker}")
+    allowed_after = claim_boundary.get("public_claim_allowed_only_after") or []
+    for marker in (
+        "all_key_claims_have_source_or_screenshot",
+        "pending_account_or_manual_capture_is_zero",
+        "report_rebuilt_after_evidence_update",
+    ):
+        if marker not in allowed_after:
+            template_errors.append(f"public claim gate missing {marker}")
+
+    source_records = template.get("source_records") or []
+    screenshot_records = template.get("screenshot_records") or []
+    data_rows = template.get("data_rows") or []
+    claim_records = template.get("claim_records") or []
+    gap_cards = template.get("evidence_gap_cards") or []
+    if not source_records:
+        template_errors.append("source_records must include at least one source")
+    if not screenshot_records:
+        template_errors.append("screenshot_records must include at least one screenshot record")
+    if not data_rows:
+        template_errors.append("data_rows must include at least one data row")
+    if not claim_records:
+        template_errors.append("claim_records must include at least one claim")
+    if not gap_cards:
+        template_errors.append("evidence_gap_cards must include at least one gap card")
+
+    for index, item in enumerate(source_records):
+        for field in ("source_id", "title", "source_type", "url_or_local_ref", "access_mode", "status"):
+            if not item.get(field):
+                template_errors.append(f"source_records[{index}] missing {field}")
+        if item.get("sensitive_material_removed") is not True:
+            template_errors.append(f"source_records[{index}] must mark sensitive_material_removed=true")
+    for index, item in enumerate(screenshot_records):
+        for field in ("evidence_id", "source_id", "file_name", "page_or_panel", "claim_ids", "capture_method", "status"):
+            if not item.get(field):
+                template_errors.append(f"screenshot_records[{index}] missing {field}")
+        if "evidence_" not in str(item.get("file_name") or ""):
+            template_errors.append(f"screenshot_records[{index}] file_name must follow evidence_ naming")
+        if item.get("contains_private_account_data") is not False:
+            template_errors.append(f"screenshot_records[{index}] must not contain private account data")
+    for index, item in enumerate(data_rows):
+        for field in ("row_id", "source_id", "evidence_id", "metric", "value", "unit", "time_range", "status"):
+            if not item.get(field):
+                template_errors.append(f"data_rows[{index}] missing {field}")
+    for index, item in enumerate(claim_records):
+        for field in ("claim_id", "claim_text", "evidence_ids", "source_ids", "data_row_ids", "confidence", "report_section"):
+            if not item.get(field):
+                template_errors.append(f"claim_records[{index}] missing {field}")
+    for index, item in enumerate(gap_cards):
+        for field in ("gap_id", "claim_id", "missing_evidence", "owner", "suggested_file_name", "acceptance", "after_capture_action"):
+            if not item.get(field):
+                template_errors.append(f"evidence_gap_cards[{index}] missing {field}")
+        if "evidence_" not in str(item.get("suggested_file_name") or ""):
+            template_errors.append(f"evidence_gap_cards[{index}] suggested_file_name must follow evidence_ naming")
+
+    rebuild = template.get("report_rebuild") or {}
+    if rebuild.get("required_after_evidence_update") is not True:
+        template_errors.append("report_rebuild.required_after_evidence_update must be true")
+    if not any("verify_research_office_readiness.py" in str(command) for command in rebuild.get("commands") or []):
+        template_errors.append("report_rebuild.commands must include verify_research_office_readiness.py")
+    for target in ("report.md", "evidence_manifest.json", "claim-report.json"):
+        if target not in (rebuild.get("must_update") or []):
+            template_errors.append(f"report_rebuild.must_update must include {target}")
+
+    summary = template.get("research_evidence_summary") or {}
+    for field in ("source_count", "screenshot_count", "verified_claim_count", "pending_gap_count", "placeholder_demo_source_count", "ready_for_final_research_claim"):
+        if field not in summary:
+            template_errors.append(f"research_evidence_summary missing {field}")
+
+    errors.extend(f"research evidence intake template: {item}" for item in template_errors)
+    return {
+        "status": "passed" if not template_errors else "failed",
+        "path": str(RESEARCH_EVIDENCE_TEMPLATE_PATH.relative_to(REPO_ROOT)),
+        "schema": template.get("schema"),
+        "source_count": len(source_records),
+        "screenshot_count": len(screenshot_records),
+        "data_row_count": len(data_rows),
+        "claim_count": len(claim_records),
+        "gap_card_count": len(gap_cards),
+        "forbidden_marker_count": len(must_not_include),
+        "errors": template_errors,
+    }
 
 
 def _verify_artifact_package(errors: list[str]) -> dict[str, Any]:
@@ -355,6 +489,7 @@ def verify_research_office_readiness() -> dict[str, Any]:
     errors: list[str] = []
     artifact_package = _verify_artifact_package(errors)
     demo_endpoint = _verify_demo_endpoint(errors)
+    evidence_template = _verify_research_evidence_template(errors)
     return {
         "status": "passed" if not errors else "failed",
         "mode": "research_office_no_key_readiness",
@@ -365,6 +500,7 @@ def verify_research_office_readiness() -> dict[str, Any]:
         ),
         "artifact_package": artifact_package,
         "demo_endpoint": demo_endpoint,
+        "evidence_template": evidence_template,
         "errors": errors,
     }
 
@@ -373,6 +509,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
     package = payload.get("artifact_package") or {}
     quality = package.get("quality") or {}
     demo = payload.get("demo_endpoint") or {}
+    template = payload.get("evidence_template") or {}
     lines = [
         "# Research Office Readiness Audit",
         "",
@@ -428,6 +565,23 @@ def format_markdown(payload: dict[str, Any]) -> str:
     )
     for item in demo.get("downloads") or []:
         lines.append(f"  - `{item.get('uri')}`: HTTP {item.get('status_code')}, {item.get('bytes')} bytes")
+
+    lines.extend(
+        [
+            "",
+            "## Evidence Intake Template",
+            "",
+            f"- Status: {template.get('status')}",
+            f"- Path: `{template.get('path')}`",
+            f"- Schema: `{template.get('schema')}`",
+            f"- Sources: {template.get('source_count')}",
+            f"- Screenshots: {template.get('screenshot_count')}",
+            f"- Data rows: {template.get('data_row_count')}",
+            f"- Claims: {template.get('claim_count')}",
+            f"- Gap cards: {template.get('gap_card_count')}",
+            f"- Forbidden markers: {template.get('forbidden_marker_count')}",
+        ]
+    )
 
     if quality.get("warnings"):
         lines.extend(["", "## Warnings", ""])

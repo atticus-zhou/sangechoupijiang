@@ -1,0 +1,118 @@
+{
+  "schema": "research_evidence_intake_v1",
+  "office_id": "research",
+  "claim_boundary": {
+    "target_claim_level": "verified_research_package",
+    "must_not_include": [
+      "api_key",
+      "cookie",
+      "browser_profile",
+      "account_password",
+      "config.yaml",
+      ".env",
+      "user_data",
+      "raw_private_dashboard_export"
+    ],
+    "public_claim_allowed_only_after": [
+      "all_key_claims_have_source_or_screenshot",
+      "pending_account_or_manual_capture_is_zero",
+      "placeholder_demo_source_is_zero",
+      "evidence_manifest_passes_schema_gate",
+      "report_rebuilt_after_evidence_update"
+    ]
+  },
+  "workspace": {
+    "workspace_id": "ws_replace_with_real_workspace_id",
+    "task_id": "task_replace_with_real_task_id",
+    "research_object": "replace_with_research_object",
+    "report_version": "research_report_v_replace",
+    "evidence_manifest_version": "research_evidence_manifest_v_replace"
+  },
+  "source_records": [
+    {
+      "source_id": "src_001",
+      "title": "replace_source_title",
+      "source_type": "platform_page",
+      "url_or_local_ref": "https://example.com/replace",
+      "access_mode": "human_login_then_capture",
+      "captured_by": "human",
+      "captured_at": "2026-01-01T00:00:00Z",
+      "status": "verified",
+      "sensitive_material_removed": true
+    }
+  ],
+  "screenshot_records": [
+    {
+      "evidence_id": "evidence_001",
+      "source_id": "src_001",
+      "file_name": "evidence_001_platform_rank.png",
+      "page_or_panel": "platform_rank_or_product_detail",
+      "claim_ids": [
+        "claim_001"
+      ],
+      "capture_method": "human_login_then_system_archive",
+      "contains_private_account_data": false,
+      "redaction_required": false,
+      "status": "verified"
+    }
+  ],
+  "data_rows": [
+    {
+      "row_id": "data_001",
+      "source_id": "src_001",
+      "evidence_id": "evidence_001",
+      "metric": "replace_metric_name",
+      "value": "replace_metric_value",
+      "unit": "replace_unit",
+      "time_range": "replace_time_range",
+      "status": "verified"
+    }
+  ],
+  "claim_records": [
+    {
+      "claim_id": "claim_001",
+      "claim_text": "replace_research_claim",
+      "evidence_ids": [
+        "evidence_001"
+      ],
+      "source_ids": [
+        "src_001"
+      ],
+      "data_row_ids": [
+        "data_001"
+      ],
+      "confidence": "verified",
+      "report_section": "replace_report_section"
+    }
+  ],
+  "evidence_gap_cards": [
+    {
+      "gap_id": "gap_001",
+      "claim_id": "claim_001",
+      "missing_evidence": "replace_missing_evidence",
+      "owner": "human",
+      "suggested_file_name": "evidence_002_missing_panel.png",
+      "acceptance": "截图能看到指标名称、时间范围、对象名称和来源页面。",
+      "after_capture_action": "archive_and_rebuild_report"
+    }
+  ],
+  "report_rebuild": {
+    "required_after_evidence_update": true,
+    "commands": [
+      "python scripts/verify_research_office_readiness.py --format markdown"
+    ],
+    "must_update": [
+      "report.md",
+      "evidence_manifest.json",
+      "claim-report.json"
+    ]
+  },
+  "research_evidence_summary": {
+    "source_count": 1,
+    "screenshot_count": 1,
+    "verified_claim_count": 1,
+    "pending_gap_count": 1,
+    "placeholder_demo_source_count": 0,
+    "ready_for_final_research_claim": false
+  }
+}

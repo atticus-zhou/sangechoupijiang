@@ -52,6 +52,7 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
             "docs/REAL_PRODUCTION_CLAIMS.md",
             "docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md",
             "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json",
+            "docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json",
         ]:
             self.assertIn(target, copied_targets)
 
@@ -64,12 +65,14 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
         self.assertIn("1. `START_HERE.md`", open_first)
         self.assertIn("2. `README.md`", open_first)
         self.assertIn("5. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`", open_first)
+        self.assertIn("6. `docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json`", open_first)
 
         with zipfile.ZipFile(zip_path) as archive:
             names = set(archive.namelist())
         self.assertIn("OPEN_THIS_FIRST.md", names)
         self.assertIn("START_HERE.md", names)
         self.assertIn("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", names)
+        self.assertIn("docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json", names)
         self.assertIn("verification/first_run.json", names)
         self.assertIn("verification/secret_scan.txt", names)
         forbidden = ("config.yaml", ".env", "user_data", "output", "runtime_logs", ".vercel")

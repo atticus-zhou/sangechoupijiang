@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 
 
 class ResearchOfficeReadinessVerifierTests(unittest.TestCase):
@@ -72,6 +73,29 @@ class ResearchOfficeReadinessVerifierTests(unittest.TestCase):
         self.assertGreaterEqual(demo["placeholder_demo_source_count"], 1)
         self.assertGreaterEqual(demo["pending_evidence_count"], 1)
 
+        template = payload["evidence_template"]
+        self.assertEqual(template["status"], "passed")
+        self.assertEqual(template["schema"], "research_evidence_intake_v1")
+        self.assertGreaterEqual(template["source_count"], 1)
+        self.assertGreaterEqual(template["screenshot_count"], 1)
+        self.assertGreaterEqual(template["data_row_count"], 1)
+        self.assertGreaterEqual(template["claim_count"], 1)
+        self.assertGreaterEqual(template["gap_card_count"], 1)
+        self.assertGreaterEqual(template["forbidden_marker_count"], 8)
+
+    def test_research_evidence_template_is_machine_readable_and_safe(self):
+        template = json.loads(Path("docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(template["schema"], "research_evidence_intake_v1")
+        self.assertEqual(template["office_id"], "research")
+        self.assertIn("api_key", template["claim_boundary"]["must_not_include"])
+        self.assertIn("account_password", template["claim_boundary"]["must_not_include"])
+        self.assertIn("raw_private_dashboard_export", template["claim_boundary"]["must_not_include"])
+        self.assertFalse(template["screenshot_records"][0]["contains_private_account_data"])
+        self.assertIn("evidence_", template["screenshot_records"][0]["file_name"])
+        self.assertTrue(template["report_rebuild"]["required_after_evidence_update"])
+        self.assertIn("claim-report.json", template["report_rebuild"]["must_update"])
+
     def test_markdown_is_operator_readable(self):
         completed = subprocess.run(
             [
@@ -100,6 +124,8 @@ class ResearchOfficeReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Research evidence requirements", completed.stdout)
         self.assertIn("staged_only", completed.stdout)
         self.assertIn("Evidence status counts", completed.stdout)
+        self.assertIn("Evidence Intake Template", completed.stdout)
+        self.assertIn("research_evidence_intake_v1", completed.stdout)
         self.assertIn("Claim report", completed.stdout)
         self.assertIn("staged_research_demo", completed.stdout)
         self.assertIn("/api/demo/research/files/report.md", completed.stdout)

@@ -37,6 +37,7 @@ COPY_FILES = [
     ("docs/COMIC_DOWNSTREAM_HANDOFF.md", "docs/COMIC_DOWNSTREAM_HANDOFF.md", "How the comic production package hands off downstream."),
     ("docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", "docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", "How to audit real comic model runs before claiming production quality."),
     ("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", "Machine-readable evidence intake template for real model runs."),
+    ("docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json", "docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json", "Machine-readable evidence intake template for research screenshots, sources, and claims."),
     ("docs/NEW_OFFICE_STARTER_CHECKLIST.md", "docs/NEW_OFFICE_STARTER_CHECKLIST.md", "Checklist for adding future offices safely."),
 ]
 
@@ -143,10 +144,11 @@ def _write_readme(output_dir: Path, manifest: dict[str, Any]) -> None:
         "3. `docs/FIRST_RUN_DECISION_CARD.md`",
         "4. `docs/MODEL_CONFIGURATION.md`",
         "5. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`",
-        "6. `verification/first_run.json`",
-        "7. `verification/model_guidance.json`",
-        "8. `verification/public_docs.json`",
-        "9. `verification/secret_scan.txt`",
+        "6. `docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json`",
+        "7. `verification/first_run.json`",
+        "8. `verification/model_guidance.json`",
+        "9. `verification/public_docs.json`",
+        "10. `verification/secret_scan.txt`",
         "",
         "Safe boundary:",
         "",
