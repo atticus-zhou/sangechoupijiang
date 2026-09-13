@@ -151,7 +151,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     word_canvas_asset_file_references = (
         "批准图片文件" in text
         and bool(expected_image_files)
-        and all(filename in text for filename in expected_image_files)
+        and all((filename in text or Path(str(filename)).name in text) for filename in expected_image_files)
     )
     if not word_canvas_asset_file_references:
         raise AssertionError("Word canvas is missing approved asset image file references")

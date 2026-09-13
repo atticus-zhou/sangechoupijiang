@@ -118,6 +118,7 @@ def verify_downstream_handoff(
     quick_start_failures = _quick_start_failures(manifest.get("downstream_quick_start") or [], shots)
     prompt_quality = _prompt_quality_audit(images, shots)
     image_contracts = _image_contract_counts(images)
+    image_files = _image_file_summary(manifest_path, images)
     shot_references = _shot_reference_counts(shots, asset_ids, image_ids)
     asset_requirement_matrix = _asset_image_requirement_matrix(assets, images)
     asset_requirement_summary = _asset_image_requirement_summary(asset_requirement_matrix)
@@ -130,6 +131,7 @@ def verify_downstream_handoff(
     errors.extend(asset_failures)
     errors.extend(shot_failures)
     errors.extend(asset_usage["failures"])
+    errors.extend(image_files["failures"])
     errors.extend(lineage_failures)
     errors.extend(quick_start_failures)
     errors.extend(prompt_quality_failures)
@@ -161,6 +163,9 @@ def verify_downstream_handoff(
         "image_usage_contracts": image_contracts["usage_contracts"],
         "image_reference_policies": image_contracts["reference_policies"],
         "clean_background_asset_images": image_contracts["clean_background_asset_images"],
+        "image_files_present": image_files["present"],
+        "image_files_total": image_files["total"],
+        "image_files_missing": image_files["missing"],
         "first_frame_bound_shots": shot_references["first_frame_bound_shots"],
         "complete_reference_chain_shots": shot_references["complete_reference_chain_shots"],
         "reference_asset_links": shot_references["reference_asset_links"],
@@ -248,6 +253,48 @@ def _require_fields(errors: list[str], label: str, payload: dict[str, Any], fiel
     for field in fields:
         if payload.get(field) in (None, "", []):
             errors.append(f"{label}.{field} missing")
+
+
+def _image_file_summary(manifest_path: Path, images: list[dict[str, Any]]) -> dict[str, Any]:
+    failures: list[str] = []
+    present = 0
+    missing = 0
+    for image in images:
+        image_id = image.get("image_id") or "<missing_image_id>"
+        filename = str(image.get("file") or "").strip()
+        if not filename:
+            missing += 1
+            failures.append(f"{image_id}: image file path missing")
+            continue
+        resolved = _resolve_manifest_file(manifest_path, filename)
+        if not resolved or not resolved.is_file():
+            missing += 1
+            failures.append(f"{image_id}: image file missing from delivery package ({filename})")
+            continue
+        if resolved.stat().st_size <= 0:
+            missing += 1
+            failures.append(f"{image_id}: image file is empty ({filename})")
+            continue
+        present += 1
+    return {
+        "present": present,
+        "total": len(images),
+        "missing": missing,
+        "failures": failures,
+    }
+
+
+def _resolve_manifest_file(manifest_path: Path, filename: str) -> Path | None:
+    candidate = Path(filename)
+    if candidate.is_absolute():
+        return candidate
+    direct = manifest_path.parent / candidate
+    if direct.exists():
+        return direct
+    same_dir_name = manifest_path.parent / candidate.name
+    if same_dir_name.exists():
+        return same_dir_name
+    return direct
 
 
 def _asset_handoff_failures(assets: list[dict[str, Any]], image_ids: set[str]) -> list[str]:
@@ -655,6 +702,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- Director prompt sets: {result.get('director_prompt_sets')}",
         f"- Image usage contracts: {result.get('image_usage_contracts')}/{result.get('image_count')}",
         f"- Image reference policies: {result.get('image_reference_policies')}/{result.get('image_count')}",
+        f"- Image files present: {result.get('image_files_present')}/{result.get('image_files_total')}",
         f"- Clean-background base asset images: {result.get('clean_background_asset_images')}",
         f"- First-frame bound shots: {result.get('first_frame_bound_shots')}/{result.get('shot_count')}",
         f"- Complete reference-chain shots: {result.get('complete_reference_chain_shots')}/{result.get('shot_count')}",

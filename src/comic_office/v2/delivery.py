@@ -171,7 +171,7 @@ def _write_handoff_manifest(
             "image_id": record.image_id,
             "asset_id": record.asset_id,
             "image_kind": record.image_kind,
-            "file": Path(record.path).name,
+            "file": _delivery_relative_file(word_path, record.path),
             "provider": record.provider,
             "model": record.model,
             "status": record.status,
@@ -200,7 +200,7 @@ def _write_handoff_manifest(
         })
     shots = []
     for shot in prompt_package.shots:
-        reference_images = _shot_reference_images(shot.reference_asset_ids, image_result.records)
+        reference_images = _shot_reference_images(shot.reference_asset_ids, image_result.records, word_path)
         reference_asset_chain = _shot_reference_asset_chain(shot.reference_asset_ids, manifest, reference_images)
         first_frame_reference = reference_images[0] if reference_images else {}
         shots.append({
@@ -575,7 +575,18 @@ def _production_lineage(
     ]
 
 
-def _shot_reference_images(asset_ids: tuple[str, ...], records: tuple) -> list[dict[str, str]]:
+def _delivery_relative_file(word_path: Path, file_path: str | Path) -> str:
+    """Return a manifest path that is resolvable from the Word canvas directory."""
+    path = Path(file_path)
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.relative_to(word_path.parent).as_posix()
+    except ValueError:
+        return path.name
+
+
+def _shot_reference_images(asset_ids: tuple[str, ...], records: tuple, word_path: Path) -> list[dict[str, str]]:
     references = []
     for asset_id in asset_ids:
         candidates = [record for record in records if record.asset_id == asset_id]
@@ -586,7 +597,7 @@ def _shot_reference_images(asset_ids: tuple[str, ...], records: tuple) -> list[d
             "asset_id": record.asset_id,
             "image_id": record.image_id,
             "image_kind": record.image_kind,
-            "file": Path(record.path).name,
+            "file": _delivery_relative_file(word_path, record.path),
         })
     return references
 
