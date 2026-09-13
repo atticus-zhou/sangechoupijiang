@@ -120,6 +120,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertEqual(payload["artifact"]["name"], "no-key-release-evidence")
         self.assertFalse(payload["artifact"]["expired"])
         self.assertFalse(payload["errors"])
+        self.assertTrue(any("npm run check:online" in item for item in payload["next_actions"]))
 
     def test_verifier_fails_when_latest_run_is_not_complete(self):
         def fake_fetch(url, timeout):
@@ -136,6 +137,8 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertEqual(payload["status"], "failed")
         self.assertTrue(any("not completed" in item for item in payload["errors"]))
         self.assertTrue(any("not success" in item for item in payload["errors"]))
+        self.assertTrue(any("等待 1-2 分钟" in item for item in payload["next_actions"]))
+        self.assertTrue(any("不要把 in_progress 当成失败" in item for item in payload["next_actions"]))
 
     def test_verifier_refreshes_stale_in_progress_list_entry(self):
         full_sha = "131fb3f8eb4f009247ad74da0c93a00a98afe712"
@@ -215,6 +218,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertEqual(payload["latest_run"]["status"], "in_progress")
         self.assertIn("actions?query=branch%3Amain", payload["public_actions_url"])
         self.assertTrue(any("could not be verified from public GitHub pages" in item for item in payload["errors"]))
+        self.assertTrue(any("等待 1-2 分钟" in item for item in payload["next_actions"]))
 
     def test_verifier_uses_commit_checks_page_when_api_is_rate_limited_and_head_sha_is_given(self):
         def fake_fetch_text(url, timeout):
@@ -240,6 +244,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertIn("/commit/4b5eb5170112ea6dfea66fc3d7f4ed60dc901f1a/checks", payload["public_commit_checks_url"])
         self.assertEqual(payload["artifact"], {})
         self.assertTrue(any("could not be verified from public GitHub pages" in item for item in payload["errors"]))
+        self.assertTrue(any("--head-sha <commit>" in item for item in payload["next_actions"]))
 
     def test_commit_checks_loading_state_is_not_misread_as_success(self):
         def fake_fetch_text(url, timeout):
@@ -285,6 +290,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertGreater(payload["artifact"]["size_in_bytes"], 0)
         self.assertFalse(payload["errors"])
         self.assertTrue(payload["warnings"])
+        self.assertTrue(any("GitHub no-key 发布证据" in item for item in payload["next_actions"]))
 
     def test_verifier_reports_when_api_and_html_fallback_both_fail(self):
         with (
@@ -345,6 +351,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
             "artifact": {},
             "summary": "fallback",
             "errors": [],
+            "next_actions": ["等待 1-2 分钟后重新运行本命令。"],
         }
 
         markdown = format_markdown(payload)
@@ -352,6 +359,7 @@ class GitHubReleaseEvidenceVerifierTests(unittest.TestCase):
         self.assertIn("Verification source: `github_actions_html_fallback`", markdown)
         self.assertIn("Public Actions URL: https://github.com/atticus-zhou/sangechoupijiang/actions", markdown)
         self.assertIn("Public Commit Checks URL: https://github.com/atticus-zhou/sangechoupijiang/commit/4b5eb51/checks", markdown)
+        self.assertIn("## Next Actions", markdown)
 
     def test_contract_only_verifies_local_workflow_and_docs(self):
         payload = verify_github_release_contract()

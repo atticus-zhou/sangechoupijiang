@@ -361,7 +361,7 @@ def _html_fallback_payload(
         html_text = _fetch_text(public_url, timeout=timeout)
     except RuntimeError as exc:
         errors.extend([api_error, str(exc)])
-        return _failed_payload(
+        return _with_next_actions(_failed_payload(
             repo,
             branch,
             workflow_name,
@@ -369,7 +369,7 @@ def _html_fallback_payload(
             errors,
             verification_source="github_api_unavailable",
             public_actions_url=public_url,
-        )
+        ))
 
     latest = _parse_public_actions_html(
         html_text,
@@ -415,7 +415,7 @@ def _html_fallback_payload(
 
     if not artifact:
         errors.append(f"required artifact {artifact_name!r} could not be verified from public GitHub pages")
-    return {
+    return _with_next_actions({
         "status": "passed" if not errors else "failed",
         "mode": "github_no_key_release_evidence",
         "verification_source": verification_source,
@@ -434,7 +434,7 @@ def _html_fallback_payload(
         ),
         "errors": errors,
         "warnings": warnings,
-    }
+    })
 
 
 def verify_github_release_evidence(
@@ -450,7 +450,9 @@ def verify_github_release_evidence(
     warnings: list[str] = []
     owner_repo = repo.strip("/")
     if "/" not in owner_repo:
-        return _failed_payload(repo, branch, workflow_name, artifact_name, ["repo must use owner/name format"])
+        return _with_next_actions(
+            _failed_payload(repo, branch, workflow_name, artifact_name, ["repo must use owner/name format"])
+        )
 
     runs_url = (
         f"https://api.github.com/repos/{owner_repo}/actions/runs"
@@ -517,7 +519,7 @@ def verify_github_release_evidence(
         if int(artifact.get("size_in_bytes") or 0) <= 0:
             errors.append(f"required artifact {artifact_name!r} is empty")
 
-    return {
+    return _with_next_actions({
         "status": "passed" if not errors else "failed",
         "mode": "github_no_key_release_evidence",
         "verification_source": "github_api",
@@ -551,7 +553,7 @@ def verify_github_release_evidence(
         ),
         "errors": errors,
         "warnings": warnings,
-    }
+    })
 
 
 def verify_github_release_contract() -> dict[str, Any]:
@@ -673,6 +675,55 @@ def _failed_payload(
     }
 
 
+def _with_next_actions(payload: dict[str, Any]) -> dict[str, Any]:
+    if payload.get("mode") != "github_no_key_release_evidence":
+        return payload
+    payload["next_actions"] = _github_evidence_next_actions(payload)
+    return payload
+
+
+def _github_evidence_next_actions(payload: dict[str, Any]) -> list[str]:
+    run = payload.get("latest_run") or {}
+    artifact = payload.get("artifact") or {}
+    actions_url = payload.get("public_actions_url") or ""
+    checks_url = payload.get("public_commit_checks_url") or ""
+    run_url = run.get("html_url") or actions_url
+    status = run.get("status") or ""
+    conclusion = run.get("conclusion")
+
+    if payload.get("status") == "passed":
+        return [
+            "Release readiness 已经通过；可以把这个 run URL 作为 GitHub no-key 发布证据保存。",
+            "如果要证明个人网站线上入口可用，还必须在个人网站仓库继续运行 `npm run check:online`。",
+        ]
+
+    if status and status != "completed":
+        return [
+            "远端 Release readiness 还没结束；等待 1-2 分钟后重新运行本命令。",
+            f"打开 run 页面查看进度：{run_url}",
+            "不要把 in_progress 当成失败，也不要因此修改产品代码。",
+        ]
+
+    if conclusion and conclusion != "success":
+        return [
+            f"远端 Release readiness 结束但结论是 {conclusion}；先打开 run 页面查看失败步骤。",
+            f"Run 页面：{run_url}",
+            "如果失败的是 Public showcase pages 或 Vercel 线上路由，先区分它是不是外部部署授权问题。",
+        ]
+
+    if not artifact:
+        return [
+            "workflow 状态可能已经成功，但 artifact 暂时无法从当前公开页面/API 复核。",
+            "稍后重跑本命令；如果 GitHub API 被限流，可以加 `--head-sha <commit>` 使用 commit checks 页面辅助判断。",
+            f"可打开公开页面人工核对：{checks_url or actions_url}",
+        ]
+
+    return [
+        "GitHub release evidence 还不完整；先查看 Errors 和 Warnings 中的第一条具体原因。",
+        f"公开 Actions 页面：{actions_url}",
+    ]
+
+
 def format_markdown(payload: dict[str, Any]) -> str:
     if payload.get("mode") == "github_no_key_release_contract":
         return _format_contract_markdown(payload)
@@ -712,6 +763,9 @@ def format_markdown(payload: dict[str, Any]) -> str:
     if payload.get("warnings"):
         lines.extend(["", "## Warnings", ""])
         lines.extend(f"- {item}" for item in payload["warnings"])
+    if payload.get("next_actions"):
+        lines.extend(["", "## Next Actions", ""])
+        lines.extend(f"- {item}" for item in payload["next_actions"])
     return "\n".join(lines) + "\n"
 
 
