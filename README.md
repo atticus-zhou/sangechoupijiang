@@ -172,6 +172,8 @@ python scripts/verify_comic_v2_production_benchmark.py --manifest output/your_pr
 
 第一条盘点命令会在顶部给出 `Recommended Manifest` 和重复导出分组。输出目录里如果有很多同名验证副本，先打开推荐路径；`Duplicate Groups` 里的其他路径作为历史证据保留，不需要逐个打开判断。
 
+下游交接还必须核对真实图片文件是否随包存在：`python scripts/verify_comic_v2_downstream_handoff.py --manifest ... --format markdown` 会输出 `Image files present: x/y`。这里必须是全数通过，才说明 handoff manifest 的 `images[].file`、首帧参考图和资产引用链都能解析到真实图片；如果只是 Word 里看见文件名，但 manifest 找不到相对路径，不能交给 Libtv、小云雀或其他下游工具。
+
 只有交付物清点可追溯、真实生产声明显示 `can_claim_real_quality=True`，制片质量基准显示 `production_quality_verified`，并且 `prompt_strategy_lineage.ready_for_real_quality_claim=True` 时，才把这次产物对外描述为真实生产质量。否则只能说它完成了结构、流程或部分模型验证。
 
 常见首次运行问题可以直接看：
@@ -422,6 +424,8 @@ python scripts/verify_comic_real_production_claim.py --manifest output/your_proj
 ```
 
 第一条自动从 `output/workspaces/` 找最新真实工作区制片包，并把真实模型、图片、质检、提示词谱系和 Word/manifest/trace 证据做总收口。如果要复核旧项目，再把第一条输出里的 `Audited manifest` 路径传给后两条：第二条看下游视频/剪辑流程能不能接手，第三条看对外能怎么说。不带 `--latest`、也不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
+
+第二条还会核对 `Image files present: x/y`：manifest 里的 `images[].file`、镜头首帧参考图和资产引用链必须能解析到真实图片文件。缺图、空路径、只写 basename 或文件没有随 Word 画布一起交付时，都只能算待修复产物，不能进入真实下游生产。
 
 产品内也有同一套本地状态卡：
 

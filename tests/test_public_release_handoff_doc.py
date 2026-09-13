@@ -81,6 +81,10 @@ class PublicReleaseHandoffDocTests(unittest.TestCase):
         self.assertIn("同一代提示词规则", text)
         self.assertIn("不能把当前制片包说成", text)
         self.assertIn("Libtv、小云雀", text)
+        self.assertIn("images[].file", text)
+        self.assertIn("Image files present: x/y", text)
+        self.assertIn("相对 Word 画布目录可解析", text)
+        self.assertIn("真实图片文件", text)
 
     def test_readme_links_public_release_handoff_doc(self):
         text = Path("README.md").read_text(encoding="utf-8")
