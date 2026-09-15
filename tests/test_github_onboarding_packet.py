@@ -1,4 +1,5 @@
 import json
+import hashlib
 import subprocess
 import sys
 import unittest
@@ -7,6 +8,14 @@ from pathlib import Path
 
 
 SCRIPT = Path("scripts/export_github_onboarding_packet.py")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class GitHubOnboardingPacketTests(unittest.TestCase):
@@ -116,6 +125,18 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
         self.assertIn("productization_status", result.stdout)
         self.assertIn("model_guidance", result.stdout)
         self.assertIn("secret_scan", result.stdout)
+
+    def test_fixed_generated_at_makes_archive_reproducible(self):
+        from scripts.export_github_onboarding_packet import export_packet
+
+        output_dir = Path("tmp/test-github-onboarding-repro")
+        zip_path = Path("tmp/test-github-onboarding-repro.zip")
+        export_packet(output_dir=output_dir, zip_path=zip_path, generated_at="static-public-showcase")
+        first_hash = _sha256(zip_path)
+        export_packet(output_dir=output_dir, zip_path=zip_path, generated_at="static-public-showcase")
+        second_hash = _sha256(zip_path)
+
+        self.assertEqual(first_hash, second_hash)
 
 
 if __name__ == "__main__":

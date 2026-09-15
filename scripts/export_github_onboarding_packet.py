@@ -188,10 +188,18 @@ def _zip_directory(output_dir: Path, zip_path: Path) -> None:
                 lowered = {part.lower() for part in Path(rel).parts}
                 if lowered & FORBIDDEN_PATH_PARTS:
                     raise RuntimeError(f"Refusing to archive forbidden path: {rel}")
-                archive.write(path, rel)
+                info = zipfile.ZipInfo(rel)
+                info.date_time = (2026, 1, 1, 0, 0, 0)
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.external_attr = 0o644 << 16
+                archive.writestr(info, path.read_bytes())
 
 
-def export_packet(output_dir: Path = DEFAULT_OUTPUT, zip_path: Path = DEFAULT_ZIP) -> dict[str, Any]:
+def export_packet(
+    output_dir: Path = DEFAULT_OUTPUT,
+    zip_path: Path = DEFAULT_ZIP,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -220,7 +228,7 @@ def export_packet(output_dir: Path = DEFAULT_OUTPUT, zip_path: Path = DEFAULT_ZI
 
     manifest = {
         "mode": "github_onboarding_packet",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": generated_at or datetime.now(timezone.utc).isoformat(),
         "output_dir": str(output_dir),
         "archive_path": str(zip_path),
         "safe_for_public_review": True,

@@ -16,6 +16,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from fastapi.testclient import TestClient
 
+from scripts.export_github_onboarding_packet import DEFAULT_ZIP as ONBOARDING_PACKET_ZIP
+from scripts.export_github_onboarding_packet import export_packet as export_github_onboarding_packet
 from scripts.verify_public_docs_readability import _find_suspicious_markers
 from src.web.app import app
 
@@ -86,6 +88,22 @@ EXTRA_REVIEWABLE_DOCS = [
             "明确 no-key demo 不暴露作者 API Key",
             "明确公开样例只证明结构和交付链路",
             "明确线上入口必须由 npm run check:online 证明",
+        ],
+    },
+    {
+        "source_path": ONBOARDING_PACKET_ZIP,
+        "local_uri": "downloads/platform/github-onboarding-packet.zip",
+        "title": "GitHub 新用户上手包",
+        "office_id": "platform",
+        "office_name": "公开复现与开发者上手",
+        "type": "github_onboarding_packet",
+        "reader_guidance": "给第一次从 GitHub 下载项目的人看：先打开 OPEN_THIS_FIRST.md，再按 START_HERE、模型配置、产品化状态和扩展决策顺序理解项目。",
+        "look_for": "START_HERE.md、PRODUCTIZATION_STATUS.md、OFFICE_EXPANSION_DECISION_BRIEF.md、verification/productization_status.json 和 secret_scan.txt。",
+        "proves": "证明公开展示不只是一张页面，还给新用户提供了可离线复核的首次运行、模型配置、产品化状态和安全边界包。",
+        "acceptance_signals": [
+            "不包含 config.yaml、API Key、Cookie、user_data 或 output",
+            "包含产品化状态和办公室扩展决策文档",
+            "包含 no-key 验证结果和敏感信息扫描摘要",
         ],
     }
 ]
@@ -376,6 +394,17 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _reviewable_content_type(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix == ".zip":
+        return "application/zip"
+    if suffix == ".json":
+        return "application/json; charset=utf-8"
+    if suffix == ".md":
+        return "text/markdown; charset=utf-8"
+    return "application/octet-stream"
+
+
 def _text_integrity_findings(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     text_suffixes = {".html", ".js", ".json", ".md", ".txt"}
@@ -410,6 +439,8 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
         raise RuntimeError("Static export refused a showcase that can read API keys or call real models.")
     if showcase.get("safe_for_public_portfolio") is not True:
         raise RuntimeError("Static export refused a showcase that is not marked safe for a public portfolio.")
+
+    export_github_onboarding_packet(generated_at="static-public-showcase")
 
     staging = target.parent / f".{target.name}.building"
     if staging.exists():
@@ -488,7 +519,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                     "source_uri": source_path.relative_to(REPO_ROOT).as_posix(),
                     "local_uri": local_uri,
                     "bytes": destination.stat().st_size,
-                    "content_type": "text/markdown; charset=utf-8",
+                    "content_type": _reviewable_content_type(destination),
                     "sha256": _sha256(destination),
                 }
             )
@@ -508,7 +539,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "generated_by": "python scripts/export_public_showcase.py",
         }
         static_showcase["safety_boundaries"] = [
-            "静态展示只包含固定样例、实际产品截图、八份公开样例下载物、真实生产声明报告、真实运行证据收口单、研究证据导入模板、办公室扩展决策简报和面试官评审包，共十三个可复核文件。",
+            "静态展示只包含固定样例、实际产品截图、八份公开样例下载物、真实生产声明报告、真实运行证据收口单、研究证据导入模板、办公室扩展决策简报、面试官评审包和 GitHub 新用户上手包，共十四个可复核文件。",
             "页面运行时不连接 FastAPI，不读取 config.yaml、环境变量、Cookie、登录态或本地用户工作区。",
             "不要把个人 API Key、真实用户数据或运行产物复制进静态目录。",
             "真实生产继续走本地模式，由使用者填写自己的模型 Key。",
@@ -520,7 +551,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             )
         if len(interview_script) >= 3:
             interview_script[2]["product_response"] = (
-                "八份公开下载物已经随静态站点一起导出，连同声明报告、真实运行证据收口单、研究证据导入模板、办公室扩展决策简报和面试官评审包构成十三个可复核文件，每个链接都附带阅读重点和验收信号。"
+                "八份公开下载物已经随静态站点一起导出，连同声明报告、真实运行证据收口单、研究证据导入模板、办公室扩展决策简报、面试官评审包和 GitHub 新用户上手包构成十四个可复核文件，每个链接都附带阅读重点和验收信号。"
             )
         deployment = static_showcase.setdefault("public_deployment", {})
         deployment["mode"] = "static_demo_only"
