@@ -44,6 +44,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "docs/MODEL_CONFIGURATION.md",
             "docs/MODEL_CAPABILITY_MATRIX.json",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
+            "docs/PRODUCTIZATION_STATUS.md",
+            "docs/OFFICE_EXPANSION_DECISION_BRIEF.md",
         ]:
             self.assertIn(marker, checklist_text)
         for private_marker in [
@@ -57,6 +59,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             self.assertIn(private_marker, checklist_text)
         self.assertIn("python scripts/check_no_secrets.py", checklist_text)
         self.assertIn("python scripts/verify_release_readiness.py --format markdown", checklist_text)
+        self.assertIn("python scripts/export_github_onboarding_packet.py --format markdown", checklist_text)
         self.assertEqual(checklist["missing_python_packages"], [])
         for package in [
             "fastapi",
@@ -180,6 +183,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "public_deploy_real_mode",
             "incomplete_handoff_download",
             "github_showcase_workflow_email_failed",
+            "vercel_auth_missing_or_old_bundle",
         ]:
             self.assertIn(failure_id, failures)
             self.assertTrue(failures[failure_id]["symptom"])
@@ -198,6 +202,10 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("atticus-zhou/me", failures["github_showcase_workflow_email_failed"]["recovery_action"])
         self.assertIn("npm run check:showcase-ci", failures["github_showcase_workflow_email_failed"]["check_command"])
         self.assertIn("sangechoupijiang", failures["github_showcase_workflow_email_failed"]["recovery_action"])
+        self.assertFalse(failures["vercel_auth_missing_or_old_bundle"]["requires_api_key"])
+        self.assertIn("npm run doctor:deploy", failures["vercel_auth_missing_or_old_bundle"]["check_command"])
+        self.assertIn("npm run check:online", failures["vercel_auth_missing_or_old_bundle"]["recovery_action"])
+        self.assertIn("Vercel", failures["vercel_auth_missing_or_old_bundle"]["likely_cause"])
 
     def test_markdown_is_readable_as_a_github_first_run_checklist(self):
         result = subprocess.run(
@@ -234,6 +242,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("python scripts/verify_static_public_showcase.py --format markdown", result.stdout)
         self.assertIn("python scripts/verify_comic_v2_downstream_handoff.py --format markdown", result.stdout)
         self.assertIn("python scripts/verify_office_isolation.py --format markdown", result.stdout)
+        self.assertIn("python scripts/export_github_onboarding_packet.py --format markdown", result.stdout)
         self.assertIn("Deliverable reading guide", result.stdout)
         self.assertIn("AI 漫剧 Word 制片画布", result.stdout)
         self.assertIn("handoff manifest", result.stdout)
@@ -268,6 +277,8 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("github_showcase_workflow_email_failed", result.stdout)
         self.assertIn("Three Cobblers showcase workflow run failed", result.stdout)
         self.assertIn("npm run check:showcase-ci", result.stdout)
+        self.assertIn("vercel_auth_missing_or_old_bundle", result.stdout)
+        self.assertIn("npm run check:online", result.stdout)
 
 
 if __name__ == "__main__":

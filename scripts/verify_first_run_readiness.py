@@ -23,6 +23,7 @@ DOWNSTREAM_HANDOFF_COMMAND = "python scripts/verify_comic_v2_downstream_handoff.
 LOCAL_DOCTOR_COMMAND = "python scripts/doctor.py --format markdown"
 PRODUCT_READINESS_COMMAND = "python scripts/verify_product_readiness.py --format markdown"
 OFFICE_ISOLATION_COMMAND = "python scripts/verify_office_isolation.py --format markdown"
+ONBOARDING_PACKET_COMMAND = "python scripts/export_github_onboarding_packet.py --format markdown"
 SERVER_COMMAND = "python run.py --port 8080"
 HANDOFF_AUDIT_COMMAND = "python scripts/audit_comic_v2_handoffs.py --format markdown"
 REQUIRED_PYTHON_PACKAGES = [
@@ -90,6 +91,7 @@ def build_first_run_readiness(base_dir: Path | str = REPO_ROOT) -> dict[str, Any
             "comic_real_run_evidence_intake": REAL_RUN_INTAKE_COMMAND,
             "product_readiness": PRODUCT_READINESS_COMMAND,
             "office_isolation": OFFICE_ISOLATION_COMMAND,
+            "github_onboarding_packet": ONBOARDING_PACKET_COMMAND,
             "server": SERVER_COMMAND,
         },
         "common_first_run_failures": _common_first_run_failures(),
@@ -121,6 +123,8 @@ def _github_download_checklist(root: Path) -> dict[str, Any]:
         "docs/DEPLOYMENT_MODES.md",
         "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
         "docs/PUBLIC_RELEASE_HANDOFF.md",
+        "docs/PRODUCTIZATION_STATUS.md",
+        "docs/OFFICE_EXPANSION_DECISION_BRIEF.md",
     ]
     file_checks = [
         {
@@ -174,6 +178,11 @@ def _github_download_checklist(root: Path) -> dict[str, Any]:
                 "name": "公开发布总门禁",
                 "command": "python scripts/verify_release_readiness.py --format markdown",
                 "proves": "无 Key demo、静态展示包、交付物、模型指引、隔离和密钥扫描是否统一通过。",
+            },
+            {
+                "name": "GitHub 新用户上手包",
+                "command": ONBOARDING_PACKET_COMMAND,
+                "proves": "把首次运行、模型配置、产品化状态、扩展决策和敏感信息扫描打成可离线复核的 zip。",
             },
         ],
         "before_public_sharing": [
@@ -294,6 +303,8 @@ def _first_run_file_reason(path: str) -> str:
         "docs/DEPLOYMENT_MODES.md": "Separates public demo, local real use, and future SaaS deployment.",
         "docs/STATIC_SHOWCASE_DEPLOYMENT.md": "Explains how to publish the no-key static showcase.",
         "docs/PUBLIC_RELEASE_HANDOFF.md": "Explains what evidence must exist before sharing the project publicly.",
+        "docs/PRODUCTIZATION_STATUS.md": "Maps productization goals to evidence, so new users do not confuse demos with live production quality.",
+        "docs/OFFICE_EXPANSION_DECISION_BRIEF.md": "Explains current office priority and why future offices should not be opened before their contracts are ready.",
     }
     return reasons.get(path, "Required first-run file.")
 
@@ -370,6 +381,14 @@ def _common_first_run_failures() -> list[dict[str, Any]]:
             "likely_cause": "这通常是个人网站或公开展示仓库里的静态展示检查失败，不等于三个臭皮匠产品本体崩溃；常见原因是展示包未同步、GitHub 云端还在跑旧提交、缺少本地复现脚本，或 Vercel 线上仍是旧版本。",
             "check_command": "personal-site: npm run check:showcase-ci; product: python scripts/verify_release_readiness.py --format markdown",
             "recovery_action": "先看失败邮件属于哪个仓库：如果是 `atticus-zhou/me`，优先修个人网站的 showcase 同步和 Vercel 发布；如果是 `sangechoupijiang`，再回到本产品仓库修 release readiness 或 secret scan。任何情况下，`npm run check:online` 通过前都不要宣称个人网站线上入口已可访问。",
+            "requires_api_key": False,
+        },
+        {
+            "id": "vercel_auth_missing_or_old_bundle",
+            "symptom": "个人网站本地检查通过，但 `https://www.atticus.asia/three-stooges/`、`/build-info.json` 或 GitHub onboarding packet 仍然 404；或者 Vercel/GitHub 一直弹账号选择窗口。",
+            "likely_cause": "个人网站仓库已经准备好，但 Vercel 没有本地部署授权、控制台没有重新部署，或线上仍在服务旧 bundle。这不是产品本体运行失败。",
+            "check_command": "personal-site: npm run doctor:deploy; npm run check:online",
+            "recovery_action": "在个人网站仓库先确认 `npm run check:showcase-ci`、`npm run check:github-sync` 和 `npm run check:vercel-prebuilt` 通过；然后完成 `npx vercel login` 或直接在 Vercel 控制台重新部署 `personal-website-v2`。只有 `npm run check:online` 通过后，才把线上链接发给面试官。",
             "requires_api_key": False,
         },
     ]
