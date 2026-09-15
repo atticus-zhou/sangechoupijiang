@@ -49,31 +49,40 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
             "docs/MODEL_CONFIGURATION.md",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
             "docs/PUBLIC_RELEASE_HANDOFF.md",
+            "docs/PRODUCTIZATION_STATUS.md",
             "docs/REAL_PRODUCTION_CLAIMS.md",
             "docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md",
             "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json",
             "docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json",
+            "docs/OFFICE_EXPANSION_DECISION_BRIEF.md",
         ]:
             self.assertIn(target, copied_targets)
 
         verification = {item["id"]: item for item in payload["verification"]}
-        self.assertEqual(set(verification), {"first_run", "model_guidance", "public_docs", "secret_scan"})
+        self.assertEqual(set(verification), {"first_run", "productization_status", "model_guidance", "public_docs", "secret_scan"})
         self.assertTrue(all(item["status"] == "passed" for item in verification.values()))
         self.assertIn("github_download=ready", verification["first_run"]["summary"])
+        self.assertIn("requirements=", verification["productization_status"]["summary"])
+        self.assertIn("readme_linked=True", verification["productization_status"]["summary"])
         self.assertIn("tracked secrets", verification["secret_scan"]["summary"])
         open_first = output_dir.joinpath("OPEN_THIS_FIRST.md").read_text(encoding="utf-8")
         self.assertIn("1. `START_HERE.md`", open_first)
         self.assertIn("2. `README.md`", open_first)
-        self.assertIn("5. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`", open_first)
-        self.assertIn("6. `docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json`", open_first)
+        self.assertIn("5. `docs/PRODUCTIZATION_STATUS.md`", open_first)
+        self.assertIn("6. `docs/OFFICE_EXPANSION_DECISION_BRIEF.md`", open_first)
+        self.assertIn("7. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`", open_first)
+        self.assertIn("8. `docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json`", open_first)
 
         with zipfile.ZipFile(zip_path) as archive:
             names = set(archive.namelist())
         self.assertIn("OPEN_THIS_FIRST.md", names)
         self.assertIn("START_HERE.md", names)
+        self.assertIn("docs/PRODUCTIZATION_STATUS.md", names)
+        self.assertIn("docs/OFFICE_EXPANSION_DECISION_BRIEF.md", names)
         self.assertIn("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", names)
         self.assertIn("docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json", names)
         self.assertIn("verification/first_run.json", names)
+        self.assertIn("verification/productization_status.json", names)
         self.assertIn("verification/secret_scan.txt", names)
         forbidden = ("config.yaml", ".env", "user_data", "output", "runtime_logs", ".vercel")
         for name in names:
@@ -104,6 +113,7 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
         self.assertIn("Writes workspace: `False`", result.stdout)
         self.assertIn("Archive:", result.stdout)
         self.assertIn("first_run", result.stdout)
+        self.assertIn("productization_status", result.stdout)
         self.assertIn("model_guidance", result.stdout)
         self.assertIn("secret_scan", result.stdout)
 

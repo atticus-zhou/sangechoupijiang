@@ -33,16 +33,19 @@ COPY_FILES = [
     ("docs/DEPLOYMENT_MODES.md", "docs/DEPLOYMENT_MODES.md", "Deployment modes and public/private boundaries."),
     ("docs/STATIC_SHOWCASE_DEPLOYMENT.md", "docs/STATIC_SHOWCASE_DEPLOYMENT.md", "How to export and verify the static no-key showcase."),
     ("docs/PUBLIC_RELEASE_HANDOFF.md", "docs/PUBLIC_RELEASE_HANDOFF.md", "Public release handoff and reviewer boundary."),
+    ("docs/PRODUCTIZATION_STATUS.md", "docs/PRODUCTIZATION_STATUS.md", "Current evidence-backed productization status and remaining boundaries."),
     ("docs/REAL_PRODUCTION_CLAIMS.md", "docs/REAL_PRODUCTION_CLAIMS.md", "When real production quality can be claimed."),
     ("docs/COMIC_DOWNSTREAM_HANDOFF.md", "docs/COMIC_DOWNSTREAM_HANDOFF.md", "How the comic production package hands off downstream."),
     ("docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", "docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", "How to audit real comic model runs before claiming production quality."),
     ("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", "Machine-readable evidence intake template for real model runs."),
     ("docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json", "docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json", "Machine-readable evidence intake template for research screenshots, sources, and claims."),
+    ("docs/OFFICE_EXPANSION_DECISION_BRIEF.md", "docs/OFFICE_EXPANSION_DECISION_BRIEF.md", "Evidence-backed decision brief for research-office staging and future office expansion."),
     ("docs/NEW_OFFICE_STARTER_CHECKLIST.md", "docs/NEW_OFFICE_STARTER_CHECKLIST.md", "Checklist for adding future offices safely."),
 ]
 
 VERIFY_COMMANDS = [
     ("first_run", [sys.executable, "scripts/verify_first_run_readiness.py", "--format", "json"]),
+    ("productization_status", [sys.executable, "scripts/verify_productization_status.py", "--format", "json"]),
     ("model_guidance", [sys.executable, "scripts/verify_model_configuration_guidance.py", "--format", "json"]),
     ("public_docs", [sys.executable, "scripts/verify_public_docs_readability.py", "--format", "json"]),
     ("secret_scan", [sys.executable, "scripts/check_no_secrets.py"]),
@@ -124,6 +127,14 @@ def _summarize_command(name: str, parsed: Any, stdout: str) -> str:
             offices = parsed.get("office_model_setup_summary") or []
             checks = parsed.get("checks") or []
             return f"status={parsed.get('status')}; offices={len(offices)}; checks={len(checks)}"
+        if name == "productization_status":
+            requirements = parsed.get("requirements") or []
+            passed = sum(1 for item in requirements if item.get("status") == "passed")
+            return (
+                f"status={parsed.get('status')}; "
+                f"requirements={passed}/{len(requirements)}; "
+                f"readme_linked={parsed.get('readme_links_status')}"
+            )
         if name == "public_docs":
             return f"status={parsed.get('status')}; docs={parsed.get('passed_count')}/{parsed.get('doc_count')}; failures={len(parsed.get('failures') or [])}"
     if "Sensitive data scan passed" in stdout:
@@ -143,12 +154,15 @@ def _write_readme(output_dir: Path, manifest: dict[str, Any]) -> None:
         "2. `README.md`",
         "3. `docs/FIRST_RUN_DECISION_CARD.md`",
         "4. `docs/MODEL_CONFIGURATION.md`",
-        "5. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`",
-        "6. `docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json`",
-        "7. `verification/first_run.json`",
-        "8. `verification/model_guidance.json`",
-        "9. `verification/public_docs.json`",
-        "10. `verification/secret_scan.txt`",
+        "5. `docs/PRODUCTIZATION_STATUS.md`",
+        "6. `docs/OFFICE_EXPANSION_DECISION_BRIEF.md`",
+        "7. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`",
+        "8. `docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json`",
+        "9. `verification/first_run.json`",
+        "10. `verification/productization_status.json`",
+        "11. `verification/model_guidance.json`",
+        "12. `verification/public_docs.json`",
+        "13. `verification/secret_scan.txt`",
         "",
         "Safe boundary:",
         "",
