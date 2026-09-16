@@ -259,6 +259,7 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
     download_catalog = static_showcase.get("download_catalog") or []
     fallback = deployment.get("reviewer_fallback_packet") or portfolio.get("reviewer_fallback_packet") or {}
     static_url_fallback = deployment.get("static_url_fallback") or portfolio.get("static_url_fallback") or {}
+    stale_bundle_diagnosis = live_verification.get("stale_bundle_diagnosis") or deployment.get("stale_bundle_diagnosis") or {}
 
     return {
         "mode": "public_no_key_visitor_acceptance",
@@ -338,6 +339,7 @@ def _build_visitor_acceptance_guide(static_showcase: dict[str, Any]) -> dict[str
             "doctor_command": live_verification.get("doctor_command", "npm run doctor:deploy"),
             "check_command": live_verification.get("check_command", "npm run check:online"),
             "do_not_claim_live_until": "npm run check:online passes",
+            "stale_bundle_diagnosis": stale_bundle_diagnosis,
         },
         "reviewer_fallback_packet": {
             "status": fallback.get("status", "available_when_live_route_stale"),
@@ -566,7 +568,32 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "check_command": "npm run check:online",
             "ship_command": "npm run ship:vercel",
             "failure_meaning": "The static package is ready, but the production Vercel domain may still be serving an older deployment.",
+            "stale_bundle_diagnosis": {
+                "status": "source_mismatch_or_stale_vercel_bundle",
+                "reported_by": "npm run check:online:json",
+                "meaning": "The production home is reachable, but it is not serving the personal website build that contains /three-stooges/.",
+                "signals": [
+                    "https://www.atticus.asia/ returns HTTP 200",
+                    "https://www.atticus.asia/build-info.json returns HTTP 404",
+                    "https://www.atticus.asia/three-stooges/ returns HTTP 404",
+                    "the live asset bundle does not contain /three-stooges/",
+                ],
+                "dashboard_checklist": [
+                    "Open the Vercel project that serves https://www.atticus.asia/.",
+                    "Confirm the Git repository is atticus-zhou/me.",
+                    "Confirm the production branch is main.",
+                    "Confirm Root Directory points at the personal website project when the repository is configured as a monorepo.",
+                    "Confirm Build Command runs the personal website build.",
+                    "Confirm Output Directory points at the generated Vite dist directory unless using the prebuilt deploy path.",
+                ],
+                "recovery_actions": [
+                    "Do not edit Three Cobblers product data to hide the 404.",
+                    "Redeploy the latest personal website commit from Vercel or run npm run ship:vercel after Vercel authorization.",
+                    "Run npm run check:online after redeploy and keep the passing output as release evidence.",
+                ],
+            },
         }
+        deployment["stale_bundle_diagnosis"] = deployment["live_verification"]["stale_bundle_diagnosis"]
         deployment.setdefault(
             "reviewer_fallback_packet",
             (static_showcase.get("portfolio_embed") or {}).get("reviewer_fallback_packet") or {},
@@ -618,6 +645,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
                 "requires_vercel_authorization": True,
                 "passes_when": "https://www.atticus.asia/three-stooges/ and sample downloads return HTTP 200 from the personal website repository check.",
                 "do_not_claim_live_until": "npm run check:online passes",
+                "stale_bundle_diagnosis": deployment["live_verification"]["stale_bundle_diagnosis"],
             },
             "ci_verification": {
                 "status": ci_verification.get("status", "repo_static_checks"),

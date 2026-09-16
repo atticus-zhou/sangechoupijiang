@@ -395,6 +395,11 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(live_verification["ship_command"], "npm run ship:vercel")
         self.assertTrue(live_verification["requires_vercel_authorization"])
         self.assertIn("check:online", live_verification["do_not_claim_live_until"])
+        stale_diagnosis = live_verification["stale_bundle_diagnosis"]
+        self.assertEqual(stale_diagnosis["status"], "source_mismatch_or_stale_vercel_bundle")
+        self.assertIn("build-info.json", " ".join(stale_diagnosis["signals"]))
+        self.assertIn("atticus-zhou/me", " ".join(stale_diagnosis["dashboard_checklist"]))
+        self.assertTrue(any("Do not edit Three Cobblers product data" in item for item in stale_diagnosis["recovery_actions"]))
         static_fallback = deploy_manifest["static_url_fallback"]
         self.assertEqual(static_fallback["status"], "external_required")
         self.assertEqual(static_fallback["default_url"], "https://atticus-zhou.github.io/sangechoupijiang/")
@@ -422,6 +427,14 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(showcase_live_verification["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(showcase_live_verification["check_command"], "npm run check:online")
         self.assertEqual(showcase_live_verification["live_url"], "https://www.atticus.asia/three-stooges/")
+        self.assertEqual(
+            showcase_live_verification["stale_bundle_diagnosis"]["status"],
+            "source_mismatch_or_stale_vercel_bundle",
+        )
+        self.assertEqual(
+            visitor_guide["live_verification"]["stale_bundle_diagnosis"]["status"],
+            "source_mismatch_or_stale_vercel_bundle",
+        )
         showcase_static_fallback = showcase["public_deployment"]["static_url_fallback"]
         self.assertEqual(showcase_static_fallback["status"], "external_required")
         self.assertEqual(showcase_static_fallback["default_url"], "https://atticus-zhou.github.io/sangechoupijiang/")

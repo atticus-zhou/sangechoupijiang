@@ -1905,6 +1905,33 @@ def _public_showcase_portfolio_ci_proof() -> dict:
     }
 
 
+def _public_showcase_stale_bundle_diagnosis() -> dict:
+    return {
+        "status": "source_mismatch_or_stale_vercel_bundle",
+        "reported_by": "npm run check:online:json",
+        "meaning": "The production home is reachable, but it is not serving the personal website build that contains /three-stooges/.",
+        "signals": [
+            "https://www.atticus.asia/ returns HTTP 200",
+            "https://www.atticus.asia/build-info.json returns HTTP 404",
+            "https://www.atticus.asia/three-stooges/ returns HTTP 404",
+            "the live asset bundle does not contain /three-stooges/",
+        ],
+        "dashboard_checklist": [
+            "Open the Vercel project that serves https://www.atticus.asia/.",
+            "Confirm the Git repository is atticus-zhou/me.",
+            "Confirm the production branch is main.",
+            "Confirm Root Directory points at the personal website project when the repository is configured as a monorepo.",
+            "Confirm Build Command runs the personal website build.",
+            "Confirm Output Directory points at the generated Vite dist directory unless using the prebuilt deploy path.",
+        ],
+        "recovery_actions": [
+            "Do not edit Three Cobblers product data to hide the 404.",
+            "Redeploy the latest personal website commit from Vercel or run npm run ship:vercel after Vercel authorization.",
+            "Run npm run check:online after redeploy and keep the passing output as release evidence.",
+        ],
+    }
+
+
 def _public_showcase_reviewer_fallback_packet() -> dict:
     return {
         "title": "离线评审包",
@@ -1983,6 +2010,7 @@ def _public_showcase_static_url_fallback() -> dict:
 def _public_showcase_portfolio_integration() -> dict:
     reviewer_fallback = _public_showcase_reviewer_fallback_packet()
     static_url_fallback = _public_showcase_static_url_fallback()
+    stale_bundle_diagnosis = _public_showcase_stale_bundle_diagnosis()
     return {
         "title": "个人网站接入方式",
         "summary": "公开展示应只接入 no-key 静态包或 /api/demo/public-showcase 数据，不接入真实生产接口、config.yaml、用户工作区或作者 API Key。",
@@ -2003,6 +2031,7 @@ def _public_showcase_portfolio_integration() -> dict:
             "check_command": "npm run check:online",
             "ship_command": "npm run ship:vercel",
             "do_not_claim_live_until": "npm run check:online passes",
+            "stale_bundle_diagnosis": stale_bundle_diagnosis,
         },
         "reviewer_fallback_packet": reviewer_fallback,
         "static_url_fallback": static_url_fallback,
@@ -3401,6 +3430,7 @@ async def get_public_showcase_demo_api():
                 "check_command": "npm run check:online",
                 "ship_command": "npm run ship:vercel",
                 "do_not_claim_live_until": "npm run check:online passes",
+                "stale_bundle_diagnosis": _public_showcase_stale_bundle_diagnosis(),
             },
             "ci_verification": _public_showcase_portfolio_ci_proof(),
             "reviewer_fallback_packet": reviewer_fallback,

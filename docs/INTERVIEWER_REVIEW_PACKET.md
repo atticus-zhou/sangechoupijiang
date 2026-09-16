@@ -53,6 +53,14 @@
 - 线上公开 URL 还需要 Vercel 重新部署后再验收。
 - 只有 `npm run check:online` 通过，才算线上入口可以正式发给外部访客。
 
+如果个人网站仓库的 `npm run check:online:json` 输出
+`deployment_diagnosis.status = "source_mismatch_or_stale_vercel_bundle"`，
+不要为了消掉 404 去修改“三个臭皮匠”的静态展示数据。这个诊断表示：
+生产首页可以访问，但 `/build-info.json` 和 `/three-stooges/` 没有跟随
+当前 GitHub 提交刷新，通常需要在 Vercel Dashboard 里检查项目源仓库、
+production branch、Root Directory、Build Command 和 Output Directory。
+核对并重新部署后，再用 `npm run check:online` 做最终线上验收。
+
 ## 安全边界
 
 公开展示包禁止包含：

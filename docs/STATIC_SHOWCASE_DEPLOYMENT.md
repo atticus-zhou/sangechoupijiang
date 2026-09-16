@@ -162,6 +162,17 @@ Do not describe the personal website as live until `npm run check:online` passes
 
 如果本地 `npm run check:showcase`、`npm run prepare:vercel-prebuilt` 都通过，但 `npm run check:online` 仍然报告 `/three-stooges/` 是 404，先不要继续改三个臭皮匠产品代码。这通常只说明 Vercel 还在服务旧构建，或者 Vercel 项目没有从当前 GitHub 分支重新部署。
 
+如果 `npm run check:online:json` 进一步报告
+`deployment_diagnosis.status = "source_mismatch_or_stale_vercel_bundle"`，
+含义更具体：生产首页是可访问的，但 `/build-info.json`、`/three-stooges/`
+和线上 bundle 没有对应当前个人网站构建。此时优先检查 Vercel 项目设置：
+
+- Git repository 是否是 `atticus-zhou/me`。
+- Production branch 是否是 `main`。
+- Root Directory 是否指向个人网站项目目录。
+- Build Command 是否执行个人网站构建。
+- Output Directory 是否指向 Vite 生成的 `dist`，除非你明确使用 prebuilt deploy。
+
 推荐先走 Dashboard 路线：
 
 1. 打开 Vercel Dashboard。

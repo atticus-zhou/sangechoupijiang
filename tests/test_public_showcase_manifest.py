@@ -523,6 +523,11 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(deployment_live["doctor_command"], "npm run doctor:deploy")
         self.assertEqual(deployment_live["check_command"], "npm run check:online")
         self.assertEqual(deployment_live["ship_command"], "npm run ship:vercel")
+        stale_diagnosis = deployment_live["stale_bundle_diagnosis"]
+        self.assertEqual(stale_diagnosis["status"], "source_mismatch_or_stale_vercel_bundle")
+        self.assertIn("build-info.json", " ".join(stale_diagnosis["signals"]))
+        self.assertIn("Root Directory", " ".join(stale_diagnosis["dashboard_checklist"]))
+        self.assertTrue(any("check:online" in item for item in stale_diagnosis["recovery_actions"]))
         deployment_ci = public_deployment["ci_verification"]
         self.assertEqual(deployment_ci["workflow_path"], ".github/workflows/three-cobblers-showcase.yml")
         self.assertEqual(deployment_ci["live_authority"], "npm run check:online")
