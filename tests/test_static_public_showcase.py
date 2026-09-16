@@ -716,8 +716,9 @@ class StaticPublicShowcaseTests(unittest.TestCase):
 
         self.assertEqual(payload["status"], "passed")
         self.assertEqual(payload["mode"], "public_no_key_live_showcase")
-        self.assertEqual(payload["checked_files"], 8)
+        self.assertEqual(payload["checked_files"], 9)
         self.assertEqual(payload["download_count"], 8)
+        self.assertIn("downloads/platform/github-onboarding-packet.zip", payload["fetched"])
         self.assertGreaterEqual(payload["visitor_step_count"], 5)
         self.assertEqual(payload["claim_level"], "demo_structure_only")
         self.assertEqual(payload["errors"], [])

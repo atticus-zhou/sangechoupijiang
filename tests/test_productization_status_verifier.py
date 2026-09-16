@@ -23,6 +23,8 @@ class ProductizationStatusVerifierTests(unittest.TestCase):
         self.assertEqual(len(payload["requirements"]), 11)
         self.assertTrue(payload["release_gate_includes_status"])
         self.assertTrue(payload["readme_links_status"])
+        public_boundary = next(item for item in module.REQUIREMENTS if item["id"] == "P1")
+        self.assertIn("downloads/platform/github-onboarding-packet.zip", public_boundary["markers"])
         office_governance = next(item for item in module.REQUIREMENTS if item["id"] == "P7")
         self.assertIn("required_demo_contract", office_governance["markers"])
         self.assertIn("starter checklist", office_governance["markers"])

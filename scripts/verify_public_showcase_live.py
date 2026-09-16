@@ -25,6 +25,7 @@ REQUIRED_STATIC_FILES = (
     "downloads/comic-production/files/word_canvas.docx",
     "downloads/comic-production/files/handoff_manifest.json",
     "downloads/comic-production/files/trace.json",
+    "downloads/platform/github-onboarding-packet.zip",
 )
 
 

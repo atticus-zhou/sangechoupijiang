@@ -24,6 +24,7 @@ REQUIREMENTS: list[dict[str, Any]] = [
             "python scripts/verify_portfolio_showcase_sync.py --format markdown",
             "python scripts/verify_public_docs_readability.py --format markdown",
             "/api/demo/public-showcase",
+            "downloads/platform/github-onboarding-packet.zip",
             ".github/workflows/release-readiness.yml",
             "docs/STATIC_SHOWCASE_DEPLOYMENT.md",
         ],

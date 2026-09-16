@@ -129,7 +129,7 @@ Current deployment boundary:
 - `local_static_showcase_ready`: proved by `python scripts/verify_static_public_showcase.py --format markdown`.
 - `portfolio_copy_sync_ready`: proved by `python scripts/verify_portfolio_showcase_sync.py --format markdown`; it compares `dist/public-showcase` against the personal website copy at `public/three-stooges/` by file hash. If the default personal website folder is absent, the check reports `skipped` and asks the operator to rerun with `--target-dir` after copying the static package into a portfolio site.
 - `live_domain_verification_external`: diagnosed by `npm run doctor:deploy` and proved only by the personal website command `npm run check:online`.
-- `public_url_live_ready`: proved by `python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/three-stooges/ --format markdown` or by passing any other deployed static showcase URL. It checks the public URL itself, including the homepage, JSON manifests, visitor guide, claim report, sample Word canvas, and handoff manifest.
+- `public_url_live_ready`: proved by `python scripts/verify_public_showcase_live.py --url https://www.atticus.asia/three-stooges/ --format markdown` or by passing any other deployed static showcase URL. It checks the public URL itself, including the homepage, JSON manifests, visitor guide, claim report, sample Word canvas, handoff manifest, trace bundle, and `downloads/platform/github-onboarding-packet.zip`.
 - `external_vercel_redeploy_required`: if `https://www.atticus.asia/three-stooges/` returns 404 or stale content, complete Vercel authorization and run `npm run ship:vercel` from the personal website repository.
 
 Do not describe the personal website route as live until
