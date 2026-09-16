@@ -100,15 +100,22 @@ jobs:
 
       - name: Verify published Pages URL
         if: steps.pages_preflight.outputs.configured == 'true'
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
+          if [ -z "${PAGES_URL}" ]; then
+            echo "::error::GitHub Pages deployment did not return a page_url. Open the workflow run and check the Deploy to GitHub Pages step."
+            exit 1
+          fi
+          echo "GitHub Pages returned URL: ${PAGES_URL}"
           for attempt in 1 2 3 4 5; do
             echo "Checking GitHub Pages URL, attempt ${attempt}/5..."
-            if python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown --timeout 20; then
+            if python scripts/verify_public_showcase_live.py --url "${PAGES_URL}" --format markdown --timeout 20; then
               exit 0
             fi
             sleep 15
           done
-          python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown --timeout 20
+          python scripts/verify_public_showcase_live.py --url "${PAGES_URL}" --format markdown --timeout 20
 
       - name: Explain Pages deployment result
         if: steps.pages_preflight.outputs.configured == 'true'
