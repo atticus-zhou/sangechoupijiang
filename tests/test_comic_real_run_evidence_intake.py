@@ -59,6 +59,8 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertGreaterEqual(payload["template_contract"]["forbidden_marker_count"], 7)
         self.assertGreaterEqual(payload["template_contract"]["asset_identity_card_count"], 2)
         self.assertGreaterEqual(payload["template_contract"]["reference_asset_chain_count"], 1)
+        self.assertGreaterEqual(payload["template_contract"]["director_prompt_record_count"], 1)
+        self.assertTrue(payload["template_contract"]["director_contract_ready"])
         self.assertTrue(payload["template_contract"]["operator_acceptance_ready"])
         self.assertEqual(payload["benchmark_claim"], "demo_structure_verified")
         self.assertFalse(payload["benchmark_real_quality_verified"])
@@ -75,6 +77,8 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("不讲故事、不加剧情动作", text)
         self.assertIn("提示词不能只是固定模板堆词", text)
         self.assertIn("像导演交代现场一样", text)
+        self.assertIn("prompt_director_contract", text)
+        self.assertIn("template_repetition_score", text)
         self.assertIn("哪张图服务哪个镜头，哪个镜头使用哪些资产", text)
         self.assertIn("人工验收签字", text)
         self.assertIn("故事锁定", text)
@@ -104,6 +108,7 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("Real Model Evidence", completed.stdout)
         self.assertIn("Evidence Template", completed.stdout)
         self.assertIn("Operator acceptance ready: `True`", completed.stdout)
+        self.assertIn("Director contract ready: `True`", completed.stdout)
         self.assertIn("COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", completed.stdout)
 
     def test_real_run_evidence_template_is_machine_readable_and_safe(self):
@@ -120,6 +125,7 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("bingbu_prompt_director", template["model_evidence"])
         self.assertIn("asset_identity_cards", template)
         self.assertIn("reference_asset_chain", template)
+        self.assertIn("prompt_director_contract", template)
         self.assertIn("operator_acceptance_checklist", template)
         self.assertFalse(template["generated_images"][0]["fixture"])
         self.assertEqual(template["visual_reviews"][0]["reviewer_department"], "xingbu")
@@ -140,6 +146,21 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
             reference["referenced_assets"][0]["approved_reference_image_ids"],
         )
         self.assertTrue(template["downstream_handoff_decision"]["handoff_allowed"])
+        director_contract = template["prompt_director_contract"]
+        self.assertEqual(director_contract["status"], "ready")
+        self.assertEqual(director_contract["prompt_author_department"], "bingbu")
+        self.assertEqual(director_contract["reviewer_department"], "xingbu")
+        self.assertEqual(director_contract["negative_prompt_policy"]["placement"], "end_only")
+        self.assertEqual(director_contract["negative_prompt_policy"]["prefix"], "禁止")
+        self.assertIn("shot_purpose", director_contract["required_sections"])
+        self.assertIn("reference_image_chain", director_contract["required_sections"])
+        self.assertIn("camera_plan", director_contract["required_sections"])
+        prompt_record = director_contract["shot_prompt_records"][0]
+        self.assertEqual(prompt_record["shot_id"], "shot_001")
+        self.assertTrue(prompt_record["negative_prompt"].startswith("禁止"))
+        self.assertNotIn("不要", prompt_record["negative_prompt"])
+        self.assertLessEqual(prompt_record["template_repetition_score"], 0.3)
+        self.assertIn("img_char_001_three_view", prompt_record["reference_image_chain"])
         acceptance = template["operator_acceptance_checklist"]
         self.assertTrue(acceptance["story_locked"])
         self.assertTrue(acceptance["asset_split_approved"])

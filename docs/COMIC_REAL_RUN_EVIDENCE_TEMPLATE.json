@@ -198,6 +198,53 @@
     "shot_prompt_count": 0,
     "missing_check_ids": []
   },
+  "prompt_director_contract": {
+    "status": "ready",
+    "strategy_version": "prompt_strategy_v_replace",
+    "prompt_author_department": "bingbu",
+    "reviewer_department": "xingbu",
+    "negative_prompt_policy": {
+      "placement": "end_only",
+      "prefix": "禁止",
+      "forbidden_forms": [
+        "正文中夹杂负面词",
+        "读不出来的碎词",
+        "与镜头目的无关的固定模板堆词"
+      ]
+    },
+    "required_sections": [
+      "shot_purpose",
+      "reference_image_chain",
+      "camera_plan",
+      "performance_direction",
+      "art_lighting",
+      "continuity_constraints",
+      "negative_prompt"
+    ],
+    "shot_prompt_records": [
+      {
+        "shot_id": "shot_001",
+        "prompt_id": "prompt_shot_001_video",
+        "shot_purpose": "说明这一镜推动的剧情节点或情绪变化。",
+        "reference_image_chain": [
+          "img_char_001_three_view",
+          "img_scene_001_top_down"
+        ],
+        "camera_plan": "景别、视角、机位、运动方式、镜头时长或节奏。",
+        "performance_direction": "人物动作、眼神、表情、语气、台词或沉默。",
+        "art_lighting": "画风、时代、材质、色彩、光源和空间气氛。",
+        "continuity_constraints": [
+          "保持人物脸型和服装主色",
+          "保持场景入口方向",
+          "承接上一镜情绪"
+        ],
+        "negative_prompt": "禁止脸型变化、服装漂移、多余肢体、背景破碎、随机文字、水印、无关 logo。",
+        "template_repetition_score": 0.08,
+        "human_review_status": "approved"
+      }
+    ],
+    "acceptance": "每条镜头提示词都必须能解释剧情目的、参考图链路、摄影和表演计划；负面提示词只能放在最后，用“禁止...”表达。"
+  },
   "operator_acceptance_checklist": {
     "reviewer_role": "project_owner_or_operator",
     "reviewed_at": "2026-01-01T00:00:00Z",

@@ -37,6 +37,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - `visual_reviews` 必须由刑部或视觉质检阶段写入七维评分、通过状态、问题列表和恢复动作。
 - `image_quality_summary` 必须能让人立刻知道总图数、可用图数、废片/返工图数和失败图片 ID。
 - `prompt_strategy_lineage` 必须证明资产提示词、镜头提示词和 Word 画布来自同一版策略。
+- `prompt_director_contract` 必须证明镜头提示词不是固定模板堆词，而是由兵部生成、经刑部复核的导演式提示词合同。
 - `operator_acceptance_checklist` 必须保留人工验收签字，说明故事、资产、图片、提示词、Word 画布和下游交接是否都已经被人确认。
 - `delivery_files` 必须指向 Word 画布、handoff manifest、trace 和 production acceptance card。
 - `downstream_handoff_decision` 必须明确 `handoff_allowed`，不能只说“已完成”。
@@ -52,6 +53,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - `asset_identity_cards`，人物、道具、场景都有稳定身份卡，后续所有图片和提示词只引用这些身份卡。
 - `reference_asset_chain`，每个镜头说明用了哪些人物图、道具图、场景图或首帧参考图。
 - `prompt_strategy_lineage`，证明基础资产提示词、镜头提示词和 Word 画布来自同一版提示词策略。
+- `prompt_director_contract`，记录每个镜头提示词的 `shot_purpose`、`reference_image_chain`、`camera_plan`、`performance_direction`、`art_lighting`、`continuity_constraints` 和 `negative_prompt`，并说明负面提示词只能放在最后，用“禁止...”表达。
 - `operator_acceptance_checklist`，记录人工验收签字：故事锁定、资产拆解已审核、图片质量已通过、提示词包已通过、Word 画布已通过、可以交给下游。
 - `downstream_handoff_decision`，明确 `handoff_allowed` 是否为 true，以及不能交付时下一步该做什么。
 
@@ -78,6 +80,8 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - 美术与光线：画风、时代、材质、色彩、光源和空间气氛。
 - 连续性要求：人物身份、服装、道具位置、场景方向、上一镜到下一镜的承接。
 - 负面提示词：放在最后，用“禁止...”表达，不夹在正文里，不写读不出来的碎词。
+
+证据文件里必须同步写入 `prompt_director_contract`。它不是给模型看的长提示词正文，而是给人和验证脚本看的结构化合同：谁生成了提示词、谁复核了提示词、每个镜头用了哪些参考图、有没有镜头目的、有没有表演和摄影计划、负面提示词是不是只出现在最后。`template_repetition_score` 应尽量接近 0；如果一组镜头除了资产名之外几乎一样，不能进入 `real_quality_verified`。
 
 ## Word 画布验收
 
@@ -131,6 +135,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 - `image_quality_summary.waste_or_rework_images=0`。
 - 刑部视觉质检显示所有基础资产和镜头参考图通过。
 - 兵部提示词质量为 ready，且没有固定模板式重复问题。
+- `prompt_director_contract.status=ready`，每条镜头提示词都有剧情目的、参考图链路、摄影计划、人物表演、美术光线、连续性约束和末尾负面提示词。
 - `operator_acceptance_checklist` 中故事、资产、图片、提示词、Word 画布和下游交接全部为通过，且没有未解决问题。
 - Word 画布、handoff manifest、trace bundle 和 production acceptance card 字段互相一致。
 - `downstream_handoff_decision.status=ready_for_downstream` 且 `handoff_allowed=true`。

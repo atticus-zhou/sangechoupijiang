@@ -35,6 +35,7 @@ REQUIRED_MARKERS = [
     "asset_identity_cards",
     "reference_asset_chain",
     "prompt_strategy_lineage",
+    "prompt_director_contract",
     "operator_acceptance_checklist",
     "downstream_handoff_decision",
     "人物三视图",
@@ -45,6 +46,12 @@ REQUIRED_MARKERS = [
     "首帧参考图",
     "负面提示词",
     "禁止",
+    "prompt_director_contract",
+    "shot_purpose",
+    "reference_image_chain",
+    "camera_plan",
+    "performance_direction",
+    "continuity_constraints",
     "Word 制片画布",
     "regenerate_images",
     "python scripts/verify_comic_real_production_claim.py --format markdown",
@@ -84,6 +91,7 @@ TEMPLATE_REQUIRED_TOP_LEVEL = [
     "asset_identity_cards",
     "reference_asset_chain",
     "prompt_strategy_lineage",
+    "prompt_director_contract",
     "operator_acceptance_checklist",
     "delivery_files",
     "downstream_handoff_decision",
@@ -235,6 +243,69 @@ def _verify_template_contract() -> dict[str, Any]:
         if field not in lineage:
             errors.append(f"template prompt_strategy_lineage must include {field}")
 
+    director_contract = template.get("prompt_director_contract") or {}
+    if director_contract.get("status") != "ready":
+        errors.append("template prompt_director_contract.status must show the ready target state")
+    if director_contract.get("prompt_author_department") != "bingbu":
+        errors.append("template prompt_director_contract.prompt_author_department must be bingbu")
+    if director_contract.get("reviewer_department") != "xingbu":
+        errors.append("template prompt_director_contract.reviewer_department must be xingbu")
+    negative_policy = director_contract.get("negative_prompt_policy") or {}
+    if negative_policy.get("placement") != "end_only":
+        errors.append("template prompt_director_contract.negative_prompt_policy.placement must be end_only")
+    if negative_policy.get("prefix") != "禁止":
+        errors.append("template prompt_director_contract.negative_prompt_policy.prefix must be 禁止")
+    if len(negative_policy.get("forbidden_forms") or []) < 3:
+        errors.append("template prompt_director_contract.negative_prompt_policy must list forbidden forms")
+    required_sections = set(str(item) for item in (director_contract.get("required_sections") or []))
+    expected_sections = {
+        "shot_purpose",
+        "reference_image_chain",
+        "camera_plan",
+        "performance_direction",
+        "art_lighting",
+        "continuity_constraints",
+        "negative_prompt",
+    }
+    missing_sections = sorted(expected_sections - required_sections)
+    if missing_sections:
+        errors.append("template prompt_director_contract.required_sections missing: " + ", ".join(missing_sections))
+    prompt_records = director_contract.get("shot_prompt_records") or []
+    if not prompt_records:
+        errors.append("template prompt_director_contract.shot_prompt_records must include at least one record")
+    known_image_ids = {
+        str(image.get("image_id"))
+        for image in generated_images
+        if image.get("image_id")
+    }
+    known_shot_ids = {
+        str(chain.get("shot_id"))
+        for chain in reference_chain
+        if chain.get("shot_id")
+    }
+    for index, record in enumerate(prompt_records):
+        for field in expected_sections | {"shot_id", "prompt_id", "template_repetition_score", "human_review_status"}:
+            if field not in record:
+                errors.append(f"template prompt_director_contract.shot_prompt_records[{index}] missing {field}")
+        if record.get("shot_id") and record.get("shot_id") not in known_shot_ids:
+            errors.append(f"template prompt_director_contract.shot_prompt_records[{index}] points to unknown shot_id")
+        reference_images = [str(item) for item in (record.get("reference_image_chain") or []) if str(item).strip()]
+        if not reference_images:
+            errors.append(f"template prompt_director_contract.shot_prompt_records[{index}] must list reference_image_chain")
+        for image_id in reference_images:
+            if image_id not in known_image_ids:
+                errors.append(f"template prompt_director_contract.shot_prompt_records[{index}] references unknown image_id: {image_id}")
+        negative_prompt = str(record.get("negative_prompt") or "")
+        if not negative_prompt.startswith("禁止"):
+            errors.append(f"template prompt_director_contract.shot_prompt_records[{index}].negative_prompt must start with 禁止")
+        if "不要" in negative_prompt:
+            errors.append(f"template prompt_director_contract.shot_prompt_records[{index}].negative_prompt must use 禁止 instead of 不要")
+        repetition_score = record.get("template_repetition_score")
+        if not isinstance(repetition_score, (int, float)) or not 0 <= float(repetition_score) <= 0.3:
+            errors.append(f"template prompt_director_contract.shot_prompt_records[{index}].template_repetition_score must be between 0 and 0.3")
+        if record.get("human_review_status") not in {"approved", "needs_revision", "rejected"}:
+            errors.append(f"template prompt_director_contract.shot_prompt_records[{index}].human_review_status must be approved, needs_revision, or rejected")
+
     acceptance = template.get("operator_acceptance_checklist") or {}
     for field in (
         "reviewer_role",
@@ -287,6 +358,8 @@ def _verify_template_contract() -> dict[str, Any]:
         "visual_review_count": len(reviews),
         "asset_identity_card_count": len(asset_cards),
         "reference_asset_chain_count": len(reference_chain),
+        "director_prompt_record_count": len((template.get("prompt_director_contract") or {}).get("shot_prompt_records") or []),
+        "director_contract_ready": (template.get("prompt_director_contract") or {}).get("status") == "ready",
         "operator_acceptance_ready": bool(acceptance) and not any(
             acceptance.get(field) is not True
             for field in (
@@ -396,6 +469,7 @@ def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[s
         "evidence": all(marker in text for marker in ("model_evidence", "image_production_evidence", "prompt_strategy_lineage")),
         "asset_quality": all(marker in text for marker in ("人物三视图", "人物表情表", "干净白底", "广角图", "俯视图")),
         "prompt_quality": all(marker in text for marker in ("镜头目的", "参考链路", "摄影计划", "人物表演", "负面提示词")),
+        "prompt_director_contract": all(marker in text for marker in ("prompt_director_contract", "shot_purpose", "reference_image_chain", "camera_plan", "performance_direction", "continuity_constraints")),
         "word_canvas": all(marker in text for marker in ("故事合同", "资产身份证", "图片联系表", "镜头卡", "提示词包")),
         "operator_acceptance": all(marker in text for marker in ("人工验收签字", "故事锁定", "资产拆解已审核", "交给下游")),
         "recovery": not missing_recovery,
@@ -475,6 +549,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Visual reviews: `{template.get('visual_review_count')}`",
         f"- Asset identity cards: `{template.get('asset_identity_card_count')}`",
         f"- Reference asset chains: `{template.get('reference_asset_chain_count')}`",
+        f"- Director prompt records: `{template.get('director_prompt_record_count')}`",
+        f"- Director contract ready: `{template.get('director_contract_ready')}`",
         f"- Operator acceptance ready: `{template.get('operator_acceptance_ready')}`",
         f"- Forbidden markers: `{template.get('forbidden_marker_count')}`",
     ])
