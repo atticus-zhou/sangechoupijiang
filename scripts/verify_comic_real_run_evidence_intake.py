@@ -79,6 +79,8 @@ TEMPLATE_REQUIRED_TOP_LEVEL = [
     "generated_images",
     "visual_reviews",
     "image_quality_summary",
+    "asset_identity_cards",
+    "reference_asset_chain",
     "prompt_strategy_lineage",
     "delivery_files",
     "downstream_handoff_decision",
@@ -164,6 +166,65 @@ def _verify_template_contract() -> dict[str, Any]:
         if field not in summary:
             errors.append(f"template image_quality_summary must include {field}")
 
+    asset_cards = template.get("asset_identity_cards") or []
+    if not asset_cards:
+        errors.append("template asset_identity_cards must include at least one approved asset card")
+    for index, card in enumerate(asset_cards):
+        required = (
+            "asset_id",
+            "asset_type",
+            "name",
+            "story_source",
+            "identity_baseline_image_id",
+            "required_image_kinds",
+            "approved_image_ids",
+            "continuity_locks",
+            "human_review_status",
+        )
+        missing_card = [field for field in required if field not in card]
+        if missing_card:
+            errors.append(f"template asset_identity_cards[{index}] missing fields: {', '.join(missing_card)}")
+        if card.get("asset_type") not in {"character", "prop", "scene"}:
+            errors.append(f"template asset_identity_cards[{index}].asset_type must be character, prop, or scene")
+        if not card.get("identity_baseline_image_id"):
+            errors.append(f"template asset_identity_cards[{index}] must bind an identity_baseline_image_id")
+        approved = card.get("approved_image_ids") or []
+        if not approved:
+            errors.append(f"template asset_identity_cards[{index}] must list approved_image_ids")
+        if card.get("identity_baseline_image_id") and card.get("identity_baseline_image_id") not in approved:
+            errors.append(f"template asset_identity_cards[{index}] baseline image must be approved")
+        if card.get("human_review_status") not in {"approved", "needs_revision", "rejected"}:
+            errors.append(f"template asset_identity_cards[{index}].human_review_status must be approved, needs_revision, or rejected")
+
+    reference_chain = template.get("reference_asset_chain") or []
+    if not reference_chain:
+        errors.append("template reference_asset_chain must include at least one shot-to-asset reference")
+    known_asset_ids = {
+        str(card.get("asset_id"))
+        for card in asset_cards
+        if card.get("asset_id")
+    }
+    for index, chain in enumerate(reference_chain):
+        for field in ("shot_id", "story_purpose", "referenced_assets", "continuity_note"):
+            if field not in chain:
+                errors.append(f"template reference_asset_chain[{index}] missing {field}")
+        referenced_assets = chain.get("referenced_assets") or []
+        if not referenced_assets:
+            errors.append(f"template reference_asset_chain[{index}] must list referenced_assets")
+        for ref_index, ref in enumerate(referenced_assets):
+            for field in ("asset_id", "asset_type", "name", "identity_baseline_image_id", "approved_reference_image_ids"):
+                if field not in ref:
+                    errors.append(f"template reference_asset_chain[{index}].referenced_assets[{ref_index}] missing {field}")
+            if ref.get("asset_id") and ref.get("asset_id") not in known_asset_ids:
+                errors.append(
+                    f"template reference_asset_chain[{index}].referenced_assets[{ref_index}] points to unknown asset_id"
+                )
+            approved_refs = ref.get("approved_reference_image_ids") or []
+            if ref.get("identity_baseline_image_id") and ref.get("identity_baseline_image_id") not in approved_refs:
+                errors.append(
+                    f"template reference_asset_chain[{index}].referenced_assets[{ref_index}] baseline image must be an approved reference"
+                )
+
     lineage = template.get("prompt_strategy_lineage") or {}
     if lineage.get("status") != "ready":
         errors.append("template prompt_strategy_lineage.status must show the ready target state")
@@ -188,6 +249,8 @@ def _verify_template_contract() -> dict[str, Any]:
         "schema": template.get("schema"),
         "image_record_count": len(generated_images),
         "visual_review_count": len(reviews),
+        "asset_identity_card_count": len(asset_cards),
+        "reference_asset_chain_count": len(reference_chain),
         "forbidden_marker_count": len(must_not_include),
         "errors": errors,
     }
@@ -359,11 +422,13 @@ def format_markdown(payload: dict[str, Any]) -> str:
             "",
             f"- Status: `{template.get('status')}`",
             f"- Path: `{template.get('path')}`",
-            f"- Schema: `{template.get('schema')}`",
-            f"- Image records: `{template.get('image_record_count')}`",
-            f"- Visual reviews: `{template.get('visual_review_count')}`",
-            f"- Forbidden markers: `{template.get('forbidden_marker_count')}`",
-        ])
+        f"- Schema: `{template.get('schema')}`",
+        f"- Image records: `{template.get('image_record_count')}`",
+        f"- Visual reviews: `{template.get('visual_review_count')}`",
+        f"- Asset identity cards: `{template.get('asset_identity_card_count')}`",
+        f"- Reference asset chains: `{template.get('reference_asset_chain_count')}`",
+        f"- Forbidden markers: `{template.get('forbidden_marker_count')}`",
+    ])
     image_summary = payload.get("image_quality_summary") or {}
     if image_summary:
         lines.extend([

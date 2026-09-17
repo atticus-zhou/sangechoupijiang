@@ -57,6 +57,8 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertEqual(payload["template_contract"]["status"], "passed")
         self.assertEqual(payload["template_contract"]["schema"], "comic_real_run_evidence_intake_v1")
         self.assertGreaterEqual(payload["template_contract"]["forbidden_marker_count"], 7)
+        self.assertGreaterEqual(payload["template_contract"]["asset_identity_card_count"], 2)
+        self.assertGreaterEqual(payload["template_contract"]["reference_asset_chain_count"], 1)
         self.assertEqual(payload["benchmark_claim"], "demo_structure_verified")
         self.assertFalse(payload["benchmark_real_quality_verified"])
         self.assertEqual(payload["claim_level"], "demo_structure_only")
@@ -111,9 +113,26 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("gongbu_image_generation", template["model_evidence"])
         self.assertIn("xingbu_visual_review", template["model_evidence"])
         self.assertIn("bingbu_prompt_director", template["model_evidence"])
+        self.assertIn("asset_identity_cards", template)
+        self.assertIn("reference_asset_chain", template)
         self.assertFalse(template["generated_images"][0]["fixture"])
         self.assertEqual(template["visual_reviews"][0]["reviewer_department"], "xingbu")
         self.assertGreaterEqual(len(template["visual_reviews"][0]["scores"]), 7)
+        character_card = template["asset_identity_cards"][0]
+        self.assertEqual(character_card["asset_type"], "character")
+        self.assertIn(character_card["identity_baseline_image_id"], character_card["approved_image_ids"])
+        self.assertEqual(character_card["human_review_status"], "approved")
+        scene_card = template["asset_identity_cards"][1]
+        self.assertEqual(scene_card["asset_type"], "scene")
+        self.assertFalse(scene_card["clean_background_required"])
+        reference = template["reference_asset_chain"][0]
+        self.assertEqual(reference["shot_id"], "shot_001")
+        self.assertGreaterEqual(len(reference["referenced_assets"]), 2)
+        self.assertEqual(reference["referenced_assets"][0]["asset_id"], character_card["asset_id"])
+        self.assertIn(
+            reference["referenced_assets"][0]["identity_baseline_image_id"],
+            reference["referenced_assets"][0]["approved_reference_image_ids"],
+        )
         self.assertTrue(template["downstream_handoff_decision"]["handoff_allowed"])
 
     def test_existing_real_manifest_can_pass_the_intake_gate(self):

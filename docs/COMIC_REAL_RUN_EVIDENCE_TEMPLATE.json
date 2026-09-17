@@ -113,6 +113,83 @@
     "failed_image_ids": [],
     "rework_instructions": []
   },
+  "asset_identity_cards": [
+    {
+      "asset_id": "char_001",
+      "asset_type": "character",
+      "name": "replace_character_name",
+      "story_source": "来自已确认故事中的人物，不允许凭空新增。",
+      "identity_baseline_image_id": "img_char_001_three_view",
+      "required_image_kinds": [
+        "three_view",
+        "expression_sheet",
+        "half_body_reference"
+      ],
+      "approved_image_ids": [
+        "img_char_001_three_view"
+      ],
+      "continuity_locks": [
+        "脸型",
+        "发型",
+        "服装主色",
+        "年龄感",
+        "标志性细节"
+      ],
+      "clean_background_required": true,
+      "human_review_status": "approved"
+    },
+    {
+      "asset_id": "scene_001",
+      "asset_type": "scene",
+      "name": "replace_scene_name",
+      "story_source": "来自已确认故事中的场景，不允许凭空新增。",
+      "identity_baseline_image_id": "img_scene_001_top_down",
+      "required_image_kinds": [
+        "wide",
+        "top_down",
+        "camera_angles"
+      ],
+      "approved_image_ids": [
+        "img_scene_001_top_down"
+      ],
+      "continuity_locks": [
+        "空间结构",
+        "入口出口",
+        "时代材质",
+        "光线方向"
+      ],
+      "clean_background_required": false,
+      "human_review_status": "approved"
+    }
+  ],
+  "reference_asset_chain": [
+    {
+      "shot_id": "shot_001",
+      "story_purpose": "replace_this_shot_story_purpose",
+      "first_frame_reference_image_id": "replace_first_frame_or_empty_when_not_generated",
+      "referenced_assets": [
+        {
+          "asset_id": "char_001",
+          "asset_type": "character",
+          "name": "replace_character_name",
+          "identity_baseline_image_id": "img_char_001_three_view",
+          "approved_reference_image_ids": [
+            "img_char_001_three_view"
+          ]
+        },
+        {
+          "asset_id": "scene_001",
+          "asset_type": "scene",
+          "name": "replace_scene_name",
+          "identity_baseline_image_id": "img_scene_001_top_down",
+          "approved_reference_image_ids": [
+            "img_scene_001_top_down"
+          ]
+        }
+      ],
+      "continuity_note": "镜头提示词必须引用这些已审核资产，不允许临时改人物、道具或场景身份。"
+    }
+  ],
   "prompt_strategy_lineage": {
     "status": "ready",
     "expected_prompt_strategy_version": "prompt_strategy_v_replace",
