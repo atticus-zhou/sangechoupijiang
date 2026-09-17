@@ -242,6 +242,28 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
         ],
     },
     {
+        "path": "docs/OFFICE_EXTENSION_PROTOCOL.md",
+        "role": "new office extension protocol",
+        "required_markers": [
+            "新办公室扩展协议",
+            "OfficeProfile",
+            "office_id",
+            "运行时状态",
+            "no-key demo",
+            "downloadable_deliverables",
+            "public_claim_report",
+            "schema gates",
+            "recovery_actions",
+            "最小实现包",
+            "src/office_preflight.py",
+            "verify_office_isolation.py",
+            "verify_office_extension_governance.py",
+            "verify_release_readiness.py",
+            "check_no_secrets.py",
+            "只做 UI，不提供可下载、可复核的交付物",
+        ],
+    },
+    {
         "path": "docs/OFFICE_EXPANSION_DECISION_BRIEF.md",
         "role": "office expansion decision brief",
         "required_markers": [
