@@ -33,6 +33,24 @@ EXPECTED_PRIORITY_ORDER = [
     "story_ip",
     "technical_project",
 ]
+ECOMMERCE_REQUIRED_SCHEMA_OUTPUTS = {
+    "selection_source_manifest",
+    "selection_decision_report",
+    "competitor_price_band",
+    "review_pain_point_table",
+    "supply_chain_hypothesis_cards",
+    "evidence_gap_cards",
+}
+ECOMMERCE_REQUIRED_RECOVERY_ACTIONS = {
+    "mark_platform_access_blocked",
+    "sync_selection_evidence",
+    "rebuild_selection_pack",
+}
+ECOMMERCE_REQUIRED_BOUNDARY_MARKERS = {
+    "primary_hall_card",
+    "real_task_executor",
+    "shared_research_workspace",
+}
 REQUIRED_PUBLIC_BLOCKERS = {
     "sample_delivery",
     "schema_gate",
@@ -118,6 +136,13 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         errors.append("candidate must declare human_review_points before public work starts")
     if len(candidate.get("forbidden_shortcuts") or []) < 3:
         errors.append("candidate must declare forbidden_shortcuts before public work starts")
+    if candidate.get("id") == "ecommerce_selection":
+        _validate_ecommerce_selection_contract(
+            candidate=candidate,
+            schema_output_ids=schema_output_ids,
+            recovery_events=recovery_events,
+            errors=errors,
+        )
     return {
         "id": candidate.get("id", ""),
         "name": candidate.get("name", ""),
@@ -135,11 +160,53 @@ def _candidate_report(candidate: dict[str, Any], backlog_ids: set[str]) -> dict[
         "first_recovery_events": recovery_events,
         "human_review_points": candidate.get("human_review_points", []),
         "forbidden_shortcuts": candidate.get("forbidden_shortcuts", []),
+        "launch_boundary": candidate.get("launch_boundary", {}),
         "blocking_backlog_ids": blocking_backlog,
         "missing_core_blockers": missing_core_blockers,
         "status": "blocked_until_evidence" if not errors else "needs_backlog_detail",
         "errors": errors,
     }
+
+
+def _validate_ecommerce_selection_contract(
+    *,
+    candidate: dict[str, Any],
+    schema_output_ids: set[str],
+    recovery_events: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    missing_outputs = sorted(ECOMMERCE_REQUIRED_SCHEMA_OUTPUTS - schema_output_ids)
+    if missing_outputs:
+        errors.append("ecommerce_selection missing schema outputs: " + ", ".join(missing_outputs))
+    contracts = {
+        str(contract.get("schema_id") or ""): contract
+        for contract in candidate.get("first_schema_contracts") or []
+    }
+    if contracts.get("selection_source_manifest", {}).get("owner_agent") != "shibu":
+        errors.append("ecommerce_selection selection_source_manifest must be owned by shibu")
+    if contracts.get("evidence_gap_cards", {}).get("owner_agent") != "xingbu":
+        errors.append("ecommerce_selection evidence_gap_cards must be owned by xingbu")
+    if "boss_readable_summary" not in (contracts.get("selection_decision_report", {}).get("required_fields") or []):
+        errors.append("ecommerce_selection decision report must include boss_readable_summary")
+    if "blocks_claim" not in (contracts.get("evidence_gap_cards", {}).get("required_fields") or []):
+        errors.append("ecommerce_selection evidence gaps must state which claim they block")
+    if "validation_step" not in (contracts.get("supply_chain_hypothesis_cards", {}).get("required_fields") or []):
+        errors.append("ecommerce_selection supply chain hypotheses must include validation_step")
+    actions = {str(event.get("action") or "") for event in recovery_events}
+    missing_actions = sorted(ECOMMERCE_REQUIRED_RECOVERY_ACTIONS - actions)
+    if missing_actions:
+        errors.append("ecommerce_selection missing recovery actions: " + ", ".join(missing_actions))
+    launch_boundary = candidate.get("launch_boundary") or {}
+    if launch_boundary.get("status") != "blocked_until_evidence":
+        errors.append("ecommerce_selection launch_boundary must stay blocked_until_evidence")
+    if launch_boundary.get("public_entry") != "backlog_only":
+        errors.append("ecommerce_selection launch_boundary must keep public_entry=backlog_only")
+    must_not_create = set(str(item) for item in launch_boundary.get("must_not_create") or [])
+    missing_boundaries = sorted(ECOMMERCE_REQUIRED_BOUNDARY_MARKERS - must_not_create)
+    if missing_boundaries:
+        errors.append("ecommerce_selection launch boundary missing markers: " + ", ".join(missing_boundaries))
+    if "确认供应链假设仅为假设" not in (candidate.get("human_review_points") or []):
+        errors.append("ecommerce_selection must require human review of supply-chain assumptions")
 
 
 def verify_future_office_backlog() -> dict[str, Any]:

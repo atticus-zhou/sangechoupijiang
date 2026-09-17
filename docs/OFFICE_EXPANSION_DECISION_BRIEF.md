@@ -12,6 +12,8 @@
 
 当前候选清单已经增加“开工前合同”：每个候选办公室必须先写出第一批 schema contract 和 recovery events。schema contract 要写明 `schema_id`、责任 Agent、必填字段和验收标准；recovery events 要写明失败阶段、恢复动作、保留哪些内容、清理哪些内容，以及给用户看的说明。这样后续开发不会只新增一个办公室卡片，而是从第一天就能被 schema gate、runtime status、history trace 和失败恢复验证。
 
+`ecommerce_selection` 作为第一候选已经被单独加严，但仍然只能停留在 backlog。它的第一批合同必须覆盖 `selection_source_manifest`、`selection_decision_report`、`competitor_price_band`、`review_pain_point_table`、`supply_chain_hypothesis_cards` 和 `evidence_gap_cards`；其中来源清单归史部，证据缺口归刑部，供应链只能写成假设卡并要求人工确认“这只是待验证假设”。在这些 schema、恢复动作和样例交付物通过门禁前，它不能创建大厅主入口、不能启动真实任务执行器，也不能复用研究办公室的真实 workspace。
+
 ## 稳定后评估结论
 
 当前可以进入“评估完成，但不扩办公室”的状态。理由是：AI 漫剧制片办公室已经具备无 Key 样例、交付画布、追溯包、失败恢复和 release gate；研究办公室也已经通过 staged readiness，能够展示阶段报告、来源、数据、竞品、截图计划和证据缺口；但两者都还没有把“真实账号/真实模型/真实生产质量”升级证据连续跑到足够稳定。
@@ -22,7 +24,7 @@
 | --- | --- | --- |
 | AI 漫剧制片办公室 | 继续作为主力办公室 | 它最能展示多 Agent 拆解、生产、质检、交付和追溯，但真实图片质量仍需要真实模型证据持续验证。 |
 | 研究办公室 | 保持可展示，继续强化补证闭环 | 它能交付 staged research demo，但不能宣称全自动采集第三方平台数据。下一步应补真实截图导入、证据命名、来源回填和补证后重跑报告。 |
-| `ecommerce_selection` | 只保留为第一候选，不启动真实开发 | 它最能复用研究办公室的证据链，但必须先定义选品报告 schema、证据缺口、恢复动作和无 Key 样例交付。 |
+| `ecommerce_selection` | 只保留为第一候选，不启动真实开发 | 它最能复用研究办公室的证据链，但必须先定义来源清单、选品报告、竞品价格带、评论痛点、供应链假设、证据缺口、恢复动作和无 Key 样例交付。 |
 | 其他候选办公室 | 暂缓 | 当前继续增加入口会分散主力办公室质量，不利于进入可展示、可复现、可交付状态。 |
 
 这条评估结论的产品含义是：现在应该继续把“一个办公室真实能交付”和“一个办公室 staged 证据闭环”打磨稳，而不是把首页做成很多看起来热闹但没有交付证据的入口。
@@ -68,6 +70,7 @@
 - 拥有办公室专属 schema gate，不能复用不相干办公室的校验器假装通过。
 - 拥有办公室专属 recovery actions，说明失败后保留什么、清理什么、如何重试。
 - 在进入真实开发前，先补 `first_schema_contracts` 和 `first_recovery_events`：前者规定模型输出必须有哪些字段，后者规定每个失败阶段如何保留已确认内容、清理坏证据并让用户知道下一步。
+- 第一候选 `ecommerce_selection` 还必须保留 `launch_boundary.status=blocked_until_evidence`，并明确禁止创建 `primary_hall_card`、`real_task_executor` 和 `shared_research_workspace`；否则它会在没有交付证据时挤进公开入口，破坏现有办公室隔离。
 - 拥有无 Key demo、样例交付物、下载清单、阅读指南和 public claim report。
 - README、部署文档、公开演示和 release readiness 都能解释它可以宣称什么，不能宣称什么。
 - `python scripts/check_no_secrets.py` 必须通过，公开展示包不能包含 API Key、cookie、浏览器登录态、用户数据或 runtime 输出。

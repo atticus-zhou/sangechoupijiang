@@ -74,6 +74,35 @@ class FutureOfficeBacklogVerifierTests(unittest.TestCase):
                 self.assertTrue(event["user_message"])
             self.assertGreaterEqual(len(report["human_review_points"]), 3)
             self.assertGreaterEqual(len(report["forbidden_shortcuts"]), 3)
+        ecommerce = next(report for report in payload["reports"] if report["id"] == "ecommerce_selection")
+        self.assertEqual(ecommerce["launch_boundary"]["status"], "blocked_until_evidence")
+        self.assertEqual(ecommerce["launch_boundary"]["public_entry"], "backlog_only")
+        self.assertIn("primary_hall_card", ecommerce["launch_boundary"]["must_not_create"])
+        self.assertIn("real_task_executor", ecommerce["launch_boundary"]["must_not_create"])
+        self.assertIn("shared_research_workspace", ecommerce["launch_boundary"]["must_not_create"])
+        self.assertEqual(
+            set(ecommerce["first_schema_outputs"]),
+            {
+                "selection_source_manifest",
+                "selection_decision_report",
+                "competitor_price_band",
+                "review_pain_point_table",
+                "supply_chain_hypothesis_cards",
+                "evidence_gap_cards",
+            },
+        )
+        contracts = {item["schema_id"]: item for item in ecommerce["first_schema_contracts"]}
+        self.assertEqual(contracts["selection_source_manifest"]["owner_agent"], "shibu")
+        self.assertEqual(contracts["evidence_gap_cards"]["owner_agent"], "xingbu")
+        self.assertIn("boss_readable_summary", contracts["selection_decision_report"]["required_fields"])
+        self.assertIn("blocks_claim", contracts["evidence_gap_cards"]["required_fields"])
+        self.assertIn("validation_step", contracts["supply_chain_hypothesis_cards"]["required_fields"])
+        self.assertEqual(
+            {item["action"] for item in ecommerce["first_recovery_events"]},
+            {"mark_platform_access_blocked", "sync_selection_evidence", "rebuild_selection_pack"},
+        )
+        self.assertIn("确认供应链假设仅为假设", ecommerce["human_review_points"])
+        self.assertIn("不能把供应链假设写成已验证结论", ecommerce["forbidden_shortcuts"])
 
     def test_markdown_lists_each_candidate_and_platform_blocker(self):
         completed = subprocess.run(
@@ -105,6 +134,7 @@ class FutureOfficeBacklogVerifierTests(unittest.TestCase):
         self.assertIn("Schema contracts", completed.stdout)
         self.assertIn("Recovery events", completed.stdout)
         self.assertIn("选品决策报告", completed.stdout)
+        self.assertIn("供应链假设卡", completed.stdout)
         self.assertIn("脚本矩阵", completed.stdout)
 
 
