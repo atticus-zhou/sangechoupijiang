@@ -46,10 +46,8 @@ class GitHubActionsReleaseReadinessTests(unittest.TestCase):
         self.assertIn("actions/deploy-pages@v4", text)
         self.assertIn("path: dist/public-showcase", text)
         self.assertIn("Verify published Pages URL", text)
-        self.assertIn(
-            "python scripts/verify_public_showcase_live.py --url https://atticus-zhou.github.io/sangechoupijiang/ --format markdown",
-            text,
-        )
+        self.assertIn("PAGES_URL: ${{ steps.deployment.outputs.page_url }}", text)
+        self.assertIn('python scripts/verify_public_showcase_live.py --url "${PAGES_URL}" --format markdown --timeout 20', text)
         self.assertIn("GitHub Pages deployed and verified", text)
         self.assertIn("Enable Settings -> Pages -> Source: GitHub Actions", text)
         self.assertNotIn("continue-on-error: true", text)

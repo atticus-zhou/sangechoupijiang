@@ -50,6 +50,7 @@ PUBLIC_DOCS: list[dict[str, Any]] = [
             "公开展示交接说明",
             "GitHub workflow failed",
             "Public showcase pages",
+            "python scripts/diagnose_showcase_workflow_email.py --head-sha <邮件里的 commit> --format markdown",
             "workflow_dispatch",
             "运行验收摘要",
             "真实生产声明",

@@ -77,6 +77,8 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("npm run ship:vercel", text)
         self.assertIn("只有第二条通过，才适合把线上链接发给面试官", text)
         self.assertIn("Public showcase pages", text)
+        self.assertIn("python scripts/diagnose_showcase_workflow_email.py --head-sha <邮件里的 commit> --format markdown", text)
+        self.assertIn("--contract-only", text)
         self.assertIn("旧发布尝试的残留通知", text)
         self.assertIn("而不是红色失败", text)
         self.assertIn("workflow_dispatch", text)
