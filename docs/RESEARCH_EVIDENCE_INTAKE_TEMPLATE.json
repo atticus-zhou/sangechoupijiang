@@ -107,6 +107,21 @@
       "claim-report.json"
     ]
   },
+  "operator_acceptance_checklist": {
+    "reviewer_role": "project_owner_or_research_operator",
+    "reviewed_at": "2026-01-01T00:00:00Z",
+    "staged_delivery_approved": true,
+    "source_trace_reviewed": true,
+    "screenshot_quality_reviewed": true,
+    "data_claim_alignment_reviewed": true,
+    "report_rebuilt_after_evidence_update": false,
+    "final_claim_approved": false,
+    "unresolved_questions": [
+      "仍有待补截图或人工账号证据，因此只能批准阶段性交付，不能批准最终验证报告。"
+    ],
+    "rejected_items": [],
+    "acceptance_note": "人工已确认阶段报告、来源计划、截图清单和补证卡可以展示；最终验证结论必须等待补证、重建报告并再次验收。"
+  },
   "research_evidence_summary": {
     "source_count": 1,
     "screenshot_count": 1,

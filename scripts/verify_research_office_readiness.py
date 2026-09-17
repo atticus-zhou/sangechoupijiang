@@ -53,6 +53,7 @@ RESEARCH_TEMPLATE_REQUIRED_TOP_LEVEL = [
     "claim_records",
     "evidence_gap_cards",
     "report_rebuild",
+    "operator_acceptance_checklist",
     "research_evidence_summary",
 ]
 
@@ -165,6 +166,42 @@ def _verify_research_evidence_template(errors: list[str]) -> dict[str, Any]:
         if field not in summary:
             template_errors.append(f"research_evidence_summary missing {field}")
 
+    acceptance = template.get("operator_acceptance_checklist") or {}
+    for field in (
+        "reviewer_role",
+        "reviewed_at",
+        "staged_delivery_approved",
+        "source_trace_reviewed",
+        "screenshot_quality_reviewed",
+        "data_claim_alignment_reviewed",
+        "report_rebuilt_after_evidence_update",
+        "final_claim_approved",
+        "unresolved_questions",
+        "rejected_items",
+        "acceptance_note",
+    ):
+        if field not in acceptance:
+            template_errors.append(f"operator_acceptance_checklist missing {field}")
+    for field in (
+        "staged_delivery_approved",
+        "source_trace_reviewed",
+        "screenshot_quality_reviewed",
+        "data_claim_alignment_reviewed",
+    ):
+        if acceptance.get(field) is not True:
+            template_errors.append(f"operator_acceptance_checklist.{field} must be true for staged demo evidence")
+    if not isinstance(acceptance.get("unresolved_questions"), list):
+        template_errors.append("operator_acceptance_checklist.unresolved_questions must be a list")
+    if not isinstance(acceptance.get("rejected_items"), list):
+        template_errors.append("operator_acceptance_checklist.rejected_items must be a list")
+    if not str(acceptance.get("acceptance_note") or "").strip():
+        template_errors.append("operator_acceptance_checklist.acceptance_note must explain the human decision")
+    ready_for_final = summary.get("ready_for_final_research_claim") is True
+    if acceptance.get("final_claim_approved") is True and not ready_for_final:
+        template_errors.append("operator_acceptance_checklist.final_claim_approved cannot be true while ready_for_final_research_claim is false")
+    if not ready_for_final and not acceptance.get("unresolved_questions"):
+        template_errors.append("operator_acceptance_checklist must keep unresolved_questions while final claim is not ready")
+
     errors.extend(f"research evidence intake template: {item}" for item in template_errors)
     return {
         "status": "passed" if not template_errors else "failed",
@@ -176,6 +213,11 @@ def _verify_research_evidence_template(errors: list[str]) -> dict[str, Any]:
         "claim_count": len(claim_records),
         "gap_card_count": len(gap_cards),
         "forbidden_marker_count": len(must_not_include),
+        "operator_acceptance": {
+            "staged_delivery_approved": acceptance.get("staged_delivery_approved"),
+            "final_claim_approved": acceptance.get("final_claim_approved"),
+            "unresolved_question_count": len(acceptance.get("unresolved_questions") or []),
+        },
         "errors": template_errors,
     }
 
@@ -580,6 +622,14 @@ def format_markdown(payload: dict[str, Any]) -> str:
             f"- Claims: {template.get('claim_count')}",
             f"- Gap cards: {template.get('gap_card_count')}",
             f"- Forbidden markers: {template.get('forbidden_marker_count')}",
+        ]
+    )
+    acceptance = template.get("operator_acceptance") or {}
+    lines.extend(
+        [
+            f"- Operator staged approval: {acceptance.get('staged_delivery_approved')}",
+            f"- Operator final approval: {acceptance.get('final_claim_approved')}",
+            f"- Operator unresolved questions: {acceptance.get('unresolved_question_count')}",
         ]
     )
 
