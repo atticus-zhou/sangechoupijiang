@@ -59,6 +59,7 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertGreaterEqual(payload["template_contract"]["forbidden_marker_count"], 7)
         self.assertGreaterEqual(payload["template_contract"]["asset_identity_card_count"], 2)
         self.assertGreaterEqual(payload["template_contract"]["reference_asset_chain_count"], 1)
+        self.assertTrue(payload["template_contract"]["operator_acceptance_ready"])
         self.assertEqual(payload["benchmark_claim"], "demo_structure_verified")
         self.assertFalse(payload["benchmark_real_quality_verified"])
         self.assertEqual(payload["claim_level"], "demo_structure_only")
@@ -75,6 +76,9 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("提示词不能只是固定模板堆词", text)
         self.assertIn("像导演交代现场一样", text)
         self.assertIn("哪张图服务哪个镜头，哪个镜头使用哪些资产", text)
+        self.assertIn("人工验收签字", text)
+        self.assertIn("故事锁定", text)
+        self.assertIn("资产拆解已审核", text)
         self.assertIn("不能让用户重新开盲盒", text)
 
     def test_markdown_output_is_operator_readable(self):
@@ -99,6 +103,7 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("Image Evidence", completed.stdout)
         self.assertIn("Real Model Evidence", completed.stdout)
         self.assertIn("Evidence Template", completed.stdout)
+        self.assertIn("Operator acceptance ready: `True`", completed.stdout)
         self.assertIn("COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", completed.stdout)
 
     def test_real_run_evidence_template_is_machine_readable_and_safe(self):
@@ -115,6 +120,7 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("bingbu_prompt_director", template["model_evidence"])
         self.assertIn("asset_identity_cards", template)
         self.assertIn("reference_asset_chain", template)
+        self.assertIn("operator_acceptance_checklist", template)
         self.assertFalse(template["generated_images"][0]["fixture"])
         self.assertEqual(template["visual_reviews"][0]["reviewer_department"], "xingbu")
         self.assertGreaterEqual(len(template["visual_reviews"][0]["scores"]), 7)
@@ -134,6 +140,15 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
             reference["referenced_assets"][0]["approved_reference_image_ids"],
         )
         self.assertTrue(template["downstream_handoff_decision"]["handoff_allowed"])
+        acceptance = template["operator_acceptance_checklist"]
+        self.assertTrue(acceptance["story_locked"])
+        self.assertTrue(acceptance["asset_split_approved"])
+        self.assertTrue(acceptance["image_quality_approved"])
+        self.assertTrue(acceptance["prompt_package_approved"])
+        self.assertTrue(acceptance["word_canvas_approved"])
+        self.assertTrue(acceptance["downstream_handoff_approved"])
+        self.assertEqual(acceptance["unresolved_questions"], [])
+        self.assertEqual(acceptance["rejected_items"], [])
 
     def test_existing_real_manifest_can_pass_the_intake_gate(self):
         with tempfile.TemporaryDirectory() as tmp:

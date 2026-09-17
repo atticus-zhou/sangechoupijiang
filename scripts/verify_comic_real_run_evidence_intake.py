@@ -35,6 +35,7 @@ REQUIRED_MARKERS = [
     "asset_identity_cards",
     "reference_asset_chain",
     "prompt_strategy_lineage",
+    "operator_acceptance_checklist",
     "downstream_handoff_decision",
     "人物三视图",
     "人物表情表",
@@ -52,6 +53,7 @@ REQUIRED_MARKERS = [
     "python scripts/verify_release_readiness.py --format markdown",
     "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json",
     "证据导入模板",
+    "人工验收签字",
 ]
 
 EXPECTED_HUMAN_FLOW = [
@@ -82,6 +84,7 @@ TEMPLATE_REQUIRED_TOP_LEVEL = [
     "asset_identity_cards",
     "reference_asset_chain",
     "prompt_strategy_lineage",
+    "operator_acceptance_checklist",
     "delivery_files",
     "downstream_handoff_decision",
 ]
@@ -232,6 +235,39 @@ def _verify_template_contract() -> dict[str, Any]:
         if field not in lineage:
             errors.append(f"template prompt_strategy_lineage must include {field}")
 
+    acceptance = template.get("operator_acceptance_checklist") or {}
+    for field in (
+        "reviewer_role",
+        "reviewed_at",
+        "story_locked",
+        "asset_split_approved",
+        "image_quality_approved",
+        "prompt_package_approved",
+        "word_canvas_approved",
+        "downstream_handoff_approved",
+        "unresolved_questions",
+        "rejected_items",
+        "acceptance_note",
+    ):
+        if field not in acceptance:
+            errors.append(f"template operator_acceptance_checklist must include {field}")
+    for field in (
+        "story_locked",
+        "asset_split_approved",
+        "image_quality_approved",
+        "prompt_package_approved",
+        "word_canvas_approved",
+        "downstream_handoff_approved",
+    ):
+        if acceptance.get(field) is not True:
+            errors.append(f"template operator_acceptance_checklist.{field} must show the ready target state")
+    if not isinstance(acceptance.get("unresolved_questions"), list):
+        errors.append("template operator_acceptance_checklist.unresolved_questions must be a list")
+    if not isinstance(acceptance.get("rejected_items"), list):
+        errors.append("template operator_acceptance_checklist.rejected_items must be a list")
+    if not str(acceptance.get("acceptance_note") or "").strip():
+        errors.append("template operator_acceptance_checklist.acceptance_note must explain the human decision")
+
     delivery = template.get("delivery_files") or {}
     for field in ("word_canvas_path", "handoff_manifest_path", "trace_path", "production_acceptance_path"):
         if not delivery.get(field):
@@ -251,6 +287,17 @@ def _verify_template_contract() -> dict[str, Any]:
         "visual_review_count": len(reviews),
         "asset_identity_card_count": len(asset_cards),
         "reference_asset_chain_count": len(reference_chain),
+        "operator_acceptance_ready": bool(acceptance) and not any(
+            acceptance.get(field) is not True
+            for field in (
+                "story_locked",
+                "asset_split_approved",
+                "image_quality_approved",
+                "prompt_package_approved",
+                "word_canvas_approved",
+                "downstream_handoff_approved",
+            )
+        ),
         "forbidden_marker_count": len(must_not_include),
         "errors": errors,
     }
@@ -350,6 +397,7 @@ def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[s
         "asset_quality": all(marker in text for marker in ("人物三视图", "人物表情表", "干净白底", "广角图", "俯视图")),
         "prompt_quality": all(marker in text for marker in ("镜头目的", "参考链路", "摄影计划", "人物表演", "负面提示词")),
         "word_canvas": all(marker in text for marker in ("故事合同", "资产身份证", "图片联系表", "镜头卡", "提示词包")),
+        "operator_acceptance": all(marker in text for marker in ("人工验收签字", "故事锁定", "资产拆解已审核", "交给下游")),
         "recovery": not missing_recovery,
         "public_claim": all(marker in text for marker in ("production_quality_verified=true", "handoff_allowed=true")),
     }
@@ -427,6 +475,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Visual reviews: `{template.get('visual_review_count')}`",
         f"- Asset identity cards: `{template.get('asset_identity_card_count')}`",
         f"- Reference asset chains: `{template.get('reference_asset_chain_count')}`",
+        f"- Operator acceptance ready: `{template.get('operator_acceptance_ready')}`",
         f"- Forbidden markers: `{template.get('forbidden_marker_count')}`",
     ])
     image_summary = payload.get("image_quality_summary") or {}

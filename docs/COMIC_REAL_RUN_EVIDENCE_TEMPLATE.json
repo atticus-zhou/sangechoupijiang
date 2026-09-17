@@ -198,6 +198,19 @@
     "shot_prompt_count": 0,
     "missing_check_ids": []
   },
+  "operator_acceptance_checklist": {
+    "reviewer_role": "project_owner_or_operator",
+    "reviewed_at": "2026-01-01T00:00:00Z",
+    "story_locked": true,
+    "asset_split_approved": true,
+    "image_quality_approved": true,
+    "prompt_package_approved": true,
+    "word_canvas_approved": true,
+    "downstream_handoff_approved": true,
+    "unresolved_questions": [],
+    "rejected_items": [],
+    "acceptance_note": "人工已确认故事、资产、图片、提示词和 Word 画布可以进入下游生产；如果任何一项为 false，不能宣称 real_quality_verified。"
+  },
   "delivery_files": {
     "word_canvas_path": "output/workspaces/ws_xxx/delivery/project_word_canvas.docx",
     "handoff_manifest_path": "output/workspaces/ws_xxx/delivery/project_handoff_manifest.json",

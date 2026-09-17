@@ -37,6 +37,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - `visual_reviews` 必须由刑部或视觉质检阶段写入七维评分、通过状态、问题列表和恢复动作。
 - `image_quality_summary` 必须能让人立刻知道总图数、可用图数、废片/返工图数和失败图片 ID。
 - `prompt_strategy_lineage` 必须证明资产提示词、镜头提示词和 Word 画布来自同一版策略。
+- `operator_acceptance_checklist` 必须保留人工验收签字，说明故事、资产、图片、提示词、Word 画布和下游交接是否都已经被人确认。
 - `delivery_files` 必须指向 Word 画布、handoff manifest、trace 和 production acceptance card。
 - `downstream_handoff_decision` 必须明确 `handoff_allowed`，不能只说“已完成”。
 
@@ -51,6 +52,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - `asset_identity_cards`，人物、道具、场景都有稳定身份卡，后续所有图片和提示词只引用这些身份卡。
 - `reference_asset_chain`，每个镜头说明用了哪些人物图、道具图、场景图或首帧参考图。
 - `prompt_strategy_lineage`，证明基础资产提示词、镜头提示词和 Word 画布来自同一版提示词策略。
+- `operator_acceptance_checklist`，记录人工验收签字：故事锁定、资产拆解已审核、图片质量已通过、提示词包已通过、Word 画布已通过、可以交给下游。
 - `downstream_handoff_decision`，明确 `handoff_allowed` 是否为 true，以及不能交付时下一步该做什么。
 
 ## 图片资产验收
@@ -91,6 +93,17 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - 质检记录：刑部逐图意见、废片数量、返工指令。
 - 追溯附录：`handoff_manifest.json`、`trace.json`、production acceptance card 的关键字段摘要。
 
+## 人工验收签字
+
+真实项目不能只靠系统显示“完成”。在允许 `production_quality_verified=true` 之前，`operator_acceptance_checklist` 必须把人的判断写清楚：
+
+- 故事锁定：当前故事已经是用户要生产的版本，不能再被内阁或 Agent 随意改写。
+- 资产拆解已审核：人物、道具、场景都来自故事本身，没有“张卡”这类误判人物，也没有凭空冒出的现代道具或无关场景。
+- 图片质量已通过：人物和道具资产干净可复用，场景有广角图和俯视图，镜头参考图引用了正确资产。
+- 提示词包已通过：提示词不是固定模板堆词，而是带有镜头目的、参考链路、摄影计划、人物表演和连续性要求。
+- Word 画布已通过：用户能看懂哪张图、哪个资产、哪个镜头、哪段提示词如何对应。
+- 下游交接已通过：如果要交给 Libtv、小云雀或其他平台，必须明确可以交给下游；如果不能，`unresolved_questions` 和 `rejected_items` 必须写清楚。
+
 ## 失败恢复
 
 真实运行失败时，不能让用户重新开盲盒。恢复动作必须保留已经确认的人类意图，清掉坏证据，再从正确阶段继续。
@@ -118,6 +131,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 - `image_quality_summary.waste_or_rework_images=0`。
 - 刑部视觉质检显示所有基础资产和镜头参考图通过。
 - 兵部提示词质量为 ready，且没有固定模板式重复问题。
+- `operator_acceptance_checklist` 中故事、资产、图片、提示词、Word 画布和下游交接全部为通过，且没有未解决问题。
 - Word 画布、handoff manifest、trace bundle 和 production acceptance card 字段互相一致。
 - `downstream_handoff_decision.status=ready_for_downstream` 且 `handoff_allowed=true`。
 - `python scripts/verify_comic_real_run_evidence_intake.py --format markdown`、`python scripts/verify_comic_real_production_claim.py --format markdown`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_release_readiness.py --format markdown` 全部通过。
