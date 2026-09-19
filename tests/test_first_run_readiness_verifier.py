@@ -183,6 +183,7 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
             "public_deploy_real_mode",
             "incomplete_handoff_download",
             "github_showcase_workflow_email_failed",
+            "release_readiness_in_progress",
             "vercel_auth_missing_or_old_bundle",
         ]:
             self.assertIn(failure_id, failures)
@@ -202,6 +203,11 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("atticus-zhou/me", failures["github_showcase_workflow_email_failed"]["recovery_action"])
         self.assertIn("npm run check:showcase-ci", failures["github_showcase_workflow_email_failed"]["check_command"])
         self.assertIn("sangechoupijiang", failures["github_showcase_workflow_email_failed"]["recovery_action"])
+        self.assertFalse(failures["release_readiness_in_progress"]["requires_api_key"])
+        self.assertIn("verify_github_release_evidence.py", failures["release_readiness_in_progress"]["check_command"])
+        self.assertIn("in_progress", failures["release_readiness_in_progress"]["symptom"])
+        self.assertIn("no-key-release-evidence", failures["release_readiness_in_progress"]["symptom"])
+        self.assertIn("不要把 `in_progress` 当失败", failures["release_readiness_in_progress"]["recovery_action"])
         self.assertFalse(failures["vercel_auth_missing_or_old_bundle"]["requires_api_key"])
         self.assertIn("npm run doctor:deploy", failures["vercel_auth_missing_or_old_bundle"]["check_command"])
         self.assertIn("npm run check:online", failures["vercel_auth_missing_or_old_bundle"]["recovery_action"])
@@ -277,6 +283,9 @@ class FirstRunReadinessVerifierTests(unittest.TestCase):
         self.assertIn("github_showcase_workflow_email_failed", result.stdout)
         self.assertIn("Three Cobblers showcase workflow run failed", result.stdout)
         self.assertIn("npm run check:showcase-ci", result.stdout)
+        self.assertIn("release_readiness_in_progress", result.stdout)
+        self.assertIn("no-key-release-evidence", result.stdout)
+        self.assertIn("verify_github_release_evidence.py", result.stdout)
         self.assertIn("vercel_auth_missing_or_old_bundle", result.stdout)
         self.assertIn("npm run check:online", result.stdout)
 

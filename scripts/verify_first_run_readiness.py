@@ -384,6 +384,14 @@ def _common_first_run_failures() -> list[dict[str, Any]]:
             "requires_api_key": False,
         },
         {
+            "id": "release_readiness_in_progress",
+            "symptom": "`python scripts/verify_github_release_evidence.py --format markdown` 显示最新 Release readiness 是 `in_progress`，还没有 `no-key-release-evidence` artifact。",
+            "likely_cause": "远端 GitHub Actions 正在跑最新提交，artifact 只有在 workflow 结束并成功后才会出现；这不是本地 no-key 包失败，也不是 Vercel 线上 404。",
+            "check_command": "python scripts/verify_github_release_evidence.py --format markdown",
+            "recovery_action": "等待 1-2 分钟后重跑同一条命令；如果仍是 `in_progress`，打开输出里的 run URL 看排队或执行进度。不要把 `in_progress` 当失败，也不要因此回滚产品代码。",
+            "requires_api_key": False,
+        },
+        {
             "id": "vercel_auth_missing_or_old_bundle",
             "symptom": "个人网站本地检查通过，但 `https://www.atticus.asia/three-stooges/`、`/build-info.json` 或 GitHub onboarding packet 仍然 404；或者 Vercel/GitHub 一直弹账号选择窗口。",
             "likely_cause": "个人网站仓库已经准备好，但 Vercel 没有本地部署授权、控制台没有重新部署，或线上仍在服务旧 bundle。这不是产品本体运行失败。",

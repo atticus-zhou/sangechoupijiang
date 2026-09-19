@@ -105,6 +105,8 @@ python scripts/verify_portfolio_showcase_sync.py --format markdown
 
 如果邮件来自 `Public showcase pages`，它是 GitHub Pages 备用公开入口，不是本地真实产品服务。先核对邮件里的提交号是不是当前 `main`，再看 `.github/workflows/pages-showcase.yml` 是否仍然只有 `workflow_dispatch`。如果它已经只允许手动触发，旧提交上的失败邮件可以归档；不要因为旧 run 失败就回滚产品代码。新版本 workflow 会先构建、验证和扫描 no-key 静态包；如果只提示 `GitHub Pages not enabled`，说明 Pages 设置没开，公开 URL 还不能分享，但这不是产品构建失败。只有你真的想启用 GitHub Pages 备用入口时，才需要去 Settings -> Pages 把 Source 设为 GitHub Actions，然后手动运行这个 workflow。
 
+如果 `python scripts/verify_github_release_evidence.py --format markdown` 显示 `Release readiness` 还是 `in_progress`，也不要把它当失败。它只说明 GitHub Actions 还在跑，`no-key-release-evidence` artifact 要等 workflow 成功结束后才会出现。等 1-2 分钟重跑同一条命令；如果一直不结束，再打开命令输出里的 run URL 看队列或失败步骤。
+
 线上地址是否真的可用，必须用实际 URL 检查。对于作者当前个人网站，权威检查是：
 
 ```powershell
