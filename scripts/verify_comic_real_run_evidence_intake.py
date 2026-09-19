@@ -37,6 +37,7 @@ REQUIRED_MARKERS = [
     "prompt_strategy_lineage",
     "prompt_director_contract",
     "operator_acceptance_checklist",
+    "recovery_protocol",
     "downstream_handoff_decision",
     "人物三视图",
     "人物表情表",
@@ -54,6 +55,9 @@ REQUIRED_MARKERS = [
     "continuity_constraints",
     "Word 制片画布",
     "regenerate_images",
+    "recovery_protocol",
+    "return_to_stage",
+    "operator_next_step",
     "python scripts/verify_comic_real_production_claim.py --format markdown",
     "python scripts/verify_comic_v2_production_benchmark.py --format markdown",
     "python scripts/verify_comic_v2_downstream_handoff.py --format markdown",
@@ -93,6 +97,7 @@ TEMPLATE_REQUIRED_TOP_LEVEL = [
     "prompt_strategy_lineage",
     "prompt_director_contract",
     "operator_acceptance_checklist",
+    "recovery_protocol",
     "delivery_files",
     "downstream_handoff_decision",
 ]
@@ -339,6 +344,53 @@ def _verify_template_contract() -> dict[str, Any]:
     if not str(acceptance.get("acceptance_note") or "").strip():
         errors.append("template operator_acceptance_checklist.acceptance_note must explain the human decision")
 
+    recovery = template.get("recovery_protocol") or {}
+    if recovery.get("status") != "ready":
+        errors.append("template recovery_protocol.status must show the ready target state")
+    if recovery.get("default_recovery_action") != "regenerate_images":
+        errors.append("template recovery_protocol.default_recovery_action must be regenerate_images")
+    if recovery.get("retry_endpoint") != "/api/workspaces/{workspace_id}/comic/v2/quality/recover":
+        errors.append("template recovery_protocol.retry_endpoint must expose the quality recovery endpoint")
+    if "重新开盲盒" not in str(recovery.get("scope_policy") or ""):
+        errors.append("template recovery_protocol.scope_policy must preserve the no-new-blind-box recovery rule")
+    stage_routes = recovery.get("stage_routes") or []
+    expected_failure_types = {
+        "image_quality_failed": "image_generation",
+        "asset_split_failed": "asset_review",
+        "prompt_package_failed": "prompt_review",
+        "word_canvas_missing_or_stale": "delivery_build",
+    }
+    seen_failure_types: set[str] = set()
+    for index, route in enumerate(stage_routes):
+        failure_type = str(route.get("failure_type") or "")
+        seen_failure_types.add(failure_type)
+        expected_stage = expected_failure_types.get(failure_type)
+        if not expected_stage:
+            errors.append(f"template recovery_protocol.stage_routes[{index}] has unknown failure_type")
+        elif route.get("return_to_stage") != expected_stage:
+            errors.append(
+                f"template recovery_protocol.stage_routes[{index}] return_to_stage must be {expected_stage}"
+            )
+        for field in ("preserve", "clear", "reviewer_department", "operator_next_step"):
+            if not route.get(field):
+                errors.append(f"template recovery_protocol.stage_routes[{index}] must include {field}")
+        if not isinstance(route.get("preserve"), list):
+            errors.append(f"template recovery_protocol.stage_routes[{index}].preserve must be a list")
+        if not isinstance(route.get("clear"), list):
+            errors.append(f"template recovery_protocol.stage_routes[{index}].clear must be a list")
+        if failure_type == "image_quality_failed":
+            if route.get("target_image_ids_source") != "image_quality_summary.failed_image_ids":
+                errors.append("template image-quality recovery must scope retries to image_quality_summary.failed_image_ids")
+            if "failed_generated_images" not in (route.get("clear") or []):
+                errors.append("template image-quality recovery must clear failed_generated_images")
+            if "story" not in (route.get("preserve") or []):
+                errors.append("template image-quality recovery must preserve story")
+    missing_routes = sorted(set(expected_failure_types) - seen_failure_types)
+    if missing_routes:
+        errors.append("template recovery_protocol missing routes: " + ", ".join(missing_routes))
+    if not str(recovery.get("acceptance") or "").strip():
+        errors.append("template recovery_protocol.acceptance must explain post-recovery verification")
+
     delivery = template.get("delivery_files") or {}
     for field in ("word_canvas_path", "handoff_manifest_path", "trace_path", "production_acceptance_path"):
         if not delivery.get(field):
@@ -360,6 +412,8 @@ def _verify_template_contract() -> dict[str, Any]:
         "reference_asset_chain_count": len(reference_chain),
         "director_prompt_record_count": len((template.get("prompt_director_contract") or {}).get("shot_prompt_records") or []),
         "director_contract_ready": (template.get("prompt_director_contract") or {}).get("status") == "ready",
+        "recovery_protocol_ready": (template.get("recovery_protocol") or {}).get("status") == "ready",
+        "recovery_route_count": len((template.get("recovery_protocol") or {}).get("stage_routes") or []),
         "operator_acceptance_ready": bool(acceptance) and not any(
             acceptance.get(field) is not True
             for field in (
@@ -472,6 +526,7 @@ def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[s
         "prompt_director_contract": all(marker in text for marker in ("prompt_director_contract", "shot_purpose", "reference_image_chain", "camera_plan", "performance_direction", "continuity_constraints")),
         "word_canvas": all(marker in text for marker in ("故事合同", "资产身份证", "图片联系表", "镜头卡", "提示词包")),
         "operator_acceptance": all(marker in text for marker in ("人工验收签字", "故事锁定", "资产拆解已审核", "交给下游")),
+        "recovery_protocol": all(marker in text for marker in ("recovery_protocol", "return_to_stage", "preserve", "clear", "operator_next_step")),
         "recovery": not missing_recovery,
         "public_claim": all(marker in text for marker in ("production_quality_verified=true", "handoff_allowed=true")),
     }
@@ -551,6 +606,8 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"- Reference asset chains: `{template.get('reference_asset_chain_count')}`",
         f"- Director prompt records: `{template.get('director_prompt_record_count')}`",
         f"- Director contract ready: `{template.get('director_contract_ready')}`",
+        f"- Recovery protocol ready: `{template.get('recovery_protocol_ready')}`",
+        f"- Recovery routes: `{template.get('recovery_route_count')}`",
         f"- Operator acceptance ready: `{template.get('operator_acceptance_ready')}`",
         f"- Forbidden markers: `{template.get('forbidden_marker_count')}`",
     ])

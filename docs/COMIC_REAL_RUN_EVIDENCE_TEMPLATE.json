@@ -258,6 +258,87 @@
     "rejected_items": [],
     "acceptance_note": "人工已确认故事、资产、图片、提示词和 Word 画布可以进入下游生产；如果任何一项为 false，不能宣称 real_quality_verified。"
   },
+  "recovery_protocol": {
+    "status": "ready",
+    "scope_policy": "只返工失败图片、被打回的资产或缺失的交付文件；保留已确认故事和已审核通过的资产身份卡，不能让用户重新开盲盒。",
+    "default_recovery_action": "regenerate_images",
+    "retry_endpoint": "/api/workspaces/{workspace_id}/comic/v2/quality/recover",
+    "stage_routes": [
+      {
+        "failure_type": "image_quality_failed",
+        "return_to_stage": "image_generation",
+        "preserve": [
+          "story",
+          "asset_identity_cards",
+          "prompt_strategy_lineage",
+          "operator_acceptance_checklist.story_locked"
+        ],
+        "clear": [
+          "failed_generated_images",
+          "failed_visual_reviews",
+          "stale_word_canvas",
+          "stale_handoff_manifest"
+        ],
+        "target_image_ids_source": "image_quality_summary.failed_image_ids",
+        "reviewer_department": "xingbu",
+        "operator_next_step": "重新生成失败图片，重跑刑部视觉质检，再刷新 Word 画布和 trace。"
+      },
+      {
+        "failure_type": "asset_split_failed",
+        "return_to_stage": "asset_review",
+        "preserve": [
+          "story"
+        ],
+        "clear": [
+          "asset_identity_cards",
+          "reference_asset_chain",
+          "prompt_strategy_lineage",
+          "generated_images"
+        ],
+        "target_image_ids_source": "",
+        "reviewer_department": "menxia",
+        "operator_next_step": "退回中书省和门下省，只重做人物、道具、场景拆解，不改已确认故事。"
+      },
+      {
+        "failure_type": "prompt_package_failed",
+        "return_to_stage": "prompt_review",
+        "preserve": [
+          "story",
+          "asset_identity_cards",
+          "generated_images",
+          "visual_reviews"
+        ],
+        "clear": [
+          "prompt_director_contract",
+          "stale_word_canvas",
+          "stale_handoff_manifest"
+        ],
+        "target_image_ids_source": "",
+        "reviewer_department": "xingbu",
+        "operator_next_step": "退回兵部重写导演式镜头提示词，再由刑部复核模板重复、参考链路和负面提示词。"
+      },
+      {
+        "failure_type": "word_canvas_missing_or_stale",
+        "return_to_stage": "delivery_build",
+        "preserve": [
+          "story",
+          "asset_identity_cards",
+          "generated_images",
+          "visual_reviews",
+          "prompt_director_contract"
+        ],
+        "clear": [
+          "stale_word_canvas",
+          "stale_trace",
+          "stale_production_acceptance"
+        ],
+        "target_image_ids_source": "",
+        "reviewer_department": "libu",
+        "operator_next_step": "退回礼部，只重建 Word、manifest、trace 和 production acceptance card。"
+      }
+    ],
+    "acceptance": "恢复后必须重新运行真实运行证据收口、生产质量基准、真实声明和下游交接验证；没有通过前不能恢复 real_quality_verified。"
+  },
   "delivery_files": {
     "word_canvas_path": "output/workspaces/ws_xxx/delivery/project_word_canvas.docx",
     "handoff_manifest_path": "output/workspaces/ws_xxx/delivery/project_handoff_manifest.json",

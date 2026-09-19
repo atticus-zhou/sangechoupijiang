@@ -61,6 +61,8 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertGreaterEqual(payload["template_contract"]["reference_asset_chain_count"], 1)
         self.assertGreaterEqual(payload["template_contract"]["director_prompt_record_count"], 1)
         self.assertTrue(payload["template_contract"]["director_contract_ready"])
+        self.assertTrue(payload["template_contract"]["recovery_protocol_ready"])
+        self.assertEqual(payload["template_contract"]["recovery_route_count"], 4)
         self.assertTrue(payload["template_contract"]["operator_acceptance_ready"])
         self.assertEqual(payload["benchmark_claim"], "demo_structure_verified")
         self.assertFalse(payload["benchmark_real_quality_verified"])
@@ -81,6 +83,9 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("template_repetition_score", text)
         self.assertIn("哪张图服务哪个镜头，哪个镜头使用哪些资产", text)
         self.assertIn("人工验收签字", text)
+        self.assertIn("recovery_protocol", text)
+        self.assertIn("return_to_stage", text)
+        self.assertIn("operator_next_step", text)
         self.assertIn("故事锁定", text)
         self.assertIn("资产拆解已审核", text)
         self.assertIn("不能让用户重新开盲盒", text)
@@ -109,6 +114,8 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("Evidence Template", completed.stdout)
         self.assertIn("Operator acceptance ready: `True`", completed.stdout)
         self.assertIn("Director contract ready: `True`", completed.stdout)
+        self.assertIn("Recovery protocol ready: `True`", completed.stdout)
+        self.assertIn("Recovery routes: `4`", completed.stdout)
         self.assertIn("COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json", completed.stdout)
 
     def test_real_run_evidence_template_is_machine_readable_and_safe(self):
@@ -127,6 +134,7 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("reference_asset_chain", template)
         self.assertIn("prompt_director_contract", template)
         self.assertIn("operator_acceptance_checklist", template)
+        self.assertIn("recovery_protocol", template)
         self.assertFalse(template["generated_images"][0]["fixture"])
         self.assertEqual(template["visual_reviews"][0]["reviewer_department"], "xingbu")
         self.assertGreaterEqual(len(template["visual_reviews"][0]["scores"]), 7)
@@ -170,6 +178,28 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertTrue(acceptance["downstream_handoff_approved"])
         self.assertEqual(acceptance["unresolved_questions"], [])
         self.assertEqual(acceptance["rejected_items"], [])
+        recovery = template["recovery_protocol"]
+        self.assertEqual(recovery["status"], "ready")
+        self.assertEqual(recovery["default_recovery_action"], "regenerate_images")
+        self.assertEqual(recovery["retry_endpoint"], "/api/workspaces/{workspace_id}/comic/v2/quality/recover")
+        self.assertIn("重新开盲盒", recovery["scope_policy"])
+        routes = {route["failure_type"]: route for route in recovery["stage_routes"]}
+        self.assertEqual(
+            set(routes),
+            {
+                "image_quality_failed",
+                "asset_split_failed",
+                "prompt_package_failed",
+                "word_canvas_missing_or_stale",
+            },
+        )
+        self.assertEqual(routes["image_quality_failed"]["return_to_stage"], "image_generation")
+        self.assertEqual(routes["image_quality_failed"]["target_image_ids_source"], "image_quality_summary.failed_image_ids")
+        self.assertIn("story", routes["image_quality_failed"]["preserve"])
+        self.assertIn("failed_generated_images", routes["image_quality_failed"]["clear"])
+        self.assertEqual(routes["prompt_package_failed"]["reviewer_department"], "xingbu")
+        self.assertEqual(routes["word_canvas_missing_or_stale"]["return_to_stage"], "delivery_build")
+        self.assertIn("Word", routes["word_canvas_missing_or_stale"]["operator_next_step"])
 
     def test_existing_real_manifest_can_pass_the_intake_gate(self):
         with tempfile.TemporaryDirectory() as tmp:

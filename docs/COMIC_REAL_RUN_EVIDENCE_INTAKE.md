@@ -39,6 +39,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - `prompt_strategy_lineage` 必须证明资产提示词、镜头提示词和 Word 画布来自同一版策略。
 - `prompt_director_contract` 必须证明镜头提示词不是固定模板堆词，而是由兵部生成、经刑部复核的导演式提示词合同。
 - `operator_acceptance_checklist` 必须保留人工验收签字，说明故事、资产、图片、提示词、Word 画布和下游交接是否都已经被人确认。
+- `recovery_protocol` 必须把失败恢复写成可审计字段，说明失败类型、回退阶段、保留内容、清理内容、返工范围和复核部门。
 - `delivery_files` 必须指向 Word 画布、handoff manifest、trace 和 production acceptance card。
 - `downstream_handoff_decision` 必须明确 `handoff_allowed`，不能只说“已完成”。
 
@@ -55,6 +56,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 - `prompt_strategy_lineage`，证明基础资产提示词、镜头提示词和 Word 画布来自同一版提示词策略。
 - `prompt_director_contract`，记录每个镜头提示词的 `shot_purpose`、`reference_image_chain`、`camera_plan`、`performance_direction`、`art_lighting`、`continuity_constraints` 和 `negative_prompt`，并说明负面提示词只能放在最后，用“禁止...”表达。
 - `operator_acceptance_checklist`，记录人工验收签字：故事锁定、资产拆解已审核、图片质量已通过、提示词包已通过、Word 画布已通过、可以交给下游。
+- `recovery_protocol`，记录失败恢复协议：图片失败走 `regenerate_images`，资产拆解失败退回中书省和门下省，提示词失败退回兵部，Word 画布缺失退回礼部；每条都要写清 preserve、clear 和 operator_next_step。
 - `downstream_handoff_decision`，明确 `handoff_allowed` 是否为 true，以及不能交付时下一步该做什么。
 
 ## 图片资产验收
@@ -112,6 +114,8 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 
 真实运行失败时，不能让用户重新开盲盒。恢复动作必须保留已经确认的人类意图，清掉坏证据，再从正确阶段继续。
 
+证据文件里必须同步写入 `recovery_protocol`。它不是给用户看的安慰文案，而是给系统和审核人看的恢复合同：失败类型是什么、应该回到哪个阶段、哪些故事/资产/提示词必须保留、哪些图片/质检/Word 画布必须清掉、只返工哪些图片，以及恢复后由哪个部门复核。没有这段结构化协议，历史页和下游交接只能看到“失败了”，不能知道如何不重开盲盒地继续。
+
 - 如果图片质量失败：使用 `regenerate_images`，保留故事、资产拆解、提示词策略和旧 Word 归档，清掉 fixture 或失败图片证据，回到工部重新生成，再交给刑部复审。
 - 如果资产拆解失败：退回中书省和门下省，只重做人物、道具、场景拆解，不改已确认故事。
 - 如果提示词失败：退回兵部，保留已通过的基础资产图和刑部质检结果，重写导演式镜头提示词。
@@ -137,6 +141,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 - 兵部提示词质量为 ready，且没有固定模板式重复问题。
 - `prompt_director_contract.status=ready`，每条镜头提示词都有剧情目的、参考图链路、摄影计划、人物表演、美术光线、连续性约束和末尾负面提示词。
 - `operator_acceptance_checklist` 中故事、资产、图片、提示词、Word 画布和下游交接全部为通过，且没有未解决问题。
+- `recovery_protocol.status=ready`，且四类恢复路线都明确 preserve、clear、return_to_stage 和 reviewer_department。
 - Word 画布、handoff manifest、trace bundle 和 production acceptance card 字段互相一致。
 - `downstream_handoff_decision.status=ready_for_downstream` 且 `handoff_allowed=true`。
 - `python scripts/verify_comic_real_run_evidence_intake.py --format markdown`、`python scripts/verify_comic_real_production_claim.py --format markdown`、`python scripts/verify_comic_v2_production_benchmark.py --format markdown`、`python scripts/verify_comic_v2_downstream_handoff.py --format markdown` 和 `python scripts/verify_release_readiness.py --format markdown` 全部通过。
