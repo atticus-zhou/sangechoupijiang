@@ -45,6 +45,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_github_release_evidence.py", "--format", "json", "--contract-only"],
     },
     {
+        "id": "public_showcase_workflow_contract",
+        "title": "Public showcase workflow notification contract",
+        "command": ["scripts/diagnose_showcase_workflow_email.py", "--format", "json", "--contract-only"],
+    },
+    {
         "id": "public_docs_readability",
         "title": "Public docs readability",
         "command": ["scripts/verify_public_docs_readability.py", "--format", "json"],
@@ -537,6 +542,15 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"checks={len(parsed.get('checks') or [])}; "
                 f"artifact={parsed.get('artifact_name')}; "
                 f"failures={len(parsed.get('failures') or [])}; "
+                f"mode={parsed.get('mode')}"
+            )
+        if check_id == "public_showcase_workflow_contract":
+            contract = parsed.get("workflow_contract") or {}
+            return (
+                f"diagnosis={parsed.get('diagnosis')}; "
+                f"manual_only={contract.get('manual_only')}; "
+                f"push_trigger={contract.get('has_push_trigger')}; "
+                f"workflow={parsed.get('workflow_name')}; "
                 f"mode={parsed.get('mode')}"
             )
         if check_id == "public_docs_readability":

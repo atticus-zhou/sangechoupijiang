@@ -33,6 +33,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "model_guidance",
                 "development_checklist",
                 "github_release_contract",
+                "public_showcase_workflow_contract",
                 "public_docs_readability",
                 "runtime_health",
                 "first_run_guide",
@@ -68,7 +69,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
             self.assertTrue(check["command"].startswith("python scripts/"))
         first_run = next(item for item in payload["checks"] if item["id"] == "first_run")
         self.assertIn("deployment_modes=3", first_run["summary"])
-        self.assertIn("github_download=ready:16/16", first_run["summary"])
+        self.assertIn("github_download=ready:18/18", first_run["summary"])
         self.assertIn("private_boundaries=10", first_run["summary"])
         model_guidance = next(item for item in payload["checks"] if item["id"] == "model_guidance")
         self.assertIn("offices=2", model_guidance["summary"])
@@ -79,6 +80,10 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         github_contract = next(item for item in payload["checks"] if item["id"] == "github_release_contract")
         self.assertIn("artifact=no-key-release-evidence", github_contract["summary"])
         self.assertIn("failures=0", github_contract["summary"])
+        showcase_workflow = next(item for item in payload["checks"] if item["id"] == "public_showcase_workflow_contract")
+        self.assertIn("diagnosis=current_contract_safe", showcase_workflow["summary"])
+        self.assertIn("manual_only=True", showcase_workflow["summary"])
+        self.assertIn("push_trigger=False", showcase_workflow["summary"])
         runtime_health = next(item for item in payload["checks"] if item["id"] == "runtime_health")
         self.assertIn("endpoint=/health", runtime_health["summary"])
         self.assertIn("credentials=False", runtime_health["summary"])
@@ -164,7 +169,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("doc=docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md", comic_intake["summary"])
         self.assertIn("flow=6", comic_intake["summary"])
         self.assertIn("recovery=4", comic_intake["summary"])
-        self.assertIn("sections=6/6", comic_intake["summary"])
+        self.assertIn("sections=9/9", comic_intake["summary"])
         self.assertIn("claim=demo_structure_only", comic_intake["summary"])
         self.assertIn("real_quality=False", comic_intake["summary"])
         self.assertIn("downstream=structure_demo_only", comic_intake["summary"])
@@ -236,7 +241,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
 
         self.assertIn("Release Readiness Audit", completed.stdout)
         self.assertIn("Safe for public release", completed.stdout)
-        self.assertIn("github_download=ready:16/16", completed.stdout)
+        self.assertIn("github_download=ready:18/18", completed.stdout)
         self.assertIn("deployment_modes=3", completed.stdout)
         self.assertIn("private_boundaries=10", completed.stdout)
         self.assertIn("Productization objective coverage", completed.stdout)
@@ -246,6 +251,9 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("skip_release=True", completed.stdout)
         self.assertIn("GitHub release evidence contract", completed.stdout)
         self.assertIn("artifact=no-key-release-evidence", completed.stdout)
+        self.assertIn("Public showcase workflow notification contract", completed.stdout)
+        self.assertIn("manual_only=True", completed.stdout)
+        self.assertIn("push_trigger=False", completed.stdout)
         self.assertIn("Public docs readability", completed.stdout)
         self.assertIn("Backend-free static showcase export", completed.stdout)
         self.assertIn("Portfolio showcase copy sync", completed.stdout)
