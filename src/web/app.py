@@ -3625,6 +3625,17 @@ def _research_demo_chart_suggestions(results: list[dict]) -> list[dict]:
     return suggestions
 
 
+COMIC_REAL_RUN_EVIDENCE_TEMPLATE_URI = "/downloads/comic-production/comic-real-run-evidence-template.json"
+COMIC_REAL_RUN_AUDIT_COMMAND = "python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown"
+COMIC_REAL_RUN_REQUIRED_ASSET_TYPES = ["character", "prop", "scene"]
+COMIC_REAL_RUN_REQUIRED_IMAGE_ROLES = [
+    "clean_character_identity_three_view",
+    "clean_prop_turnaround_reference",
+    "scene_wide_establishing",
+    "scene_top_down_layout",
+]
+
+
 @app.get("/api/workspaces")
 async def list_workspace_api(limit: int = 50, office_id: str = ""):
     """List project workspaces."""
@@ -3678,6 +3689,16 @@ async def get_latest_comic_real_run_audit_api():
             "recommended_user_action": decision["operator_next_step"],
             "latest_incomplete_workspace": latest_incomplete,
             "download_actions": [],
+            "evidence_template_uri": COMIC_REAL_RUN_EVIDENCE_TEMPLATE_URI,
+            "audit_command": COMIC_REAL_RUN_AUDIT_COMMAND,
+            "required_asset_types": COMIC_REAL_RUN_REQUIRED_ASSET_TYPES,
+            "required_image_roles": COMIC_REAL_RUN_REQUIRED_IMAGE_ROLES,
+            "handoff_evidence_checklist": [
+                "人物、道具、场景都有身份卡和人工审核状态。",
+                "人物与道具基础资产是干净背景，场景包含广角图和俯视图。",
+                "每张进入交付的图片都有模型、提示词、质检结论和引用关系。",
+                "Word 制片画布、handoff manifest、trace.json 指向同一批资产。",
+            ],
             "why": "系统会跳过空 JSON、测试残留，以及缺少图片、资产、镜头或 Word 画布的半成品 manifest，避免把半成品误判为最新交付。",
             "user_next_actions": [
                 "在 AI 漫剧制片办公室完成故事确认。",
@@ -3688,6 +3709,7 @@ async def get_latest_comic_real_run_audit_api():
             "developer_next_actions": [
                 "如需审计指定旧项目，使用 --manifest 指向具体 *_handoff_manifest.json。",
                 "如页面显示已完成但本卡片仍无完整产物，优先检查 delivery/build 是否真的写入 Word 画布和 manifest。",
+                f"真实模型运行结束后，可用 `{COMIC_REAL_RUN_AUDIT_COMMAND}` 做交付门禁。",
             ],
             "safe_public_claim": "当前不能宣称真实画质或下游生产质量已验证。",
         }
@@ -3805,6 +3827,16 @@ async def get_latest_comic_real_run_audit_api():
         "cannot_handoff_reasons": cannot_handoff_reasons,
         "recommended_user_action": recommended_user_action,
         "download_actions": download_actions,
+        "evidence_template_uri": COMIC_REAL_RUN_EVIDENCE_TEMPLATE_URI,
+        "audit_command": COMIC_REAL_RUN_AUDIT_COMMAND,
+        "required_asset_types": COMIC_REAL_RUN_REQUIRED_ASSET_TYPES,
+        "required_image_roles": COMIC_REAL_RUN_REQUIRED_IMAGE_ROLES,
+        "handoff_evidence_checklist": [
+            "人物、道具、场景都有身份卡和人工审核状态。",
+            "人物与道具基础资产是干净背景，场景包含广角图和俯视图。",
+            "每张进入交付的图片都有模型、提示词、质检结论和引用关系。",
+            "Word 制片画布、handoff manifest、trace.json 指向同一批资产。",
+        ],
         "real_quality_promotion_ready": bool(payload.get("real_quality_promotion_ready")),
         "visual_evidence_level": payload.get("visual_evidence_level"),
         "image_summary": {

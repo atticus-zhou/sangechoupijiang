@@ -1876,6 +1876,11 @@ function renderLatestComicRealRunAudit(audit) {
         ? audit.cannot_handoff_reasons.slice(0, 5)
         : (Array.isArray(audit.missing_checks) ? audit.missing_checks.slice(0, 5) : []);
     const nextActions = Array.isArray(audit.user_next_actions) ? audit.user_next_actions.slice(0, 5) : [];
+    const evidenceChecklist = Array.isArray(audit.handoff_evidence_checklist)
+        ? audit.handoff_evidence_checklist.slice(0, 5)
+        : [];
+    const requiredAssetTypes = Array.isArray(audit.required_asset_types) ? audit.required_asset_types : [];
+    const requiredImageRoles = Array.isArray(audit.required_image_roles) ? audit.required_image_roles : [];
     const downloads = Array.isArray(audit.download_actions) && audit.download_actions.length
         ? audit.download_actions
         : [
@@ -1947,9 +1952,24 @@ function renderLatestComicRealRunAudit(audit) {
                     ${nextActions.map(item => `<span>${escapeHtml(item)}</span>`).join('')}
                 </div>
             ` : ''}
-            ${downloads.length ? `
+            ${evidenceChecklist.length ? `
+                <div class="latest-real-run-audit-list">
+                    <b>交付证据</b>
+                    ${evidenceChecklist.map(item => `<span>${escapeHtml(item)}</span>`).join('')}
+                </div>
+            ` : ''}
+            ${requiredAssetTypes.length || requiredImageRoles.length ? `
+                <div class="latest-real-run-audit-list">
+                    <b>审计标准</b>
+                    ${requiredAssetTypes.length ? `<span>资产类型：${requiredAssetTypes.map(escapeHtml).join(' / ')}</span>` : ''}
+                    ${requiredImageRoles.length ? `<span>必备图片：${requiredImageRoles.map(escapeHtml).join(' / ')}</span>` : ''}
+                    ${audit.audit_command ? `<span>本地审计：${escapeHtml(audit.audit_command)}</span>` : ''}
+                </div>
+            ` : ''}
+            ${downloads.length || audit.evidence_template_uri ? `
                 <div class="latest-real-run-audit-actions">
                     ${downloads.map(item => `<a class="ghost btn-sm" href="${escapeHtml(item.uri)}" target="_blank" rel="noreferrer" title="${escapeHtml(item.why || '')}">${escapeHtml(item.label)}</a>`).join('')}
+                    ${audit.evidence_template_uri ? `<a class="ghost btn-sm" href="${escapeHtml(audit.evidence_template_uri)}" target="_blank" rel="noreferrer" title="真实模型运行后用于整理证据的模板">下载证据模板</a>` : ''}
                 </div>
             ` : ''}
         </section>

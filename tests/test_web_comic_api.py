@@ -96,6 +96,15 @@ class WebComicApiTests(unittest.TestCase):
         self.assertTrue(payload["audited_manifest_uri"].startswith(f"/api/workspaces/{workspace_id}/files/delivery/"))
         self.assertNotIn("E:\\", payload["audited_manifest"])
         self.assertIn("下游", payload["human_message"])
+        self.assertEqual(payload["evidence_template_uri"], "/downloads/comic-production/comic-real-run-evidence-template.json")
+        self.assertEqual(
+            payload["audit_command"],
+            "python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown",
+        )
+        self.assertEqual(payload["required_asset_types"], ["character", "prop", "scene"])
+        self.assertIn("clean_character_identity_three_view", payload["required_image_roles"])
+        self.assertIn("scene_top_down_layout", payload["required_image_roles"])
+        self.assertTrue(payload["handoff_evidence_checklist"])
 
     def test_latest_real_run_audit_points_to_recent_incomplete_workspace(self):
         workspace_id = f"ws_incomplete_{str(uuid.uuid4())[:8]}"
@@ -154,6 +163,11 @@ class WebComicApiTests(unittest.TestCase):
         self.assertIn("资产拆解包", incomplete["current_object"])
         self.assertIn("审核资产拆解包", payload["recommended_user_action"])
         self.assertEqual(payload["download_actions"], [])
+        self.assertEqual(payload["evidence_template_uri"], "/downloads/comic-production/comic-real-run-evidence-template.json")
+        self.assertIn("--latest", payload["audit_command"])
+        self.assertIn("prop", payload["required_asset_types"])
+        self.assertIn("clean_prop_turnaround_reference", payload["required_image_roles"])
+        self.assertTrue(payload["handoff_evidence_checklist"])
 
     def test_handoff_lineage_summary_preserves_handoff_and_acceptance_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
