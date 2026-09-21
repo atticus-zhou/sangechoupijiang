@@ -145,6 +145,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_research_office_readiness.py", "--format", "json"],
     },
     {
+        "id": "research_evidence_intake",
+        "title": "Research evidence intake contract",
+        "command": ["scripts/verify_research_evidence_intake.py", "--format", "json"],
+    },
+    {
         "id": "office_governance",
         "title": "Office extension governance",
         "command": ["scripts/verify_office_extension_governance.py", "--format", "json"],
@@ -466,6 +471,16 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"claim={demo.get('claim_level')}; "
                 f"full_auto={demo.get('can_claim_full_automation')}; "
                 f"upgrade_checklist={demo.get('claim_upgrade_checklist_count')}"
+            )
+        if check_id == "research_evidence_intake":
+            return (
+                f"sources={parsed.get('source_count')}; "
+                f"screenshots={parsed.get('screenshot_count')}; "
+                f"claims={parsed.get('claim_count')}; "
+                f"gaps={parsed.get('gap_card_count')}; "
+                f"staged={parsed.get('operator_staged_approved')}; "
+                f"final={parsed.get('operator_final_approved')}; "
+                f"ready_final={parsed.get('summary_ready_for_final')}"
             )
         if check_id == "office_governance":
             demo_contract = parsed.get("required_demo_contract") or []

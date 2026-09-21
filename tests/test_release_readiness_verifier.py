@@ -53,6 +53,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "public_comic_trace_bundle",
                 "comic_handoff_inventory",
                 "research_readiness",
+                "research_evidence_intake",
                 "office_governance",
                 "future_office_backlog",
                 "office_expansion_decision_brief",
@@ -192,6 +193,13 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("claim=staged_research_demo", research_readiness["summary"])
         self.assertIn("full_auto=False", research_readiness["summary"])
         self.assertIn("upgrade_checklist=3", research_readiness["summary"])
+        research_intake = next(item for item in payload["checks"] if item["id"] == "research_evidence_intake")
+        self.assertIn("sources=1", research_intake["summary"])
+        self.assertIn("screenshots=1", research_intake["summary"])
+        self.assertIn("claims=1", research_intake["summary"])
+        self.assertIn("gaps=1", research_intake["summary"])
+        self.assertIn("staged=True", research_intake["summary"])
+        self.assertIn("final=False", research_intake["summary"])
         office_governance = next(item for item in payload["checks"] if item["id"] == "office_governance")
         self.assertIn("demo_contract=", office_governance["summary"])
         self.assertIn("starter=passed", office_governance["summary"])
@@ -274,6 +282,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("Future office backlog boundary", completed.stdout)
         self.assertIn("AI comic handoff inventory", completed.stdout)
         self.assertIn("Research office staged delivery", completed.stdout)
+        self.assertIn("Research evidence intake contract", completed.stdout)
         self.assertIn("Office isolation", completed.stdout)
         self.assertIn("Secret and runtime artifact scan", completed.stdout)
         self.assertIn("interview_script=4/4", completed.stdout)
@@ -308,6 +317,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("handoff=3/3", completed.stdout)
         self.assertIn("claim=staged_research_demo", completed.stdout)
         self.assertIn("full_auto=False", completed.stdout)
+        self.assertIn("sources=1; screenshots=1; claims=1; gaps=1; staged=True; final=False", completed.stdout)
         self.assertIn("demo_contract=8", completed.stdout)
         self.assertIn("starter=passed", completed.stdout)
         self.assertIn("starter_items=8", completed.stdout)
