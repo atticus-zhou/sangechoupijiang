@@ -81,6 +81,8 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
         self.assertIn("6. `docs/OFFICE_EXPANSION_DECISION_BRIEF.md`", open_first)
         self.assertIn("7. `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json`", open_first)
         self.assertIn("8. `docs/RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json`", open_first)
+        self.assertIn("--evidence-file", open_first)
+        self.assertIn("--strict-real-values", open_first)
 
         with zipfile.ZipFile(zip_path) as archive:
             names = set(archive.namelist())
@@ -125,6 +127,31 @@ class GitHubOnboardingPacketTests(unittest.TestCase):
         self.assertIn("productization_status", result.stdout)
         self.assertIn("model_guidance", result.stdout)
         self.assertIn("secret_scan", result.stdout)
+
+    def test_verifier_rebuilds_and_checks_packet_contract(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/verify_github_onboarding_packet.py",
+                "--output",
+                "tmp/test-github-onboarding-packet-verify",
+                "--zip",
+                "tmp/test-github-onboarding-packet-verify.zip",
+                "--format",
+                "json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "passed")
+        self.assertGreater(payload["archive_bytes"], 1000)
+        self.assertEqual(payload["errors"], [])
+        self.assertIn("first_run", payload["verification_checks"])
+        self.assertIn("secret_scan", payload["verification_checks"])
 
     def test_fixed_generated_at_makes_archive_reproducible(self):
         from scripts.export_github_onboarding_packet import export_packet

@@ -71,16 +71,23 @@ http://127.0.0.1:8080/
 真实生成完成后，不要只看“已完成”状态。去历史页下载 Word、handoff manifest、图片记录、提示词包和 trace JSON，再用同一个 manifest 做最终验收：
 
 ```powershell
+python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/你的项目/comic_real_evidence.json --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
 
-这条检查会把 Word、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放到一起看；通过前只能说“流程跑通”或“结构样例通过”，不能说真实生产质量已经验证。
+第一条适合在真实图片和视觉质检刚完成、还没合并进最终 manifest 前做补证检查；第二条会把 Word、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放到一起看。通过前只能说“流程跑通”或“结构样例通过”，不能说真实生产质量已经验证。
 
 ### 研究办公室最小配置
 
 - 大部分部门使用文本模型。
 - 刑部需要视觉理解模型时，才适合分析截图。
 - 工部不是普通文本 Key 槽位，它代表浏览器、人工截图或平台导出证据能力。
+
+真实截图、来源和数据表进入报告前，先用严格模式拒绝占位字段：
+
+```powershell
+python scripts/verify_research_evidence_intake.py --input output/你的项目/research_evidence.json --strict-real-values --format markdown
+```
 
 ## 我想部署给别人看
 

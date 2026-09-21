@@ -420,12 +420,19 @@ python scripts/check_no_secrets.py
 真实 AI 漫剧跑完后，不要直接把生成包描述为生产级质量。先检查 handoff manifest：
 
 ```powershell
+python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/your_project/comic_real_evidence.json --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown
 python scripts/verify_comic_v2_downstream_handoff.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
 python scripts/verify_comic_real_production_claim.py --manifest output/your_project/xxx_handoff_manifest.json --format markdown
 ```
 
-第一条自动从 `output/workspaces/` 找最新真实工作区制片包，并把真实模型、图片、质检、提示词谱系和 Word/manifest/trace 证据做总收口。如果要复核旧项目，再把第一条输出里的 `Audited manifest` 路径传给后两条：第二条看下游视频/剪辑流程能不能接手，第三条看对外能怎么说。不带 `--latest`、也不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
+第一条适合在真实图片和视觉质检刚完成、还没合并进最终 manifest 前检查独立补证文件。第二条自动从 `output/workspaces/` 找最新真实工作区制片包，并把真实模型、图片、质检、提示词谱系和 Word/manifest/trace 证据做总收口。如果要复核旧项目，再把第二条输出里的 `Audited manifest` 路径传给后两条：第三条看下游视频/剪辑流程能不能接手，第四条看对外能怎么说。不带 `--latest`、也不带 `--manifest` 时，命令审计固定无 Key 样例，应该返回 `demo_structure_only`。这表示样例可以证明流程、谱系、Word 画布和下游交付结构，但不能宣称真实模型画质已经验证。
+
+研究办公室的真实截图、来源和数据表进入报告前，也要先拒绝占位字段：
+
+```powershell
+python scripts/verify_research_evidence_intake.py --input output/your_project/research_evidence.json --strict-real-values --format markdown
+```
 
 第二条还会核对 `Image files present: x/y`：manifest 里的 `images[].file`、镜头首帧参考图和资产引用链必须能解析到真实图片文件。缺图、空路径、只写 basename 或文件没有随 Word 画布一起交付时，都只能算待修复产物，不能进入真实下游生产。
 

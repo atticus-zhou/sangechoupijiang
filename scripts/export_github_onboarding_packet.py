@@ -169,6 +169,8 @@ def _write_readme(output_dir: Path, manifest: dict[str, Any]) -> None:
         "- This packet does not include `config.yaml`, API keys, cookies, browser profiles, `user_data`, `output`, logs, or real generated workspaces.",
         "- Public demo checks do not call real model providers.",
         "- Real production quality still requires the user's own local model configuration and post-run claim checks.",
+        "- For real AI comic runs, validate the standalone evidence file before merging it into a handoff manifest: `python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/你的项目/comic_real_evidence.json --format markdown`.",
+        "- For real research runs, reject placeholder evidence before using it in a report: `python scripts/verify_research_evidence_intake.py --input output/你的项目/research_evidence.json --strict-real-values --format markdown`.",
         "",
         f"Generated at: `{manifest['generated_at']}`",
         f"Files copied: `{len(manifest['files'])}`",
