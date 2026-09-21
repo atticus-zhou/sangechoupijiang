@@ -155,6 +155,8 @@ def _verify_template_contract() -> dict[str, Any]:
     generated_images = template.get("generated_images") or []
     if not generated_images:
         errors.append("template generated_images must include at least one image record")
+    generated_image_ids: set[str] = set()
+    image_roles_by_asset: dict[str, set[str]] = {}
     for index, image in enumerate(generated_images):
         required = ("image_id", "production_role", "file_path", "provider", "model", "fixture", "prompt_hash")
         missing_image = [field for field in required if field not in image]
@@ -164,11 +166,23 @@ def _verify_template_contract() -> dict[str, Any]:
             errors.append(f"template generated_images[{index}].fixture must be false")
         if not (image.get("asset_id") or image.get("shot_id")):
             errors.append(f"template generated_images[{index}] must bind to asset_id or shot_id")
+        image_id = str(image.get("image_id") or "")
+        if image_id:
+            generated_image_ids.add(image_id)
+        asset_id = str(image.get("asset_id") or "")
+        if asset_id:
+            image_roles_by_asset.setdefault(asset_id, set()).add(str(image.get("production_role") or ""))
 
     reviews = template.get("visual_reviews") or []
     if not reviews:
         errors.append("template visual_reviews must include at least one review record")
+    reviewed_image_ids: set[str] = set()
     for index, review in enumerate(reviews):
+        image_id = str(review.get("image_id") or "")
+        if image_id:
+            reviewed_image_ids.add(image_id)
+        if image_id and image_id not in generated_image_ids:
+            errors.append(f"template visual_reviews[{index}] points to unknown image_id")
         if review.get("reviewer_department") != "xingbu":
             errors.append(f"template visual_reviews[{index}] must be owned by xingbu")
         scores = review.get("scores") or {}
@@ -176,6 +190,9 @@ def _verify_template_contract() -> dict[str, Any]:
             errors.append(f"template visual_reviews[{index}] must include seven-dimensional scores")
         if review.get("status") not in {"pass", "needs_review", "fail"}:
             errors.append(f"template visual_reviews[{index}].status must be pass, needs_review, or fail")
+    missing_reviews = sorted(generated_image_ids - reviewed_image_ids)
+    if missing_reviews:
+        errors.append("template visual_reviews must cover every generated image: " + ", ".join(missing_reviews))
 
     summary = template.get("image_quality_summary") or {}
     for field in ("total_images", "usable_images", "waste_or_rework_images", "failed_image_ids", "rework_instructions"):
@@ -185,6 +202,14 @@ def _verify_template_contract() -> dict[str, Any]:
     asset_cards = template.get("asset_identity_cards") or []
     if not asset_cards:
         errors.append("template asset_identity_cards must include at least one approved asset card")
+    asset_types_present = {
+        str(card.get("asset_type") or "")
+        for card in asset_cards
+        if card.get("asset_type")
+    }
+    missing_asset_types = sorted({"character", "prop", "scene"} - asset_types_present)
+    if missing_asset_types:
+        errors.append("template asset_identity_cards must include asset types: " + ", ".join(missing_asset_types))
     for index, card in enumerate(asset_cards):
         required = (
             "asset_id",
@@ -202,6 +227,19 @@ def _verify_template_contract() -> dict[str, Any]:
             errors.append(f"template asset_identity_cards[{index}] missing fields: {', '.join(missing_card)}")
         if card.get("asset_type") not in {"character", "prop", "scene"}:
             errors.append(f"template asset_identity_cards[{index}].asset_type must be character, prop, or scene")
+        asset_id = str(card.get("asset_id") or "")
+        asset_type = str(card.get("asset_type") or "")
+        roles = image_roles_by_asset.get(asset_id, set())
+        if asset_type == "character" and "clean_character_identity_three_view" not in roles:
+            errors.append(f"template asset_identity_cards[{index}] character must have clean_character_identity_three_view")
+        if asset_type == "prop" and "clean_prop_turnaround_reference" not in roles:
+            errors.append(f"template asset_identity_cards[{index}] prop must have clean_prop_turnaround_reference")
+        if asset_type == "scene":
+            for role in ("scene_wide_establishing", "scene_top_down_layout"):
+                if role not in roles:
+                    errors.append(f"template asset_identity_cards[{index}] scene must have {role}")
+        if asset_type in {"character", "prop"} and card.get("clean_background_required") is not True:
+            errors.append(f"template asset_identity_cards[{index}] {asset_type} must require a clean background")
         if not card.get("identity_baseline_image_id"):
             errors.append(f"template asset_identity_cards[{index}] must bind an identity_baseline_image_id")
         approved = card.get("approved_image_ids") or []
@@ -209,6 +247,9 @@ def _verify_template_contract() -> dict[str, Any]:
             errors.append(f"template asset_identity_cards[{index}] must list approved_image_ids")
         if card.get("identity_baseline_image_id") and card.get("identity_baseline_image_id") not in approved:
             errors.append(f"template asset_identity_cards[{index}] baseline image must be approved")
+        for image_id in approved:
+            if str(image_id) not in generated_image_ids:
+                errors.append(f"template asset_identity_cards[{index}] approved image is not generated: {image_id}")
         if card.get("human_review_status") not in {"approved", "needs_revision", "rejected"}:
             errors.append(f"template asset_identity_cards[{index}].human_review_status must be approved, needs_revision, or rejected")
 

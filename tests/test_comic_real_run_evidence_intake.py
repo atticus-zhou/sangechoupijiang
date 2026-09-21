@@ -138,16 +138,40 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertFalse(template["generated_images"][0]["fixture"])
         self.assertEqual(template["visual_reviews"][0]["reviewer_department"], "xingbu")
         self.assertGreaterEqual(len(template["visual_reviews"][0]["scores"]), 7)
-        character_card = template["asset_identity_cards"][0]
+        cards_by_type = {
+            card["asset_type"]: card
+            for card in template["asset_identity_cards"]
+        }
+        self.assertEqual(set(cards_by_type), {"character", "prop", "scene"})
+        generated_by_id = {
+            image["image_id"]: image
+            for image in template["generated_images"]
+        }
+        reviewed_ids = {review["image_id"] for review in template["visual_reviews"]}
+        self.assertEqual(set(generated_by_id), reviewed_ids)
+
+        character_card = cards_by_type["character"]
         self.assertEqual(character_card["asset_type"], "character")
         self.assertIn(character_card["identity_baseline_image_id"], character_card["approved_image_ids"])
         self.assertEqual(character_card["human_review_status"], "approved")
-        scene_card = template["asset_identity_cards"][1]
+        self.assertEqual(generated_by_id[character_card["identity_baseline_image_id"]]["production_role"], "clean_character_identity_three_view")
+        prop_card = cards_by_type["prop"]
+        self.assertEqual(prop_card["asset_type"], "prop")
+        self.assertTrue(prop_card["clean_background_required"])
+        self.assertIn(prop_card["identity_baseline_image_id"], prop_card["approved_image_ids"])
+        self.assertEqual(generated_by_id[prop_card["identity_baseline_image_id"]]["production_role"], "clean_prop_turnaround_reference")
+        scene_card = cards_by_type["scene"]
         self.assertEqual(scene_card["asset_type"], "scene")
         self.assertFalse(scene_card["clean_background_required"])
+        scene_roles = {
+            generated_by_id[image_id]["production_role"]
+            for image_id in scene_card["approved_image_ids"]
+        }
+        self.assertIn("scene_wide_establishing", scene_roles)
+        self.assertIn("scene_top_down_layout", scene_roles)
         reference = template["reference_asset_chain"][0]
         self.assertEqual(reference["shot_id"], "shot_001")
-        self.assertGreaterEqual(len(reference["referenced_assets"]), 2)
+        self.assertGreaterEqual(len(reference["referenced_assets"]), 3)
         self.assertEqual(reference["referenced_assets"][0]["asset_id"], character_card["asset_id"])
         self.assertIn(
             reference["referenced_assets"][0]["identity_baseline_image_id"],

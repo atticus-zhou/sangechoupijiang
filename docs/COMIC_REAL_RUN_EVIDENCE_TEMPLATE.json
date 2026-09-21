@@ -85,6 +85,36 @@
       "reference_policy": "场景俯视图用于空间关系和机位规划。",
       "prompt_hash": "replace_prompt_hash",
       "generated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "image_id": "img_prop_001_turnaround",
+      "asset_id": "prop_001",
+      "shot_id": "",
+      "production_role": "clean_prop_turnaround_reference",
+      "file_path": "output/workspaces/ws_xxx/images/img_prop_001_turnaround.png",
+      "provider": "replace_provider_name",
+      "model": "replace_model_name",
+      "provider_job_id": "replace_provider_job_id",
+      "fixture": false,
+      "clean_background_required": true,
+      "reference_policy": "道具资产用于后续镜头一致性参考，不负责讲述剧情，不允许被人物手持或放进剧情现场。",
+      "prompt_hash": "replace_prompt_hash",
+      "generated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "image_id": "img_scene_001_wide",
+      "asset_id": "scene_001",
+      "shot_id": "",
+      "production_role": "scene_wide_establishing",
+      "file_path": "output/workspaces/ws_xxx/images/img_scene_001_wide.png",
+      "provider": "replace_provider_name",
+      "model": "replace_model_name",
+      "provider_job_id": "replace_provider_job_id",
+      "fixture": false,
+      "clean_background_required": false,
+      "reference_policy": "场景广角图用于建立空间、时代材质和光线方向，不把剧情事件画进基础场景资产。",
+      "prompt_hash": "replace_prompt_hash",
+      "generated_at": "2026-01-01T00:00:00Z"
     }
   ],
   "visual_reviews": [
@@ -104,11 +134,62 @@
       },
       "issues": [],
       "recovery_action": ""
+    },
+    {
+      "image_id": "img_scene_001_top_down",
+      "reviewer_department": "xingbu",
+      "review_model": "replace_vision_model_name",
+      "status": "pass",
+      "scores": {
+        "identity_consistency": 94,
+        "style_consistency": 94,
+        "asset_cleanliness": 94,
+        "story_fit": 94,
+        "prompt_adherence": 94,
+        "technical_quality": 94,
+        "downstream_usability": 94
+      },
+      "issues": [],
+      "recovery_action": ""
+    },
+    {
+      "image_id": "img_prop_001_turnaround",
+      "reviewer_department": "xingbu",
+      "review_model": "replace_vision_model_name",
+      "status": "pass",
+      "scores": {
+        "identity_consistency": 94,
+        "style_consistency": 94,
+        "asset_cleanliness": 94,
+        "story_fit": 94,
+        "prompt_adherence": 94,
+        "technical_quality": 94,
+        "downstream_usability": 94
+      },
+      "issues": [],
+      "recovery_action": ""
+    },
+    {
+      "image_id": "img_scene_001_wide",
+      "reviewer_department": "xingbu",
+      "review_model": "replace_vision_model_name",
+      "status": "pass",
+      "scores": {
+        "identity_consistency": 94,
+        "style_consistency": 94,
+        "asset_cleanliness": 94,
+        "story_fit": 94,
+        "prompt_adherence": 94,
+        "technical_quality": 94,
+        "downstream_usability": 94
+      },
+      "issues": [],
+      "recovery_action": ""
     }
   ],
   "image_quality_summary": {
-    "total_images": 2,
-    "usable_images": 2,
+    "total_images": 4,
+    "usable_images": 4,
     "waste_or_rework_images": 0,
     "failed_image_ids": [],
     "rework_instructions": []
@@ -139,6 +220,29 @@
       "human_review_status": "approved"
     },
     {
+      "asset_id": "prop_001",
+      "asset_type": "prop",
+      "name": "replace_prop_name",
+      "story_source": "来自已确认故事中的道具，不允许凭空新增现代物件或无关物品。",
+      "identity_baseline_image_id": "img_prop_001_turnaround",
+      "required_image_kinds": [
+        "turnaround",
+        "state_sheet"
+      ],
+      "approved_image_ids": [
+        "img_prop_001_turnaround"
+      ],
+      "continuity_locks": [
+        "外形轮廓",
+        "材质",
+        "主色",
+        "磨损痕迹",
+        "时代质感"
+      ],
+      "clean_background_required": true,
+      "human_review_status": "approved"
+    },
+    {
       "asset_id": "scene_001",
       "asset_type": "scene",
       "name": "replace_scene_name",
@@ -150,6 +254,7 @@
         "camera_angles"
       ],
       "approved_image_ids": [
+        "img_scene_001_wide",
         "img_scene_001_top_down"
       ],
       "continuity_locks": [
@@ -178,11 +283,21 @@
           ]
         },
         {
+          "asset_id": "prop_001",
+          "asset_type": "prop",
+          "name": "replace_prop_name",
+          "identity_baseline_image_id": "img_prop_001_turnaround",
+          "approved_reference_image_ids": [
+            "img_prop_001_turnaround"
+          ]
+        },
+        {
           "asset_id": "scene_001",
           "asset_type": "scene",
           "name": "replace_scene_name",
           "identity_baseline_image_id": "img_scene_001_top_down",
           "approved_reference_image_ids": [
+            "img_scene_001_wide",
             "img_scene_001_top_down"
           ]
         }
@@ -228,6 +343,8 @@
         "shot_purpose": "说明这一镜推动的剧情节点或情绪变化。",
         "reference_image_chain": [
           "img_char_001_three_view",
+          "img_prop_001_turnaround",
+          "img_scene_001_wide",
           "img_scene_001_top_down"
         ],
         "camera_plan": "景别、视角、机位、运动方式、镜头时长或节奏。",
