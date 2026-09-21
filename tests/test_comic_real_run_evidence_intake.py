@@ -14,6 +14,41 @@ from src.comic_office.v2.visual_review import REVIEW_DIMENSIONS
 FIXTURE = Path("tests/fixtures/comic_v2_sample.json")
 
 
+def _fill_evidence_placeholders(value):
+    if isinstance(value, dict):
+        return {key: _fill_evidence_placeholders(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_fill_evidence_placeholders(item) for item in value]
+    if isinstance(value, str):
+        replacements = {
+            "replace_provider_name": "doubao",
+            "replace_image_model_name": "doubao-seedream-5",
+            "replace_vision_model_name": "qwen-vl-max",
+            "replace_text_model_name": "deepseek-chat",
+            "replace_model_name": "doubao-seedream-5",
+            "replace_provider_request_or_job_id": "job_real_001",
+            "replace_provider_job_id": "job_real_001",
+            "replace_prompt_hash": "prompt_hash_real_001",
+            "replace_character_name": "林昭",
+            "replace_prop_name": "裂纹铜铃",
+            "replace_scene_name": "旧祠堂",
+            "replace_this_shot_story_purpose": "林昭第一次确认裂纹铜铃与旧祠堂有关",
+            "replace_first_frame_or_empty_when_not_generated": "img_scene_001_wide",
+            "ws_replace_with_real_workspace_id": "ws_real_001",
+            "task_replace_with_real_task_id": "task_real_001",
+            "story_v_replace": "story_v1",
+            "style_v_replace": "style_v1",
+            "asset_manifest_v_replace": "asset_manifest_v1",
+            "prompt_strategy_v_replace": "comic_v2_prompt_director_v2",
+            "output/workspaces/ws_xxx": "output/workspaces/ws_real_001",
+            "2026-01-01T00:00:00Z": "2026-09-21T12:00:00Z",
+        }
+        for old, new in replacements.items():
+            value = value.replace(old, new)
+        return value
+    return value
+
+
 def _real_verified_manifest(root: Path) -> Path:
     result = verify_delivery(FIXTURE, root)
     path = Path(result["handoff_manifest_path"])
@@ -224,6 +259,65 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertEqual(routes["prompt_package_failed"]["reviewer_department"], "xingbu")
         self.assertEqual(routes["word_canvas_missing_or_stale"]["return_to_stage"], "delivery_build")
         self.assertIn("Word", routes["word_canvas_missing_or_stale"]["operator_next_step"])
+
+    def test_standalone_real_evidence_file_can_be_checked_before_manifest_merge(self):
+        template = json.loads(Path("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json").read_text(encoding="utf-8"))
+        evidence = _fill_evidence_placeholders(template)
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence_path = Path(tmp) / "comic_real_evidence.json"
+            evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/verify_comic_real_run_evidence_intake.py",
+                    "--evidence-file",
+                    str(evidence_path),
+                    "--format",
+                    "json",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["audit_subject"], "evidence_file")
+        self.assertEqual(payload["claim_level"], "evidence_file_ready")
+        self.assertEqual(payload["downstream_status"], "not_merged_into_handoff")
+        self.assertEqual(payload["template_contract"]["status"], "passed")
+        self.assertTrue(payload["template_contract"]["strict_real_values"])
+        self.assertEqual(payload["template_contract"]["image_record_count"], 4)
+        self.assertTrue(payload["section_status"]["images_and_reviews"])
+        self.assertTrue(payload["section_status"]["operator_acceptance"])
+
+    def test_standalone_real_evidence_file_rejects_placeholders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence_path = Path(tmp) / "comic_real_evidence_placeholders.json"
+            evidence_path.write_text(
+                Path("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/verify_comic_real_run_evidence_intake.py",
+                    "--evidence-file",
+                    str(evidence_path),
+                    "--format",
+                    "markdown",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("Audit subject: `evidence_file`", completed.stdout)
+        self.assertIn("placeholder values", completed.stdout)
+        self.assertIn("$.model_evidence.gongbu_image_generation.provider", completed.stdout)
 
     def test_existing_real_manifest_can_pass_the_intake_gate(self):
         with tempfile.TemporaryDirectory() as tmp:

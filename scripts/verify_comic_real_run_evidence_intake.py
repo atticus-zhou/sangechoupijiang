@@ -65,6 +65,7 @@ REQUIRED_MARKERS = [
     "docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json",
     "证据导入模板",
     "人工验收签字",
+    "--evidence-file",
 ]
 
 EXPECTED_HUMAN_FLOW = [
@@ -113,21 +114,51 @@ TEMPLATE_FORBIDDEN_MARKERS = [
 ]
 
 
-def _verify_template_contract() -> dict[str, Any]:
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _placeholder_paths(payload: Any, path: str = "$") -> list[str]:
+    placeholders: list[str] = []
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            placeholders.extend(_placeholder_paths(value, f"{path}.{key}"))
+        return placeholders
+    if isinstance(payload, list):
+        for index, value in enumerate(payload):
+            placeholders.extend(_placeholder_paths(value, f"{path}[{index}]"))
+        return placeholders
+    if isinstance(payload, str):
+        lowered = payload.lower()
+        if "replace_" in lowered or "_replace" in lowered or "ws_xxx" in lowered or "2026-01-01t00:00:00z" in lowered:
+            placeholders.append(path)
+    return placeholders
+
+
+def _verify_template_contract(path: Path = TEMPLATE_PATH, *, strict_real_values: bool = False) -> dict[str, Any]:
     errors: list[str] = []
     try:
-        template = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8"))
+        template = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {
             "status": "failed",
-            "path": str(TEMPLATE_PATH.relative_to(REPO_ROOT)),
+            "path": _display_path(path),
             "errors": ["real-run evidence intake template is missing"],
         }
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         return {
             "status": "failed",
-            "path": str(TEMPLATE_PATH.relative_to(REPO_ROOT)),
+            "path": _display_path(path),
             "errors": [f"real-run evidence intake template is not valid JSON: {exc}"],
+        }
+    if not isinstance(template, dict):
+        return {
+            "status": "failed",
+            "path": _display_path(path),
+            "errors": ["real-run evidence intake template must be a JSON object"],
         }
 
     missing = [field for field in TEMPLATE_REQUIRED_TOP_LEVEL if field not in template]
@@ -137,6 +168,14 @@ def _verify_template_contract() -> dict[str, Any]:
         errors.append("template schema must be comic_real_run_evidence_intake_v1")
     if template.get("office_id") != "comic_production":
         errors.append("template office_id must be comic_production")
+    if strict_real_values:
+        placeholder_fields = _placeholder_paths(template)
+        if placeholder_fields:
+            errors.append(
+                "evidence file still contains placeholder values: "
+                + ", ".join(placeholder_fields[:12])
+                + (" ..." if len(placeholder_fields) > 12 else "")
+            )
 
     claim_boundary = template.get("claim_boundary") or {}
     must_not_include = claim_boundary.get("must_not_include") or []
@@ -198,6 +237,16 @@ def _verify_template_contract() -> dict[str, Any]:
     for field in ("total_images", "usable_images", "waste_or_rework_images", "failed_image_ids", "rework_instructions"):
         if field not in summary:
             errors.append(f"template image_quality_summary must include {field}")
+    if strict_real_values and generated_images:
+        if summary.get("total_images") != len(generated_images):
+            errors.append("evidence file image_quality_summary.total_images must match generated_images")
+        pass_reviews = [
+            review
+            for review in reviews
+            if review.get("status") == "pass"
+        ]
+        if summary.get("usable_images") != len(pass_reviews):
+            errors.append("evidence file image_quality_summary.usable_images must match pass visual reviews")
 
     asset_cards = template.get("asset_identity_cards") or []
     if not asset_cards:
@@ -445,8 +494,9 @@ def _verify_template_contract() -> dict[str, Any]:
 
     return {
         "status": "passed" if not errors else "failed",
-        "path": str(TEMPLATE_PATH.relative_to(REPO_ROOT)),
+        "path": _display_path(path),
         "schema": template.get("schema"),
+        "strict_real_values": strict_real_values,
         "image_record_count": len(generated_images),
         "visual_review_count": len(reviews),
         "asset_identity_card_count": len(asset_cards),
@@ -605,6 +655,61 @@ def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[s
     }
 
 
+def verify_real_run_evidence_file(evidence_path: Path) -> dict[str, Any]:
+    text, read_error = _read_doc()
+    evidence_contract = _verify_template_contract(evidence_path, strict_real_values=True)
+    errors: list[str] = []
+
+    if read_error:
+        errors.append(f"real-run evidence intake doc read error: {read_error}")
+    if evidence_contract.get("status") != "passed":
+        errors.extend(evidence_contract.get("errors") or ["real-run evidence file contract failed"])
+
+    image_count = int(evidence_contract.get("image_record_count") or 0)
+    review_count = int(evidence_contract.get("visual_review_count") or 0)
+    asset_count = int(evidence_contract.get("asset_identity_card_count") or 0)
+    ready = not errors
+    return {
+        "status": "passed" if ready else "failed",
+        "mode": "comic_real_run_evidence_intake",
+        "audit_subject": "evidence_file",
+        "audited_manifest": "",
+        "audited_evidence_file": _display_path(evidence_path),
+        "summary": (
+            "Standalone real-run evidence file is complete enough to merge into the final handoff manifest."
+            if ready
+            else "Standalone real-run evidence file has gaps before it can be merged into the final handoff manifest."
+        ),
+        "document": "docs/COMIC_REAL_RUN_EVIDENCE_INTAKE.md",
+        "line_count": len(text.splitlines()) if text else 0,
+        "missing_marker_count": 0,
+        "human_flow_step_count": 0,
+        "recovery_action_count": 0,
+        "template_contract": evidence_contract,
+        "section_status": {
+            "evidence_file_schema": evidence_contract.get("schema") == "comic_real_run_evidence_intake_v1",
+            "real_values": bool(evidence_contract.get("strict_real_values")),
+            "images_and_reviews": image_count > 0 and image_count == review_count,
+            "asset_identity_cards": asset_count >= 3,
+            "operator_acceptance": bool(evidence_contract.get("operator_acceptance_ready")),
+            "recovery_protocol": bool(evidence_contract.get("recovery_protocol_ready")),
+        },
+        "benchmark_claim": "not_audited",
+        "benchmark_real_quality_verified": False,
+        "claim_level": "evidence_file_ready" if ready else "evidence_file_incomplete",
+        "can_claim_real_quality": False,
+        "downstream_status": "not_merged_into_handoff",
+        "handoff_allowed": False,
+        "real_quality_promotion_ready": False,
+        "visual_evidence_level": "evidence_file_only",
+        "image_quality_summary": {},
+        "prompt_strategy_lineage": {},
+        "real_model_evidence_requirements": {},
+        "structural_downstream_handoff_ready": False,
+        "errors": errors,
+    }
+
+
 def format_markdown(payload: dict[str, Any]) -> str:
     sections = payload.get("section_status") or {}
     lines = [
@@ -617,6 +722,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- Document: `{payload.get('document')}`",
         f"- Audited manifest: `{payload.get('audited_manifest') or 'generated fixture'}`",
+        f"- Audited evidence file: `{payload.get('audited_evidence_file') or '-'}`",
         f"- Lines: `{payload.get('line_count')}`",
         f"- Missing markers: `{payload.get('missing_marker_count')}`",
         f"- Human flow steps: `{payload.get('human_flow_step_count')}`",
@@ -698,6 +804,11 @@ def main() -> int:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--manifest", type=Path, help="Existing comic V2 handoff manifest to audit.")
     source.add_argument(
+        "--evidence-file",
+        type=Path,
+        help="Standalone real-run evidence JSON to validate before merging it into a handoff manifest.",
+    )
+    source.add_argument(
         "--latest",
         action="store_true",
         help="Audit the newest *_handoff_manifest.json under output/workspaces.",
@@ -710,6 +821,13 @@ def main() -> int:
     )
     parser.add_argument("--format", choices={"json", "markdown"}, default="markdown")
     args = parser.parse_args()
+    if args.evidence_file:
+        payload = verify_real_run_evidence_file(args.evidence_file)
+        if args.format == "json":
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+        else:
+            print(format_markdown(payload))
+        return 0 if payload["status"] == "passed" else 1
     manifest_path = args.manifest
     if args.latest:
         manifest_path = find_latest_user_handoff_manifest(args.latest_output_root)

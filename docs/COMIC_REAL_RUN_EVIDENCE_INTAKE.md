@@ -17,17 +17,20 @@
 真实产物检查命令：
 
 ```bash
+python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/你的项目/comic_real_evidence.json --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
 
-优先使用 `--latest`。它会自动从 `output/workspaces/` 中寻找最新的完整可审计 `*_handoff_manifest.json`，避开验证脚本自己生成的临时审计目录，也会跳过空 JSON、测试残留和没有图片/资产/镜头/Word 画布的半成品 manifest。只有你要审计某个旧项目、备份目录或外部交付包时，才需要手动使用 `--manifest` 指向具体文件。
+如果真实模型刚跑完、证据还没有合并进最终 `handoff_manifest.json`，先用 `--evidence-file` 检查单独的证据表。它会拒绝 `replace_...`、`ws_xxx` 这类占位值，并检查 provider/model/job id、图片记录、刑部七维质检、资产身份证、人工验收和恢复协议是否完整。证据表通过以后，再合并进 `handoff_manifest.json`、`trace.json` 和 `production-acceptance.json`。
+
+如果最终交付包已经生成，优先使用 `--latest`。它会自动从 `output/workspaces/` 中寻找最新的完整可审计 `*_handoff_manifest.json`，避开验证脚本自己生成的临时审计目录，也会跳过空 JSON、测试残留和没有图片/资产/镜头/Word 画布的半成品 manifest。只有你要审计某个旧项目、备份目录或外部交付包时，才需要手动使用 `--manifest` 指向具体文件。
 
 这条命令不调用模型，只读取已经生成的 `handoff_manifest.json`、它引用的 Word 画布和清单里的图片/质检记录。它会同时跑生产质量基准、公开声明边界和下游交接验收，并输出：当前是 `real_quality_verified`、`demo_structure_only` 还是 `needs_review`；缺的是模型证据、图片证据、七维视觉质检、提示词谱系，还是 Word/manifest/trace 对不上。
 
 ## 证据导入模板
 
-真实模型运行结束后，先把关键证据整理成 `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json` 同结构的 evidence intake 文件，再把其中的字段并入最终 `handoff_manifest.json`、`trace.json` 和 `production-acceptance.json`。模板不是让用户填写 API Key，而是让系统或开发者记录“这次真实生成到底用了什么模型、生成了哪些图片、哪些图通过刑部质检、哪些图需要返工、最终 Word 和 manifest 是否一致”。
+真实模型运行结束后，先把关键证据整理成 `docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json` 同结构的 evidence intake 文件，运行 `--evidence-file` 通过以后，再把其中的字段并入最终 `handoff_manifest.json`、`trace.json` 和 `production-acceptance.json`。模板不是让用户填写 API Key，而是让系统或开发者记录“这次真实生成到底用了什么模型、生成了哪些图片、哪些图通过刑部质检、哪些图需要返工、最终 Word 和 manifest 是否一致”。
 
 模板必须保留以下边界：
 
