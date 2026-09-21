@@ -328,6 +328,8 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(first_usage["referenced_by_shots"][0]["shot_id"], package.shots[0].shot_id)
             self.assertIn("让林昭第一次主动进入真相空间", first_usage["referenced_by_shots"][0]["story_purpose"])
             self.assertIn("三视图", first_usage["downstream_instruction"])
+            self.assertIn("禁止承担剧情表演", first_usage["downstream_instruction"])
+            self.assertNotIn("不要", json.dumps(usage_map, ensure_ascii=False))
             lineage = handoff["production_lineage"]
             self.assertEqual(
                 [stage["stage"] for stage in lineage],

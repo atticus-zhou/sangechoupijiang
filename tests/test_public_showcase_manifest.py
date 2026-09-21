@@ -166,6 +166,7 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("referenced_by_shots", asset_usage_text)
         self.assertIn("downstream_instruction", asset_usage_text)
         self.assertIn("三视图", asset_usage_text)
+        self.assertNotIn("不要", asset_usage_text)
         asset_spec = embed["asset_image_production_spec"]
         self.assertEqual(
             {item["asset_type"] for item in asset_spec["asset_types"]},
@@ -178,9 +179,10 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertIn("expression_sheet", asset_spec_text)
         self.assertIn("turnaround", asset_spec_text)
         self.assertIn("top_down", asset_spec_text)
-        self.assertIn("不要把人物放进完整剧情场面", asset_spec_text)
-        self.assertIn("不要把场景做成白底静物", asset_spec_text)
+        self.assertIn("禁止把人物放进完整剧情场面", asset_spec_text)
+        self.assertIn("禁止把场景做成白底静物", asset_spec_text)
         self.assertIn("verify_comic_v2_downstream_handoff.py", asset_spec_text)
+        self.assertNotIn("不要", asset_spec_text)
         comic_demo_response = client.get("/api/demo/comic-production")
         self.assertEqual(comic_demo_response.status_code, 200)
         self.assertEqual(

@@ -409,9 +409,9 @@ def _asset_downstream_instruction(
     referenced_shots: list[dict[str, object]],
 ) -> str:
     if asset_type == "character":
-        return "先绑定三视图锁脸和服装，再按镜头卡继承表情、姿势和动作；不要让基础资产图承担剧情表演。"
+        return "先绑定三视图锁脸和服装，再按镜头卡继承表情、姿势和动作；基础资产图只做身份参考，禁止承担剧情表演。"
     if asset_type == "prop":
-        return "先绑定转面图锁轮廓和材质，再在镜头中只改变角度、持握方式或状态；不要临时改成现代物件。"
+        return "先绑定转面图锁轮廓和材质，再在镜头中只改变角度、持握方式或状态；禁止临时改成现代物件。"
     if asset_type == "scene":
         return "先看广角图和俯视图确认空间，再按镜头卡选择机位；场景图服务调度，不按白底静物处理。"
     if referenced_shots:

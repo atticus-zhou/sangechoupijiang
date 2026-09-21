@@ -777,6 +777,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         for marker in ("identity_baseline_image_id", "referenced_by_shots", "downstream_instruction", "三视图"):
             if marker not in asset_usage_text:
                 errors.append(f"static asset usage map is missing marker: {marker}")
+        if "不要" in asset_usage_text:
+            errors.append("static asset usage map must use 禁止 instead of 不要")
         asset_image_production_spec = portfolio.get("asset_image_production_spec") or {}
         asset_spec_types = {
             item.get("asset_type"): item
@@ -792,12 +794,14 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             "expression_sheet",
             "turnaround",
             "top_down",
-            "不要把人物放进完整剧情场面",
-            "不要把场景做成白底静物",
+            "禁止把人物放进完整剧情场面",
+            "禁止把场景做成白底静物",
             "verify_comic_v2_downstream_handoff.py",
         ):
             if marker not in asset_spec_text:
                 errors.append(f"static asset image production spec is missing marker: {marker}")
+        if "不要" in asset_spec_text:
+            errors.append("static asset image production spec must use 禁止 instead of 不要")
         shot_contract = portfolio.get("shot_contract") or {}
         shot_contract_text = json.dumps(shot_contract, ensure_ascii=False)
         for marker in ("first_frame_reference_image", "reference_asset_chain", "director_execution"):

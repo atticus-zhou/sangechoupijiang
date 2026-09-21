@@ -489,6 +489,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("referenced_by_shots", asset_usage_text)
         self.assertIn("downstream_instruction", asset_usage_text)
         self.assertIn("三视图", asset_usage_text)
+        self.assertNotIn("不要", asset_usage_text)
         self.assertEqual(
             {item["asset_type"] for item in asset_spec["asset_types"]},
             {"character", "prop", "scene"},
@@ -496,9 +497,10 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         asset_spec_text = json.dumps(asset_spec, ensure_ascii=False)
         self.assertIn("clean_white_or_near_white_background", asset_spec_text)
         self.assertIn("spatial_environment_not_white_background", asset_spec_text)
-        self.assertIn("不要把人物放进完整剧情场面", asset_spec_text)
-        self.assertIn("不要把场景做成白底静物", asset_spec_text)
+        self.assertIn("禁止把人物放进完整剧情场面", asset_spec_text)
+        self.assertIn("禁止把场景做成白底静物", asset_spec_text)
         self.assertIn("verify_comic_v2_downstream_handoff.py", asset_spec_text)
+        self.assertNotIn("不要", asset_spec_text)
         shot_contract = showcase["portfolio_embed"]["shot_contract"]
         self.assertEqual(shot_contract["manifest_uri"], "downloads/comic-production/files/handoff_manifest.json")
         contract_text = json.dumps(shot_contract, ensure_ascii=False)

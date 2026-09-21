@@ -196,6 +196,8 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
     for marker in ("identity_baseline_image_id", "referenced_by_shots", "downstream_instruction", "三视图"):
         if marker not in asset_usage_text:
             errors.append(f"portfolio asset usage map is missing marker: {marker}")
+    if "不要" in asset_usage_text:
+        errors.append("portfolio asset usage map must use 禁止 instead of 不要")
     asset_spec_types = {
         item.get("asset_type"): item
         for item in asset_image_production_spec.get("asset_types") or []
@@ -210,12 +212,14 @@ def _verify_showcase_manifest(client: TestClient, errors: list[str]) -> dict[str
         "expression_sheet",
         "turnaround",
         "top_down",
-        "不要把人物放进完整剧情场面",
-        "不要把场景做成白底静物",
+        "禁止把人物放进完整剧情场面",
+        "禁止把场景做成白底静物",
         "verify_comic_v2_downstream_handoff.py",
     ):
         if marker not in asset_spec_text:
             errors.append(f"portfolio asset image production spec is missing marker: {marker}")
+    if "不要" in asset_spec_text:
+        errors.append("portfolio asset image production spec must use 禁止 instead of 不要")
     if release_badge.get("status") != "safe_public_demo":
         errors.append("portfolio embed must expose a safe_public_demo release badge")
     if release_badge.get("mode") != "demo_only":
