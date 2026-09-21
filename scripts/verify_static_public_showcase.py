@@ -356,6 +356,8 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("download_catalog must include the office expansion decision brief")
         if "downloads/comic-production/comic-real-run-evidence-intake.md" not in catalog_uris:
             errors.append("download_catalog must include the comic real-run evidence intake")
+        if "downloads/comic-production/comic-real-run-evidence-template.json" not in catalog_uris:
+            errors.append("download_catalog must include the comic real-run evidence template")
         inventory_uri = "downloads/comic-production/handoff-inventory.json"
         if inventory_uri not in catalog_uris:
             errors.append("download_catalog must include the comic handoff inventory")

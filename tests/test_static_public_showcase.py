@@ -45,14 +45,14 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertFalse(showcase["static_export"]["requires_backend"])
         self.assertEqual(showcase["visitor_acceptance_guide"]["uri"], "data/visitor_acceptance_guide.json")
         self.assertEqual(showcase["visitor_acceptance_guide"]["step_count"], 8)
-        self.assertEqual(showcase["visitor_acceptance_guide"]["download_count"], 14)
+        self.assertEqual(showcase["visitor_acceptance_guide"]["download_count"], 15)
         self.assertEqual(showcase["visitor_acceptance_guide"]["live_verification_status"], "external_required")
         self.assertEqual(visitor_guide["mode"], "public_no_key_visitor_acceptance")
         self.assertFalse(visitor_guide["requires_backend"])
         self.assertFalse(visitor_guide["requires_api_key"])
         self.assertFalse(visitor_guide["calls_real_models"])
         self.assertEqual(len(visitor_guide["visitor_route"]), 8)
-        self.assertEqual(len(visitor_guide["download_acceptance"]), 14)
+        self.assertEqual(len(visitor_guide["download_acceptance"]), 15)
         self.assertEqual(visitor_guide["live_verification"]["check_command"], "npm run check:online")
         self.assertIn("check:online", visitor_guide["live_verification"]["do_not_claim_live_until"])
         self.assertTrue(any(item["title"] == "线上没刷新时打开离线评审包" for item in visitor_guide["visitor_route"]))
@@ -68,9 +68,9 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("config.yaml", visitor_guide_text)
         self.assertIn("API Key", visitor_guide_text)
         self.assertIn("user_data/", visitor_guide_text)
-        self.assertEqual(showcase["static_export"]["reviewable_file_count"], 14)
+        self.assertEqual(showcase["static_export"]["reviewable_file_count"], 15)
         catalog = showcase["download_catalog"]
-        self.assertEqual(len(catalog), 14)
+        self.assertEqual(len(catalog), 15)
         self.assertIn("data/comic_production_claim_report.json", {item["local_uri"] for item in catalog})
         self.assertIn("downloads/comic-production/production-acceptance.json", {item["local_uri"] for item in catalog})
         self.assertIn("downloads/comic-production/files/trace.json", {item["local_uri"] for item in catalog})
@@ -79,6 +79,7 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertIn("downloads/research/research-evidence-intake-template.json", {item["local_uri"] for item in catalog})
         self.assertIn("downloads/platform/office-expansion-decision-brief.md", {item["local_uri"] for item in catalog})
         self.assertIn("downloads/comic-production/comic-real-run-evidence-intake.md", {item["local_uri"] for item in catalog})
+        self.assertIn("downloads/comic-production/comic-real-run-evidence-template.json", {item["local_uri"] for item in catalog})
         self.assertIn("downloads/platform/interviewer-review-packet.md", {item["local_uri"] for item in catalog})
         self.assertIn("downloads/platform/github-onboarding-packet.zip", {item["local_uri"] for item in catalog})
         self.assertTrue(all(item["title"] and item["sha256"] and item["bytes"] for item in catalog))
@@ -88,6 +89,27 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         )
         trace_bundle = json.loads(
             (self.output_dir / "downloads/comic-production/files/trace.json").read_text(encoding="utf-8")
+        )
+        real_run_template = json.loads(
+            (self.output_dir / "downloads/comic-production/comic-real-run-evidence-template.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(real_run_template["schema"], "comic_real_run_evidence_intake_v1")
+        self.assertEqual(
+            {item["asset_type"] for item in real_run_template["asset_identity_cards"]},
+            {"character", "prop", "scene"},
+        )
+        self.assertEqual(
+            {item["production_role"] for item in real_run_template["generated_images"]},
+            {
+                "clean_character_identity_three_view",
+                "clean_prop_turnaround_reference",
+                "scene_wide_establishing",
+                "scene_top_down_layout",
+            },
+        )
+        self.assertEqual(
+            {item["image_id"] for item in real_run_template["visual_reviews"]},
+            {item["image_id"] for item in real_run_template["generated_images"]},
         )
         self.assertFalse(handoff_inventory["requires_api_key"])
         self.assertFalse(handoff_inventory["calls_real_models"])

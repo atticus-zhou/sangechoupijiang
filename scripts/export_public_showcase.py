@@ -59,6 +59,22 @@ EXTRA_REVIEWABLE_DOCS = [
         ],
     },
     {
+        "source_path": REPO_ROOT / "docs" / "COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json",
+        "local_uri": "downloads/comic-production/comic-real-run-evidence-template.json",
+        "title": "AI 漫剧真实运行证据模板",
+        "office_id": "comic_production",
+        "office_name": "AI 漫剧制片办公室",
+        "type": "real_run_evidence_template",
+        "reader_guidance": "真实模型跑完后，用这份 JSON 模板核对人物、道具、场景、图片质检、提示词合同和人工验收是否都齐全。",
+        "look_for": "generated_images、visual_reviews、asset_identity_cards、reference_asset_chain、prompt_director_contract、operator_acceptance_checklist 和 recovery_protocol。",
+        "proves": "证明真实质量升级不是口头判断，而是有机器可读的证据模板；人物、道具、场景三类资产和对应基础图都必须被记录。",
+        "acceptance_signals": [
+            "包含 character、prop、scene 三类 asset_identity_cards",
+            "包含 clean_prop_turnaround_reference、scene_wide_establishing 和 scene_top_down_layout",
+            "每张 generated_images 都应有 visual_reviews 记录",
+        ],
+    },
+    {
         "source_path": REPO_ROOT / "docs" / "RESEARCH_EVIDENCE_INTAKE_TEMPLATE.json",
         "local_uri": "downloads/research/research-evidence-intake-template.json",
         "title": "研究办公室证据导入模板",
