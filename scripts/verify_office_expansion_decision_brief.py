@@ -36,6 +36,7 @@ REQUIRED_MARKERS = [
     "办公室专属 schema gate",
     "办公室专属 recovery actions",
     "public claim report",
+    "--strict-real-values",
     "python scripts/verify_research_evidence_intake.py --format markdown",
     "python scripts/verify_research_office_readiness.py --format markdown",
     "python scripts/verify_future_office_backlog.py --format markdown",

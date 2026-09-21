@@ -47,7 +47,7 @@
 
 - 真实证据采集 playbook：说明人类登录、自动导航、截图命名、失败留位和补证重跑。
 - 来源和截图 schema gate：每条结论能回到来源、截图、数据行或待补证据。
-- 证据导入验收：补证 JSON 必须先通过 `python scripts/verify_research_evidence_intake.py --format markdown`，确认来源、截图、数据行、结论和证据缺口互相引用，且不包含 API Key、Cookie、账号密码或私有后台原始导出。
+- 证据导入验收：补证 JSON 必须先通过 `python scripts/verify_research_evidence_intake.py --input output/你的项目/research_evidence.json --strict-real-values --format markdown`，确认来源、截图、数据行、结论和证据缺口互相引用，且不包含 API Key、Cookie、账号密码、私有后台原始导出或 `replace_...` 占位值。
 - 失败恢复事件：平台打不开、账号权限不足、截图失败、数据缺失时，用户能看到下一步动作。
 - 样例交付物：至少一份可下载阶段报告、一份证据清单、一份公开 claim report。
 

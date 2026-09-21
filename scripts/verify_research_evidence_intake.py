@@ -120,7 +120,24 @@ def _as_id_set(items: list[dict[str, Any]], key: str) -> set[str]:
     return {str(item.get(key) or "") for item in items if item.get(key)}
 
 
-def verify_research_evidence_intake(input_path: Path = DEFAULT_INPUT) -> dict[str, Any]:
+def _placeholder_paths(payload: Any, path: str = "$") -> list[str]:
+    placeholders: list[str] = []
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            placeholders.extend(_placeholder_paths(value, f"{path}.{key}"))
+        return placeholders
+    if isinstance(payload, list):
+        for index, value in enumerate(payload):
+            placeholders.extend(_placeholder_paths(value, f"{path}[{index}]"))
+        return placeholders
+    if isinstance(payload, str):
+        lowered = payload.lower()
+        if "replace_" in lowered or "_replace" in lowered or "replace/" in lowered or "2026-01-01t00:00:00z" in lowered:
+            placeholders.append(path)
+    return placeholders
+
+
+def verify_research_evidence_intake(input_path: Path = DEFAULT_INPUT, *, strict_real_values: bool = False) -> dict[str, Any]:
     input_path = Path(input_path)
     payload, errors = _load_json(input_path)
     warnings: list[str] = []
@@ -139,6 +156,14 @@ def verify_research_evidence_intake(input_path: Path = DEFAULT_INPUT) -> dict[st
             errors.append("schema must be research_evidence_intake_v1")
         if payload.get("office_id") != "research":
             errors.append("office_id must be research")
+        if strict_real_values:
+            placeholder_fields = _placeholder_paths(payload)
+            if placeholder_fields:
+                errors.append(
+                    "intake still contains placeholder values: "
+                    + ", ".join(placeholder_fields[:12])
+                    + (" ..." if len(placeholder_fields) > 12 else "")
+                )
 
         claim_boundary = payload.get("claim_boundary") or {}
         must_not_include = set(claim_boundary.get("must_not_include") or [])
@@ -273,6 +298,7 @@ def verify_research_evidence_intake(input_path: Path = DEFAULT_INPUT) -> dict[st
         "status": "passed" if not errors else "failed",
         "mode": "research_evidence_intake",
         "input": str(input_path.relative_to(REPO_ROOT) if input_path.is_relative_to(REPO_ROOT) else input_path),
+        "strict_real_values": strict_real_values,
         "summary": (
             "Research evidence intake is structurally safe and ready for staged report rebuild decisions."
             if not errors
@@ -300,6 +326,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
         f"Status: `{payload.get('status')}`",
         f"Mode: `{payload.get('mode')}`",
         f"Input: `{payload.get('input')}`",
+        f"Strict real values: `{payload.get('strict_real_values')}`",
         f"Summary: {payload.get('summary')}",
         "",
         f"- Sources: {payload.get('source_count')}",
@@ -326,9 +353,14 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
+    parser.add_argument(
+        "--strict-real-values",
+        action="store_true",
+        help="Reject placeholder values such as replace_... when auditing a filled real evidence file.",
+    )
     parser.add_argument("--format", choices={"json", "markdown"}, default="markdown")
     args = parser.parse_args()
-    payload = verify_research_evidence_intake(args.input)
+    payload = verify_research_evidence_intake(args.input, strict_real_values=args.strict_real_values)
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
