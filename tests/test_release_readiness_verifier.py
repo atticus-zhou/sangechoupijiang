@@ -33,6 +33,7 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
                 "model_guidance",
                 "development_checklist",
                 "github_release_contract",
+                "github_onboarding_packet",
                 "public_showcase_workflow_contract",
                 "public_docs_readability",
                 "runtime_health",
@@ -81,6 +82,10 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         github_contract = next(item for item in payload["checks"] if item["id"] == "github_release_contract")
         self.assertIn("artifact=no-key-release-evidence", github_contract["summary"])
         self.assertIn("failures=0", github_contract["summary"])
+        onboarding_packet = next(item for item in payload["checks"] if item["id"] == "github_onboarding_packet")
+        self.assertIn("required_files=21", onboarding_packet["summary"])
+        self.assertIn("checks=5", onboarding_packet["summary"])
+        self.assertIn("errors=0", onboarding_packet["summary"])
         showcase_workflow = next(item for item in payload["checks"] if item["id"] == "public_showcase_workflow_contract")
         self.assertIn("diagnosis=current_contract_safe", showcase_workflow["summary"])
         self.assertIn("manual_only=True", showcase_workflow["summary"])
@@ -259,6 +264,8 @@ class ReleaseReadinessVerifierTests(unittest.TestCase):
         self.assertIn("skip_release=True", completed.stdout)
         self.assertIn("GitHub release evidence contract", completed.stdout)
         self.assertIn("artifact=no-key-release-evidence", completed.stdout)
+        self.assertIn("GitHub onboarding packet", completed.stdout)
+        self.assertIn("required_files=21", completed.stdout)
         self.assertIn("Public showcase workflow notification contract", completed.stdout)
         self.assertIn("manual_only=True", completed.stdout)
         self.assertIn("push_trigger=False", completed.stdout)

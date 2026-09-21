@@ -45,6 +45,11 @@ RELEASE_CHECKS = [
         "command": ["scripts/verify_github_release_evidence.py", "--format", "json", "--contract-only"],
     },
     {
+        "id": "github_onboarding_packet",
+        "title": "GitHub onboarding packet",
+        "command": ["scripts/verify_github_onboarding_packet.py", "--format", "json"],
+    },
+    {
         "id": "public_showcase_workflow_contract",
         "title": "Public showcase workflow notification contract",
         "command": ["scripts/diagnose_showcase_workflow_email.py", "--format", "json", "--contract-only"],
@@ -558,6 +563,14 @@ def _summary_for(check_id: str, parsed: dict[str, Any] | None, stdout: str, stde
                 f"artifact={parsed.get('artifact_name')}; "
                 f"failures={len(parsed.get('failures') or [])}; "
                 f"mode={parsed.get('mode')}"
+            )
+        if check_id == "github_onboarding_packet":
+            return (
+                f"required_files={parsed.get('required_files')}; "
+                f"archive_files={parsed.get('archive_files')}; "
+                f"archive_bytes={parsed.get('archive_bytes')}; "
+                f"checks={len(parsed.get('verification_checks') or [])}; "
+                f"errors={len(parsed.get('errors') or [])}"
             )
         if check_id == "public_showcase_workflow_contract":
             contract = parsed.get("workflow_contract") or {}
