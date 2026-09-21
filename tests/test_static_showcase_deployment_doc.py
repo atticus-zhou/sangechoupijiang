@@ -37,7 +37,7 @@ class StaticShowcaseDeploymentDocTests(unittest.TestCase):
         self.assertIn("不需要 Python 后端", text)
         self.assertIn("八份样例下载物", text)
         self.assertIn("最快验收路线", text)
-        self.assertIn("十四个可复核文件目录", text)
+        self.assertIn("十五个可复核文件目录", text)
         self.assertIn("GitHub 新用户上手包", text)
         self.assertIn("面试官评审包", text)
         self.assertIn("研究办公室阶段性交付声明", text)

@@ -557,7 +557,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             "generated_by": "python scripts/export_public_showcase.py",
         }
         static_showcase["safety_boundaries"] = [
-            "静态展示只包含固定样例、实际产品截图、八份公开样例下载物、真实生产声明报告、真实运行证据收口单、研究证据导入模板、办公室扩展决策简报、面试官评审包和 GitHub 新用户上手包，共十四个可复核文件。",
+            "静态展示只包含固定样例、实际产品截图、八份公开样例下载物、真实生产声明报告、真实运行证据收口单、真实运行证据模板、研究证据导入模板、办公室扩展决策简报、面试官评审包和 GitHub 新用户上手包，共十五个可复核文件。",
             "页面运行时不连接 FastAPI，不读取 config.yaml、环境变量、Cookie、登录态或本地用户工作区。",
             "不要把个人 API Key、真实用户数据或运行产物复制进静态目录。",
             "真实生产继续走本地模式，由使用者填写自己的模型 Key。",
@@ -569,7 +569,7 @@ def export_public_showcase(output_dir: Path | str = DEFAULT_OUTPUT) -> dict[str,
             )
         if len(interview_script) >= 3:
             interview_script[2]["product_response"] = (
-                "八份公开下载物已经随静态站点一起导出，连同声明报告、真实运行证据收口单、研究证据导入模板、办公室扩展决策简报、面试官评审包和 GitHub 新用户上手包构成十四个可复核文件，每个链接都附带阅读重点和验收信号。"
+                "八份公开下载物已经随静态站点一起导出，连同声明报告、真实运行证据收口单、真实运行证据模板、研究证据导入模板、办公室扩展决策简报、面试官评审包和 GitHub 新用户上手包构成十五个可复核文件，每个链接都附带阅读重点和验收信号。"
             )
         deployment = static_showcase.setdefault("public_deployment", {})
         deployment["mode"] = "static_demo_only"
