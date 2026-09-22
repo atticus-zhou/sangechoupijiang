@@ -19,7 +19,12 @@ if str(REPO_ROOT) not in sys.path:
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
 from src.comic_office.v2.delivery import build_delivery_from_v2
-from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage
+from src.comic_office.v2.production import (
+    ImageProductionResult,
+    ImageRecord,
+    PromptPackage,
+    image_file_fingerprint,
+)
 from src.comic_office.v2.prompt_director import (
     PROMPT_STRATEGY_HASH,
     PROMPT_STRATEGY_VERSION,
@@ -93,6 +98,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
                 },
                 production_role=prompt.production_role,
                 clean_background_required=prompt.clean_background_required,
+                **image_file_fingerprint(image_path),
             ))
     prompt_package = PromptPackage(
         package_id="prompts_fixture",
@@ -175,6 +181,18 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
     )
     if not image_production_roles_ready:
         raise AssertionError("handoff manifest image records are missing production roles")
+    image_file_fingerprints_ready = all(
+        isinstance(image.get("file_sha256"), str)
+        and len(image.get("file_sha256") or "") == 64
+        and isinstance(image.get("byte_size"), int)
+        and image.get("byte_size") > 0
+        and isinstance(image.get("dimensions"), dict)
+        and int((image.get("dimensions") or {}).get("width") or 0) > 0
+        and int((image.get("dimensions") or {}).get("height") or 0) > 0
+        for image in (handoff_manifest.get("images") or [])
+    )
+    if not image_file_fingerprints_ready:
+        raise AssertionError("handoff manifest image records are missing file fingerprints")
     asset_identity_ready = all(
         asset.get("type_label")
         and isinstance(asset.get("visual_locks"), list)
@@ -351,6 +369,7 @@ def verify_delivery(fixture_path: Path, output_dir: Path) -> dict:
         "handoff_manifest_image_prompts": image_prompt_ready,
         "handoff_manifest_prompt_strategy": prompt_strategy_ready,
         "handoff_manifest_image_production_roles": image_production_roles_ready,
+        "handoff_manifest_image_file_fingerprints": image_file_fingerprints_ready,
         "handoff_manifest_asset_identity_fields": asset_identity_ready,
         "handoff_manifest_asset_baseline_chain": asset_baseline_chain_ready,
         "handoff_manifest_shot_reference_images": shot_reference_images_ready,
@@ -441,6 +460,7 @@ def format_markdown(result: dict[str, Any]) -> str:
         ("handoff_manifest_image_prompts", "Executable image prompts"),
         ("handoff_manifest_prompt_strategy", "Prompt strategy lineage"),
         ("handoff_manifest_image_production_roles", "Image production roles"),
+        ("handoff_manifest_image_file_fingerprints", "Image file fingerprints"),
         ("handoff_manifest_asset_identity_fields", "Asset identity fields"),
         ("handoff_manifest_asset_baseline_chain", "Asset baseline reference chain"),
         ("handoff_manifest_shot_reference_images", "Shot reference images"),

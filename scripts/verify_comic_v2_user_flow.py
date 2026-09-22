@@ -28,7 +28,12 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.comic_office.v2.asset_manifest import build_asset_manifest, replace_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
-from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage
+from src.comic_office.v2.production import (
+    ImageProductionResult,
+    ImageRecord,
+    PromptPackage,
+    image_file_fingerprint,
+)
 from src.comic_office.v2.prompt_director import build_asset_prompt_plan, build_shot_card
 from src.image_generation import GeneratedImage
 from src.web.app import app, config_manager
@@ -144,6 +149,7 @@ def verify_user_flow(fixture_path: Path, output_dir: Path, *, cleanup: bool = Tr
                     review={"status": "pass", "fixture": True},
                     production_role=prompt.production_role,
                     clean_background_required=prompt.clean_background_required,
+                    **image_file_fingerprint(image_path),
                 ))
                 if index == 0:
                     baseline_id = image_id

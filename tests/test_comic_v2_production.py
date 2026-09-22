@@ -1,3 +1,4 @@
+import base64
 import json
 import tempfile
 import unittest
@@ -12,6 +13,9 @@ from src.llm.providers import LLMResponse, ModelConfig
 
 
 STORY = "林昭提着裂纹月灯走进月塔，最终熄灭月塔。"
+PNG_1X1 = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/l9r5WQAAAABJRU5ErkJggg=="
+)
 
 
 def bundle():
@@ -285,7 +289,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         def generator(config, prompt, output_dir, title):
             path = Path(output_dir) / f"{title}.png"
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"fake-png")
+            path.write_bytes(PNG_1X1)
             return GeneratedImage(title=title, prompt=prompt, path=str(path), provider="doubao", model="seedream")
 
         async def reviewer(request, *, baseline):
@@ -332,7 +336,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
             generated_prompts.append(prompt)
             path = Path(output_dir) / f"{title}.png"
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"fake-png")
+            path.write_bytes(PNG_1X1)
             return GeneratedImage(title=title, prompt=prompt, path=str(path), provider="doubao", model="seedream")
 
         async def reviewer(request, *, baseline):
@@ -370,7 +374,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         def generator(config, prompt, output_dir, title):
             path = Path(output_dir) / f"{title}.png"
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"fake-png")
+            path.write_bytes(PNG_1X1)
             return GeneratedImage(title=title, prompt=prompt, path=str(path), provider="doubao", model="seedream")
 
         async def reviewer(request, *, baseline):
@@ -402,7 +406,7 @@ class ComicV2ProductionTests(unittest.IsolatedAsyncioTestCase):
         def generator(config, prompt, output_dir, title):
             path = Path(output_dir) / f"{title}.png"
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"fake-png")
+            path.write_bytes(PNG_1X1)
             return GeneratedImage(title=title, prompt=prompt, path=str(path), provider="doubao", model="seedream")
 
         async def reviewer(request, *, baseline):

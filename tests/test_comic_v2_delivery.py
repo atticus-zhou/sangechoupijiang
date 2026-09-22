@@ -8,7 +8,7 @@ from docx import Document
 
 from src.comic_office.v2.asset_manifest import build_asset_manifest
 from src.comic_office.v2.contracts import build_contract_bundle
-from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage
+from src.comic_office.v2.production import ImageProductionResult, ImageRecord, PromptPackage, image_file_fingerprint
 from src.comic_office.v2.prompt_director import (
     PROMPT_STRATEGY_HASH,
     PROMPT_STRATEGY_VERSION,
@@ -140,6 +140,7 @@ def parts(image_dir: Path):
             review={"status": "pass"},
             production_role=prompts[index].production_role,
             clean_background_required=prompts[index].clean_background_required,
+            **image_file_fingerprint(path),
         ))
     result = ImageProductionResult(
         status="ready_for_delivery",
@@ -263,6 +264,9 @@ class ComicV2DeliveryTests(unittest.TestCase):
             self.assertEqual(first_image["production_role"], "clean_character_identity_three_view")
             self.assertEqual(first_image["prompt_strategy_version"], PROMPT_STRATEGY_VERSION)
             self.assertEqual(first_image["prompt_strategy_hash"], PROMPT_STRATEGY_HASH)
+            self.assertRegex(first_image["file_sha256"], r"^[0-9a-f]{64}$")
+            self.assertGreater(first_image["byte_size"], 0)
+            self.assertEqual(first_image["dimensions"], {"width": 1, "height": 1})
             self.assertTrue(first_image["clean_background_required"])
             usage_contract = "；".join(first_image["usage_contract"])
             self.assertIn("基础资产图只建立角色身份参考", usage_contract)

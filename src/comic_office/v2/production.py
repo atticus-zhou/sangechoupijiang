@@ -6,9 +6,11 @@ import asyncio
 import base64
 import hashlib
 import json
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Awaitable, Callable
+
+from PIL import Image
 
 from src.image_generation import GeneratedImage, generate_doubao_image, is_image_generation_config
 from src.llm.providers import LLMFactory, LLMMessage, ModelConfig
@@ -78,6 +80,9 @@ class ImageRecord:
     review: dict[str, Any]
     production_role: str = ""
     clean_background_required: bool = False
+    file_sha256: str = ""
+    byte_size: int = 0
+    dimensions: dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -170,6 +175,9 @@ def image_production_result_from_dict(payload: dict[str, Any]) -> ImageProductio
             image_kind=str(item.get("image_kind") or ""),
             prompt_hash=str(item.get("prompt_hash") or ""),
             path=str(item.get("path") or ""),
+            file_sha256=str(item.get("file_sha256") or ""),
+            byte_size=int(item.get("byte_size") or 0),
+            dimensions=dict(item.get("dimensions") or {}),
             provider=str(item.get("provider") or ""),
             model=str(item.get("model") or ""),
             attempts=int(item.get("attempts") or 0),
@@ -406,6 +414,7 @@ async def produce_asset_images(
                 image_kind=image_kind,
                 prompt_hash=hashlib.sha256(current_prompt.encode("utf-8")).hexdigest(),
                 path=str(final_image.path),
+                **image_file_fingerprint(final_image.path),
                 provider=final_image.provider,
                 model=final_image.model,
                 attempts=attempts,
@@ -434,6 +443,19 @@ async def produce_asset_images(
         records=tuple(records),
         failures=tuple(failures),
     )
+
+
+def image_file_fingerprint(path: str | Path) -> dict[str, Any]:
+    """Return immutable evidence that an image record points at a real image file."""
+    image_path = Path(path)
+    data = image_path.read_bytes()
+    with Image.open(image_path) as image:
+        width, height = image.size
+    return {
+        "file_sha256": hashlib.sha256(data).hexdigest(),
+        "byte_size": len(data),
+        "dimensions": {"width": int(width), "height": int(height)},
+    }
 
 
 async def run_visual_review(

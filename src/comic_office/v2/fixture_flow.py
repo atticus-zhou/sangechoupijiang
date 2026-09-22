@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw
 
 from .asset_manifest import AssetManifest, build_asset_manifest, replace_asset_manifest
 from .contracts import ContractBundle, build_contract_bundle
-from .production import ImageProductionResult, ImageRecord, PromptPackage
+from .production import ImageProductionResult, ImageRecord, PromptPackage, image_file_fingerprint
 from .prompt_director import PROMPT_STRATEGY_HASH, PROMPT_STRATEGY_VERSION
 from .prompt_director import build_asset_prompt_plan, build_shot_card
 from .visual_review import REVIEW_DIMENSIONS
@@ -166,6 +166,7 @@ def fixture_image_production(
                 },
                 production_role=prompt.production_role,
                 clean_background_required=prompt.clean_background_required,
+                **image_file_fingerprint(image_path),
             )
             record = replace(record, review=_fixture_visual_review(asset_type=asset.asset_type, image_kind=image_kind))
             records.append(record)
