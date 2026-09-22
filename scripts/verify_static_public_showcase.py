@@ -877,6 +877,7 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
         extension_checklist = office_extension_story.get("starter_checklist") or []
         future_candidates = office_extension_story.get("future_office_candidates") or []
         future_prioritization = office_extension_story.get("future_office_prioritization") or {}
+        cross_office_handoffs = office_extension_story.get("cross_office_handoff_map") or []
         future_backlog = office_extension_story.get("future_platform_backlog") or []
         office_launch_matrix = portfolio.get("office_launch_matrix") or {}
         launch_matrix_summary = office_launch_matrix.get("summary") or {}
@@ -915,6 +916,17 @@ def verify_static_public_showcase(existing_dir: Path | str | None = None) -> dic
             errors.append("static showcase future office prioritization must stay decision_ready_but_not_started")
         if not future_prioritization.get("decision_rule") or len(future_prioritization.get("do_not_start_until") or []) < 3:
             errors.append("static showcase future office prioritization must explain decision rule and start gates")
+        handoff_ids = {item.get("id") for item in cross_office_handoffs}
+        for handoff_id in ("research_to_comic_production", "comic_production_to_short_video_ads", "research_to_ecommerce_selection"):
+            if handoff_id not in handoff_ids:
+                errors.append(f"static showcase is missing cross-office handoff: {handoff_id}")
+        for item in cross_office_handoffs:
+            if not item.get("from_office") or not item.get("to_office") or not item.get("user_scenario"):
+                errors.append(f"static showcase cross-office handoff is incomplete: {item.get('id')}")
+            if len(item.get("handoff_artifacts") or []) < 3 or len(item.get("receiving_requirements") or []) < 2:
+                errors.append(f"static showcase cross-office handoff must list artifacts and receiving requirements: {item.get('id')}")
+            if not item.get("not_automated_reason") or not item.get("next_gate"):
+                errors.append(f"static showcase cross-office handoff must explain automation boundary and next gate: {item.get('id')}")
         backlog_ids = {item.get("id") for item in future_backlog}
         for backlog_id in ("future_schema_validators", "future_recovery_events"):
             if backlog_id not in backlog_ids:

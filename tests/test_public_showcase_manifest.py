@@ -495,6 +495,17 @@ class PublicShowcaseManifestTests(unittest.TestCase):
             ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"],
         )
         self.assertIn("复用现有证据链", extension_story["future_office_prioritization"]["decision_rule"])
+        handoffs = extension_story["cross_office_handoff_map"]
+        self.assertGreaterEqual(len(handoffs), 3)
+        handoff_by_id = {item["id"]: item for item in handoffs}
+        self.assertEqual(handoff_by_id["research_to_comic_production"]["from_office"], "research")
+        self.assertEqual(handoff_by_id["research_to_comic_production"]["to_office"], "comic_production")
+        self.assertIn("research_claim_report", handoff_by_id["research_to_comic_production"]["handoff_artifacts"])
+        self.assertEqual(handoff_by_id["comic_production_to_short_video_ads"]["status"], "blocked_until_real_quality")
+        self.assertIn("real_quality_verified", handoff_by_id["comic_production_to_short_video_ads"]["receiving_requirements"])
+        for handoff in handoffs:
+            self.assertTrue(handoff["not_automated_reason"])
+            self.assertTrue(handoff["next_gate"])
         backlog_ids = {item["id"] for item in extension_story["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
         launch_matrix = embed["office_launch_matrix"]

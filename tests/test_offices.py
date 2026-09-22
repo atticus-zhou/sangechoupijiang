@@ -171,6 +171,19 @@ class OfficeProfileTests(unittest.TestCase):
             ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"],
         )
         self.assertGreaterEqual(len(prioritization["do_not_start_until"]), 3)
+        handoffs = blueprint["cross_office_handoff_map"]
+        self.assertGreaterEqual(len(handoffs), 3)
+        handoff_ids = {item["id"] for item in handoffs}
+        self.assertIn("research_to_comic_production", handoff_ids)
+        self.assertIn("comic_production_to_short_video_ads", handoff_ids)
+        for handoff in handoffs:
+            self.assertTrue(handoff["from_office"])
+            self.assertTrue(handoff["to_office"])
+            self.assertTrue(handoff["user_scenario"])
+            self.assertGreaterEqual(len(handoff["handoff_artifacts"]), 3)
+            self.assertGreaterEqual(len(handoff["receiving_requirements"]), 2)
+            self.assertTrue(handoff["not_automated_reason"])
+            self.assertTrue(handoff["next_gate"])
         backlog_ids = {item["id"] for item in blueprint["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
         self.assertTrue(all(item["evidence_required"] for item in blueprint["future_platform_backlog"]))

@@ -392,6 +392,15 @@ class StaticPublicShowcaseTests(unittest.TestCase):
             ["ecommerce_selection", "short_video_ads", "story_ip", "technical_project"],
         )
         self.assertIn("复用现有证据链", extension_story["future_office_prioritization"]["decision_rule"])
+        handoffs = extension_story["cross_office_handoff_map"]
+        self.assertGreaterEqual(len(handoffs), 3)
+        handoff_by_id = {item["id"]: item for item in handoffs}
+        self.assertIn("research_claim_report", handoff_by_id["research_to_comic_production"]["handoff_artifacts"])
+        self.assertEqual(handoff_by_id["comic_production_to_short_video_ads"]["automation_level"], "blocked")
+        self.assertIn("future_schema_validators", handoff_by_id["research_to_ecommerce_selection"]["next_gate"])
+        for handoff in handoffs:
+            self.assertTrue(handoff["user_scenario"])
+            self.assertTrue(handoff["not_automated_reason"])
         backlog_ids = {item["id"] for item in extension_story["future_platform_backlog"]}
         self.assertEqual(backlog_ids, {"future_schema_validators", "future_recovery_events"})
         launch_matrix = showcase["portfolio_embed"]["office_launch_matrix"]

@@ -1140,6 +1140,29 @@
       target.appendChild(priorityCard);
     }
 
+    const handoffs = Array.isArray(story.cross_office_handoff_map)
+      ? story.cross_office_handoff_map
+      : [];
+    if (handoffs.length) {
+      const handoffCard = element('article', 'card extension-verifier-card cross-office-handoff-card');
+      handoffCard.appendChild(element('h3', '', '办公室之间怎么接力'));
+      handoffCard.appendChild(element('p', '', '多办公室协作先从可审计交接开始：上游交付哪些文件、下游需要哪些条件、当前为什么不能直接自动化。'));
+      const handoffGrid = element('div', 'office-priority-grid cross-office-handoff-grid');
+      handoffs.forEach(function (item) {
+        const block = element('div', 'office-priority-item cross-office-handoff-item');
+        block.appendChild(element('span', 'status-pill', item.status || item.automation_level || 'handoff'));
+        block.appendChild(element('strong', '', text(item.from_office || '') + ' -> ' + text(item.to_office || '')));
+        block.appendChild(element('p', '', item.user_scenario || ''));
+        addTextRow(block, '交接文件', (item.handoff_artifacts || []).join(' / '));
+        addTextRow(block, '接收条件', (item.receiving_requirements || []).join(' / '));
+        addTextRow(block, '自动化边界', item.not_automated_reason);
+        addTextRow(block, '下一道门禁', item.next_gate);
+        handoffGrid.appendChild(block);
+      });
+      handoffCard.appendChild(handoffGrid);
+      target.appendChild(handoffCard);
+    }
+
     const grid = element('div', 'extension-check-grid');
     checklist.forEach(function (item) {
       const card = element('article', 'card extension-check-card');

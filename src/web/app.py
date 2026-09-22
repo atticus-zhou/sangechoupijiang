@@ -2896,6 +2896,7 @@ def _public_showcase_office_extension_story(blueprint: dict) -> dict:
     candidates = list(blueprint.get("future_office_candidates") or [])
     backlog = list(blueprint.get("future_platform_backlog") or [])
     prioritization = blueprint.get("future_office_prioritization") or {}
+    handoffs = list(blueprint.get("cross_office_handoff_map") or [])
     return {
         "title": "新办公室扩展路径",
         "summary": "未来任何办公室都不能只做一个入口就出现在公开产品里；它必须先证明产品价值、安全边界、office_id 隔离、人工确认节点、样例交付物、结构与失败恢复、无 Key 演示行为和发布检查。",
@@ -2957,6 +2958,21 @@ def _public_showcase_office_extension_story(blueprint: dict) -> dict:
             ],
             "do_not_start_until": prioritization.get("do_not_start_until", []),
         },
+        "cross_office_handoff_map": [
+            {
+                "id": item.get("id", ""),
+                "status": item.get("status", ""),
+                "from_office": item.get("from_office", ""),
+                "to_office": item.get("to_office", ""),
+                "user_scenario": item.get("user_scenario", ""),
+                "handoff_artifacts": item.get("handoff_artifacts", []),
+                "receiving_requirements": item.get("receiving_requirements", []),
+                "automation_level": item.get("automation_level", ""),
+                "not_automated_reason": item.get("not_automated_reason", ""),
+                "next_gate": item.get("next_gate", ""),
+            }
+            for item in handoffs
+        ],
         "future_platform_backlog": [
             {
                 "id": item.get("id", ""),
