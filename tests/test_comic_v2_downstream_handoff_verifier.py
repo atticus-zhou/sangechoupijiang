@@ -45,6 +45,8 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(result["image_files_present"], 7)
         self.assertEqual(result["image_files_total"], 7)
         self.assertEqual(result["image_files_missing"], 0)
+        self.assertEqual(result["image_file_fingerprints_verified"], 7)
+        self.assertEqual(result["image_file_fingerprint_mismatches"], 0)
         self.assertEqual(result["clean_background_asset_images"], 4)
         self.assertEqual(result["first_frame_bound_shots"], 2)
         self.assertEqual(result["complete_reference_chain_shots"], 2)
@@ -100,6 +102,8 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertEqual(payload["image_usage_contracts"], payload["image_count"])
         self.assertEqual(payload["image_files_present"], payload["image_count"])
         self.assertEqual(payload["image_files_missing"], 0)
+        self.assertEqual(payload["image_file_fingerprints_verified"], payload["image_count"])
+        self.assertEqual(payload["image_file_fingerprint_mismatches"], 0)
         self.assertEqual(payload["asset_image_requirement_ready"], payload["asset_image_requirement_total"])
         self.assertEqual(payload["asset_image_requirement_missing"], 0)
         self.assertTrue(payload["asset_usage_map_ready"])
@@ -137,6 +141,22 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertFalse(result["downstream_handoff_ready"])
         self.assertEqual(result["image_files_missing"], 1)
         self.assertIn("image file missing from delivery package", "\n".join(result["errors"]))
+
+    def test_existing_manifest_reports_image_fingerprint_mismatch(self):
+        module = self._module()
+        with tempfile.TemporaryDirectory() as tmp:
+            delivery = verify_delivery(FIXTURE, Path(tmp))
+            manifest_path = Path(delivery["handoff_manifest_path"])
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            first_image = manifest["images"][0]
+            image_path = manifest_path.parent / first_image["file"]
+            image_path.write_bytes(image_path.read_bytes() + b"tampered")
+            result = module.verify_downstream_handoff(manifest_path=manifest_path)
+
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(result["downstream_handoff_ready"])
+        self.assertEqual(result["image_file_fingerprint_mismatches"], 1)
+        self.assertIn("file_sha256 does not match image bytes", "\n".join(result["errors"]))
 
     def test_existing_manifest_reports_missing_word_canvas(self):
         module = self._module()
@@ -184,6 +204,7 @@ class ComicV2DownstreamHandoffVerifierTests(unittest.TestCase):
         self.assertIn("Quick-start playbook: 5 steps", completed.stdout)
         self.assertIn("Image usage contracts: 7/7", completed.stdout)
         self.assertIn("Image files present: 7/7", completed.stdout)
+        self.assertIn("Image file fingerprints verified: 7/7", completed.stdout)
         self.assertIn("First-frame bound shots: 2/2", completed.stdout)
         self.assertIn("Complete reference-chain shots: 2/2", completed.stdout)
         self.assertIn("Asset Image Requirement Matrix", completed.stdout)

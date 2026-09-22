@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
 from typing import Any
+
+from PIL import Image
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -166,6 +169,8 @@ def verify_downstream_handoff(
         "image_files_present": image_files["present"],
         "image_files_total": image_files["total"],
         "image_files_missing": image_files["missing"],
+        "image_file_fingerprints_verified": image_files["fingerprints_verified"],
+        "image_file_fingerprint_mismatches": image_files["fingerprint_mismatches"],
         "first_frame_bound_shots": shot_references["first_frame_bound_shots"],
         "complete_reference_chain_shots": shot_references["complete_reference_chain_shots"],
         "reference_asset_links": shot_references["reference_asset_links"],
@@ -259,6 +264,8 @@ def _image_file_summary(manifest_path: Path, images: list[dict[str, Any]]) -> di
     failures: list[str] = []
     present = 0
     missing = 0
+    fingerprints_verified = 0
+    fingerprint_mismatches = 0
     for image in images:
         image_id = image.get("image_id") or "<missing_image_id>"
         filename = str(image.get("file") or "").strip()
@@ -276,12 +283,53 @@ def _image_file_summary(manifest_path: Path, images: list[dict[str, Any]]) -> di
             failures.append(f"{image_id}: image file is empty ({filename})")
             continue
         present += 1
+        fingerprint_errors = _image_fingerprint_failures(image_id, image, resolved)
+        if fingerprint_errors:
+            fingerprint_mismatches += 1
+            failures.extend(fingerprint_errors)
+        else:
+            fingerprints_verified += 1
     return {
         "present": present,
         "total": len(images),
         "missing": missing,
+        "fingerprints_verified": fingerprints_verified,
+        "fingerprint_mismatches": fingerprint_mismatches,
         "failures": failures,
     }
+
+
+def _image_fingerprint_failures(image_id: str, image: dict[str, Any], path: Path) -> list[str]:
+    failures: list[str] = []
+    expected_sha = str(image.get("file_sha256") or "").strip().lower()
+    expected_size = image.get("byte_size")
+    expected_dimensions = image.get("dimensions") or {}
+    if not expected_sha or len(expected_sha) != 64:
+        failures.append(f"{image_id}: file_sha256 missing or invalid")
+    if not isinstance(expected_size, int) or expected_size <= 0:
+        failures.append(f"{image_id}: byte_size missing or invalid")
+    width = expected_dimensions.get("width") if isinstance(expected_dimensions, dict) else None
+    height = expected_dimensions.get("height") if isinstance(expected_dimensions, dict) else None
+    if not isinstance(width, int) or width <= 0 or not isinstance(height, int) or height <= 0:
+        failures.append(f"{image_id}: dimensions missing or invalid")
+    if failures:
+        return failures
+
+    data = path.read_bytes()
+    actual_sha = hashlib.sha256(data).hexdigest()
+    if actual_sha != expected_sha:
+        failures.append(f"{image_id}: file_sha256 does not match image bytes")
+    if len(data) != expected_size:
+        failures.append(f"{image_id}: byte_size does not match image bytes")
+    try:
+        with Image.open(path) as opened:
+            actual_dimensions = {"width": int(opened.size[0]), "height": int(opened.size[1])}
+    except Exception as exc:
+        failures.append(f"{image_id}: dimensions could not be read ({exc})")
+        return failures
+    if actual_dimensions != {"width": width, "height": height}:
+        failures.append(f"{image_id}: dimensions do not match image file")
+    return failures
 
 
 def _resolve_manifest_file(manifest_path: Path, filename: str) -> Path | None:
@@ -703,6 +751,10 @@ def format_markdown(result: dict[str, Any]) -> str:
         f"- Image usage contracts: {result.get('image_usage_contracts')}/{result.get('image_count')}",
         f"- Image reference policies: {result.get('image_reference_policies')}/{result.get('image_count')}",
         f"- Image files present: {result.get('image_files_present')}/{result.get('image_files_total')}",
+        (
+            f"- Image file fingerprints verified: "
+            f"{result.get('image_file_fingerprints_verified')}/{result.get('image_files_total')}"
+        ),
         f"- Clean-background base asset images: {result.get('clean_background_asset_images')}",
         f"- First-frame bound shots: {result.get('first_frame_bound_shots')}/{result.get('shot_count')}",
         f"- Complete reference-chain shots: {result.get('complete_reference_chain_shots')}/{result.get('shot_count')}",
