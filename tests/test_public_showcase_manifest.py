@@ -537,8 +537,12 @@ class PublicShowcaseManifestTests(unittest.TestCase):
         self.assertEqual(deployment_live["check_command"], "npm run check:online")
         self.assertEqual(deployment_live["ship_command"], "npm run ship:vercel")
         stale_diagnosis = deployment_live["stale_bundle_diagnosis"]
-        self.assertEqual(stale_diagnosis["status"], "source_mismatch_or_stale_vercel_bundle")
-        self.assertIn("build-info.json", " ".join(stale_diagnosis["signals"]))
+        self.assertEqual(stale_diagnosis["status"], "stale_vercel_build")
+        variant_by_status = {item["status"]: item for item in stale_diagnosis["diagnosis_variants"]}
+        self.assertIn("source_mismatch_or_stale_vercel_bundle", variant_by_status)
+        self.assertIn("stale_vercel_build_by_curl_probe", variant_by_status)
+        self.assertIn("build-info.json", " ".join(variant_by_status["stale_vercel_build_by_curl_probe"]["signals"]))
+        self.assertIn("does not inspect", variant_by_status["stale_vercel_build_by_curl_probe"]["does_not_prove"])
         self.assertIn("Root Directory", " ".join(stale_diagnosis["dashboard_checklist"]))
         self.assertTrue(any("check:online" in item for item in stale_diagnosis["recovery_actions"]))
         deployment_ci = public_deployment["ci_verification"]

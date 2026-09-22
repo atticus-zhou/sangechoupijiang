@@ -427,8 +427,12 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertTrue(live_verification["requires_vercel_authorization"])
         self.assertIn("check:online", live_verification["do_not_claim_live_until"])
         stale_diagnosis = live_verification["stale_bundle_diagnosis"]
-        self.assertEqual(stale_diagnosis["status"], "source_mismatch_or_stale_vercel_bundle")
-        self.assertIn("build-info.json", " ".join(stale_diagnosis["signals"]))
+        self.assertEqual(stale_diagnosis["status"], "stale_vercel_build")
+        variant_by_status = {item["status"]: item for item in stale_diagnosis["diagnosis_variants"]}
+        self.assertIn("source_mismatch_or_stale_vercel_bundle", variant_by_status)
+        self.assertIn("stale_vercel_build_by_curl_probe", variant_by_status)
+        self.assertIn("build-info.json", " ".join(variant_by_status["stale_vercel_build_by_curl_probe"]["signals"]))
+        self.assertIn("does not inspect", variant_by_status["stale_vercel_build_by_curl_probe"]["does_not_prove"])
         self.assertIn("atticus-zhou/me", " ".join(stale_diagnosis["dashboard_checklist"]))
         self.assertTrue(any("Do not edit Three Cobblers product data" in item for item in stale_diagnosis["recovery_actions"]))
         static_fallback = deploy_manifest["static_url_fallback"]
@@ -460,11 +464,11 @@ class StaticPublicShowcaseTests(unittest.TestCase):
         self.assertEqual(showcase_live_verification["live_url"], "https://www.atticus.asia/three-stooges/")
         self.assertEqual(
             showcase_live_verification["stale_bundle_diagnosis"]["status"],
-            "source_mismatch_or_stale_vercel_bundle",
+            "stale_vercel_build",
         )
         self.assertEqual(
             visitor_guide["live_verification"]["stale_bundle_diagnosis"]["status"],
-            "source_mismatch_or_stale_vercel_bundle",
+            "stale_vercel_build",
         )
         showcase_static_fallback = showcase["public_deployment"]["static_url_fallback"]
         self.assertEqual(showcase_static_fallback["status"], "external_required")

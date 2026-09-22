@@ -166,7 +166,12 @@ Do not describe the personal website as live until `npm run check:online` passes
 如果 `npm run check:online:json` 进一步报告
 `deployment_diagnosis.status = "source_mismatch_or_stale_vercel_bundle"`，
 含义更具体：生产首页是可访问的，但 `/build-info.json`、`/three-stooges/`
-和线上 bundle 没有对应当前个人网站构建。此时优先检查 Vercel 项目设置：
+和线上 bundle 没有对应当前个人网站构建。如果报告
+`deployment_diagnosis.status = "stale_vercel_build_by_curl_probe"`，
+说明 Node HTTPS 请求被连接重置，但 curl 已证明生产首页可访问，而
+`/build-info.json` 和 `/three-stooges/` 仍是 404；这个兜底诊断不能证明
+live JS bundle 内容，只能证明线上还在服务旧构建或不完整构建。两种情况都
+优先检查 Vercel 项目设置：
 
 - Git repository 是否是 `atticus-zhou/me`。
 - Production branch 是否是 `main`。

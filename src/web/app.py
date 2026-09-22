@@ -1907,14 +1907,32 @@ def _public_showcase_portfolio_ci_proof() -> dict:
 
 def _public_showcase_stale_bundle_diagnosis() -> dict:
     return {
-        "status": "source_mismatch_or_stale_vercel_bundle",
+        "status": "stale_vercel_build",
         "reported_by": "npm run check:online:json",
         "meaning": "The production home is reachable, but it is not serving the personal website build that contains /three-stooges/.",
-        "signals": [
-            "https://www.atticus.asia/ returns HTTP 200",
-            "https://www.atticus.asia/build-info.json returns HTTP 404",
-            "https://www.atticus.asia/three-stooges/ returns HTTP 404",
-            "the live asset bundle does not contain /three-stooges/",
+        "diagnosis_variants": [
+            {
+                "status": "source_mismatch_or_stale_vercel_bundle",
+                "evidence_scope": "full_online_check",
+                "signals": [
+                    "https://www.atticus.asia/ returns HTTP 200",
+                    "https://www.atticus.asia/build-info.json returns HTTP 404",
+                    "https://www.atticus.asia/three-stooges/ returns HTTP 404",
+                    "the live asset bundle does not contain /three-stooges/",
+                ],
+            },
+            {
+                "status": "stale_vercel_build_by_curl_probe",
+                "evidence_scope": "curl_head_fallback",
+                "signals": [
+                    "Node HTTPS requests failed before returning HTTP responses",
+                    "curl can reach https://www.atticus.asia/",
+                    "https://www.atticus.asia/ returns HTTP 200",
+                    "https://www.atticus.asia/build-info.json returns HTTP 404",
+                    "https://www.atticus.asia/three-stooges/ returns HTTP 404",
+                ],
+                "does_not_prove": "This fallback does not inspect the live JavaScript bundle contents.",
+            },
         ],
         "dashboard_checklist": [
             "Open the Vercel project that serves https://www.atticus.asia/.",

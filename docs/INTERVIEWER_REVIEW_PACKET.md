@@ -59,6 +59,12 @@
 生产首页可以访问，但 `/build-info.json` 和 `/three-stooges/` 没有跟随
 当前 GitHub 提交刷新，通常需要在 Vercel Dashboard 里检查项目源仓库、
 production branch、Root Directory、Build Command 和 Output Directory。
+
+如果输出 `deployment_diagnosis.status = "stale_vercel_build_by_curl_probe"`，
+含义更窄：Node 请求没有拿到 HTTP 响应，但 curl 已经证明生产首页可访问，
+而 `/build-info.json` 和 `/three-stooges/` 仍是 404。这个结果不能证明
+live JS bundle 内容，只能说明线上仍是旧构建或不完整构建。
+
 核对并重新部署后，再用 `npm run check:online` 做最终线上验收。
 
 ## 安全边界
