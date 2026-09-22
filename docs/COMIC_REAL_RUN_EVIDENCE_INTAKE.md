@@ -18,11 +18,12 @@
 
 ```bash
 python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/你的项目/comic_real_evidence.json --format markdown
+python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/你的项目/comic_real_evidence.json --verify-files --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --latest --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
 
-如果真实模型刚跑完、证据还没有合并进最终 `handoff_manifest.json`，先用 `--evidence-file` 检查单独的证据表。它会拒绝 `replace_...`、`ws_xxx` 这类占位值，并检查 provider/model/job id、图片记录、刑部七维质检、资产身份证、人工验收和恢复协议是否完整。证据表通过以后，再合并进 `handoff_manifest.json`、`trace.json` 和 `production-acceptance.json`。
+如果真实模型刚跑完、证据还没有合并进最终 `handoff_manifest.json`，先用 `--evidence-file` 检查单独的证据表。它会拒绝 `replace_...`、`ws_xxx` 这类占位值，并检查 provider/model/job id、图片记录、刑部七维质检、资产身份证、人工验收和恢复协议是否完整。加上 `--verify-files` 后，脚本会读取证据表里每张图的 `file_path`，核对 `file_sha256`、`byte_size` 和 `dimensions` 是否真的等于磁盘上的图片；真实交付前优先使用这个模式，否则只能说明证据表结构完整，不能证明图片文件没有被替换。证据表通过以后，再合并进 `handoff_manifest.json`、`trace.json` 和 `production-acceptance.json`。
 
 如果最终交付包已经生成，优先使用 `--latest`。它会自动从 `output/workspaces/` 中寻找最新的完整可审计 `*_handoff_manifest.json`，避开验证脚本自己生成的临时审计目录，也会跳过空 JSON、测试残留和没有图片/资产/镜头/Word 画布的半成品 manifest。只有你要审计某个旧项目、备份目录或外部交付包时，才需要手动使用 `--manifest` 指向具体文件。
 

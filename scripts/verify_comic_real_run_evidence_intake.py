@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
 from pathlib import Path
 from typing import Any
+
+from PIL import Image
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -67,6 +70,7 @@ REQUIRED_MARKERS = [
     "证据导入模板",
     "人工验收签字",
     "--evidence-file",
+    "--verify-files",
 ]
 
 EXPECTED_HUMAN_FLOW = [
@@ -139,7 +143,51 @@ def _placeholder_paths(payload: Any, path: str = "$") -> list[str]:
     return placeholders
 
 
-def _verify_template_contract(path: Path = TEMPLATE_PATH, *, strict_real_values: bool = False) -> dict[str, Any]:
+def _resolve_evidence_file_path(evidence_path: Path, image_path: str) -> Path:
+    candidate = Path(image_path)
+    if candidate.is_absolute():
+        return candidate
+    evidence_relative = evidence_path.parent / candidate
+    if evidence_relative.exists():
+        return evidence_relative
+    return REPO_ROOT / candidate
+
+
+def _image_dimensions(path: Path) -> dict[str, int]:
+    with Image.open(path) as image:
+        return {"width": int(image.width), "height": int(image.height)}
+
+
+def _verify_image_file_record(evidence_path: Path, image: dict[str, Any], index: int) -> list[str]:
+    errors: list[str] = []
+    image_path = _resolve_evidence_file_path(evidence_path, str(image.get("file_path") or ""))
+    if not image_path.is_file():
+        return [f"evidence file generated_images[{index}].file_path does not exist: {image.get('file_path')}"]
+    data = image_path.read_bytes()
+    actual_sha = hashlib.sha256(data).hexdigest()
+    if actual_sha.lower() != str(image.get("file_sha256") or "").lower():
+        errors.append(f"evidence file generated_images[{index}].file_sha256 does not match file bytes")
+    if len(data) != image.get("byte_size"):
+        errors.append(f"evidence file generated_images[{index}].byte_size does not match file bytes")
+    try:
+        actual_dimensions = _image_dimensions(image_path)
+    except Exception as exc:  # Pillow raises several concrete decoding exceptions.
+        return [*errors, f"evidence file generated_images[{index}].dimensions could not be read: {exc}"]
+    expected_dimensions = image.get("dimensions") or {}
+    if actual_dimensions != {
+        "width": expected_dimensions.get("width"),
+        "height": expected_dimensions.get("height"),
+    }:
+        errors.append(f"evidence file generated_images[{index}].dimensions do not match image file")
+    return errors
+
+
+def _verify_template_contract(
+    path: Path = TEMPLATE_PATH,
+    *,
+    strict_real_values: bool = False,
+    verify_files: bool = False,
+) -> dict[str, Any]:
     errors: list[str] = []
     try:
         template = json.loads(path.read_text(encoding="utf-8"))
@@ -197,6 +245,7 @@ def _verify_template_contract(path: Path = TEMPLATE_PATH, *, strict_real_values:
         errors.append("template generated_images must include at least one image record")
     generated_image_ids: set[str] = set()
     image_roles_by_asset: dict[str, set[str]] = {}
+    file_integrity_errors: list[str] = []
     for index, image in enumerate(generated_images):
         required = (
             "image_id",
@@ -230,6 +279,10 @@ def _verify_template_contract(path: Path = TEMPLATE_PATH, *, strict_real_values:
         height = dimensions.get("height") if isinstance(dimensions, dict) else None
         if not isinstance(width, int) or width <= 0 or not isinstance(height, int) or height <= 0:
             errors.append(f"template generated_images[{index}].dimensions must include positive integer width and height")
+        if verify_files:
+            file_errors = _verify_image_file_record(path, image, index)
+            file_integrity_errors.extend(file_errors)
+            errors.extend(file_errors)
         image_id = str(image.get("image_id") or "")
         if image_id:
             generated_image_ids.add(image_id)
@@ -522,6 +575,9 @@ def _verify_template_contract(path: Path = TEMPLATE_PATH, *, strict_real_values:
         "path": _display_path(path),
         "schema": template.get("schema"),
         "strict_real_values": strict_real_values,
+        "verify_files": verify_files,
+        "file_integrity_verified": bool(verify_files) and not file_integrity_errors,
+        "file_integrity_error_count": len(file_integrity_errors),
         "image_record_count": len(generated_images),
         "visual_review_count": len(reviews),
         "asset_identity_card_count": len(asset_cards),
@@ -680,9 +736,13 @@ def verify_real_run_evidence_intake(manifest_path: Path | None = None) -> dict[s
     }
 
 
-def verify_real_run_evidence_file(evidence_path: Path) -> dict[str, Any]:
+def verify_real_run_evidence_file(evidence_path: Path, *, verify_files: bool = False) -> dict[str, Any]:
     text, read_error = _read_doc()
-    evidence_contract = _verify_template_contract(evidence_path, strict_real_values=True)
+    evidence_contract = _verify_template_contract(
+        evidence_path,
+        strict_real_values=True,
+        verify_files=verify_files,
+    )
     errors: list[str] = []
 
     if read_error:
@@ -714,6 +774,7 @@ def verify_real_run_evidence_file(evidence_path: Path) -> dict[str, Any]:
         "section_status": {
             "evidence_file_schema": evidence_contract.get("schema") == "comic_real_run_evidence_intake_v1",
             "real_values": bool(evidence_contract.get("strict_real_values")),
+            "file_integrity": not verify_files or bool(evidence_contract.get("file_integrity_verified")),
             "images_and_reviews": image_count > 0 and image_count == review_count,
             "asset_identity_cards": asset_count >= 3,
             "operator_acceptance": bool(evidence_contract.get("operator_acceptance_ready")),
@@ -772,6 +833,9 @@ def format_markdown(payload: dict[str, Any]) -> str:
             f"- Status: `{template.get('status')}`",
             f"- Path: `{template.get('path')}`",
         f"- Schema: `{template.get('schema')}`",
+        f"- Verify files: `{template.get('verify_files')}`",
+        f"- File integrity verified: `{template.get('file_integrity_verified')}`",
+        f"- File integrity errors: `{template.get('file_integrity_error_count')}`",
         f"- Image records: `{template.get('image_record_count')}`",
         f"- Visual reviews: `{template.get('visual_review_count')}`",
         f"- Asset identity cards: `{template.get('asset_identity_card_count')}`",
@@ -839,6 +903,11 @@ def main() -> int:
         help="Audit the newest *_handoff_manifest.json under output/workspaces.",
     )
     parser.add_argument(
+        "--verify-files",
+        action="store_true",
+        help="When used with --evidence-file, verify image file sha256, byte_size, and dimensions against files on disk.",
+    )
+    parser.add_argument(
         "--latest-output-root",
         type=Path,
         default=DEFAULT_USER_OUTPUT_ROOT,
@@ -847,7 +916,7 @@ def main() -> int:
     parser.add_argument("--format", choices={"json", "markdown"}, default="markdown")
     args = parser.parse_args()
     if args.evidence_file:
-        payload = verify_real_run_evidence_file(args.evidence_file)
+        payload = verify_real_run_evidence_file(args.evidence_file, verify_files=args.verify_files)
         if args.format == "json":
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:

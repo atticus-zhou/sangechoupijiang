@@ -1,9 +1,12 @@
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 from scripts.verify_comic_v2_delivery import verify_delivery
 from scripts.verify_comic_real_run_evidence_intake import find_latest_user_handoff_manifest
@@ -48,6 +51,19 @@ def _fill_evidence_placeholders(value):
             value = value.replace(old, new)
         return value
     return value
+
+
+def _write_evidence_images(evidence: dict, root: Path, *, corrupt_first_hash: bool = False) -> None:
+    for index, image in enumerate(evidence["generated_images"]):
+        image_path = root / image["file_path"]
+        image_path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (32 + index, 24 + index), color=(index * 30 % 255, 120, 180)).save(image_path)
+        data = image_path.read_bytes()
+        image["file_sha256"] = hashlib.sha256(data).hexdigest()
+        image["byte_size"] = len(data)
+        image["dimensions"] = {"width": 32 + index, "height": 24 + index}
+    if corrupt_first_hash:
+        evidence["generated_images"][0]["file_sha256"] = "b" * 64
 
 
 def _real_verified_manifest(root: Path) -> Path:
@@ -298,6 +314,65 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertEqual(payload["template_contract"]["image_record_count"], 4)
         self.assertTrue(payload["section_status"]["images_and_reviews"])
         self.assertTrue(payload["section_status"]["operator_acceptance"])
+
+    def test_standalone_real_evidence_file_can_verify_image_files(self):
+        template = json.loads(Path("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json").read_text(encoding="utf-8"))
+        evidence = _fill_evidence_placeholders(template)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_evidence_images(evidence, root)
+            evidence_path = root / "comic_real_evidence.json"
+            evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/verify_comic_real_run_evidence_intake.py",
+                    "--evidence-file",
+                    str(evidence_path),
+                    "--verify-files",
+                    "--format",
+                    "json",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "passed")
+        self.assertTrue(payload["template_contract"]["verify_files"])
+        self.assertTrue(payload["template_contract"]["file_integrity_verified"])
+        self.assertEqual(payload["template_contract"]["file_integrity_error_count"], 0)
+        self.assertTrue(payload["section_status"]["file_integrity"])
+
+    def test_standalone_real_evidence_file_rejects_image_hash_mismatch(self):
+        template = json.loads(Path("docs/COMIC_REAL_RUN_EVIDENCE_TEMPLATE.json").read_text(encoding="utf-8"))
+        evidence = _fill_evidence_placeholders(template)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_evidence_images(evidence, root, corrupt_first_hash=True)
+            evidence_path = root / "comic_real_evidence.json"
+            evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/verify_comic_real_run_evidence_intake.py",
+                    "--evidence-file",
+                    str(evidence_path),
+                    "--verify-files",
+                    "--format",
+                    "markdown",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("file_sha256 does not match file bytes", completed.stdout)
+        self.assertIn("File integrity verified: `False`", completed.stdout)
 
     def test_standalone_real_evidence_file_rejects_placeholders(self):
         with tempfile.TemporaryDirectory() as tmp:

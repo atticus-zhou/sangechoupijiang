@@ -72,10 +72,11 @@ http://127.0.0.1:8080/
 
 ```powershell
 python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/你的项目/comic_real_evidence.json --format markdown
+python scripts/verify_comic_real_run_evidence_intake.py --evidence-file output/你的项目/comic_real_evidence.json --verify-files --format markdown
 python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的项目/xxx_handoff_manifest.json --format markdown
 ```
 
-第一条适合在真实图片和视觉质检刚完成、还没合并进最终 manifest 前做补证检查；第二条会把 Word、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放到一起看。通过前只能说“流程跑通”或“结构样例通过”，不能说真实生产质量已经验证。
+第一条适合在真实图片和视觉质检刚完成、还没合并进最终 manifest 前做补证检查；第二条会进一步读取图片文件，核对 `file_sha256`、大小和尺寸是否真的匹配；第三条会把 Word、图片证据、刑部视觉质检、兵部提示词谱系和下游交接结论放到一起看。通过前只能说“流程跑通”或“结构样例通过”，不能说真实生产质量已经验证。
 
 ### 研究办公室最小配置
 
