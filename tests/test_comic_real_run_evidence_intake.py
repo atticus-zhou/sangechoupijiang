@@ -29,6 +29,7 @@ def _fill_evidence_placeholders(value):
             "replace_provider_request_or_job_id": "job_real_001",
             "replace_provider_job_id": "job_real_001",
             "replace_prompt_hash": "prompt_hash_real_001",
+            "replace_file_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "replace_character_name": "林昭",
             "replace_prop_name": "裂纹铜铃",
             "replace_scene_name": "旧祠堂",
@@ -171,6 +172,12 @@ class ComicRealRunEvidenceIntakeTests(unittest.TestCase):
         self.assertIn("operator_acceptance_checklist", template)
         self.assertIn("recovery_protocol", template)
         self.assertFalse(template["generated_images"][0]["fixture"])
+        self.assertIn("file_sha256", template["generated_images"][0])
+        self.assertIn("byte_size", template["generated_images"][0])
+        self.assertIn("dimensions", template["generated_images"][0])
+        self.assertGreater(template["generated_images"][0]["byte_size"], 0)
+        self.assertGreater(template["generated_images"][0]["dimensions"]["width"], 0)
+        self.assertGreater(template["generated_images"][0]["dimensions"]["height"], 0)
         self.assertEqual(template["visual_reviews"][0]["reviewer_department"], "xingbu")
         self.assertGreaterEqual(len(template["visual_reviews"][0]["scores"]), 7)
         cards_by_type = {

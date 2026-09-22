@@ -36,7 +36,7 @@ python scripts/verify_comic_real_run_evidence_intake.py --manifest output/你的
 
 - `office_id` 必须是 `comic_production`，避免把研究办公室或旧办公室产物混进来。
 - `model_evidence` 只记录 provider、model、request_trace_ids 或等价 job id，不记录 API Key、Cookie、浏览器 Profile 或控制台敏感截图。
-- `generated_images` 中每张图都必须声明 `fixture=false`、provider/model、图片角色、引用资产或镜头，以及是否要求干净背景。
+- `generated_images` 中每张图都必须声明 `fixture=false`、provider/model、图片角色、引用资产或镜头、是否要求干净背景，并记录 `file_sha256`、`byte_size`、`dimensions`，让图片证据可以复核是否同一张文件。
 - `visual_reviews` 必须由刑部或视觉质检阶段写入七维评分、通过状态、问题列表和恢复动作。
 - `image_quality_summary` 必须能让人立刻知道总图数、可用图数、废片/返工图数和失败图片 ID。
 - `prompt_strategy_lineage` 必须证明资产提示词、镜头提示词和 Word 画布来自同一版策略。
@@ -138,7 +138,7 @@ python scripts/verify_comic_real_production_claim.py --manifest output/你的项
 
 只有同时满足以下条件，才允许把这次产物标成 `production_quality_verified=true`：
 
-- 图片证据不是 fixture，且每张图绑定真实 provider/model/image_id。
+- 图片证据不是 fixture，且每张图绑定真实 provider/model/image_id、`file_sha256`、文件大小和尺寸。
 - `image_quality_summary.waste_or_rework_images=0`。
 - 刑部视觉质检显示所有基础资产和镜头参考图通过。
 - 兵部提示词质量为 ready，且没有固定模板式重复问题。

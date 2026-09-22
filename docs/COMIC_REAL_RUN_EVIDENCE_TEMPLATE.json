@@ -69,6 +69,12 @@
       "clean_background_required": true,
       "reference_policy": "人物资产用于后续镜头身份一致性参考，不负责讲述剧情。",
       "prompt_hash": "replace_prompt_hash",
+      "file_sha256": "replace_file_sha256",
+      "byte_size": 123456,
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
       "generated_at": "2026-01-01T00:00:00Z"
     },
     {
@@ -84,6 +90,12 @@
       "clean_background_required": false,
       "reference_policy": "场景俯视图用于空间关系和机位规划。",
       "prompt_hash": "replace_prompt_hash",
+      "file_sha256": "replace_file_sha256",
+      "byte_size": 123456,
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
       "generated_at": "2026-01-01T00:00:00Z"
     },
     {
@@ -99,6 +111,12 @@
       "clean_background_required": true,
       "reference_policy": "道具资产用于后续镜头一致性参考，不负责讲述剧情，不允许被人物手持或放进剧情现场。",
       "prompt_hash": "replace_prompt_hash",
+      "file_sha256": "replace_file_sha256",
+      "byte_size": 123456,
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
       "generated_at": "2026-01-01T00:00:00Z"
     },
     {
@@ -114,6 +132,12 @@
       "clean_background_required": false,
       "reference_policy": "场景广角图用于建立空间、时代材质和光线方向，不把剧情事件画进基础场景资产。",
       "prompt_hash": "replace_prompt_hash",
+      "file_sha256": "replace_file_sha256",
+      "byte_size": 123456,
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
       "generated_at": "2026-01-01T00:00:00Z"
     }
   ],

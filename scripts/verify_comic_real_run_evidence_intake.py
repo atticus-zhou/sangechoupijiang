@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -197,7 +198,18 @@ def _verify_template_contract(path: Path = TEMPLATE_PATH, *, strict_real_values:
     generated_image_ids: set[str] = set()
     image_roles_by_asset: dict[str, set[str]] = {}
     for index, image in enumerate(generated_images):
-        required = ("image_id", "production_role", "file_path", "provider", "model", "fixture", "prompt_hash")
+        required = (
+            "image_id",
+            "production_role",
+            "file_path",
+            "provider",
+            "model",
+            "fixture",
+            "prompt_hash",
+            "file_sha256",
+            "byte_size",
+            "dimensions",
+        )
         missing_image = [field for field in required if field not in image]
         if missing_image:
             errors.append(f"template generated_images[{index}] missing fields: {', '.join(missing_image)}")
@@ -205,6 +217,19 @@ def _verify_template_contract(path: Path = TEMPLATE_PATH, *, strict_real_values:
             errors.append(f"template generated_images[{index}].fixture must be false")
         if not (image.get("asset_id") or image.get("shot_id")):
             errors.append(f"template generated_images[{index}] must bind to asset_id or shot_id")
+        sha256 = str(image.get("file_sha256") or "")
+        if not sha256:
+            errors.append(f"template generated_images[{index}].file_sha256 must be present")
+        if strict_real_values and not re.fullmatch(r"[a-fA-F0-9]{64}", sha256):
+            errors.append(f"evidence file generated_images[{index}].file_sha256 must be a 64-character hex digest")
+        byte_size = image.get("byte_size")
+        if not isinstance(byte_size, int) or byte_size <= 0:
+            errors.append(f"template generated_images[{index}].byte_size must be a positive integer")
+        dimensions = image.get("dimensions") or {}
+        width = dimensions.get("width") if isinstance(dimensions, dict) else None
+        height = dimensions.get("height") if isinstance(dimensions, dict) else None
+        if not isinstance(width, int) or width <= 0 or not isinstance(height, int) or height <= 0:
+            errors.append(f"template generated_images[{index}].dimensions must include positive integer width and height")
         image_id = str(image.get("image_id") or "")
         if image_id:
             generated_image_ids.add(image_id)
