@@ -144,6 +144,45 @@ class ComicV2PromptQualityTests(unittest.TestCase):
         self.assertIn("疑似复制模板", messages)
         self.assertIn("重写专属视觉细节", messages)
 
+    def test_flags_story_action_leaking_into_base_asset_prompts(self):
+        result = audit_prompt_package({
+            "prompts": [
+                {
+                    "object_id": "character_01",
+                    "image_kind": "three_view",
+                    "production_role": "clean_character_identity_three_view",
+                    "clean_background_required": True,
+                    "usage_contract": ["基础资产图只建立角色身份参考，不负责讲述剧情。"],
+                    "reference_policy": "人物资产用于后续镜头身份一致性参考。",
+                    "generator_prompt": (
+                        "风格身份：style_01。资产ID：character_01。人物三视图，"
+                        "纯白或近白色干净背景，辅助阿衡下山采购后为保护队伍被车驾撞倒。"
+                    ),
+                    "negative_prompt": ["禁止剧情动作", "禁止剧情场景", "禁止文字、标签、编号和水印"],
+                },
+                {
+                    "object_id": "prop_01",
+                    "image_kind": "turnaround",
+                    "production_role": "clean_prop_turnaround_reference",
+                    "clean_background_required": True,
+                    "usage_contract": ["基础资产图只建立道具身份参考，不负责讲述剧情。"],
+                    "reference_policy": "道具资产用于后续镜头物件一致性参考。",
+                    "generator_prompt": (
+                        "风格身份：style_01。资产ID：prop_01。道具多角度转面，"
+                        "纯白或近白色干净背景，人物手持药箱站在剧情现场说话。"
+                    ),
+                    "negative_prompt": ["禁止人物手持或人物入镜", "禁止剧情现场", "禁止文字、标签、编号和水印"],
+                },
+            ],
+            "shots": [],
+        })
+
+        self.assertEqual(result["status"], "needs_review")
+        self.assertEqual(result["clean_asset_prompt_count"], 0)
+        messages = " ".join(item["message"] for item in result["issues"])
+        self.assertIn("基础资产图在讲故事", messages)
+        self.assertIn("只保留身份、材质、结构或空间信息", messages)
+
     def test_flags_template_or_unreadable_prompt_language(self):
         result = audit_prompt_package({
             "prompts": [{

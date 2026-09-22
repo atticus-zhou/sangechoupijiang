@@ -7,6 +7,33 @@ from difflib import SequenceMatcher
 from typing import Any
 
 
+ASSET_STORY_LEAK_MARKERS = (
+    "推门",
+    "战斗",
+    "打斗",
+    "奔跑",
+    "死亡",
+    "采购",
+    "说话",
+    "台词",
+    "哭",
+    "喊",
+    "手持",
+    "攻击",
+    "追逐",
+    "掀开",
+    "走进",
+    "进入",
+    "发现",
+    "倒下",
+    "死在",
+    "被车",
+    "保护",
+    "引开",
+    "搜寻",
+)
+
+
 def audit_prompt_package(package: dict[str, Any] | None) -> dict[str, Any]:
     """Return a reviewer-friendly audit for asset and shot prompts."""
     package = package or {}
@@ -32,6 +59,7 @@ def audit_prompt_package(package: dict[str, Any] | None) -> dict[str, Any]:
         "checks": [
             "人物和道具资产保持纯白或近白色干净背景",
             "场景资产保持空场景空间参考",
+            "基础资产提示词只建立人物、道具或空间身份，不能混入剧情动作",
             "基础资产提示词必须继承视觉母版的媒介、时代、光线和调色方向",
             "不同资产的提示词必须有专属内容，不能复制模板只替换名称",
             "镜头视频提示词包含原文依据、镜头形式、参考资产、故事目的、动作链、动作表演、摄影、灯光、台词、声音和连续性要求",
@@ -114,6 +142,9 @@ def _asset_prompt_issues(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
             add("usage_contract 必须明确基础资产只做一致性参考，不负责讲述剧情。")
         if not reference_policy:
             add("缺少 reference_policy，后续镜头不知道应该如何继承这张资产。")
+        story_leaks = _asset_story_leaks(generator)
+        if story_leaks:
+            add("基础资产图在讲故事，请移除剧情动作并只保留身份、材质、结构或空间信息：" + "、".join(story_leaks))
 
         if object_id.startswith("character_"):
             if clean_background_required is not True:
@@ -202,6 +233,14 @@ def _asset_type(object_id: str) -> str:
     if object_id.startswith("scene_"):
         return "scene"
     return ""
+
+
+def _asset_story_leaks(text: str) -> list[str]:
+    leaks: list[str] = []
+    for marker in ASSET_STORY_LEAK_MARKERS:
+        if marker in text:
+            leaks.append(marker)
+    return leaks
 
 
 def _normalize_prompt(text: str, object_id: str, object_name: str) -> str:
